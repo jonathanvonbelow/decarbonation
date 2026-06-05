@@ -1,6 +1,13 @@
 
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useAuth } from './hooks/useAuth';
+import { useSessionPersistence } from './hooks/useSessionPersistence';
+import LoginScreen from './components/auth/LoginScreen';
+import SurveyPre from './components/surveys/SurveyPre';
+import SurveyPost from './components/surveys/SurveyPost';
+import FacilitatorPanel from './components/facilitator/FacilitatorPanel';
+import GameSummaryPanel from './components/game/GameSummaryPanel';
 // FIX: Added NumericStellaKeys and NumericIndicatorKeys to imports from types.ts to ensure proper type checking for dynamic property access.
 import { GameState, Policy, HistoricalDataPoint, LandUseType, LandUse, StellaStocks, PolicyState, LevelConfig, Pact, ChatMessage, PolicyInstrument, RandomEvent, RandomEventEffect, ControlParams, InitialIndicatorOverrides, ChatMessageEmphasisType, InstrumentImpactHints, NumericStellaKeys, NumericIndicatorKeys, Indicators } from './types';
 import {
@@ -383,6 +390,9 @@ const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfi
 
 // FIX: Removed React.FC type from component definition to align with modern functional component best practices and avoid potential assignment errors.
 export const App = () => {
+  const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
+  const { startSession, saveSnapshot, savePreSurvey, savePostSurvey } = useSessionPersistence(user?.id ?? null);
+
   const [gameState, setGameState] = useState<GameState>(() => {
     const initialLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === 1);
     return {
@@ -413,6 +423,8 @@ export const App = () => {
   });
 
   const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
+  const [controlParams, setControlParams] = useState<ControlParams>(CONTROL_PARAMS);
+  const controlParamsRef = useRef<ControlParams>(CONTROL_PARAMS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isBotLoading, setIsBotLoading] = useState(false);
   const [apiKeyAvailable, setApiKeyAvailable] = useState(!!process.env.API_KEY);
@@ -437,6 +449,11 @@ export const App = () => {
   const [showFacilitatorManual, setShowFacilitatorManual] = useState(false);
   const [showPlayerManual, setShowPlayerManual] = useState(false);
   const [showEquationsManual, setShowEquationsManual] = useState(false);
+  const [showPreSurvey, setShowPreSurvey] = useState(false);
+  const [showPostSurvey, setShowPostSurvey] = useState(false);
+  const [showFacilitatorPanel, setShowFacilitatorPanel] = useState(false);
+  const [showGameSummary, setShowGameSummary] = useState(false);
+  const [postSurveyResult, setPostSurveyResult] = useState<'victoria' | 'derrota' | 'abandono'>('derrota');
 
 
   const handleToggleFacilitatorManual = () => {
@@ -457,6 +474,8 @@ export const App = () => {
       setCurrentSuggestedQuestions(getSuggestedQuestions(gameState));
     }
   }, [gameState, apiKeyAvailable]);
+
+  useEffect(() => { controlParamsRef.current = controlParams; }, [controlParams]);
   
   const removeToast = useCallback((id: number) => {
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
@@ -503,7 +522,17 @@ export const App = () => {
             console.error("Could not write to sessionStorage for intro status:", e);
         }
     }
-  }, [gameState.currentLevel, gameState.gameOverReason, showTutorialModal, showLevelIntroModalForLevel]);
+
+    // Only show pre-survey and start a new session when there is no active game over
+    // (avoids spurious session creation when gameOverReason changes trigger this effect)
+    if (!gameState.gameOverReason) {
+      if (authStage === 'authenticated' && !sessionStorage.getItem('decarbonationPreSurveyDone_v1')) {
+        setShowPreSurvey(true);
+      }
+      startSession(gameState.currentLevel);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.currentLevel, gameState.gameOverReason, showTutorialModal, showLevelIntroModalForLevel, authStage]);
 
 
   const handleCloseTutorial = () => {
@@ -573,11 +602,24 @@ export const App = () => {
 
 
   useEffect(() => {
-    if (gameState.gameOverReason && !hasSentFinalDecarbonitoMessage) {
-      setHasSentFinalDecarbonitoMessage(true); 
+    if (!gameState.gameOverReason) return;
+    // Lessons-learned modal (guarded by hasSentFinalDecarbonitoMessage)
+    if (!hasSentFinalDecarbonitoMessage) {
+      setHasSentFinalDecarbonitoMessage(true);
       handleLessonsLearnedStart();
     }
   }, [gameState.gameOverReason, hasSentFinalDecarbonitoMessage, handleLessonsLearnedStart]);
+
+  useEffect(() => {
+    if (!gameState.gameOverReason) return;
+    if (gameState.gameOverReason !== 'Partida abandonada por el jugador.') {
+      const resultado = gameState.gameOverReason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota';
+      setPostSurveyResult(resultado);
+      setShowPostSurvey(true);
+    }
+    // This effect depends only on gameOverReason so it fires exactly once per game-over
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.gameOverReason]);
 
 
  const progressToNextLevel = useCallback(() => {
@@ -806,7 +848,19 @@ export const App = () => {
         }
         return [...prev, currentYearData];
      });
-  }, []);
+
+    // Persistir snapshot anual en Supabase
+    const activePolicies = Object.values(currentState.policies).filter((p: any) => p.isActive).map((p: any) => p.id);
+    saveSnapshot(currentState.year, {
+      biodiversidad: currentState.indicators.biodiversity,
+      co2_per_capita: currentState.indicators.co2EqEmissionsPerCapita,
+      seg_alimentaria: currentState.indicators.foodSecurity,
+      seg_economica: currentState.indicators.economicSecurity,
+      bienestar_social: currentState.indicators.socialWellbeing,
+      estabilidad_politica: currentState.indicators.politicalStability,
+      score_general: currentState.indicators.generalScore,
+    }, activePolicies);
+  }, [saveSnapshot]);
 
 
   const togglePolicy = useCallback((policyId: Policy) => {
@@ -990,6 +1044,13 @@ export const App = () => {
   }, [logEvent, addToast]);
 
 
+  const handleAbandonGame = useCallback(() => {
+    if (gameStateRef.current.gameOverReason) return;
+    setPostSurveyResult('abandono');
+    setGameState(s => ({ ...s, gameOverReason: 'Partida abandonada por el jugador.' }));
+    setShowPostSurvey(true);
+  }, []);
+
   const generateLevel3WinReason = (gameState: GameState): { reason: string, objectivesMetCount: number } => {
     const wc = LEVEL_CONFIGS[2].winConditions;
     if (!wc) return { reason: "Condiciones de victoria no encontradas.", objectivesMetCount: 0 };
@@ -1093,6 +1154,7 @@ export const App = () => {
 };
 
   const runSimulationRound = useCallback(async () => {
+    const CP = controlParamsRef.current;
     if (gameStateRef.current.gameOverReason) {
         const message = "Juego terminado. No se puede ejecutar la simulación.";
         logEvent(message);
@@ -1198,7 +1260,7 @@ export const App = () => {
         const currentLevel = tempGameState.currentLevel;
         const additionalTaxPressurePercentage = tempGameState.additionalTaxPressurePercentage;
         
-        stellaState.Poblacion_Total *= (1 + CONTROL_PARAMS.Tasa_Crecimiento_Poblacional_Base);
+        stellaState.Poblacion_Total *= (1 + CP.Tasa_Crecimiento_Poblacional_Base);
 
         Object.values(policies).forEach((p: PolicyState) => {
             if (p.isActive && p.activationYear === undefined) {
@@ -1408,15 +1470,15 @@ export const App = () => {
         const effPAI = getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel);
         const effFRA = getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel);
 
-        const tasa_BNNP_a_BNP_final = (CONTROL_PARAMS.Tasa_de_BNNP_a_BNP_Base + (effCR * 0.05)) * landUseChangeFactors.tasa_BNNP_a_BNP;
+        const tasa_BNNP_a_BNP_final = (CP.Tasa_de_BNNP_a_BNP_Base + (effCR * 0.05)) * landUseChangeFactors.tasa_BNNP_a_BNP;
         const cambio_BNNP_a_BNP = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_BNP_final;
-        const tasa_BNNP_a_CC_final = (CONTROL_PARAMS.Tasa_de_BNNP_a_CC_Base + (effPAI * 0.04) + (effFRA * 0.01)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CC;
+        const tasa_BNNP_a_CC_final = (CP.Tasa_de_BNNP_a_CC_Base + (effPAI * 0.04) + (effFRA * 0.01)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CC;
         const cambio_BNNP_a_CC = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_CC_final;
-        const tasa_BNNP_a_CA_final = (CONTROL_PARAMS.Tasa_de_BNNP_a_CA_Base + (effAS * 0.02)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CA;
+        const tasa_BNNP_a_CA_final = (CP.Tasa_de_BNNP_a_CA_Base + (effAS * 0.02)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CA;
         const cambio_BNNP_a_CA = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_CA_final;
-        const tasa_CA_a_BNNP_final = (CONTROL_PARAMS.Tasa_de_CA_a_BNNP_Base + (effAS * 0.01)) * landUseChangeFactors.tasa_CA_a_BNNP;
+        const tasa_CA_a_BNNP_final = (CP.Tasa_de_CA_a_BNNP_Base + (effAS * 0.01)) * landUseChangeFactors.tasa_CA_a_BNNP;
         const cambio_CA_a_BNNP = landUses[LandUseType.AgroecologicalCrops].area * tasa_CA_a_BNNP_final;
-        const tasa_CC_a_CA_final = (CONTROL_PARAMS.Tasa_de_CC_a_CA_Base + (effAS * 0.03)) * (1 - effPAI * 0.5) * landUseChangeFactors.tasa_CC_a_CA;
+        const tasa_CC_a_CA_final = (CP.Tasa_de_CC_a_CA_Base + (effAS * 0.03)) * (1 - effPAI * 0.5) * landUseChangeFactors.tasa_CC_a_CA;
         const cambio_CC_a_CA = landUses[LandUseType.ConventionalCrops].area * tasa_CC_a_CA_final;
 
         const newLandUses = JSON.parse(JSON.stringify(landUses)) as Record<LandUseType, LandUse>;
@@ -1429,12 +1491,12 @@ export const App = () => {
         tempGameState.landUses = newLandUses;
 
         // 3. Financial Calculations
-        const pbiGrowthRate = CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI + (getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * 0.01) + (getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * 0.005) - (additionalTaxPressurePercentage * CONTROL_PARAMS.PBIGrowth_Reduction_Factor_Per_Tax_Point);
+        const pbiGrowthRate = CP.Tasa_Base_Crecimiento_PBI + (getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * 0.01) + (getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * 0.005) - (additionalTaxPressurePercentage * CP.PBIGrowth_Reduction_Factor_Per_Tax_Point);
         stellaState.PBI_Real *= (1 + pbiGrowthRate);
-        const taxIncome = stellaState.PBI_Real * (CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI + (additionalTaxPressurePercentage / 100));
-        const interestRate = (CONTROL_PARAMS[`Tasa_de_interes_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.03;
+        const taxIncome = stellaState.PBI_Real * (CP.Tasa_Impositiva_General_Sobre_PBI + (additionalTaxPressurePercentage / 100));
+        const interestRate = (CP[`Tasa_de_interes_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.03;
         const interestPayment = stellaState.Deuda * interestRate;
-        const debtPaymentRate = (CONTROL_PARAMS[`Pago_deuda_anual_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.1;
+        const debtPaymentRate = (CP[`Pago_deuda_anual_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.1;
         const debtPrincipalPayment = stellaState.Deuda * debtPaymentRate;
         const totalExpenses = totalPolicyCost + totalPactCost + interestPayment + debtPrincipalPayment;
 
@@ -1466,45 +1528,45 @@ export const App = () => {
         if (effCN > 0) {
             const renInst = policies[Policy.CarbonNeutrality].instruments?.["C_Fomento_Energias_Renovables_No_Convencionales"];
             const ccsInst = policies[Policy.CarbonNeutrality].instruments?.["C_Investigacion_Desarrollo_Captura_Carbono"];
-            if (renInst?.effortPercentage > 0) totalEmissions *= (1 - (CONTROL_PARAMS.Factor_Reduccion_Emisiones_Renovables_PCN * (renInst.effortPercentage / 100)));
-            if (ccsInst?.effortPercentage > 0) totalSequestration += CONTROL_PARAMS.Factor_Aumento_Secuestro_CAC_PCN * (ccsInst.effortPercentage / 100);
+            if (renInst?.effortPercentage > 0) totalEmissions *= (1 - (CP.Factor_Reduccion_Emisiones_Renovables_PCN * (renInst.effortPercentage / 100)));
+            if (ccsInst?.effortPercentage > 0) totalSequestration += CP.Factor_Aumento_Secuestro_CAC_PCN * (ccsInst.effortPercentage / 100);
         }
-        if (effPSE > 0) totalEmissions *= (1 + CONTROL_PARAMS.Factor_Aumento_Emisiones_Fosiles_PSE * effPSE);
-        if (effPAI_emissions > 0) totalEmissions *= (1 + CONTROL_PARAMS.Factor_Aumento_Emisiones_AgroIntensivo_PPAI * effPAI_emissions);
-        indicators.co2EqEmissionsPerCapita = Math.max(0, ((totalEmissions - totalSequestration) * CONTROL_PARAMS.FACTOR_C_A_CO2EQ * CONTROL_PARAMS.CO2_EMISSIONS_SCALING_FACTOR) / stellaState.Poblacion_Total);
+        if (effPSE > 0) totalEmissions *= (1 + CP.Factor_Aumento_Emisiones_Fosiles_PSE * effPSE);
+        if (effPAI_emissions > 0) totalEmissions *= (1 + CP.Factor_Aumento_Emisiones_AgroIntensivo_PPAI * effPAI_emissions);
+        indicators.co2EqEmissionsPerCapita = Math.max(0, ((totalEmissions - totalSequestration) * CP.FACTOR_C_A_CO2EQ * CP.CO2_EMISSIONS_SCALING_FACTOR) / stellaState.Poblacion_Total);
 
         // 6. Political Pressure
         let ppAgricolaImpulse = 0, ppAmbientalistaImpulse = 0, ppSocialImpulse = 0;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CONTROL_PARAMS.Factor_Presion_Agricola_PAS;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CONTROL_PARAMS.Factor_Presion_Agricola_PGS;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CONTROL_PARAMS.Factor_Presion_Agricola_PPAI;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * CONTROL_PARAMS.Factor_Presion_Agricola_PPEA;
-        if (indicators.economicSecurity < CONTROL_PARAMS.Umbral_PP_Agricola_SegEconomica) ppAgricolaImpulse += (CONTROL_PARAMS.Umbral_PP_Agricola_SegEconomica - indicators.economicSecurity) * CONTROL_PARAMS.Sensibilidad_PP_Agricola_SegEconomica;
-        if (indicators.foodSecurity < CONTROL_PARAMS.Umbral_PP_Agricola_SegAlimentaria) ppAgricolaImpulse += (CONTROL_PARAMS.Umbral_PP_Agricola_SegAlimentaria - indicators.foodSecurity) * CONTROL_PARAMS.Sensibilidad_PP_Agricola_SegAlimentaria;
+        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Agricola_PAS;
+        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CP.Factor_Presion_Agricola_PGS;
+        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Agricola_PPAI;
+        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * CP.Factor_Presion_Agricola_PPEA;
+        if (indicators.economicSecurity < CP.Umbral_PP_Agricola_SegEconomica) ppAgricolaImpulse += (CP.Umbral_PP_Agricola_SegEconomica - indicators.economicSecurity) * CP.Sensibilidad_PP_Agricola_SegEconomica;
+        if (indicators.foodSecurity < CP.Umbral_PP_Agricola_SegAlimentaria) ppAgricolaImpulse += (CP.Umbral_PP_Agricola_SegAlimentaria - indicators.foodSecurity) * CP.Sensibilidad_PP_Agricola_SegAlimentaria;
         stellaState.PP_AGRICOLA += ppAgricolaImpulse - (stellaState.PP_AGRICOLA * 0.1);
         
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PAS;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PCR;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PGS;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PAGUA;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PCN;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PPAI_Neg;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PFRA_Neg;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.EnergySubsidies], currentLevel) * CONTROL_PARAMS.Factor_Presion_Ambiental_PSE_Neg;
-        if (indicators.biodiversity < CONTROL_PARAMS.Umbral_PP_Ambiental_Biodiversidad) ppAmbientalistaImpulse += (CONTROL_PARAMS.Umbral_PP_Ambiental_Biodiversidad - indicators.biodiversity) * CONTROL_PARAMS.Sensibilidad_PP_Ambiental_Biodiversidad;
-        if (indicators.co2EqEmissionsPerCapita > CONTROL_PARAMS.Umbral_PP_Ambiental_CO2PerCapita) ppAmbientalistaImpulse += (indicators.co2EqEmissionsPerCapita - CONTROL_PARAMS.Umbral_PP_Ambiental_CO2PerCapita) * CONTROL_PARAMS.Sensibilidad_PP_Ambiental_CO2PerCapita;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Ambiental_PAS;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CP.Factor_Presion_Ambiental_PCR;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CP.Factor_Presion_Ambiental_PGS;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CP.Factor_Presion_Ambiental_PAGUA;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CP.Factor_Presion_Ambiental_PCN;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Ambiental_PPAI_Neg;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CP.Factor_Presion_Ambiental_PFRA_Neg;
+        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.EnergySubsidies], currentLevel) * CP.Factor_Presion_Ambiental_PSE_Neg;
+        if (indicators.biodiversity < CP.Umbral_PP_Ambiental_Biodiversidad) ppAmbientalistaImpulse += (CP.Umbral_PP_Ambiental_Biodiversidad - indicators.biodiversity) * CP.Sensibilidad_PP_Ambiental_Biodiversidad;
+        if (indicators.co2EqEmissionsPerCapita > CP.Umbral_PP_Ambiental_CO2PerCapita) ppAmbientalistaImpulse += (indicators.co2EqEmissionsPerCapita - CP.Umbral_PP_Ambiental_CO2PerCapita) * CP.Sensibilidad_PP_Ambiental_CO2PerCapita;
         stellaState.PP_AMBIENTALISTA += ppAmbientalistaImpulse - (stellaState.PP_AMBIENTALISTA * 0.1);
 
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PAS;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PAGUA;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PCN;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PCR;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PPAI_Neg;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PPIE_Neg;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CONTROL_PARAMS.Factor_Presion_Social_PFRA_Neg;
-        if (indicators.socialWellbeing < CONTROL_PARAMS.Umbral_PP_Social_BienestarSocial) ppSocialImpulse += (CONTROL_PARAMS.Umbral_PP_Social_BienestarSocial - indicators.socialWellbeing) * CONTROL_PARAMS.Sensibilidad_PP_Social_BienestarSocial;
-        ppSocialImpulse += additionalTaxPressurePercentage * CONTROL_PARAMS.PPSocial_Increase_Factor_Per_Tax_Point;
-        stellaState.PP_SOCIAL += ppSocialImpulse - (stellaState.PP_SOCIAL * CONTROL_PARAMS.Tasa_disipacion_social);
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Social_PAS;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CP.Factor_Presion_Social_PAGUA;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CP.Factor_Presion_Social_PCN;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CP.Factor_Presion_Social_PCR;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Social_PPAI_Neg;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * CP.Factor_Presion_Social_PPIE_Neg;
+        ppSocialImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CP.Factor_Presion_Social_PFRA_Neg;
+        if (indicators.socialWellbeing < CP.Umbral_PP_Social_BienestarSocial) ppSocialImpulse += (CP.Umbral_PP_Social_BienestarSocial - indicators.socialWellbeing) * CP.Sensibilidad_PP_Social_BienestarSocial;
+        ppSocialImpulse += additionalTaxPressurePercentage * CP.PPSocial_Increase_Factor_Per_Tax_Point;
+        stellaState.PP_SOCIAL += ppSocialImpulse - (stellaState.PP_SOCIAL * CP.Tasa_disipacion_social);
         
         stellaState.PP_AGRICOLA = Math.max(0, Math.min(100, stellaState.PP_AGRICOLA));
         stellaState.PP_AMBIENTALISTA = Math.max(0, Math.min(100, stellaState.PP_AMBIENTALISTA));
@@ -1525,7 +1587,7 @@ export const App = () => {
         });
 
         // 8. Recalculate Score
-        const carbonScore = Math.max(0, 100 - (indicators.co2EqEmissionsPerCapita / CONTROL_PARAMS.Referencia_Max_CO2_per_Capita_Puntaje) * 100);
+        const carbonScore = Math.max(0, 100 - (indicators.co2EqEmissionsPerCapita / CP.Referencia_Max_CO2_per_Capita_Puntaje) * 100);
         let finalScore = 0;
         if (currentLevel === 1) {
             // Added small economic component to teach that sustainability requires fiscal viability
@@ -1667,6 +1729,14 @@ export const App = () => {
 
   }, [logEvent]);
 
+  // Auth gate
+  if (authStage === 'loading') {
+    return <div className="bg-custom-gray min-h-screen flex items-center justify-center text-gray-400 text-lg">Cargando...</div>;
+  }
+  if (authStage === 'unauthenticated') {
+    return <LoginScreen onGoogleLogin={handleGoogleLogin} onDemo={handleDemo} />;
+  }
+
   // FIX: Added return statement to App component to render the UI and fix the error in index.tsx
   return (
     <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
@@ -1685,7 +1755,16 @@ export const App = () => {
         onShowPlayerManual={handleTogglePlayerManual}
         onShowEquationsManual={handleToggleEquationsManual}
         wonLevels={gameState.wonLevels}
+        onToggleFacilitatorPanel={() => setShowFacilitatorPanel(p => !p)}
+        onAbandon={handleAbandonGame}
       />
+
+      {authStage === 'demo' && (
+        <div className="bg-yellow-900 bg-opacity-80 text-yellow-200 text-xs text-center py-1 px-4">
+          Modo demo — tus datos no se guardan.{' '}
+          <button onClick={() => { handleSignOut(); }} className="underline hover:text-yellow-100 ml-1">Iniciar sesion</button>
+        </div>
+      )}
 
       <main className="container mx-auto p-4 lg:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1745,6 +1824,52 @@ export const App = () => {
       {showFacilitatorManual && <FacilitatorManual onClose={handleToggleFacilitatorManual} />}
       {showPlayerManual && <PlayerManual onClose={handleTogglePlayerManual} />}
       {showEquationsManual && <EquationsManual gameState={gameState} onClose={handleToggleEquationsManual} />}
+
+      {showPreSurvey && (
+        <SurveyPre
+          onComplete={(data) => {
+            setShowPreSurvey(false);
+            sessionStorage.setItem('decarbonationPreSurveyDone_v1', '1');
+            savePreSurvey(data);
+          }}
+          onSkip={() => {
+            setShowPreSurvey(false);
+            sessionStorage.setItem('decarbonationPreSurveyDone_v1', '1');
+          }}
+        />
+      )}
+      {showPostSurvey && (
+        <SurveyPost
+          resultado={postSurveyResult}
+          nivelAlcanzado={gameState.currentLevel}
+          onComplete={(data) => {
+            setShowPostSurvey(false);
+            savePostSurvey(data, postSurveyResult, gameState.currentLevel);
+            setShowGameSummary(true);
+          }}
+          onSkip={() => { setShowPostSurvey(false); setShowGameSummary(true); }}
+        />
+      )}
+      {showGameSummary && (
+        <GameSummaryPanel
+          resultado={postSurveyResult}
+          nivelAlcanzado={gameState.currentLevel}
+          historicalData={historicalData}
+          onPlayAgain={() => {
+            setShowGameSummary(false);
+            setHasSentFinalDecarbonitoMessage(false);
+            setCurrentLevelManually(1);
+            sessionStorage.removeItem('decarbonationPreSurveyDone_v1');
+          }}
+        />
+      )}
+      {showFacilitatorPanel && (
+        <FacilitatorPanel
+          controlParams={controlParams}
+          onChange={setControlParams}
+          onClose={() => setShowFacilitatorPanel(false)}
+        />
+      )}
 
       <div className="fixed bottom-4 right-4 space-y-2 z-50">
         {toasts.map(toast => (
