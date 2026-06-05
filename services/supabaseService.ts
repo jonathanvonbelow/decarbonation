@@ -1,136 +1,71 @@
-import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import { createClient, Session, User } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error(
-    "SUPABASE_URL or SUPABASE_ANON_KEY environment variables not set. " +
-    "Supabase functionality will be disabled (demo mode)."
-  );
-}
-
-export const supabase: SupabaseClient | null =
-  SUPABASE_URL && SUPABASE_ANON_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// Singleton — null when env vars are absent (demo mode)
+export const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
-// ── Interfaces ────────────────────────────────────────────────────────────────
-
-export interface PreSurveyData {
-  vinculo_clima: string;
-  experiencia_simulacion: string;
-  familiaridad_afolu: number;   // 1-5
-  expectativa: string;
-  pais_region: string;
-  comentario_abierto?: string;
-}
-
-export interface PostSurveyData {
-  estrategia_efectiva: string;
-  sorpresa_yn: boolean;
-  sorpresa_texto?: string;
-  cambio_percepcion: number;    // 1-5
-  cambio_texto?: string;
-  utilidad_docente: number;     // 1-5
-  nps: number;                  // 0-10
-  comentarios?: string;
-}
-
-// ── Auth helpers ───────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Auth helpers
+// ---------------------------------------------------------------------------
 
 export async function signInWithGoogle(): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] signInWithGoogle: Supabase client not available (demo mode).");
-    return;
-  }
-  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-  if (error) {
-    console.error("[supabaseService] signInWithGoogle error:", error.message);
-    throw error;
-  }
+  if (!supabase) return;
+  await supabase.auth.signInWithOAuth({ provider: 'google' });
 }
 
 export async function signOut(): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] signOut: Supabase client not available (demo mode).");
-    return;
-  }
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error("[supabaseService] signOut error:", error.message);
-    throw error;
-  }
+  if (!supabase) return;
+  await supabase.auth.signOut();
 }
 
 export async function getSession(): Promise<Session | null> {
-  if (!supabase) {
-    console.warn("[supabaseService] getSession: Supabase client not available (demo mode).");
-    return null;
-  }
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error("[supabaseService] getSession error:", error.message);
-    return null;
-  }
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
   return data.session;
 }
 
 export function onAuthStateChange(
-  callback: (event: AuthChangeEvent, session: Session | null) => void
-): { data: { subscription: { unsubscribe: () => void } } } {
-  if (!supabase) {
-    console.warn("[supabaseService] onAuthStateChange: Supabase client not available (demo mode).");
-    return { data: { subscription: { unsubscribe: () => {} } } };
-  }
+  callback: (event: string, session: Session | null) => void
+) {
+  if (!supabase) return { data: { subscription: { unsubscribe: () => {} } } };
   return supabase.auth.onAuthStateChange(callback);
 }
 
-// ── Game session helpers ───────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Game session helpers
+// ---------------------------------------------------------------------------
 
 export async function createGameSession(
   userId: string,
   nivel: number
 ): Promise<string | null> {
-  if (!supabase) {
-    console.warn("[supabaseService] createGameSession: Supabase client not available (demo mode).");
-    return null;
-  }
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('game_sessions')
-    .insert({ user_id: userId, nivel_inicio: nivel })
+    .insert({ user_id: userId, nivel_inicio: nivel, inicio: new Date().toISOString() })
     .select('id')
     .single();
-  if (error) {
-    console.error("[supabaseService] createGameSession error:", error.message);
-    return null;
-  }
+  if (error) { console.error('createGameSession:', error); return null; }
   return data?.id ?? null;
 }
 
 export async function finalizeGameSession(
   sessionId: string,
-  resultado: 'victoria' | 'derrota' | 'abandono' | 'demo',
+  resultado: 'victoria' | 'derrota' | 'abandono',
   nivelAlcanzado: number
 ): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] finalizeGameSession: Supabase client not available (demo mode).");
-    return;
-  }
+  if (!supabase) return;
   const { error } = await supabase
     .from('game_sessions')
-    .update({
-      ended_at: new Date().toISOString(),
-      resultado,
-      nivel_alcanzado: nivelAlcanzado,
-    })
+    .update({ resultado, nivel_alcanzado: nivelAlcanzado, fin: new Date().toISOString() })
     .eq('id', sessionId);
-  if (error) {
-    console.error("[supabaseService] finalizeGameSession error:", error.message);
-  }
+  if (error) console.error('finalizeGameSession:', error);
 }
-
-// ── Snapshot helper ────────────────────────────────────────────────────────────
 
 export async function upsertAnnualSnapshot(
   sessionId: string,
@@ -138,44 +73,45 @@ export async function upsertAnnualSnapshot(
   indicators: Record<string, number>,
   politicasActivas: string[]
 ): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] upsertAnnualSnapshot: Supabase client not available (demo mode).");
-    return;
-  }
+  if (!supabase) return;
   const { error } = await supabase
     .from('annual_snapshots')
     .upsert(
-      {
-        session_id: sessionId,
-        anio,
-        indicators,
-        politicas_activas: politicasActivas,
-        updated_at: new Date().toISOString(),
-      },
+      { session_id: sessionId, anio, ...indicators, politicas_activas: politicasActivas },
       { onConflict: 'session_id,anio' }
     );
-  if (error) {
-    console.error("[supabaseService] upsertAnnualSnapshot error:", error.message);
-  }
+  if (error) console.error('upsertAnnualSnapshot:', error);
 }
 
-// ── Survey helpers ─────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Survey data types & helpers
+// ---------------------------------------------------------------------------
+
+export interface PreSurveyData {
+  rol?: string;
+  experiencia_previa?: string;
+  expectativas?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+export interface PostSurveyData {
+  aprendizaje?: string;
+  dificultad?: number;
+  recomendaria?: boolean;
+  comentarios?: string;
+  [key: string]: string | number | boolean | undefined;
+}
 
 export async function insertPreSurvey(
   userId: string,
   sessionId: string | null,
   data: PreSurveyData
 ): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] insertPreSurvey: Supabase client not available (demo mode).");
-    return;
-  }
+  if (!supabase) return;
   const { error } = await supabase
     .from('pre_surveys')
-    .insert({ user_id: userId, session_id: sessionId, ...data });
-  if (error) {
-    console.error("[supabaseService] insertPreSurvey error:", error.message);
-  }
+    .insert({ user_id: userId, session_id: sessionId, ...data, created_at: new Date().toISOString() });
+  if (error) console.error('insertPreSurvey:', error);
 }
 
 export async function insertPostSurvey(
@@ -183,14 +119,9 @@ export async function insertPostSurvey(
   sessionId: string | null,
   data: PostSurveyData
 ): Promise<void> {
-  if (!supabase) {
-    console.warn("[supabaseService] insertPostSurvey: Supabase client not available (demo mode).");
-    return;
-  }
+  if (!supabase) return;
   const { error } = await supabase
     .from('post_surveys')
-    .insert({ user_id: userId, session_id: sessionId, ...data });
-  if (error) {
-    console.error("[supabaseService] insertPostSurvey error:", error.message);
-  }
+    .insert({ user_id: userId, session_id: sessionId, ...data, created_at: new Date().toISOString() });
+  if (error) console.error('insertPostSurvey:', error);
 }

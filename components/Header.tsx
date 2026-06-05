@@ -7,34 +7,38 @@ interface HeaderProps {
   year: number;
   score: number;
   level: number;
-  levelName?: string; 
-  headerSuffix?: string; 
+  levelName?: string;
+  headerSuffix?: string;
   gameOver: boolean;
   setCurrentLevelManually: (levelNumber: number) => void;
   scoreTooltipText: string;
   scoreColorClass: string;
-  onShowTutorial: () => void; 
+  onShowTutorial: () => void;
   onShowFacilitatorManual: () => void;
   onShowPlayerManual: () => void;
   onShowEquationsManual: () => void;
-  wonLevels: number[]; 
+  wonLevels: number[];
+  onToggleFacilitatorPanel: () => void;
+  onAbandon?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  year, 
-  score, 
-  level, 
-  levelName, 
-  headerSuffix, 
-  gameOver, 
-  setCurrentLevelManually, 
+const Header: React.FC<HeaderProps> = ({
+  year,
+  score,
+  level,
+  levelName,
+  headerSuffix,
+  gameOver,
+  setCurrentLevelManually,
   scoreTooltipText,
   scoreColorClass,
   onShowTutorial,
   onShowFacilitatorManual,
   onShowPlayerManual,
   onShowEquationsManual,
-  wonLevels
+  wonLevels,
+  onToggleFacilitatorPanel,
+  onAbandon,
 }) => {
 
   return (
@@ -73,6 +77,15 @@ const Header: React.FC<HeaderProps> = ({
             >
               Ecuaciones
             </button>
+            {onAbandon && !gameOver && (
+              <button
+                onClick={onAbandon}
+                className="m-1 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-700 hover:border-red-500 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+                aria-label="Abandonar partida"
+              >
+                Abandonar
+              </button>
+            )}
           </div>
         </div>
         <div className="flex space-x-4 sm:space-x-6 items-center">
@@ -93,6 +106,14 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </Tooltip>
            {gameOver && <span className="text-lg font-semibold text-red-500 px-2 py-1 bg-red-900 rounded">JUEGO TERMINADO</span>}
+          <button
+            onClick={onToggleFacilitatorPanel}
+            className="text-gray-400 hover:text-gray-200 text-xl ml-2 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded"
+            aria-label="Abrir panel del facilitador"
+            title="Panel del facilitador"
+          >
+            &#9881;
+          </button>
         </div>
       </div>
       {levelName && !gameOver && (
