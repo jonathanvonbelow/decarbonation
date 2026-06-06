@@ -7,34 +7,38 @@ interface HeaderProps {
   year: number;
   score: number;
   level: number;
-  levelName?: string; 
-  headerSuffix?: string; 
+  levelName?: string;
+  headerSuffix?: string;
   gameOver: boolean;
   setCurrentLevelManually: (levelNumber: number) => void;
   scoreTooltipText: string;
   scoreColorClass: string;
-  onShowTutorial: () => void; 
+  onShowTutorial: () => void;
   onShowFacilitatorManual: () => void;
   onShowPlayerManual: () => void;
   onShowEquationsManual: () => void;
-  wonLevels: number[]; 
+  wonLevels: number[];
+  onToggleFacilitatorPanel: () => void;
+  onAbandon?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  year, 
-  score, 
-  level, 
-  levelName, 
-  headerSuffix, 
-  gameOver, 
-  setCurrentLevelManually, 
+const Header: React.FC<HeaderProps> = ({
+  year,
+  score,
+  level,
+  levelName,
+  headerSuffix,
+  gameOver,
+  setCurrentLevelManually,
   scoreTooltipText,
   scoreColorClass,
   onShowTutorial,
   onShowFacilitatorManual,
   onShowPlayerManual,
   onShowEquationsManual,
-  wonLevels
+  wonLevels,
+  onToggleFacilitatorPanel,
+  onAbandon,
 }) => {
 
   return (
@@ -66,13 +70,31 @@ const Header: React.FC<HeaderProps> = ({
             >
               Facilitadores
             </button>
-             <button
+            <button
               onClick={onShowEquationsManual}
               className="m-1 px-3 py-1.5 text-xs bg-rose-700 hover:bg-rose-800 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
               aria-label="Abrir manual de ecuaciones"
             >
               Ecuaciones
             </button>
+            <Tooltip text="Panel del Facilitador — ajustar parametros de simulacion" position="bottom">
+              <button
+                onClick={onToggleFacilitatorPanel}
+                className="m-1 px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+                aria-label="Abrir panel del facilitador"
+              >
+                ⚙ Facilitador
+              </button>
+            </Tooltip>
+            {!gameOver && onAbandon && (
+              <button
+                onClick={onAbandon}
+                className="m-1 px-3 py-1.5 text-xs bg-red-800 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+                aria-label="Abandonar partida"
+              >
+                Abandonar
+              </button>
+            )}
           </div>
         </div>
         <div className="flex space-x-4 sm:space-x-6 items-center">
@@ -92,11 +114,11 @@ const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
           </Tooltip>
-           {gameOver && <span className="text-lg font-semibold text-red-500 px-2 py-1 bg-red-900 rounded">JUEGO TERMINADO</span>}
+          {gameOver && <span className="text-lg font-semibold text-red-500 px-2 py-1 bg-red-900 rounded">JUEGO TERMINADO</span>}
         </div>
       </div>
       {levelName && !gameOver && (
-         <div className="text-center text-base text-gray-300 mt-1 sm:mt-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:top-12">Enfoque Actual: {levelName}</div>
+        <div className="text-center text-base text-gray-300 mt-1 sm:mt-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:top-12">Enfoque Actual: {levelName}</div>
       )}
       {!gameOver && (
         <div className="container mx-auto flex justify-center space-x-2 mt-2">
@@ -104,7 +126,7 @@ const Header: React.FC<HeaderProps> = ({
             const levelNum = i + 1;
             const isDisabled = level === levelNum || gameOver;
             return (
-              <Tooltip 
+              <Tooltip
                 key={`level-btn-tooltip-${levelNum}`}
                 text={isDisabled && level === levelNum ? `Ya estás en el Nivel ${levelNum}` : `Fijar Nivel ${levelNum}`}
                 position="bottom"
@@ -114,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({
                   onClick={() => setCurrentLevelManually(levelNum)}
                   disabled={isDisabled}
                   className={`px-3 py-1 text-xs rounded transition-colors mr-1 last:mr-0
-                    ${level === levelNum ? 'bg-blue-700 text-white cursor-default' : 
+                    ${level === levelNum ? 'bg-blue-700 text-white cursor-default' :
                       (gameOver ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white')
                     }
                   `}
