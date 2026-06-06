@@ -864,14 +864,15 @@ export const App = () => {
     const activePolicies = Object.values(currentState.policies)
       .filter((p: PolicyState) => p.isActive)
       .map((p: PolicyState) => p.id as string);
-    const indicatorSnapshot: Record<string, number> = {
-      biodiversidad: currentState.indicators.biodiversity,
-      co2_per_capita: currentState.indicators.co2EqEmissionsPerCapita,
-      seg_alimentaria: currentState.indicators.foodSecurity,
-      seg_economica: currentState.indicators.economicSecurity,
-      bienestar_social: currentState.indicators.socialWellbeing,
+    // Tipo AnnualSnapshotIndicators: campos planos que coinciden con columnas de la tabla annual_snapshots
+    const indicatorSnapshot = {
+      biodiversidad:        currentState.indicators.biodiversity,
+      co2_per_capita:       currentState.indicators.co2EqEmissionsPerCapita,
+      seg_alimentaria:      currentState.indicators.foodSecurity,
+      seg_economica:        currentState.indicators.economicSecurity,
+      bienestar_social:     currentState.indicators.socialWellbeing,
       estabilidad_politica: currentState.indicators.politicalStability,
-      score_general: currentState.indicators.generalScore,
+      score_general:        currentState.indicators.generalScore,
     };
     saveSnapshot(currentState.year, indicatorSnapshot, activePolicies);
   }, [saveSnapshot]);

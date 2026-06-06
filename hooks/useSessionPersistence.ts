@@ -6,14 +6,14 @@ import {
   insertPreSurvey,
   insertPostSurvey,
 } from '../services/supabaseService';
-import type { PreSurveyData, PostSurveyData } from '../services/supabaseService';
+import type { PreSurveyData, PostSurveyData, AnnualSnapshotIndicators } from '../services/supabaseService';
 
 export function useSessionPersistence(userId: string | null) {
   const sessionIdRef = useRef<string | null>(null);
 
   const startSession = async (nivel: number) => {
     if (!userId) return;
-    // Guard against re-entry: only create one session per hook instance
+    // Guard contra re-entrada: solo crea una sesión por instancia del hook
     if (sessionIdRef.current) return;
     const id = await createGameSession(userId, nivel);
     sessionIdRef.current = id;
@@ -21,7 +21,7 @@ export function useSessionPersistence(userId: string | null) {
 
   const saveSnapshot = async (
     anio: number,
-    indicators: Record<string, number>,
+    indicators: AnnualSnapshotIndicators,
     politicasActivas: string[]
   ) => {
     if (!sessionIdRef.current) return;

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
+import type { PreSurveyData } from '../../services/supabaseService';
 
-export interface PreSurveyData {
-  rol: string;
-  experienciaClima: string;
-  expectativa: string;
-}
+// Re-exportar para que App.tsx pueda importar el tipo desde aquí (compatibilidad)
+export type { PreSurveyData };
 
 interface SurveyPreProps {
   onComplete: (data: PreSurveyData) => void;
@@ -12,52 +10,91 @@ interface SurveyPreProps {
 }
 
 const SurveyPre: React.FC<SurveyPreProps> = ({ onComplete, onSkip }) => {
-  const [rol, setRol] = useState('');
-  const [experienciaClima, setExperienciaClima] = useState('');
+  const [vinculo_clima, setVinculoClima] = useState('');
+  const [experiencia_simulacion, setExperienciaSimulacion] = useState('');
+  const [familiaridad_afolu, setFamiliaridadAfolu] = useState(3);
   const [expectativa, setExpectativa] = useState('');
+  const [pais_region, setPaisRegion] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete({ rol, experienciaClima, expectativa });
+    onComplete({
+      vinculo_clima,
+      experiencia_simulacion,
+      familiaridad_afolu,
+      expectativa,
+      pais_region,
+    });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000] p-4">
-      <div className="bg-custom-light-gray rounded-xl shadow-2xl p-6 max-w-lg w-full">
+      <div className="bg-custom-light-gray rounded-xl shadow-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-custom-accent mb-1">Antes de empezar</h2>
         <p className="text-gray-400 text-sm mb-5">
-          Tus respuestas nos ayudan a mejorar la experiencia de aprendizaje.
+          Tus respuestas nos ayudan a mejorar la experiencia de aprendizaje. Solo lleva 2 minutos.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              ¿Cuál es tu rol o perfil? (ej: estudiante, docente, profesional)
+              ¿Cuál es tu vínculo con el clima o la política ambiental?
             </label>
-            <input
-              type="text"
-              value={rol}
-              onChange={e => setRol(e.target.value)}
+            <select
+              value={vinculo_clima}
+              onChange={e => setVinculoClima(e.target.value)}
               className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent"
-              placeholder="Tu rol..."
-            />
+            >
+              <option value="">Seleccioná una opción...</option>
+              <option value="investigacion">Investigación académica</option>
+              <option value="docencia">Docencia o formación</option>
+              <option value="politica_publica">Política pública o gobierno</option>
+              <option value="ong_sociedad_civil">ONG o sociedad civil</option>
+              <option value="sector_privado">Sector privado</option>
+              <option value="estudiante">Estudiante</option>
+              <option value="otro">Otro / Sin vínculo específico</option>
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              ¿Cuánta experiencia tenés con temas de cambio climático o política ambiental?
+              ¿Tenés experiencia previa con simulaciones o juegos serios?
             </label>
             <select
-              value={experienciaClima}
-              onChange={e => setExperienciaClima(e.target.value)}
+              value={experiencia_simulacion}
+              onChange={e => setExperienciaSimulacion(e.target.value)}
               className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent"
             >
               <option value="">Seleccioná una opción...</option>
-              <option value="ninguna">Ninguna — soy nuevo/a en el tema</option>
-              <option value="basica">Básica — conozco conceptos generales</option>
-              <option value="intermedia">Intermedia — trabajo o estudio el tema</option>
-              <option value="avanzada">Avanzada — experto/a o investigador/a</option>
+              <option value="ninguna">Ninguna — primera vez</option>
+              <option value="poca">Poca — alguna vez</option>
+              <option value="moderada">Moderada — varias veces</option>
+              <option value="mucha">Mucha — uso frecuente</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              ¿Qué tan familiarizado/a estás con el sector AFOLU (Agricultura, Silvicultura y Uso del Suelo)?
+              <span className="text-gray-500 ml-1">(1 = nada, 5 = experto/a)</span>
+            </label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setFamiliaridadAfolu(v)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none ${
+                    familiaridad_afolu === v
+                      ? 'bg-custom-accent text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -67,9 +104,22 @@ const SurveyPre: React.FC<SurveyPreProps> = ({ onComplete, onSkip }) => {
             <textarea
               value={expectativa}
               onChange={e => setExpectativa(e.target.value)}
-              rows={3}
+              rows={2}
               className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent resize-none"
               placeholder="Tu expectativa..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              País o región
+            </label>
+            <input
+              type="text"
+              value={pais_region}
+              onChange={e => setPaisRegion(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent"
+              placeholder="Ej: Argentina, Colombia, España..."
             />
           </div>
 
