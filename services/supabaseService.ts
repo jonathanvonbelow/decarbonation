@@ -1,4 +1,4 @@
-import { createClient, Session, User } from '@supabase/supabase-js';
+import { createClient, Session } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -47,7 +47,7 @@ export async function createGameSession(
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('game_sessions')
-    .insert({ user_id: userId, nivel_inicio: nivel, inicio: new Date().toISOString() })
+    .insert({ user_id: userId, nivel_alcanzado: nivel })
     .select('id')
     .single();
   if (error) { console.error('createGameSession:', error); return null; }
@@ -62,7 +62,7 @@ export async function finalizeGameSession(
   if (!supabase) return;
   const { error } = await supabase
     .from('game_sessions')
-    .update({ resultado, nivel_alcanzado: nivelAlcanzado, fin: new Date().toISOString() })
+    .update({ resultado, nivel_alcanzado: nivelAlcanzado, ended_at: new Date().toISOString() })
     .eq('id', sessionId);
   if (error) console.error('finalizeGameSession:', error);
 }
@@ -88,18 +88,23 @@ export async function upsertAnnualSnapshot(
 // ---------------------------------------------------------------------------
 
 export interface PreSurveyData {
-  rol?: string;
-  experiencia_previa?: string;
-  expectativas?: string;
-  [key: string]: string | number | boolean | undefined;
+  vinculo_clima: string;
+  experiencia_simulacion: string;
+  familiaridad_afolu: number;   // 1-5
+  expectativa: string;
+  pais_region: string;
+  comentario_abierto?: string;
 }
 
 export interface PostSurveyData {
-  aprendizaje?: string;
-  dificultad?: number;
-  recomendaria?: boolean;
+  estrategia_efectiva: string;
+  sorpresa_yn: boolean;
+  sorpresa_texto?: string;
+  cambio_percepcion: number;    // 1-5
+  cambio_texto?: string;
+  utilidad_docente: number;     // 1-5
+  nps: number;                  // 0-10
   comentarios?: string;
-  [key: string]: string | number | boolean | undefined;
 }
 
 export async function insertPreSurvey(
@@ -109,8 +114,8 @@ export async function insertPreSurvey(
 ): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase
-    .from('pre_surveys')
-    .insert({ user_id: userId, session_id: sessionId, ...data, created_at: new Date().toISOString() });
+    .from('pre_survey')
+    .insert({ user_id: userId, session_id: sessionId, ...data });
   if (error) console.error('insertPreSurvey:', error);
 }
 
@@ -121,7 +126,7 @@ export async function insertPostSurvey(
 ): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase
-    .from('post_surveys')
-    .insert({ user_id: userId, session_id: sessionId, ...data, created_at: new Date().toISOString() });
+    .from('post_survey')
+    .insert({ user_id: userId, session_id: sessionId, ...data });
   if (error) console.error('insertPostSurvey:', error);
 }
