@@ -1,6 +1,14 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { GameState, Policy, PolicyState, LandUse, LandUseType, Pact } from '../types';
 import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, ALL_POLICIES } from '../constants';
+import { Language } from '../hooks/useLanguage';
+import { getPolicyName } from '../i18n/gameData';
+
+// Suffix appended to the system instruction to enforce response language
+const LANGUAGE_INSTRUCTION: Record<Language, string> = {
+  es: '\n\nIMPORTANTE: Responde SIEMPRE en español, independientemente del idioma en que te hagan la pregunta.',
+  en: '\n\nIMPORTANT: Always respond in English, regardless of the language in which you are asked the question.',
+};
 
 const API_KEY = process.env.API_KEY;
 
@@ -11,7 +19,7 @@ if (!API_KEY) {
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
 // Helper function to create a concise summary of the game state
-const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTANCE' | 'LEVEL_REFLECTION' | 'NEWS_HEADLINES' = 'GENERAL_ASSISTANCE'): string => {
+const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTANCE' | 'LEVEL_REFLECTION' | 'NEWS_HEADLINES' = 'GENERAL_ASSISTANCE', language: Language = 'es'): string => {
     const { year, currentLevel, policies, indicators, stellaSpecificState, pacts, gameLog, currentEvent, additionalTaxPressurePercentage } = gameState;
     const activeLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === currentLevel);
 
@@ -45,7 +53,8 @@ const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTAN
     if (activePolicies.length > 0) {
         context += `**Políticas Activas (${activePolicies.length}):**\n`;
         activePolicies.forEach(p => {
-            context += `- ${p.name}`;
+            const pName = getPolicyName(p.id, language) || p.name;
+            context += `- ${pName}`;
             if (currentLevel >= 2) {
                 context += ` (Eficiencia: ${(p.currentEfficiency! * 100).toFixed(0)}%, Esfuerzo Instr.: ${p.totalInstrumentEffortApplied || 0}%)`;
             }
@@ -84,20 +93,20 @@ const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTAN
     return context;
 };
 
-export const askGemini = async (userInput: string, gameState: GameState, purpose: 'GENERAL_ASSISTANCE' | 'LEVEL_REFLECTION' = 'GENERAL_ASSISTANCE'): Promise<string> => {
+export const askGemini = async (userInput: string, gameState: GameState, purpose: 'GENERAL_ASSISTANCE' | 'LEVEL_REFLECTION' = 'GENERAL_ASSISTANCE', language: Language = 'es'): Promise<string> => {
   if (!API_KEY) {
     throw new Error("API_KEY is not configured.");
   }
-  
+
   const activeLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === gameState.currentLevel);
   if (!activeLevelConfig) {
     throw new Error(`Configuration for level ${gameState.currentLevel} not found.`);
   }
-  
-  const systemInstruction = activeLevelConfig.chatbotSystemInstruction;
-  const gameStateContext = createGameStateContext(gameState, purpose);
-  
-  const fullPrompt = `${gameStateContext}\n**Pregunta del Jugador:**\n${userInput}`;
+
+  const systemInstruction = activeLevelConfig.chatbotSystemInstruction + LANGUAGE_INSTRUCTION[language];
+  const gameStateContext = createGameStateContext(gameState, purpose, language);
+  const playerLabel = language === 'en' ? 'Player Question' : 'Pregunta del Jugador';
+  const fullPrompt = `${gameStateContext}\n**${playerLabel}:**\n${userInput}`;
   
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
@@ -115,21 +124,31 @@ export const askGemini = async (userInput: string, gameState: GameState, purpose
   } catch (error) {
     console.error("Error in askGemini:", error);
     if (error instanceof Error) {
-        return `Lo siento, ocurrió un error al procesar tu solicitud: ${error.message}`;
+        return language === 'en'
+          ? `Sorry, an error occurred while processing your request: ${error.message}`
+          : `Lo siento, ocurrió un error al procesar tu solicitud: ${error.message}`;
     }
-    return "Lo siento, ocurrió un error inesperado al procesar tu solicitud.";
+    return language === 'en'
+      ? "Sorry, an unexpected error occurred while processing your request."
+      : "Lo siento, ocurrió un error inesperado al procesar tu solicitud.";
   }
 };
 
 
-export const generateNewsHeadlines = async (gameState: GameState): Promise<string[]> => {
+export const generateNewsHeadlines = async (gameState: GameState, language: Language = 'es'): Promise<string[]> => {
     if (!API_KEY) {
         console.warn("Cannot generate news without API_KEY.");
         return [];
     }
 
-    const gameStateContext = createGameStateContext(gameState, 'NEWS_HEADLINES');
-    const prompt = `Basado en el siguiente estado del juego DecarboNation, genera 3 titulares de noticias breves (máximo 15 palabras cada uno) que reflejen la situación actual de la nación. Los titulares deben ser plausibles y pueden ser positivos, negativos o neutros. No expliques los titulares.
+    const gameStateContext = createGameStateContext(gameState, 'NEWS_HEADLINES', language);
+    const prompt = language === 'en'
+      ? `Based on the following DecarboNation game state, generate 3 brief news headlines (max 15 words each) reflecting the current state of the nation. Headlines should be plausible and can be positive, negative, or neutral. Do not explain the headlines.
+
+    ${gameStateContext}
+
+    Format examples: "Energy crisis hits industry as reserves drop", "Agro-ecological advances boost food security", "Political debate intensifies over new environmental regulations".`
+      : `Basado en el siguiente estado del juego DecarboNation, genera 3 titulares de noticias breves (máximo 15 palabras cada uno) que reflejen la situación actual de la nación. Los titulares deben ser plausibles y pueden ser positivos, negativos o neutros. No expliques los titulares.
 
     ${gameStateContext}
 

@@ -1,16 +1,36 @@
 import React from 'react';
 import { PolicyState } from '../types';
 import Tooltip from './common/Tooltip';
+import { useLanguageContext } from '../contexts/LanguageContext';
+import { getPolicyName } from '../i18n/gameData';
 
 interface PolicyToggleProps {
   policy: PolicyState;
   onToggle: () => void;
   currentYear: number;
   policyLockInDuration: number;
-  currentLevel: number; // Added to control visibility of efficiency dot
+  currentLevel: number;
 }
 
+const T = {
+  es: {
+    currentEfficiency: 'Eficiencia Actual:',
+    efficiencyNote: 'La eficiencia varía con el tiempo y factores políticos.',
+    lockedUntil: (y: number) => `🔒 Bloqueada hasta el año ${y}.`,
+    efficiencyTitle: (e: string) => `Eficiencia: ${e}%`,
+  },
+  en: {
+    currentEfficiency: 'Current Efficiency:',
+    efficiencyNote: 'Efficiency varies over time and political factors.',
+    lockedUntil: (y: number) => `🔒 Locked until year ${y}.`,
+    efficiencyTitle: (e: string) => `Efficiency: ${e}%`,
+  },
+} as const;
+
 const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYear, policyLockInDuration, currentLevel }) => {
+  const { language } = useLanguageContext();
+  const t = T[language];
+
   const isLockedForDeactivation =
     policy.isActive &&
     policy.activationYear !== undefined &&
@@ -33,20 +53,18 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   };
 
   const efficiencyPercentage = policy.currentEfficiency !== undefined ? (policy.currentEfficiency * 100).toFixed(0) : null;
+  const displayName = getPolicyName(policy.id, language) || policy.name;
 
   let baseTooltip: React.ReactNode;
-
   if (currentLevel >= 2 && policy.isActive && efficiencyPercentage !== null) {
     baseTooltip = (
       <>
         <p className="mb-2">{policy.description}</p>
         <div className="border-t border-gray-600 pt-2 mt-2">
-            <p className="font-semibold text-base text-center mb-1">
-                Eficiencia Actual: <span className={getEfficiencyTextColor(policy.currentEfficiency)}>{efficiencyPercentage}%</span>
-            </p>
-            <p className="text-xs text-gray-400 text-center">
-              La eficiencia varía con el tiempo y factores políticos.
-            </p>
+          <p className="font-semibold text-base text-center mb-1">
+            {t.currentEfficiency} <span className={getEfficiencyTextColor(policy.currentEfficiency)}>{efficiencyPercentage}%</span>
+          </p>
+          <p className="text-xs text-gray-400 text-center">{t.efficiencyNote}</p>
         </div>
       </>
     );
@@ -58,17 +76,14 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   if (isLockedForDeactivation && policy.activationYear !== undefined) {
     const unlockYear = policy.activationYear + policyLockInDuration;
     tooltipContent = (
-        <div>
-            <p className="font-semibold text-yellow-400 mb-2">
-                🔒 Bloqueada hasta el año {unlockYear}.
-            </p>
-            {baseTooltip}
-        </div>
+      <div>
+        <p className="font-semibold text-yellow-400 mb-2">{t.lockedUntil(unlockYear)}</p>
+        {baseTooltip}
+      </div>
     );
   } else {
     tooltipContent = baseTooltip;
   }
-
 
   return (
     <div className={`p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out
@@ -77,23 +92,17 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
     `}>
       <label htmlFor={policy.id} className={`flex items-center ${isLockedForDeactivation ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
         <div className="relative">
-          <input
-            type="checkbox"
-            id={policy.id}
-            className="sr-only"
-            checked={policy.isActive}
-            onChange={onToggle}
-          />
+          <input type="checkbox" id={policy.id} className="sr-only" checked={policy.isActive} onChange={onToggle} />
           <div className={`block w-14 h-8 rounded-full transition-colors ${policy.isActive ? 'bg-green-500' : 'bg-gray-600'}`}></div>
           <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${policy.isActive ? 'transform translate-x-6' : ''}`}></div>
         </div>
         <div className="ml-3 text-gray-200 font-medium flex items-center">
           <Tooltip content={tooltipContent}>
             <span>
-              {policy.name}
+              {displayName}
               {currentLevel >= 2 && policy.isActive && policy.currentEfficiency !== undefined && (
                 <span
-                  title={`Eficiencia: ${(policy.currentEfficiency * 100).toFixed(0)}%`}
+                  title={t.efficiencyTitle((policy.currentEfficiency * 100).toFixed(0))}
                   className={`inline-block w-3 h-3 rounded-full ml-2 ${getEfficiencyColor(policy.currentEfficiency)}`}
                 ></span>
               )}
