@@ -112,6 +112,57 @@ export const REGION_NAMES: Record<string, Record<Language, string>> = {
   'zona_costera_pesquera':  { es: 'Región Costera Pesquera',            en: 'Coastal Fishing Region' },
 };
 
+// ─── Regional zone content (Level 2) ─────────────────────────────────────────
+export const REGION_CONTENT: Record<string, Record<Language, {
+  focus: string;
+  mainSectors: string[];
+  agrarian: string;
+  commercial: string;
+  industrial: string;
+}>> = {
+  'zona_norte_agricola': {
+    es: { focus: 'Agricultura extensiva, potencial agroecológico', mainSectors: ['Agricultura', 'Ganadería', 'Servicios Locales'], agrarian: 'Cultivos tradicionales y ganadería', commercial: 'Comercio local de productos agrícolas', industrial: 'Pequeña agroindustria' },
+    en: { focus: 'Extensive agriculture, agro-ecological potential', mainSectors: ['Agriculture', 'Livestock', 'Local Services'], agrarian: 'Traditional crops and livestock', commercial: 'Local agricultural trade', industrial: 'Small agro-industry' },
+  },
+  'zona_centro_urbana': {
+    es: { focus: 'Industria, servicios, alta densidad poblacional', mainSectors: ['Servicios', 'Industria Manufacturera', 'Comercio'], agrarian: 'Periurbana, horticultura', commercial: 'Grandes centros comerciales y financieros', industrial: 'Parques industriales diversos' },
+    en: { focus: 'Industry, services, high population density', mainSectors: ['Services', 'Manufacturing Industry', 'Commerce'], agrarian: 'Peri-urban, horticulture', commercial: 'Large commercial and financial centers', industrial: 'Diverse industrial parks' },
+  },
+  'zona_sur_forestal': {
+    es: { focus: 'Conservación, turismo sostenible, productos forestales no maderables', mainSectors: ['Turismo', 'Forestería Sostenible', 'Artesanías'], agrarian: 'Pequeña escala, orgánica', commercial: 'Servicios turísticos, exportación productos naturales', industrial: 'Procesamiento mínimo de madera, artesanías' },
+    en: { focus: 'Conservation, sustainable tourism, non-timber forest products', mainSectors: ['Tourism', 'Sustainable Forestry', 'Crafts'], agrarian: 'Small-scale, organic', commercial: 'Tourist services, natural product exports', industrial: 'Minimal wood processing, crafts' },
+  },
+  'zona_costera_pesquera': {
+    es: { focus: 'Pesca, acuicultura, turismo costero', mainSectors: ['Pesca y Acuicultura', 'Turismo', 'Procesamiento de Pescado'], agrarian: 'Pequeña agricultura costera', commercial: 'Comercio de productos marinos, servicios turísticos', industrial: 'Plantas de procesamiento pesquero' },
+    en: { focus: 'Fishing, aquaculture, coastal tourism', mainSectors: ['Fishing & Aquaculture', 'Tourism', 'Fish Processing'], agrarian: 'Small coastal agriculture', commercial: 'Marine product trade, tourist services', industrial: 'Fish processing plants' },
+  },
+};
+
+// ─── Player report guide questions ───────────────────────────────────────────
+export const REPORT_GUIDE_SECTIONS: Record<Language, Array<{ title: string; questions: string[] }>> = {
+  es: [
+    { title: 'Estrategia General y Objetivos', questions: ['¿Cuál fue tu estrategia principal para este nivel/juego? ¿Cambió con el tiempo?', '¿Qué tan bien lograste los objetivos específicos del nivel/juego? ¿Dónde te quedaste corto o superaste las expectativas?'] },
+    { title: 'Decisiones Clave y Consecuencias', questions: ['¿Cuáles fueron las 2-3 decisiones políticas más impactantes que tomaste y por qué?', '¿Hubo alguna decisión que tuvo consecuencias inesperadas (positivas o negativas)?', 'Si ocurrió algún evento aleatorio, ¿cómo afectó tu estrategia y tus resultados?'] },
+    { title: 'Gestión de Indicadores y Desafíos', questions: ['¿Qué indicadores te resultaron más difíciles de gestionar y por qué?', '¿Cómo manejaste los trade-offs entre diferentes indicadores (ej. desarrollo económico vs. conservación ambiental)?', '¿Cómo evolucionaron las presiones políticas y cómo respondiste a ellas?'] },
+    { title: 'Aprendizajes y Próximos Pasos', questions: ['¿Qué aprendiste sobre la complejidad de la toma de decisiones para la sostenibilidad y la descarbonización?', '¿Qué harías diferente si volvieras a jugar este nivel/juego?', '¿Qué conceptos clave del juego (ej. AFOLU, LTS, servicios ecosistémicos, sinergias) entendiste mejor?'] },
+  ],
+  en: [
+    { title: 'Overall Strategy & Objectives', questions: ['What was your main strategy for this level/game? Did it change over time?', 'How well did you achieve the specific objectives? Where did you fall short or exceed expectations?'] },
+    { title: 'Key Decisions & Consequences', questions: ['What were the 2-3 most impactful policy decisions you made and why?', 'Were there any decisions that had unexpected consequences (positive or negative)?', 'If a random event occurred, how did it affect your strategy and results?'] },
+    { title: 'Indicator Management & Challenges', questions: ['Which indicators were hardest to manage and why?', 'How did you handle trade-offs between different indicators (e.g., economic development vs. environmental conservation)?', 'How did political pressures evolve and how did you respond to them?'] },
+    { title: 'Learnings & Next Steps', questions: ['What did you learn about the complexity of decision-making for sustainability and decarbonization?', 'What would you do differently if you played this level/game again?', 'Which key concepts (e.g., AFOLU, LTS, ecosystem services, synergies) did you understand better?'] },
+  ],
+};
+
+// ─── Innovation data (Level 3) ────────────────────────────────────────────────
+export const INNOVATION_DATA_NAMES: Record<Language, {
+  carbonCapture: string; carbonCaptureReadiness: string; renewables: string; materials: string;
+  low: string; medium: string; high: string; promising: string;
+}> = {
+  es: { carbonCapture: 'Tecnología de Captura de Carbono', carbonCaptureReadiness: 'Preparación', renewables: 'Renovables Avanzadas', materials: 'I+D Materiales Sostenibles', low: 'Baja', medium: 'Media', high: 'Alta', promising: 'Prometedor' },
+  en: { carbonCapture: 'Carbon Capture Technology', carbonCaptureReadiness: 'Readiness', renewables: 'Advanced Renewables', materials: 'Sustainable Materials R&D', low: 'Low', medium: 'Medium', high: 'High', promising: 'Promising' },
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export function getPolicyName(id: string, lang: Language): string {
   return POLICY_NAMES[id]?.[lang] ?? id;

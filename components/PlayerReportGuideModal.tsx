@@ -1,6 +1,12 @@
+import React from 'react';
+import { PLAYER_REPORT_GUIDE_QUESTIONS } from '../constants';
+import { useLanguageContext } from '../contexts/LanguageContext';
+import { REPORT_GUIDE_SECTIONS } from '../i18n/gameData';
 
-import React, { useEffect } from 'react';
-import { PLAYER_REPORT_GUIDE_QUESTIONS } from '../constants'; // Assuming this constant exists and is typed
+const T = {
+  es: { title: 'Guía de Reflexión Post-Juego / Lecciones Aprendidas', closeLabel: 'Cerrar guía', intro: 'Has llegado al final de esta etapa. Tómate un momento para reflexionar sobre tu experiencia. Usa las siguientes preguntas como guía. Puedes discutir tus respuestas con DecarboNito en el chat.', startReflection: 'Iniciar Reflexión con DecarboNito', closeBtn: 'Cerrar Guía' },
+  en: { title: 'Post-Game Reflection Guide / Lessons Learned', closeLabel: 'Close guide', intro: "You've reached the end of this stage. Take a moment to reflect on your experience. Use the following questions as a guide. You can discuss your answers with DecarboNito in the chat.", startReflection: 'Start Reflection with DecarboNito', closeBtn: 'Close Guide' },
+} as const;
 
 interface PlayerReportGuideModalProps {
   onClose: () => void;
@@ -9,11 +15,9 @@ interface PlayerReportGuideModalProps {
 }
 
 const PlayerReportGuideModal: React.FC<PlayerReportGuideModalProps> = ({ onClose, reportQuestions, onStartBotReflection }) => {
-  
-  useEffect(() => {
-    // This effect can be used if you want to auto-start bot reflection when modal opens
-    // onStartBotReflection(); 
-  }, [onStartBotReflection]);
+  const { language } = useLanguageContext();
+  const t = T[language];
+  const sections = REPORT_GUIDE_SECTIONS[language];
 
   return (
     <div 
@@ -28,22 +32,15 @@ const PlayerReportGuideModal: React.FC<PlayerReportGuideModalProps> = ({ onClose
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 id="player-report-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">Guía de Reflexión Post-Juego / Lecciones Aprendidas</h2>
-          <button 
-            onClick={onClose} 
-            className="text-gray-400 hover:text-white text-3xl leading-none"
-            aria-label="Cerrar guía"
-          >
+          <h2 id="player-report-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">{t.title}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" aria-label={t.closeLabel}>
             &times;
           </button>
         </div>
 
         <div className="overflow-y-auto flex-grow mb-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pr-2 space-y-4">
-          <p className="text-sm text-gray-300">
-            Has llegado al final de esta etapa. Tómate un momento para reflexionar sobre tu experiencia. 
-            Usa las siguientes preguntas como guía. Puedes discutir tus respuestas con DecarboNito en el chat.
-          </p>
-          {reportQuestions.sections.map((section, sectionIndex) => (
+          <p className="text-sm text-gray-300">{t.intro}</p>
+          {sections.map((section, sectionIndex) => (
             <div key={sectionIndex}>
               <h3 className="text-lg font-semibold text-blue-300 mt-3 mb-1">{section.title}</h3>
               <ul className="list-disc list-inside space-y-1 pl-4">
@@ -56,17 +53,11 @@ const PlayerReportGuideModal: React.FC<PlayerReportGuideModalProps> = ({ onClose
         </div>
         
         <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-gray-700 space-y-3 sm:space-y-0">
-          <button
-            onClick={onStartBotReflection}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors w-full sm:w-auto"
-          >
-            Iniciar Reflexión con DecarboNito
+          <button onClick={onStartBotReflection} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors w-full sm:w-auto">
+            {t.startReflection}
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-custom-accent hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors w-full sm:w-auto"
-          >
-            Cerrar Guía
+          <button onClick={onClose} className="px-4 py-2 bg-custom-accent hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors w-full sm:w-auto">
+            {t.closeBtn}
           </button>
         </div>
       </div>
