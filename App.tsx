@@ -1,6 +1,7 @@
 
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { useAuth } from './hooks/useAuth';
 import { useSessionPersistence } from './hooks/useSessionPersistence';
 import LoginScreen from './components/auth/LoginScreen';
@@ -1729,16 +1730,22 @@ export const App = () => {
 
   }, [logEvent]);
 
-  // Auth gate
+  // Auth gate — all branches share a single LanguageProvider so language state
+  // is preserved across the login → game transition without remounting.
   if (authStage === 'loading') {
     return <div className="bg-custom-gray min-h-screen flex items-center justify-center text-gray-400 text-lg">Cargando...</div>;
   }
   if (authStage === 'unauthenticated') {
-    return <LoginScreen onGoogleLogin={handleGoogleLogin} onDemo={handleDemo} />;
+    return (
+      <LanguageProvider>
+        <LoginScreen onGoogleLogin={handleGoogleLogin} onDemo={handleDemo} />
+      </LanguageProvider>
+    );
   }
 
   // FIX: Added return statement to App component to render the UI and fix the error in index.tsx
   return (
+    <LanguageProvider>
     <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
       <Header
         year={gameState.year}
@@ -1877,5 +1884,6 @@ export const App = () => {
         ))}
       </div>
     </div>
+    </LanguageProvider>
   );
 };
