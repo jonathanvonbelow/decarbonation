@@ -2,6 +2,12 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { Language } from './hooks/useLanguage';
+// Reads current language at call-time (avoids circular context dependency)
+const getActiveLanguage = (): Language => {
+  try { const s = localStorage.getItem('decarbonationLanguage_v1'); if (s === 'en' || s === 'es') return s; } catch {}
+  return 'es';
+};
 import { useAuth } from './hooks/useAuth';
 import { useSessionPersistence } from './hooks/useSessionPersistence';
 import LoginScreen from './components/auth/LoginScreen';
@@ -472,7 +478,7 @@ export const App = () => {
   useEffect(() => {
     gameStateRef.current = gameState;
     if (apiKeyAvailable) {
-      setCurrentSuggestedQuestions(getSuggestedQuestions(gameState));
+      setCurrentSuggestedQuestions(getSuggestedQuestions(gameState, getActiveLanguage()));
     }
   }, [gameState, apiKeyAvailable]);
 
@@ -579,7 +585,7 @@ export const App = () => {
     setIsBotLoading(true);
 
     try {
-      const botResponseText = await askGemini(userInput, gameStateRef.current);
+      const botResponseText = await askGemini(userInput, gameStateRef.current, 'GENERAL_ASSISTANCE', getActiveLanguage());
       addMessageToChat(botResponseText, 'bot');
     } catch (error) {
       console.error("Error comunicándose con Gemini:", error);
@@ -807,7 +813,7 @@ export const App = () => {
       }
 
       setIsBotLoading(true);
-      askGemini(prompt, gameStateRef.current, 'LEVEL_REFLECTION')
+      askGemini(prompt, gameStateRef.current, 'LEVEL_REFLECTION', getActiveLanguage())
         .then(response => {
           addMessageToChat(response, 'bot', 'level_event');
           logEvent(`Reflexión de DecarboNito para Nivel ${level} recibida.`);
