@@ -1,5 +1,10 @@
 
 import React, { useState } from 'react';
+import { useLanguageContext } from '../../contexts/LanguageContext';
+const FM_UI = {
+  es: { access: 'Acceso para Facilitadores', enterPassword: 'Por favor, ingrese la contraseña para ver el manual técnico.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', enter: 'Acceder', wrongPassword: 'Contraseña incorrecta.', subtitle: 'Detrás de Escena de DecarboNation', closeLabel: 'Cerrar manual', page: (c:number,t:number) => `Página ${c} de ${t}`, prev: 'Anterior', next: 'Siguiente' },
+  en: { access: 'Facilitator Access', enterPassword: 'Please enter the password to view the technical manual.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', enter: 'Access', wrongPassword: 'Incorrect password.', subtitle: 'Behind the Scenes of DecarboNation', closeLabel: 'Close manual', page: (c:number,t:number) => `Page ${c} of ${t}`, prev: 'Previous', next: 'Next' },
+} as const;
 import { CONTROL_PARAMS, LEVEL_CONFIGS, INDICATOR_IMPACT_WEIGHTS, INITIAL_POLICIES, INITIAL_LAND_USES, ALL_RANDOM_EVENTS, INITIAL_PACTS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
 import { Policy, LandUseType } from '../../types';
 
@@ -267,6 +272,8 @@ const manualSlides = [
 ];
 
 const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
+  const { language } = useLanguageContext();
+  const ui = FM_UI[language];
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
@@ -278,7 +285,7 @@ const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
       setIsAuthenticated(true);
       setError('');
     } else {
-      setError('Contraseña incorrecta.');
+      setError(ui.wrongPassword);
       setPassword('');
     }
   };
@@ -310,20 +317,20 @@ const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
       >
         {!isAuthenticated ? (
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-custom-accent mb-4">Acceso para Facilitadores</h2>
-            <p className="text-gray-400 mb-6">Por favor, ingrese la contraseña para ver el manual técnico.</p>
+            <h2 className="text-2xl font-bold text-custom-accent mb-4">{ui.access}</h2>
+            <p className="text-gray-400 mb-6">{ui.enterPassword}</p>
             <form onSubmit={handlePasswordSubmit} className="flex flex-col items-center gap-4">
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="p-3 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-custom-accent focus:border-transparent outline-none text-gray-200 placeholder-gray-500 transition-colors w-64 text-center"
-                placeholder="Contraseña"
-                aria-label="Contraseña para el manual"
+                placeholder={ui.passwordPlaceholder}
+                aria-label={ui.passwordLabel}
                 autoFocus
               />
               <button type="submit" className="px-6 py-2 bg-custom-accent hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors">
-                Acceder
+                {ui.enter}
               </button>
               {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
             </form>
@@ -333,18 +340,18 @@ const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
             <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
               <div>
                 <h2 id="manual-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">
-                    Manual del Facilitador: <span className="text-blue-300">{slide.title}</span>
+                    {language === 'es' ? 'Manual del Facilitador' : 'Facilitator Manual'}: <span className="text-blue-300">{slide.title}</span>
                 </h2>
-                <p className="text-xs text-gray-400">Detrás de Escena de DecarboNation</p>
+                <p className="text-xs text-gray-400">{ui.subtitle}</p>
               </div>
-              <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" aria-label="Cerrar manual">&times;</button>
+              <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" aria-label={ui.closeLabel}>&times;</button>
             </div>
             <div className="overflow-y-auto flex-grow mb-6 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 pr-4">
               {slide.content}
             </div>
             <div className="flex justify-between items-center pt-4 border-t border-slate-700">
               <span className="text-xs text-gray-500">
-                Página {currentSlide + 1} de {manualSlides.length}
+                {ui.page(currentSlide + 1, manualSlides.length)}
               </span>
               <div className="space-x-3">
                 <button
@@ -352,14 +359,14 @@ const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
                   disabled={currentSlide === 0}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Anterior
+                  {ui.prev}
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={currentSlide === manualSlides.length - 1}
                   className="px-4 py-2 bg-custom-accent hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Siguiente
+                  {ui.next}
                 </button>
               </div>
             </div>

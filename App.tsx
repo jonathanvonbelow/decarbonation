@@ -1,6 +1,7 @@
 
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { useAuth } from './hooks/useAuth';
 import { useSessionPersistence } from './hooks/useSessionPersistence';
 import LoginScreen from './components/auth/LoginScreen';
@@ -1739,6 +1740,7 @@ export const App = () => {
 
   // FIX: Added return statement to App component to render the UI and fix the error in index.tsx
   return (
+    <LanguageProvider>
     <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
       <Header
         year={gameState.year}
@@ -1877,5 +1879,6 @@ export const App = () => {
         ))}
       </div>
     </div>
+    </LanguageProvider>
   );
 };
