@@ -29,6 +29,7 @@ import Toast from './components/common/Toast';
 import GameLogPanel from './components/GameLogPanel';
 import { useAuth } from './hooks/useAuth';
 import { useSessionPersistence } from './hooks/useSessionPersistence';
+import { useLanguage } from './hooks/useLanguage';
 import LoginScreen from './components/auth/LoginScreen';
 import SurveyPre from './components/surveys/SurveyPre';
 import type { PreSurveyData } from './components/surveys/SurveyPre';
@@ -461,6 +462,9 @@ export const App = () => {
   // Auth y persistencia
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
   const { startSession, saveSnapshot, savePreSurvey, savePostSurvey } = useSessionPersistence(user?.id ?? null);
+
+  // Idioma — persiste en localStorage
+  const { language, toggleLanguage } = useLanguage();
 
 
   const handleToggleFacilitatorManual = () => {
@@ -1751,7 +1755,14 @@ export const App = () => {
     return <div className="bg-custom-gray min-h-screen flex items-center justify-center text-gray-300">Cargando...</div>;
   }
   if (authStage === 'unauthenticated') {
-    return <LoginScreen onGoogleLogin={handleGoogleLogin} onDemo={handleDemo} />;
+    return (
+      <LoginScreen
+        onGoogleLogin={handleGoogleLogin}
+        onDemo={handleDemo}
+        language={language}
+        onToggleLanguage={toggleLanguage}
+      />
+    );
   }
 
   // FIX: Added return statement to App component to render the UI and fix the error in index.tsx
@@ -1774,6 +1785,8 @@ export const App = () => {
         wonLevels={gameState.wonLevels}
         onToggleFacilitatorPanel={() => setShowFacilitatorPanel(prev => !prev)}
         onAbandon={handleAbandonGame}
+        language={language}
+        onToggleLanguage={toggleLanguage}
       />
 
       {authStage === 'demo' && (
