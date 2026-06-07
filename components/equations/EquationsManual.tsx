@@ -1,9 +1,13 @@
-
 import React, { useState, useMemo } from 'react';
 import { GameState, ControlParams, Policy, LandUseType } from '../../types';
 import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, LEVEL_CONFIGS } from '../../constants';
 import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
+import { useLanguageContext } from '../../contexts/LanguageContext';
+const EQ_UI = {
+  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo', thDecay: 'Decaimiento (Años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)' },
+  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost', thDecay: 'Decay (Years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)' },
+} as const;
 
 // Helper components for styling
 const Code = ({ children }: { children: React.ReactNode }) => <code className="text-orange-400 bg-gray-900 px-1.5 py-0.5 rounded-md font-mono">{children}</code>;
@@ -102,6 +106,8 @@ interface EquationsManualProps {
 }
 
 const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState }) => {
+  const { language } = useLanguageContext();
+  const ui = EQ_UI[language];
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
@@ -113,7 +119,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
       setIsAuthenticated(true);
       setError('');
     } else {
-      setError('Contraseña incorrecta.');
+      setError(ui.wrongPw);
       setPassword('');
     }
   };
@@ -148,20 +154,20 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
 
   const passwordScreen = (
     <div className="text-center">
-      <h2 className="text-2xl font-bold text-custom-accent mb-4">Manual de Ecuaciones y Parámetros</h2>
-      <p className="text-gray-400 mb-6">Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.</p>
+      <h2 className="text-2xl font-bold text-custom-accent mb-4">{ui.title}</h2>
+      <p className="text-gray-400 mb-6">{ui.subtitle}</p>
       <form onSubmit={handlePasswordSubmit} className="flex flex-col items-center gap-4">
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="p-3 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-custom-accent focus:border-transparent outline-none text-gray-200 placeholder-gray-500 transition-colors w-64 text-center"
-          placeholder="Contraseña"
-          aria-label="Contraseña para el manual"
+          placeholder={ui.passwordPlaceholder}
+          aria-label={ui.passwordLabel}
           autoFocus
         />
         <button type="submit" className="px-6 py-2 bg-custom-accent hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors">
-          Verificar
+          {ui.verify}
         </button>
         {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
       </form>
@@ -172,10 +178,10 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
     <>
         <div className="flex justify-between items-start mb-4 border-b border-slate-700 pb-4">
           <div>
-            <h2 id="manual-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">Manual de Ecuaciones</h2>
-            <p className="text-xs text-gray-400">Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: <LiveValue>{gameState.year}</LiveValue>)</p>
+            <h2 id="manual-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">{ui.mainTitle}</h2>
+            <p className="text-xs text-gray-400">{ui.liveSubtitle(gameState.year)}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" aria-label="Cerrar manual">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" aria-label={ui.closeLabel}>&times;</button>
         </div>
 
         <div className="overflow-y-auto flex-grow scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 pr-4">
@@ -183,7 +189,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
             <SectionTitle tooltipText={DESCRIPTIONS.TITLE_CONTROL_PARAMS}>Parámetros de Control Global</SectionTitle>
             <input
                 type="text"
-                placeholder="Filtrar parámetros..."
+                placeholder={ui.filter}
                 value={filter}
                 onChange={e => setFilter(e.target.value)}
                 className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded-md placeholder-gray-500"
@@ -192,8 +198,8 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_KEY}>Parámetro</Th>
-                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_VALUE}>Valor</Th>
+                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_KEY}>{ui.thParam}</Th>
+                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_VALUE}>{ui.thValue}</Th>
                         </tr>
                     </thead>
                     <tbody>
@@ -216,11 +222,11 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_NAME}>Política</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_COST}>Costo</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_DECAY}>Decaimiento (Años)</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFICIENCY_LIVE}>Eficiencia (Vivo)</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFORT_LIVE}>Esfuerzo (Vivo)</Th>
+                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_NAME}>{ui.thPolicy}</Th>
+                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_COST}>{ui.thCost}</Th>
+                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_DECAY}>{ui.thDecay}</Th>
+                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFICIENCY_LIVE}>{ui.thEfficiency}</Th>
+                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFORT_LIVE}>{ui.thEffort}</Th>
                         </tr>
                     </thead>
                     <tbody>
@@ -246,10 +252,10 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_NAME}>Uso de Suelo</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_EMISSION}>Emisión</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_SEQUESTRATION}>Secuestro</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_AREA_LIVE}>Área (Viva)</Th>
+                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_NAME}>{ui.thLandUse}</Th>
+                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_EMISSION}>{ui.thEmission}</Th>
+                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_SEQUESTRATION}>{ui.thSequestration}</Th>
+                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_AREA_LIVE}>{ui.thArea}</Th>
                         </tr>
                     </thead>
                     <tbody>

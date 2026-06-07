@@ -1,5 +1,9 @@
-
 import React from 'react';
+import { useLanguageContext } from '../../contexts/LanguageContext';
+const T = {
+  es: { won: (n:number) => `¡Nivel ${n} Superado!`, lost: (n:number) => `Nivel ${n} No Superado`, continue: 'Continuar al Siguiente Desafío', retry: 'Volver a Intentar', close: 'Cerrar' },
+  en: { won: (n:number) => `Level ${n} Completed!`, lost: (n:number) => `Level ${n} Not Completed`, continue: 'Continue to Next Challenge', retry: 'Try Again', close: 'Close' },
+} as const;
 
 interface LevelUpBannerProps {
   result: {
@@ -11,10 +15,12 @@ interface LevelUpBannerProps {
 }
 
 const LevelUpBanner: React.FC<LevelUpBannerProps> = ({ result, onClose }) => {
+  const { language } = useLanguageContext();
+  const t = T[language];
   const isWin = result.status === 'won';
-  const title = isWin ? `¡Nivel ${result.level} Superado!` : `Nivel ${result.level} No Superado`;
+  const title = isWin ? t.won(result.level) : t.lost(result.level);
   const bgColor = isWin ? 'bg-green-700 border-green-500' : 'bg-red-800 border-red-600';
-  const buttonText = isWin ? 'Continuar al Siguiente Desafío' : 'Volver a Intentar';
+  const buttonText = isWin ? t.continue : t.retry;
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] transition-opacity duration-300 ease-in-out animate-fade-in" onClick={onClose}>
@@ -25,7 +31,7 @@ const LevelUpBanner: React.FC<LevelUpBannerProps> = ({ result, onClose }) => {
         <button 
           onClick={onClose} 
           className="absolute top-2 right-3 text-white hover:text-gray-300 text-3xl font-bold leading-none focus:outline-none"
-          aria-label="Cerrar"
+          aria-label={t.close}
         >
           &times;
         </button>

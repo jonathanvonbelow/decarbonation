@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChatMessage } from '../types'; 
+import { ChatMessage } from '../types';
+import { useLanguageContext } from '../contexts/LanguageContext';
+const T = {
+  es: { title: 'DecarboNito Asesor', focus: 'Enfoque:', noKey: 'API Key no configurada', thinking: 'DecarboNito está pensando...', placeholder: 'Pregunta a DecarboNito...', inputLabel: 'Tu pregunta para DecarboNito', sendingLabel: 'Enviando pregunta', sendLabel: 'Enviar pregunta', send: 'Enviar', noKeyMsg: 'El chatbot está desactivado porque la API Key no está configurada.', askLabel: (q:string) => `Preguntar: ${q}` },
+  en: { title: 'DecarboNito Advisor', focus: 'Focus:', noKey: 'API Key not configured', thinking: 'DecarboNito is thinking...', placeholder: 'Ask DecarboNito...', inputLabel: 'Your question for DecarboNito', sendingLabel: 'Sending question', sendLabel: 'Send question', send: 'Send', noKeyMsg: 'Chatbot is disabled because the API Key is not configured.', askLabel: (q:string) => `Ask: ${q}` },
+} as const;
 
 interface ChatbotPanelProps {
   messages: ChatMessage[];
@@ -18,6 +23,8 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
   currentLevelName,
   suggestedQuestions 
 }) => {
+  const { language } = useLanguageContext();
+  const t = T[language];
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
@@ -50,9 +57,9 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
-          DecarboNito Asesor
+          {t.title}
         </h3>
-        {currentLevelName && <p className="text-xs text-gray-400 ml-8">Enfoque: {currentLevelName}</p>}
+        {currentLevelName && <p className="text-xs text-gray-400 ml-8">{t.focus} {currentLevelName}</p>}
       </div>
       <div className="flex-grow p-4 space-y-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {messages.map((msg, index) => (
@@ -80,26 +87,26 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            placeholder={!apiKeyAvailable ? "API Key no configurada" : isLoading ? "DecarboNito está pensando..." : "Pregunta a DecarboNito..."}
+            placeholder={!apiKeyAvailable ? t.noKey : isLoading ? t.thinking : t.placeholder}
             className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-custom-accent focus:border-transparent outline-none text-gray-200 placeholder-gray-500 transition-colors"
             disabled={isLoading || !apiKeyAvailable}
-            aria-label="Tu pregunta para DecarboNito"
+            aria-label={t.inputLabel}
           />
           <button
             type="submit"
             disabled={isLoading || !userInput.trim() || !apiKeyAvailable}
             className="px-6 py-3 bg-custom-accent text-white font-semibold rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75"
-            aria-label={isLoading ? "Enviando pregunta" : "Enviar pregunta"}
+            aria-label={isLoading ? t.sendingLabel : t.sendLabel}
           >
             {isLoading ? (
               <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-            ) : 'Enviar'}
+            ) : t.send}
           </button>
         </div>
-         {!apiKeyAvailable && <p className="text-xs text-red-400 mt-1">El chatbot está desactivado porque la API Key no está configurada.</p>}
+         {!apiKeyAvailable && <p className="text-xs text-red-400 mt-1">{t.noKeyMsg}</p>}
       
         {apiKeyAvailable && suggestedQuestions.length > 0 && !isLoading && (
           <div className="mt-3 pt-2 border-t border-gray-700/50">
