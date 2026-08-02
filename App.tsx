@@ -493,7 +493,7 @@ const buildLevelInitializationState = (levelNumber: number): LevelInitialization
 // FIX: Removed React.FC type from component definition to align with modern functional component best practices and avoid potential assignment errors.
 export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
-  const { startSession, saveSnapshot, savePreSurvey, savePostSurvey } = useSessionPersistence(user?.id ?? null);
+  const { startSession, resetSession, saveFinalSnapshot, savePreSurvey, savePostSurvey, endSession } = useSessionPersistence(user?.id ?? null);
 
   const [gameState, setGameState] = useState<GameState>(() => {
     const initialLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === 1);
@@ -631,7 +631,7 @@ export const App = () => {
       if (authStage === 'authenticated' && !sessionStorage.getItem('decarbonationPreSurveyDone_v1')) {
         setShowPreSurvey(true);
       }
-      startSession(gameState.currentLevel);
+      startSession(gameState.currentLevel, INITIAL_YEAR);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.currentLevel, gameState.gameOverReason, showTutorialModal, showLevelIntroModalForLevel, authStage]);
@@ -714,11 +714,30 @@ export const App = () => {
 
   useEffect(() => {
     if (!gameState.gameOverReason) return;
-    if (gameState.gameOverReason !== 'Partida abandonada por el jugador.') {
-      const resultado = gameState.gameOverReason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota';
-      setPostSurveyResult(resultado);
+
+    const resultadoFinal: 'victoria' | 'derrota' | 'abandono' =
+      gameState.gameOverReason === 'Partida abandonada por el jugador.'
+        ? 'abandono'
+        : (gameState.gameOverReason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota');
+
+    if (resultadoFinal !== 'abandono') {
+      setPostSurveyResult(resultadoFinal);
       setShowPostSurvey(true);
     }
+
+    // Persistir el estado FINAL de la sesión exactamente una vez al concluir
+    // la partida (annual_snapshots: una fila por sesión) y cerrar la sesión
+    // (game_sessions.resultado/nivel_alcanzado/año_fin), independientemente
+    // de si el jugador completa o no la encuesta post.
+    const activePolicies = Object.values(gameState.policies).filter((p: any) => p.isActive).map((p: any) => p.id);
+    saveFinalSnapshot({
+      biodiversidad_final: gameState.indicators.biodiversity,
+      co2_final: gameState.indicators.co2EqEmissionsPerCapita,
+      seg_alimentaria_final: gameState.indicators.foodSecurity,
+      seg_economica_final: gameState.indicators.economicSecurity,
+      score_final: gameState.indicators.generalScore,
+    }, activePolicies);
+    endSession(resultadoFinal, gameState.currentLevel, gameState.year);
     // This effect depends only on gameOverReason so it fires exactly once per game-over
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.gameOverReason]);
@@ -905,19 +924,11 @@ export const App = () => {
         }
         return [...prev, currentYearData];
      });
-
-    // Persistir snapshot anual en Supabase
-    const activePolicies = Object.values(currentState.policies).filter((p: any) => p.isActive).map((p: any) => p.id);
-    saveSnapshot(currentState.year, {
-      biodiversidad: currentState.indicators.biodiversity,
-      co2_per_capita: currentState.indicators.co2EqEmissionsPerCapita,
-      seg_alimentaria: currentState.indicators.foodSecurity,
-      seg_economica: currentState.indicators.economicSecurity,
-      bienestar_social: currentState.indicators.socialWellbeing,
-      estabilidad_politica: currentState.indicators.politicalStability,
-      score_general: currentState.indicators.generalScore,
-    }, activePolicies);
-  }, [saveSnapshot]);
+    // Nota: la persistencia en Supabase del snapshot ya NO ocurre acá (por año).
+    // annual_snapshots se recortó a una sola fila por sesión con el estado
+    // FINAL — ver saveFinalSnapshot(), llamado una única vez al concluir la
+    // partida (efecto de gameOverReason más abajo).
+  }, []);
 
 
   const togglePolicy = useCallback((policyId: Policy) => {
@@ -1840,7 +1851,7 @@ export const App = () => {
           nivelAlcanzado={gameState.currentLevel}
           onComplete={(data) => {
             setShowPostSurvey(false);
-            savePostSurvey(data, postSurveyResult, gameState.currentLevel);
+            savePostSurvey(data);
             setShowGameSummary(true);
           }}
           onSkip={() => { setShowPostSurvey(false); setShowGameSummary(true); }}
@@ -1854,6 +1865,9 @@ export const App = () => {
           onPlayAgain={() => {
             setShowGameSummary(false);
             setHasSentFinalDecarbonitoMessage(false);
+            // New playthrough — a fresh game_sessions row should be created,
+            // not reused/overwritten (see useSessionPersistence.resetSession).
+            resetSession();
             setCurrentLevelManually(1);
             sessionStorage.removeItem('decarbonationPreSurveyDone_v1');
           }}

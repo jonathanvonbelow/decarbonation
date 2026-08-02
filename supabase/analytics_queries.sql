@@ -1,7 +1,10 @@
 -- =============================================================================
 -- DecarboNation v2.6 — Analytics Queries para Supabase Studio
 -- Ejecutar en: Supabase Dashboard > SQL Editor
--- Última actualización: 2026-06-05
+-- Actualizado para el schema mínimo recortado — ver
+-- ultimo-ajuste/05_datos_minimos_supabase.md. `annual_snapshots` ahora es una
+-- fila por sesión con el estado FINAL (no una serie año a año), por lo que ya
+-- no existen columnas `anio` / `biodiversidad` / etc. sin sufijo `_final`.
 -- =============================================================================
 
 
@@ -55,82 +58,81 @@ FROM public.game_sessions
 GROUP BY nivel_alcanzado
 ORDER BY nivel_alcanzado;
 
+-- Temporalidad de las partidas: distribución de año_inicio / año_fin
+SELECT
+    anio_inicio,
+    anio_fin,
+    COUNT(*) AS total_sesiones
+FROM public.game_sessions
+WHERE anio_inicio IS NOT NULL OR anio_fin IS NOT NULL
+GROUP BY anio_inicio, anio_fin
+ORDER BY anio_inicio, anio_fin;
+
 
 -- =============================================================================
--- SECCIÓN 2: Curvas de aprendizaje (score por año de simulación)
+-- SECCIÓN 2: Estado final de las partidas (annual_snapshots — versión mínima)
+-- Ya no hay serie año a año: solo el estado final por sesión. Ver
+-- ultimo-ajuste/05_datos_minimos_supabase.md sección 3 ("qué se pierde con
+-- este recorte").
 -- =============================================================================
 
--- Score promedio por año de simulación, agrupado por resultado
--- Compara trayectorias de jugadores ganadores vs perdedores
+-- Score final promedio, agrupado por resultado
 SELECT
-    anio,
-    resultado,
-    ROUND(AVG(s.score_general), 4)     AS score_promedio,
-    COUNT(DISTINCT s.session_id)        AS num_sesiones
-FROM public.annual_snapshots s
-JOIN public.game_sessions gs ON gs.id = s.session_id
-GROUP BY anio, resultado
-ORDER BY anio, resultado;
-
--- Biodiversidad y CO2 promedio por año simulado (toda la población)
-SELECT
-    anio,
-    ROUND(AVG(biodiversidad), 4)      AS biodiversidad_promedio,
-    ROUND(AVG(co2_per_capita), 4)     AS co2_per_capita_promedio,
-    COUNT(*)                           AS num_snapshots
-FROM public.annual_snapshots
-GROUP BY anio
-ORDER BY anio;
-
--- Comparativa de biodiversidad y CO2 por año y resultado de sesión
-SELECT
-    anio,
     gs.resultado,
-    ROUND(AVG(s.biodiversidad), 4)      AS biodiversidad_promedio,
-    ROUND(AVG(s.co2_per_capita), 4)     AS co2_per_capita_promedio
+    ROUND(AVG(s.score_final), 4)        AS score_final_promedio,
+    COUNT(*)                             AS num_sesiones
 FROM public.annual_snapshots s
 JOIN public.game_sessions gs ON gs.id = s.session_id
-GROUP BY anio, gs.resultado
-ORDER BY anio, gs.resultado;
+GROUP BY gs.resultado
+ORDER BY gs.resultado;
+
+-- Biodiversidad y CO2 final promedio (toda la población)
+SELECT
+    ROUND(AVG(biodiversidad_final), 4)  AS biodiversidad_final_promedio,
+    ROUND(AVG(co2_final), 4)            AS co2_final_promedio,
+    COUNT(*)                             AS num_sesiones
+FROM public.annual_snapshots;
+
+-- Comparativa de indicadores finales por resultado de sesión
+SELECT
+    gs.resultado,
+    ROUND(AVG(s.biodiversidad_final), 4)   AS biodiversidad_final_promedio,
+    ROUND(AVG(s.co2_final), 4)             AS co2_final_promedio,
+    ROUND(AVG(s.seg_alimentaria_final), 4) AS seg_alimentaria_final_promedio,
+    ROUND(AVG(s.seg_economica_final), 4)   AS seg_economica_final_promedio
+FROM public.annual_snapshots s
+JOIN public.game_sessions gs ON gs.id = s.session_id
+GROUP BY gs.resultado
+ORDER BY gs.resultado;
 
 
 -- =============================================================================
--- SECCIÓN 3: Políticas más usadas
+-- SECCIÓN 3: Políticas activas al final de la partida
 -- =============================================================================
 
--- Frecuencia de cada política en politicas_activas JSONB
--- politicas_activas es un array JSON de strings, e.g. ["reforestacion","solar"]
+-- Frecuencia de cada política en politicas_activas_final (JSONB, array de strings)
 SELECT
     politica,
     COUNT(*) AS frecuencia
 FROM public.annual_snapshots,
-     jsonb_array_elements_text(politicas_activas) AS politica
+     jsonb_array_elements_text(politicas_activas_final) AS politica
 GROUP BY politica
 ORDER BY frecuencia DESC;
 
--- Top 5 combinaciones de políticas en sesiones ganadoras
--- Muestra las combinaciones exactas más frecuentes al cierre de sesión (último año)
-WITH ultimo_snapshot AS (
-    -- Tomamos el snapshot del año más alto de cada sesión ganadora
-    SELECT DISTINCT ON (s.session_id)
-        s.session_id,
-        s.politicas_activas
-    FROM public.annual_snapshots s
-    JOIN public.game_sessions gs ON gs.id = s.session_id
-    WHERE gs.resultado = 'victoria'
-    ORDER BY s.session_id, s.anio DESC
-)
+-- Top 5 combinaciones exactas de políticas activas al final, en sesiones ganadoras
 SELECT
-    politicas_activas::TEXT AS combinacion_politicas,
-    COUNT(*)                AS frecuencia
-FROM ultimo_snapshot
-GROUP BY politicas_activas::TEXT
+    s.politicas_activas_final::TEXT AS combinacion_politicas,
+    COUNT(*)                         AS frecuencia
+FROM public.annual_snapshots s
+JOIN public.game_sessions gs ON gs.id = s.session_id
+WHERE gs.resultado = 'victoria'
+GROUP BY s.politicas_activas_final::TEXT
 ORDER BY frecuencia DESC
 LIMIT 5;
 
 
 -- =============================================================================
--- SECCIÓN 4: Perfil de jugadores (encuesta pre)
+-- SECCIÓN 4: Perfil de jugadores (encuesta pre — recortada a 3 preguntas)
 -- =============================================================================
 
 -- Distribución de vínculo con el tema climático
@@ -143,52 +145,36 @@ WHERE vinculo_clima IS NOT NULL
 GROUP BY vinculo_clima
 ORDER BY total DESC;
 
--- Distribución de familiaridad con AFOLU: promedio y conteo por valor
+-- Experiencia previa con simulaciones de política pública (sí/no)
 SELECT
-    familiaridad_afolu,
+    experiencia_simulacion,
     COUNT(*)                                        AS total,
     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS porcentaje
 FROM public.pre_survey
-WHERE familiaridad_afolu IS NOT NULL
-GROUP BY familiaridad_afolu
-ORDER BY familiaridad_afolu;
+WHERE experiencia_simulacion IS NOT NULL
+GROUP BY experiencia_simulacion
+ORDER BY experiencia_simulacion;
 
--- Promedio general de familiaridad_afolu
+-- Distribución por bloque de convocatoria (1-4, ver
+-- ultimo-ajuste/04_recalibracion_actores_y_convocatoria.md) — permite
+-- filtrar el análisis de septiembre por bloque.
 SELECT
-    ROUND(AVG(familiaridad_afolu), 2) AS familiaridad_afolu_promedio,
-    COUNT(*)                           AS respuestas
-FROM public.pre_survey
-WHERE familiaridad_afolu IS NOT NULL;
-
--- Top países/regiones participantes
-SELECT
-    pais_region,
-    COUNT(*) AS total_participantes
-FROM public.pre_survey
-WHERE pais_region IS NOT NULL AND pais_region <> ''
-GROUP BY pais_region
-ORDER BY total_participantes DESC
-LIMIT 20;
-
--- Distribución de expectativas antes del juego
-SELECT
-    expectativa,
+    bloque_convocatoria,
     COUNT(*)                                        AS total,
     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS porcentaje
 FROM public.pre_survey
-WHERE expectativa IS NOT NULL
-GROUP BY expectativa
-ORDER BY total DESC;
+WHERE bloque_convocatoria IS NOT NULL
+GROUP BY bloque_convocatoria
+ORDER BY bloque_convocatoria;
 
 
 -- =============================================================================
--- SECCIÓN 5: Resultados de encuesta post
+-- SECCIÓN 5: Resultados de encuesta post (recortada a 4 preguntas)
 -- =============================================================================
 
 -- Promedios clave de encuesta post
 SELECT
-    ROUND(AVG(cambio_percepcion), 2)  AS cambio_percepcion_promedio,
-    ROUND(AVG(utilidad_docente), 2)   AS utilidad_docente_promedio,
+    ROUND(AVG(utilidad_sintesis), 2)  AS utilidad_sintesis_promedio,
     ROUND(AVG(nps), 2)                AS nps_raw_promedio,
     COUNT(*)                           AS total_respuestas
 FROM public.post_survey;
@@ -234,7 +220,6 @@ ORDER BY sorpresa_yn;
 -- Conteo de respuestas abiertas no nulas (cuántos escribieron texto libre)
 SELECT
     COUNT(*) FILTER (WHERE sorpresa_texto   IS NOT NULL AND sorpresa_texto   <> '') AS escribieron_sorpresa,
-    COUNT(*) FILTER (WHERE cambio_texto     IS NOT NULL AND cambio_texto     <> '') AS escribieron_cambio,
     COUNT(*) FILTER (WHERE comentarios      IS NOT NULL AND comentarios      <> '') AS escribieron_comentarios,
     COUNT(*)                                                                         AS total_respuestas_post
 FROM public.post_survey;
@@ -282,8 +267,8 @@ ORDER BY bucket_10min;
 -- =============================================================================
 
 -- Vista materializada: session_summary
--- Consolida game_sessions + profiles + encuestas pre y post en una sola fila.
--- Útil para exportar un CSV completo después de cada taller.
+-- Consolida game_sessions + profiles + estado final + encuestas pre y post en
+-- una sola fila. Útil para exportar un CSV completo después de cada taller.
 /*
 CREATE MATERIALIZED VIEW public.session_summary AS
 SELECT
@@ -291,48 +276,34 @@ SELECT
     gs.started_at,
     gs.ended_at,
     gs.duracion_segundos,
+    gs.anio_inicio,
+    gs.anio_fin,
     gs.nivel_alcanzado,
     gs.resultado,
     p.email,
     p.nombre,
     p.afiliacion,
     p.rol,
+    snap.biodiversidad_final,
+    snap.co2_final,
+    snap.seg_alimentaria_final,
+    snap.seg_economica_final,
+    snap.score_final,
+    snap.politicas_activas_final,
     pre.vinculo_clima,
     pre.experiencia_simulacion,
-    pre.familiaridad_afolu,
-    pre.expectativa,
-    pre.pais_region,
-    post.cambio_percepcion,
-    post.cambio_texto,
-    post.utilidad_docente,
+    pre.bloque_convocatoria,
+    post.utilidad_sintesis,
     post.nps,
     post.sorpresa_yn,
     post.sorpresa_texto,
     post.comentarios
 FROM public.game_sessions gs
 LEFT JOIN public.profiles           p    ON p.id   = gs.user_id
+LEFT JOIN public.annual_snapshots   snap ON snap.session_id = gs.id
 LEFT JOIN public.pre_survey         pre  ON pre.session_id  = gs.id
 LEFT JOIN public.post_survey        post ON post.session_id = gs.id;
 
 -- Actualizar bajo demanda (no automático):
 -- REFRESH MATERIALIZED VIEW public.session_summary;
-*/
-
--- Vista materializada: learning_curve
--- Score general por año de simulación y resultado, listo para Recharts.
--- Estructura: { anio, resultado, score_promedio, num_sesiones }
-/*
-CREATE MATERIALIZED VIEW public.learning_curve AS
-SELECT
-    s.anio,
-    gs.resultado,
-    ROUND(AVG(s.score_general), 4)    AS score_promedio,
-    COUNT(DISTINCT s.session_id)       AS num_sesiones
-FROM public.annual_snapshots s
-JOIN public.game_sessions gs ON gs.id = s.session_id
-GROUP BY s.anio, gs.resultado
-ORDER BY s.anio, gs.resultado;
-
--- Actualizar bajo demanda:
--- REFRESH MATERIALIZED VIEW public.learning_curve;
 */
