@@ -54,8 +54,9 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
     <div className="bg-custom-light-gray rounded-lg shadow-xl flex flex-col flex-1 min-h-[400px]">
       <div className="p-4 border-b border-gray-700">
         <h3 className="text-xl font-semibold text-custom-accent flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 1.5a1 1 0 01.95.69l1.14 3.5a3.5 3.5 0 002.22 2.22l3.5 1.14a1 1 0 010 1.9l-3.5 1.14a3.5 3.5 0 00-2.22 2.22l-1.14 3.5a1 1 0 01-1.9 0l-1.14-3.5a3.5 3.5 0 00-2.22-2.22l-3.5-1.14a1 1 0 010-1.9l3.5-1.14a3.5 3.5 0 002.22-2.22l1.14-3.5a1 1 0 01.95-.69z" />
+            <path d="M16.5 1a.75.75 0 01.712.513l.334 1.001a1.5 1.5 0 00.94.94l1.001.334a.75.75 0 010 1.424l-1.001.334a1.5 1.5 0 00-.94.94l-.334 1.001a.75.75 0 01-1.424 0l-.334-1.001a1.5 1.5 0 00-.94-.94l-1.001-.334a.75.75 0 010-1.424l1.001-.334a1.5 1.5 0 00.94-.94l.334-1.001A.75.75 0 0116.5 1z" />
           </svg>
           {t.title}
         </h3>
@@ -81,7 +82,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700 sticky bottom-0 bg-custom-light-gray">
         <div className="flex gap-2">
           <input
             type="text"
