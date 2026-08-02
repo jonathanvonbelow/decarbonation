@@ -218,6 +218,18 @@ export interface HistoricalDataPoint {
   [key: string]: number;
 }
 
+// Personalized end-of-session synthesis ("Guía de Reflexión" / closing debrief).
+// Produced either by Gemini (services/geminiService.ts#generateClosingSynthesis)
+// or by the pure local fallback (services/geminiService.ts#buildFallbackSynthesis)
+// when no API key is configured or the AI call fails.
+export interface ClosingSynthesis {
+  decisionsTaken: string; // Section 1: policies activated + effort distribution
+  tradeOffs: string; // Section 2: which indicators improved at the cost of others
+  crossSectoralEffects: string; // Section 3: causal relationships observed during the session
+  reflectionQuestions: string[]; // Section 4: 2-4 open, non-evaluative reflection questions
+  isFallback?: boolean; // true when generated locally instead of via Gemini
+}
+
 export type ChatMessageEmphasisType = 'standard' | 'level_event' | 'game_event' | 'proactive_bot' | 'system_error' | 'policy_efficiency_warning';
 
 export interface ChatMessage {
