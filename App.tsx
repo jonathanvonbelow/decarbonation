@@ -34,6 +34,7 @@ import { askGemini, generateNewsHeadlines } from './services/geminiService';
 import { getSuggestedQuestions } from './services/suggestionService';
 import LevelUpBanner from './components/common/LevelUpBanner';
 import TutorialModal from './components/common/TutorialModal';
+import CoverScreen from './components/common/CoverScreen';
 import PlayerReportGuideModal from './components/PlayerReportGuideModal';
 import LevelIntroModal from './components/common/LevelIntroModal';
 import FacilitatorManual from './components/facilitator/FacilitatorManual';
@@ -560,6 +561,39 @@ export const App = () => {
   const [showFacilitatorPanel, setShowFacilitatorPanel] = useState(false);
   const [showGameSummary, setShowGameSummary] = useState(false);
   const [postSurveyResult, setPostSurveyResult] = useState<'victoria' | 'derrota' | 'abandono'>('derrota');
+
+  // Cover/portada screen: shown before everything else on first entry (see criteria in
+  // ultimo-ajuste/02_pantalla_portada_e_identidad.md), and reopenable anytime via Header's
+  // "Acerca de" button without losing in-progress game state.
+  const [showCoverGate, setShowCoverGate] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('decarbonationCoverSeen_v1') !== 'true';
+    } catch (e) {
+      console.error("Could not access localStorage to check for cover screen:", e);
+      return true;
+    }
+  });
+  const [showAboutCover, setShowAboutCover] = useState(false);
+  const [coverSeenPreference, setCoverSeenPreference] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('decarbonationCoverSeen_v1') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleDismissCover = (dontShowAgain: boolean) => {
+    try {
+      if (dontShowAgain) {
+        localStorage.setItem('decarbonationCoverSeen_v1', 'true');
+      } else {
+        localStorage.removeItem('decarbonationCoverSeen_v1');
+      }
+    } catch (e) {
+      console.error("Could not write to localStorage for cover screen:", e);
+    }
+    setCoverSeenPreference(dontShowAgain);
+  };
 
 
   const handleToggleFacilitatorManual = () => {
@@ -1739,6 +1773,25 @@ export const App = () => {
 
   }, [logEvent]);
 
+  // Cover/portada gate: shown before everything else — even before the auth loading/login
+  // screens — on first entry only (decarbonationCoverSeen_v1 absent/false in localStorage).
+  // Wrapped in its own LanguageProvider since this render path sits outside the main app's
+  // provider below, so language is still read correctly from localStorage here.
+  if (showCoverGate) {
+    return (
+      <LanguageProvider>
+        <CoverScreen
+          mode="gate"
+          initialDontShowAgain={coverSeenPreference}
+          onStart={(dontShowAgain) => {
+            handleDismissCover(dontShowAgain);
+            setShowCoverGate(false);
+          }}
+        />
+      </LanguageProvider>
+    );
+  }
+
   // Auth gate
   if (authStage === 'loading') {
     return <div className="bg-custom-gray min-h-screen flex items-center justify-center text-gray-400 text-lg">Cargando...</div>;
@@ -1766,6 +1819,7 @@ export const App = () => {
         onShowFacilitatorManual={handleToggleFacilitatorManual}
         onShowPlayerManual={handleTogglePlayerManual}
         onShowEquationsManual={handleToggleEquationsManual}
+        onShowAbout={() => setShowAboutCover(true)}
         wonLevels={gameState.wonLevels}
         onToggleFacilitatorPanel={() => setShowFacilitatorPanel(p => !p)}
         onAbandon={handleAbandonGame}
@@ -1817,6 +1871,18 @@ export const App = () => {
       )}
 
       {showTutorialModal && <TutorialModal onClose={handleCloseTutorial} />}
+
+      {showAboutCover && (
+        <CoverScreen
+          mode="about"
+          initialDontShowAgain={coverSeenPreference}
+          onClose={() => setShowAboutCover(false)}
+          onStart={(dontShowAgain) => {
+            handleDismissCover(dontShowAgain);
+            setShowAboutCover(false);
+          }}
+        />
+      )}
 
       {showPlayerReportModal && (
         <PlayerReportGuideModal

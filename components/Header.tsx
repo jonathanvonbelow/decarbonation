@@ -19,6 +19,7 @@ interface HeaderProps {
   onShowFacilitatorManual: () => void;
   onShowPlayerManual: () => void;
   onShowEquationsManual: () => void;
+  onShowAbout: () => void;
   wonLevels: number[];
   onToggleFacilitatorPanel: () => void;
   onAbandon?: () => void;
@@ -30,6 +31,7 @@ const T = {
     playerManual: 'Manual del Jugador',
     facilitators: 'Facilitadores',
     equations: 'Ecuaciones',
+    about: 'Acerca de',
     abandon: 'Abandonar',
     gameOver: 'JUEGO TERMINADO',
     levelLabel: 'Nivel',
@@ -50,6 +52,7 @@ const T = {
     playerManual: "Player's Manual",
     facilitators: 'Facilitators',
     equations: 'Equations',
+    about: 'About',
     abandon: 'Abandon',
     gameOver: 'GAME OVER',
     levelLabel: 'Level',
@@ -82,6 +85,7 @@ const Header: React.FC<HeaderProps> = ({
   onShowFacilitatorManual,
   onShowPlayerManual,
   onShowEquationsManual,
+  onShowAbout,
   wonLevels,
   onToggleFacilitatorPanel,
   onAbandon,
@@ -124,6 +128,14 @@ const Header: React.FC<HeaderProps> = ({
               aria-label={t.equations}
             >
               {t.equations}
+            </button>
+            <button
+              onClick={onShowAbout}
+              className="m-1 px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+              aria-label={t.about}
+              title={t.about}
+            >
+              {t.about}
             </button>
             {onAbandon && !gameOver && (
               <button
