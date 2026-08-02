@@ -3,8 +3,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { HistoricalDataPoint } from '../../types';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const T = {
-  es: { victoria: '¡Victoria!', derrota: 'Partida terminada', abandono: 'Partida abandonada', levelReached: 'Nivel alcanzado:', trajectory: 'Trayectoria del puntaje general', playAgain: 'Jugar de nuevo' },
-  en: { victoria: 'Victory!', derrota: 'Game Over', abandono: 'Game Abandoned', levelReached: 'Level reached:', trajectory: 'General score trajectory', playAgain: 'Play Again' },
+  es: { victoria: '¡Victoria!', derrota: 'Partida terminada', abandono: 'Partida abandonada', levelReached: 'Nivel alcanzado:', trajectory: 'Trayectoria del puntaje general', playAgain: 'Iniciar nueva simulación' },
+  en: { victoria: 'Victory!', derrota: 'Game Over', abandono: 'Game Abandoned', levelReached: 'Level reached:', trajectory: 'General score trajectory', playAgain: 'Start a new simulation' },
 } as const;
 
 interface GameSummaryPanelProps {
