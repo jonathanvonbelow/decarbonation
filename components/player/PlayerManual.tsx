@@ -137,7 +137,7 @@ const SLIDES_ES = [
         <ul className="list-disc list-inside space-y-4 text-sm">
           <li><strong className="text-sky-300">Juego de Roles:</strong> Asignar roles hace que los debates sean más ricos y realistas.</li>
           <li><strong className="text-sky-300">Mecanismos de Decisión:</strong> Establezcan si se decide por consenso, votación, o "presidencia" con voto de desempate.</li>
-          <li><strong className="text-sky-300">Pausas para la Reflexión:</strong> Usen las preguntas de la "Guía de Reflexión" para discutir: ¿Qué funcionó? ¿Qué aprendimos?</li>
+          <li><strong className="text-sky-300">Pausas para la Reflexión:</strong> Al cerrar una partida, la app genera automáticamente una síntesis individual (decisiones, trade-offs y preguntas de reflexión). Para el cierre grupal, el facilitador cuenta además con la "Guía del Facilitador — Debriefing de Taller" (documento descargable, con guion paso a paso y preguntas por nivel) para conducir la discusión: ¿Qué funcionó? ¿Qué aprendimos?</li>
           <li><strong className="text-sky-300">Utilicen a DecarboNito:</strong> El chatbot puede actuar como asesor técnico imparcial.</li>
         </ul>
         <p className="mt-6 text-sm italic text-gray-400">El objetivo no es solo "ganar", sino entender las tensiones y compromisos en la gobernanza para la sostenibilidad.</p>
@@ -277,7 +277,7 @@ const SLIDES_EN = [
         <ul className="list-disc list-inside space-y-4 text-sm">
           <li><strong className="text-sky-300">Role Play:</strong> Assigning roles (e.g., different ministry ministers, sector representatives) makes debates richer and more realistic. Players must defend their role's interests.</li>
           <li><strong className="text-sky-300">Decision Mechanisms:</strong> Establish how decisions will be made. By consensus? By vote? Is there a "President" with the deciding vote in case of a tie?</li>
-          <li><strong className="text-sky-300">Reflection Pauses:</strong> After each level or important event, pause the simulation. Use the "Reflection Guide" questions to discuss: What worked? What didn't? What did we learn?</li>
+          <li><strong className="text-sky-300">Reflection Pauses:</strong> When a session ends, the app automatically generates an individual synthesis (decisions, trade-offs, and reflection questions). For the group closing, the facilitator also has the "Facilitator Guide — Workshop Debriefing" (downloadable document with a step-by-step script and per-level questions) to run the discussion: What worked? What didn't? What did we learn?</li>
           <li><strong className="text-sky-300">Use DecarboNito:</strong> Encourage the group to ask questions to DecarboNito. The chatbot can act as an impartial technical advisor.</li>
         </ul>
         <p className="mt-6 text-sm italic text-gray-400">The goal is not just to "win" the game, but to understand the tensions, trade-offs, and need for an integral vision in governance for sustainability.</p>
