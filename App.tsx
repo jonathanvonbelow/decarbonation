@@ -25,7 +25,7 @@ import {
   INDICATOR_IMPACT_WEIGHTS, API_KEY_ERROR_MESSAGE, GEMINI_MODEL_TEXT, ALL_RANDOM_EVENTS,
   LEVEL_2_INITIAL_LAND_USES, LEVEL_2_INITIAL_STELLA_OVERRIDES, LEVEL_2_INITIAL_INDICATOR_OVERRIDES,
   LEVEL_3_INITIAL_LAND_USES, LEVEL_3_INITIAL_STELLA_OVERRIDES, LEVEL_3_INITIAL_INDICATOR_OVERRIDES,
-  POLICY_LOCK_IN_DURATION, MAX_ACTIVE_POLICIES, PLAYER_REPORT_GUIDE_QUESTIONS, INSTRUMENT_IMPACT_HINTS
+  POLICY_LOCK_IN_DURATION, MAX_ACTIVE_POLICIES, INSTRUMENT_IMPACT_HINTS
 } from './constants';
 import { Dashboard } from './components/Dashboard';
 import Header from './components/Header';
@@ -35,7 +35,7 @@ import { getSuggestedQuestions } from './services/suggestionService';
 import LevelUpBanner from './components/common/LevelUpBanner';
 import TutorialModal from './components/common/TutorialModal';
 import CoverScreen from './components/common/CoverScreen';
-import PlayerReportGuideModal from './components/PlayerReportGuideModal';
+import ClosingSynthesisModal from './components/game/ClosingSynthesisModal';
 import LevelIntroModal from './components/common/LevelIntroModal';
 import FacilitatorManual from './components/facilitator/FacilitatorManual';
 import PlayerManual from './components/player/PlayerManual';
@@ -551,7 +551,7 @@ export const App = () => {
     }
   });
   const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
-  const [showPlayerReportModal, setShowPlayerReportModal] = useState<boolean>(false);
+  const [showClosingSynthesisModal, setShowClosingSynthesisModal] = useState<boolean>(false);
   const [showLevelIntroModalForLevel, setShowLevelIntroModalForLevel] = useState<number | null>(null);
   const [showFacilitatorManual, setShowFacilitatorManual] = useState(false);
   const [showPlayerManual, setShowPlayerManual] = useState(false);
@@ -730,14 +730,8 @@ export const App = () => {
     }
   }, [isBotLoading, apiKeyAvailable, addMessageToChat, logEvent]);
   
-  const handleStartBotReflection = useCallback(() => {
-    const prompt = "He terminado mi sesión. Ayúdame a reflexionar sobre mis lecciones aprendidas.";
-    handleUserChatSubmit(prompt);
-    setShowPlayerReportModal(false);
-  }, [handleUserChatSubmit]);
-
   const handleLessonsLearnedStart = useCallback(() => {
-    setShowPlayerReportModal(true);
+    setShowClosingSynthesisModal(true);
   }, []);
 
 
@@ -750,6 +744,12 @@ export const App = () => {
     }
   }, [gameState.gameOverReason, hasSentFinalDecarbonitoMessage, handleLessonsLearnedStart]);
 
+  // Persistir el estado FINAL de la sesión exactamente una vez al concluir
+  // la partida (annual_snapshots: una fila por sesión) y cerrar la sesión
+  // (game_sessions.resultado/nivel_alcanzado/año_fin), independientemente
+  // de si el jugador completa o no la encuesta post. El disparo de la encuesta
+  // post-partida NO vive acá: se encadena desde el onClose de la síntesis de
+  // cierre (handleClosingSynthesisDismissed) para garantizar el orden síntesis → encuesta.
   useEffect(() => {
     if (!gameState.gameOverReason) return;
 
@@ -758,15 +758,6 @@ export const App = () => {
         ? 'abandono'
         : (gameState.gameOverReason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota');
 
-    if (resultadoFinal !== 'abandono') {
-      setPostSurveyResult(resultadoFinal);
-      setShowPostSurvey(true);
-    }
-
-    // Persistir el estado FINAL de la sesión exactamente una vez al concluir
-    // la partida (annual_snapshots: una fila por sesión) y cerrar la sesión
-    // (game_sessions.resultado/nivel_alcanzado/año_fin), independientemente
-    // de si el jugador completa o no la encuesta post.
     const activePolicies = Object.values(gameState.policies).filter((p: any) => p.isActive).map((p: any) => p.id);
     saveFinalSnapshot({
       biodiversidad_final: gameState.indicators.biodiversity,
@@ -779,6 +770,24 @@ export const App = () => {
     // This effect depends only on gameOverReason so it fires exactly once per game-over
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.gameOverReason]);
+
+  // Triggers the post-session survey once the closing synthesis modal has been dismissed
+  // (called from its onClose below). Kept as an imperative handler rather than a second
+  // useEffect keyed on gameOverReason: both the synthesis modal and this survey are
+  // full-screen z-[1000] overlays, and two effects firing off the same gameOverReason change
+  // would both read stale state in the same commit and open simultaneously. Chaining off the
+  // modal's onClose instead guarantees a strict survey-after-synthesis sequence, with the
+  // synthesis modal always shown first for every ending (won/lost/abandoned) and the survey
+  // skipped only for an abandoned session, matching the previous behavior.
+  const handleClosingSynthesisDismissed = useCallback(() => {
+    setShowClosingSynthesisModal(false);
+    const reason = gameStateRef.current.gameOverReason;
+    if (reason && reason !== 'Partida abandonada por el jugador.') {
+      const resultado = reason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota';
+      setPostSurveyResult(resultado);
+      setShowPostSurvey(true);
+    }
+  }, []);
 
 
  const progressToNextLevel = useCallback(() => {
@@ -850,7 +859,7 @@ export const App = () => {
         });
     }
 
-    if (lastInfo && !gameState.sentLevelReflectionMessage && apiKeyAvailable && !showPlayerReportModal) {
+    if (lastInfo && !gameState.sentLevelReflectionMessage && apiKeyAvailable && !showClosingSynthesisModal) {
       const { level, status, reason, finalIndicators, winConditions } = lastInfo;
       
       let prompt = `El Nivel ${level} de DecarboNation ha concluido.\n`;
@@ -936,7 +945,7 @@ export const App = () => {
         });
     }
 
-  }, [gameState.lastConcludedLevelInfo, gameState.sentLevelReflectionMessage, apiKeyAvailable, addMessageToChat, logEvent, gameStateRef, showPlayerReportModal, levelEndInfo]);
+  }, [gameState.lastConcludedLevelInfo, gameState.sentLevelReflectionMessage, apiKeyAvailable, addMessageToChat, logEvent, gameStateRef, showClosingSynthesisModal, levelEndInfo]);
 
 
   const updateHistoricalData = useCallback((currentState: GameState) => {
@@ -1884,11 +1893,11 @@ export const App = () => {
         />
       )}
 
-      {showPlayerReportModal && (
-        <PlayerReportGuideModal
-          onClose={() => setShowPlayerReportModal(false)}
-          reportQuestions={PLAYER_REPORT_GUIDE_QUESTIONS}
-          onStartBotReflection={handleStartBotReflection}
+      {showClosingSynthesisModal && (
+        <ClosingSynthesisModal
+          gameState={gameState}
+          historicalData={historicalData}
+          onClose={handleClosingSynthesisDismissed}
         />
       )}
 
