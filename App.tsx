@@ -320,11 +320,15 @@ const generateScoreTooltipText = (gs: GameState): string => {
     const carbonScoreComponent = Math.max(0, Math.min(100, carbonScoreComponentRaw));
 
     if (currentLevel === 1) {
-        const scoreWeightBiodiversityL1 = 0.50;
-        const scoreWeightCarbonL1 = 0.50;
+        const scoreWeightBiodiversityL1 = 0.40;
+        const scoreWeightCarbonL1 = 0.45;
+        const scoreWeightEconL1 = 0.15;
+        const econScoreComponent = Math.max(0, Math.min(100, indicators.economicSecurity));
         text += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}% (Peso: ${(scoreWeightBiodiversityL1 * 100).toFixed(0)}%)\n`;
         text += `- Componente de Carbono: ${carbonScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightCarbonL1 * 100).toFixed(0)}%)\n`;
         text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab. Ref. máx. para puntaje: ${CONTROL_PARAMS.Referencia_Max_CO2_per_Capita_Puntaje} t/hab)\n`;
+        text += `- Seguridad Económica: ${econScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightEconL1 * 100).toFixed(0)}%)\n`;
+        text += `  (Un mínimo de viabilidad fiscal es necesario para sostener la transición ecológica)\n`;
     } else if (currentLevel === 2) {
         const scoreWeightBiodiversityL2 = 0.15;
         const scoreWeightCarbonL2 = 0.20;

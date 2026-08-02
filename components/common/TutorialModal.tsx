@@ -23,6 +23,17 @@ const TUTORIAL_STEPS = {
     • **Fijar Nivel**: Estos botones te permiten revisitar o saltar a niveles específicos. Útil para aprender o experimentar, pero la progresion natural del juego es secuencial.`
     },
     {
+      title: '¿Cómo se calcula tu puntaje?',
+      content: `El Puntaje General es un promedio ponderado de varios indicadores (cada uno entre 0-100%), que luego se multiplica por 10 para mostrarse en una escala de 0 a 1000.
+
+    Los indicadores que entran en juego y su peso cambian según el nivel, porque cada nivel te exige gestionar una nación más compleja:
+    • **Nivel 1**: Biodiversidad (40%), Componente de Carbono —basado en tus emisiones de CO2eq/cápita— (45%) y Seguridad Económica (15%). La base es ambiental, pero ya se exige un mínimo de viabilidad fiscal.
+    • **Nivel 2**: Biodiversidad (15%), Componente de Carbono (20%), Desempeño Político —qué tan bajas mantienes las presiones agrícola, ambientalista y social— (30%) y un promedio de indicadores socioeconómicos —Seguridad Alimentaria, Seguridad Económica, Bienestar Social y Estabilidad Política— (35%).
+    • **Nivel 3**: Biodiversidad (10%), Componente de Carbono (15%), Desempeño Político (20%), el mismo promedio socioeconómico (25%) y Desempeño del PBI (30%).
+
+    En otras palabras: en Nivel 1 el foco está en lo ambiental, y en los niveles siguientes el peso se reparte cada vez más entre la estabilidad política y el desempeño socioeconómico/financiero. Pasa el cursor sobre el Puntaje en el panel superior para ver el desglose exacto con tus valores actuales.`
+    },
+    {
       title: 'Indicadores de Sostenibilidad',
       content: `En el tablero principal, monitorea estos indicadores vitales (valores 0-100%):
     • **Biodiversidad**: La salud de tus ecosistemas. Esencial para la resiliencia.
@@ -91,6 +102,17 @@ const TUTORIAL_STEPS = {
     • **Level**: Your current stage in the game. Each level introduces new challenges and mechanics.
     • **Score**: Reflects your overall performance. Higher is better! Hover over the score to see how it is calculated.
     • **Lock Level**: These buttons let you revisit or jump to specific levels. Useful for learning or experimenting, though natural game progression is sequential.`
+    },
+    {
+      title: 'How is your score calculated?',
+      content: `The General Score is a weighted average of several indicators (each ranging 0-100%), which is then multiplied by 10 to display on a 0-1000 scale.
+
+    Which indicators count, and how heavily, changes by level — because each level asks you to manage a more complex nation:
+    • **Level 1**: Biodiversity (40%), Carbon Component — based on your CO2eq emissions per capita — (45%), and Economic Security (15%). The focus is environmental, but a minimum of fiscal viability is already required.
+    • **Level 2**: Biodiversity (15%), Carbon Component (20%), Political Performance — how low you keep agricultural, environmental, and social pressures — (30%), and an average of socioeconomic indicators — Food Security, Economic Security, Social Wellbeing, and Political Stability — (35%).
+    • **Level 3**: Biodiversity (10%), Carbon Component (15%), Political Performance (20%), the same socioeconomic average (25%), and GDP Performance (30%).
+
+    In short: Level 1 emphasises environmental outcomes, while later levels shift more weight toward political stability and socioeconomic/financial performance. Hover over the Score in the top panel to see the exact breakdown using your current values.`
     },
     {
       title: 'Sustainability Indicators',
