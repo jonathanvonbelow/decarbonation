@@ -3,6 +3,7 @@ import React from 'react';
 import { LevelConfig } from '../../types';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 import { Language } from '../../hooks/useLanguage';
+import { INITIAL_YEAR, YEARS_PER_LEVEL } from '../../constants';
 
 interface LevelIntroModalProps {
   levelConfig: LevelConfig;
@@ -13,6 +14,7 @@ const T = {
   es: {
     welcome: (n:number) => `Bienvenido al Nivel ${n}`,
     closeIntro: 'Cerrar introducción',
+    duration: (start: number, end: number, years: number) => `Este nivel dura ${years} años simulados: comienza en el año ${start} y finaliza en el año ${end}.`,
     winConditions: 'Condiciones de Victoria:',
     forward: '¡Adelante!',
     noObjectives: 'No hay objetivos específicos definidos para este nivel.',
@@ -37,6 +39,7 @@ const T = {
   en: {
     welcome: (n:number) => `Welcome to Level ${n}`,
     closeIntro: 'Close introduction',
+    duration: (start: number, end: number, years: number) => `This level lasts ${years} simulated years: it starts in the year ${start} and ends in the year ${end}.`,
     winConditions: 'Victory Conditions:',
     forward: "Let's Go!",
     noObjectives: 'No specific objectives defined for this level.',
@@ -87,6 +90,8 @@ const LevelIntroModal: React.FC<LevelIntroModalProps> = ({ levelConfig, onClose 
   const t = T[language];
   const { levelNumber, name, description, winConditions } = levelConfig;
   const formattedGoals = formatWinConditions(winConditions, language);
+  const endYear = levelConfig.targetYear ?? (INITIAL_YEAR + YEARS_PER_LEVEL);
+  const startYear = endYear - YEARS_PER_LEVEL;
 
   return (
     <div
@@ -106,6 +111,9 @@ const LevelIntroModal: React.FC<LevelIntroModalProps> = ({ levelConfig, onClose 
         </div>
         <div className="overflow-y-auto flex-grow mb-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pr-2">
           <h3 className="text-xl font-semibold text-blue-300 mb-3">{name}</h3>
+          <p className="text-sm sm:text-base font-semibold text-yellow-300 mb-4">
+            {t.duration(startYear, endYear, YEARS_PER_LEVEL)}
+          </p>
           {description && <p className="text-sm sm:text-base whitespace-pre-line leading-relaxed mb-4">{description}</p>}
           <h4 className="text-md font-semibold text-gray-200 mb-2">{t.winConditions}</h4>
           <ul className="list-disc list-inside space-y-1 pl-4 text-sm sm:text-base">

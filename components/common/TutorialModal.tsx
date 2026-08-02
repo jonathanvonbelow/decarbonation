@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
-import { MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../constants';
+import { MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, INITIAL_YEAR, YEARS_PER_LEVEL } from '../../constants';
 import { useEffect } from 'react';
 import { useLanguageContext } from '../../contexts/LanguageContext';
+
+const LEVEL_END_YEAR = INITIAL_YEAR + YEARS_PER_LEVEL;
 
 interface TutorialModalProps {
   onClose: () => void;
@@ -17,7 +19,8 @@ const TUTORIAL_STEPS = {
     {
       title: 'Panel de Control Superior',
       content: `Arriba encontrarás información crucial:
-    • **Año Actual**: Sigue el progreso de tu nación a través del tiempo. Cada simulación avanza un año.
+    • **Año Actual**: Sigue el progreso de tu nación a través del tiempo. Cada simulación avanza un año. Junto al año actual verás también el año de finalización del nivel (por ejemplo "${INITIAL_YEAR} / ${LEVEL_END_YEAR}").
+    • **Duración del Nivel**: Cada nivel dura ${YEARS_PER_LEVEL} años simulados, desde ${INITIAL_YEAR} hasta ${LEVEL_END_YEAR}.
     • **Nivel**: Tu etapa actual en el juego. Cada nivel introduce nuevos desafíos y mecánicas.
     • **Puntaje**: Refleja tu desempeño general. ¡Más alto es mejor! Pasa el cursor sobre el puntaje para ver cómo se calcula.
     • **Fijar Nivel**: Estos botones te permiten revisitar o saltar a niveles específicos. Útil para aprender o experimentar, pero la progresion natural del juego es secuencial.`
@@ -98,7 +101,8 @@ const TUTORIAL_STEPS = {
     {
       title: 'Top Control Panel',
       content: `At the top you will find crucial information:
-    • **Current Year**: Track your nation's progress over time. Each simulation run advances by one year.
+    • **Current Year**: Track your nation's progress over time. Each simulation run advances by one year. Next to the current year you will also see the level's end year (e.g. "${INITIAL_YEAR} / ${LEVEL_END_YEAR}").
+    • **Level Duration**: Each level lasts ${YEARS_PER_LEVEL} simulated years, from ${INITIAL_YEAR} to ${LEVEL_END_YEAR}.
     • **Level**: Your current stage in the game. Each level introduces new challenges and mechanics.
     • **Score**: Reflects your overall performance. Higher is better! Hover over the score to see how it is calculated.
     • **Lock Level**: These buttons let you revisit or jump to specific levels. Useful for learning or experimenting, though natural game progression is sequential.`
