@@ -1750,6 +1750,7 @@ export const App = () => {
     <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
       <Header
         year={gameState.year}
+        targetYear={gameState.activeLevelConfig?.targetYear}
         score={gameState.indicators.generalScore}
         level={gameState.currentLevel}
         levelName={gameState.activeLevelConfig?.name}

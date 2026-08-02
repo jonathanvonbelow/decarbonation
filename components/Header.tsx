@@ -6,6 +6,7 @@ import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   year: number;
+  targetYear?: number;
   score: number;
   level: number;
   levelName?: string;
@@ -33,6 +34,8 @@ const T = {
     gameOver: 'JUEGO TERMINADO',
     levelLabel: 'Nivel',
     yearLabel: 'Año',
+    yearOfTotal: (year: number, target: number) => `${year} / ${target}`,
+    yearTooltip: (target: number) => `El nivel finaliza en el año ${target}.`,
     scoreLabel: 'Puntaje',
     currentFocus: 'Enfoque Actual',
     setLevel: (n: number) => `Fijar Nivel ${n}`,
@@ -51,6 +54,8 @@ const T = {
     gameOver: 'GAME OVER',
     levelLabel: 'Level',
     yearLabel: 'Year',
+    yearOfTotal: (year: number, target: number) => `${year} / ${target}`,
+    yearTooltip: (target: number) => `The level ends in the year ${target}.`,
     scoreLabel: 'Score',
     currentFocus: 'Current Focus',
     setLevel: (n: number) => `Set Level ${n}`,
@@ -64,6 +69,7 @@ const T = {
 
 const Header: React.FC<HeaderProps> = ({
   year,
+  targetYear,
   score,
   level,
   levelName,
@@ -145,7 +151,13 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="text-center">
             <span className="block text-xs text-gray-400 uppercase">{t.yearLabel}</span>
-            <span className="text-xl font-semibold">{year}</span>
+            {targetYear ? (
+              <Tooltip text={t.yearTooltip(targetYear)} position="bottom">
+                <span className="text-xl font-semibold cursor-help">{t.yearOfTotal(year, targetYear)}</span>
+              </Tooltip>
+            ) : (
+              <span className="text-xl font-semibold">{year}</span>
+            )}
           </div>
           <Tooltip text={scoreTooltipText} position="bottom">
             <div className="text-center cursor-help">
