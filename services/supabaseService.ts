@@ -40,71 +40,99 @@ export function onAuthStateChange(
 // Game session helpers
 // ---------------------------------------------------------------------------
 
+// `game_sessions` is one row per playthrough. `createGameSession` must only be
+// called once per playthrough (guarded in `useSessionPersistence`); subsequent
+// level changes call `updateSessionLevel` to UPDATE the same row instead of
+// inserting a new one.
 export async function createGameSession(
   userId: string,
-  nivel: number
+  nivel: number,
+  anioInicio: number
 ): Promise<string | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('game_sessions')
-    .insert({ user_id: userId, nivel_alcanzado: nivel })
+    .insert({ user_id: userId, nivel_alcanzado: nivel, anio_inicio: anioInicio })
     .select('id')
     .single();
   if (error) { console.error('createGameSession:', error); return null; }
   return data?.id ?? null;
 }
 
-export async function finalizeGameSession(
+export async function updateSessionLevel(
   sessionId: string,
-  resultado: 'victoria' | 'derrota' | 'abandono',
-  nivelAlcanzado: number
+  nivel: number
 ): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase
     .from('game_sessions')
-    .update({ resultado, nivel_alcanzado: nivelAlcanzado, ended_at: new Date().toISOString() })
+    .update({ nivel_alcanzado: nivel })
+    .eq('id', sessionId);
+  if (error) console.error('updateSessionLevel:', error);
+}
+
+export async function finalizeGameSession(
+  sessionId: string,
+  resultado: 'victoria' | 'derrota' | 'abandono',
+  nivelAlcanzado: number,
+  anioFin: number
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('game_sessions')
+    .update({ resultado, nivel_alcanzado: nivelAlcanzado, anio_fin: anioFin, ended_at: new Date().toISOString() })
     .eq('id', sessionId);
   if (error) console.error('finalizeGameSession:', error);
 }
 
-export async function upsertAnnualSnapshot(
+// `annual_snapshots` is trimmed to one row per session holding only the FINAL
+// state (see ultimo-ajuste/05_datos_minimos_supabase.md). There is no more
+// per-year history — `insertFinalSnapshot` is called exactly once, at
+// end-of-session, instead of once per simulated year.
+export interface FinalSnapshotData {
+  biodiversidad_final: number;
+  co2_final: number;
+  seg_alimentaria_final: number;
+  seg_economica_final: number;
+  score_final: number;
+}
+
+export async function insertFinalSnapshot(
   sessionId: string,
-  anio: number,
-  indicators: Record<string, number>,
+  data: FinalSnapshotData,
   politicasActivas: string[]
 ): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase
     .from('annual_snapshots')
     .upsert(
-      { session_id: sessionId, anio, ...indicators, politicas_activas: politicasActivas },
-      { onConflict: 'session_id,anio' }
+      { session_id: sessionId, ...data, politicas_activas_final: politicasActivas },
+      { onConflict: 'session_id' }
     );
-  if (error) console.error('upsertAnnualSnapshot:', error);
+  if (error) console.error('insertFinalSnapshot:', error);
 }
 
 // ---------------------------------------------------------------------------
 // Survey data types & helpers
 // ---------------------------------------------------------------------------
 
+// Trimmed to the 3-question minimal spec — see
+// ultimo-ajuste/05_datos_minimos_supabase.md section 2. Do not add fields back
+// without also adding a real question for them; no fabricated/hardcoded data.
 export interface PreSurveyData {
-  vinculo_clima: string;
-  experiencia_simulacion: string;
-  familiaridad_afolu: number;   // 1-5
-  expectativa: string;
-  pais_region: string;
-  comentario_abierto?: string;
+  vinculo_clima: string;             // (1) vínculo principal con clima/sostenibilidad
+  experiencia_simulacion: boolean;   // (2) experiencia previa con simulaciones de política pública (sí/no)
+  bloque_convocatoria: string;       // (3) '1' | '2' | '3' | '4' | 'no_aplica' — ver ultimo-ajuste/04_recalibracion_actores_y_convocatoria.md
 }
 
+// Trimmed to the 4-question minimal spec — see
+// ultimo-ajuste/05_datos_minimos_supabase.md section 2.
 export interface PostSurveyData {
-  estrategia_efectiva: string;
-  sorpresa_yn: boolean;
-  sorpresa_texto?: string;
-  cambio_percepcion: number;    // 1-5
-  cambio_texto?: string;
-  utilidad_docente: number;     // 1-5
-  nps: number;                  // 0-10
-  comentarios?: string;
+  utilidad_sintesis: number;    // (1) utilidad de la síntesis de cierre, 1-5
+  sorpresa_yn: boolean;         // (2) ¿algo te sorprendió?
+  sorpresa_texto?: string;      // (2) campo abierto corto, opcional
+  nps: number;                  // (3) NPS real, 0-10
+  comentarios?: string;         // (4) comentarios libres, opcional
 }
 
 export async function insertPreSurvey(
@@ -113,6 +141,10 @@ export async function insertPreSurvey(
   data: PreSurveyData
 ): Promise<void> {
   if (!supabase) return;
+  // NOTE: table name is singular ('pre_survey'), matching supabase/schema.sql.
+  // This was already fixed in commit 03958c0 (previously called 'pre_surveys',
+  // causing 404s). If 404s reappear in production it's a stale deployment that
+  // hasn't picked up that fix — not a mismatch here. Don't "fix" this again.
   const { error } = await supabase
     .from('pre_survey')
     .insert({ user_id: userId, session_id: sessionId, ...data });
@@ -125,6 +157,8 @@ export async function insertPostSurvey(
   data: PostSurveyData
 ): Promise<void> {
   if (!supabase) return;
+  // NOTE: table name is singular ('post_survey'), matching supabase/schema.sql.
+  // Same already-fixed 404 issue as insertPreSurvey above — see that comment.
   const { error } = await supabase
     .from('post_survey')
     .insert({ user_id: userId, session_id: sessionId, ...data });

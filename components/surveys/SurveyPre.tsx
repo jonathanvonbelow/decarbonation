@@ -9,11 +9,13 @@ interface SurveyPreProps {
   onSkip: () => void;
 }
 
+// Trimmed to the 3-question minimal spec — see
+// ultimo-ajuste/05_datos_minimos_supabase.md section 2.
 const T = {
   es: {
     title: 'Encuesta inicial',
     subtitle: 'Antes de comenzar, cuéntanos un poco sobre vos. Solo toma 1 minuto.',
-    rolLabel: 'Tu rol o perfil principal',
+    rolLabel: 'Tu vínculo principal con temas de clima/sostenibilidad',
     rolOptions: [
       { value: '', label: '-- Seleccionar --' },
       { value: 'estudiante', label: 'Estudiante' },
@@ -24,23 +26,25 @@ const T = {
       { value: 'ong', label: 'ONG / Sociedad civil' },
       { value: 'otro', label: 'Otro' },
     ],
-    expLabel: 'Experiencia previa en temas de política climática',
-    expOptions: [
+    expLabel: '¿Tenés experiencia previa con simulaciones de política pública?',
+    yes: 'Sí',
+    no: 'No',
+    convocatoriaLabel: '¿A través de qué canal llegaste a esta actividad?',
+    convocatoriaOptions: [
       { value: '', label: '-- Seleccionar --' },
-      { value: 'ninguna', label: 'Ninguna' },
-      { value: 'basica', label: 'Básica (lecturas, artículos)' },
-      { value: 'intermedia', label: 'Intermedia (cursos, talleres)' },
-      { value: 'avanzada', label: 'Avanzada (trabajo o investigación)' },
+      { value: '1', label: 'ONG / técnico de ambiente o AFOLU / red temática' },
+      { value: '2', label: 'Gobierno, asesoría o consultoría con llegada a decisión' },
+      { value: '3', label: 'Universidad, cátedra o espacio docente' },
+      { value: '4', label: 'Difusión general / redes / público abierto' },
+      { value: 'no_aplica', label: 'No sé / No aplica' },
     ],
-    expectLabel: '¿Qué esperás aprender o experimentar con este juego?',
-    expectPlaceholder: 'Escribe tu respuesta aquí...',
     start: 'Comenzar juego',
     skip: 'Omitir',
   },
   en: {
     title: 'Initial Survey',
     subtitle: 'Before we start, tell us a bit about yourself. Takes only 1 minute.',
-    rolLabel: 'Your main role or profile',
+    rolLabel: 'Your main connection to climate/sustainability topics',
     rolOptions: [
       { value: '', label: '-- Select --' },
       { value: 'estudiante', label: 'Student' },
@@ -51,16 +55,18 @@ const T = {
       { value: 'ong', label: 'NGO / Civil society' },
       { value: 'otro', label: 'Other' },
     ],
-    expLabel: 'Prior experience with climate policy topics',
-    expOptions: [
+    expLabel: 'Do you have prior experience with public policy simulations?',
+    yes: 'Yes',
+    no: 'No',
+    convocatoriaLabel: 'How did you hear about this activity?',
+    convocatoriaOptions: [
       { value: '', label: '-- Select --' },
-      { value: 'ninguna', label: 'None' },
-      { value: 'basica', label: 'Basic (readings, articles)' },
-      { value: 'intermedia', label: 'Intermediate (courses, workshops)' },
-      { value: 'avanzada', label: 'Advanced (work or research)' },
+      { value: '1', label: 'NGO / environment or AFOLU technician / thematic network' },
+      { value: '2', label: 'Government, advisory, or consulting with decision reach' },
+      { value: '3', label: 'University, department, or teaching space' },
+      { value: '4', label: 'General outreach / social media / open public' },
+      { value: 'no_aplica', label: "Don't know / Not applicable" },
     ],
-    expectLabel: 'What do you hope to learn or experience with this game?',
-    expectPlaceholder: 'Write your answer here...',
     start: 'Start game',
     skip: 'Skip',
   },
@@ -70,17 +76,15 @@ const SurveyPre: React.FC<SurveyPreProps> = ({ onComplete, onSkip }) => {
   const { language } = useLanguageContext();
   const t = T[language];
   const [rol, setRol] = useState('');
-  const [experiencia, setExperiencia] = useState('');
-  const [expectativas, setExpectativas] = useState('');
+  const [experienciaSimulacion, setExperienciaSimulacion] = useState<boolean | undefined>(undefined);
+  const [bloqueConvocatoria, setBloqueConvocatoria] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onComplete({
       vinculo_clima: rol,
-      experiencia_simulacion: experiencia,
-      familiaridad_afolu: 3,
-      expectativa: expectativas,
-      pais_region: '',
+      experiencia_simulacion: !!experienciaSimulacion,
+      bloque_convocatoria: bloqueConvocatoria || 'no_aplica',
     });
   };
 
@@ -100,18 +104,25 @@ const SurveyPre: React.FC<SurveyPreProps> = ({ onComplete, onSkip }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1" htmlFor="pre-exp">{t.expLabel}</label>
-            <select id="pre-exp" value={experiencia} onChange={e => setExperiencia(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent">
-              {t.expOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <p className="block text-sm font-medium text-gray-300 mb-2">{t.expLabel}</p>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="experienciaSimulacion" value="si" checked={experienciaSimulacion === true} onChange={() => setExperienciaSimulacion(true)} className="accent-custom-accent" />
+                <span className="text-sm">{t.yes}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="experienciaSimulacion" value="no" checked={experienciaSimulacion === false} onChange={() => setExperienciaSimulacion(false)} className="accent-custom-accent" />
+                <span className="text-sm">{t.no}</span>
+              </label>
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1" htmlFor="pre-exp2">{t.expectLabel}</label>
-            <textarea id="pre-exp2" value={expectativas} onChange={e => setExpectativas(e.target.value)} rows={3}
-              placeholder={t.expectPlaceholder}
-              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent resize-none" />
+            <label className="block text-sm font-medium text-gray-300 mb-1" htmlFor="pre-convocatoria">{t.convocatoriaLabel}</label>
+            <select id="pre-convocatoria" value={bloqueConvocatoria} onChange={e => setBloqueConvocatoria(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-custom-accent">
+              {t.convocatoriaOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
 
           <div className="flex gap-3 mt-2">
