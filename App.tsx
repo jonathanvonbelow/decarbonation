@@ -395,6 +395,101 @@ const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfi
     }
 };
 
+// Single source of truth for (re)initializing all per-level game state (year, land uses, Stella
+// stocks/indicators, policies, pacts, level counters, etc). Used whenever the game needs to reset to
+// the initial conditions of a given level: starting the next level after a win (progressToNextLevel),
+// manually jumping to a level via the header controls (setCurrentLevelManually), and retrying the
+// current level after a loss (handleCloseLevelEndModal's 'lost' branch). Keeping this logic in one
+// place ensures all three paths reset exactly the same fields.
+interface LevelInitializationResult {
+  gameStatePatch: Pick<GameState,
+    | 'year'
+    | 'currentLevel'
+    | 'policies'
+    | 'landUses'
+    | 'indicators'
+    | 'stellaSpecificState'
+    | 'pacts'
+    | 'activeLevelConfig'
+    | 'yearsSimulatedInCurrentLevel'
+    | 'level3EventsTriggeredCount'
+    | 'additionalTaxPressurePercentage'
+    | 'decarbonitoProactiveMessageSentInLevel'
+    | 'lastConcludedLevelInfo'
+    | 'sentLevelReflectionMessage'
+  >;
+  initialHistoricalDataPoint: HistoricalDataPoint;
+}
+
+const buildLevelInitializationState = (levelNumber: number): LevelInitializationResult => {
+  const newLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === levelNumber);
+
+  let newStellaState = JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS)) as StellaStocks;
+  let newLandUses: Record<LandUseType, LandUse> = JSON.parse(JSON.stringify(INITIAL_LAND_USES));
+  let indicatorOverrides: InitialIndicatorOverrides | null = null;
+
+  if (levelNumber === 2) {
+    newLandUses = JSON.parse(JSON.stringify(LEVEL_2_INITIAL_LAND_USES));
+    newStellaState = { ...newStellaState, ...LEVEL_2_INITIAL_STELLA_OVERRIDES };
+    indicatorOverrides = LEVEL_2_INITIAL_INDICATOR_OVERRIDES;
+  } else if (levelNumber === 3) {
+    newLandUses = JSON.parse(JSON.stringify(LEVEL_3_INITIAL_LAND_USES));
+    newStellaState = { ...newStellaState, ...LEVEL_3_INITIAL_STELLA_OVERRIDES };
+    indicatorOverrides = LEVEL_3_INITIAL_INDICATOR_OVERRIDES;
+  }
+
+  const newIndicators: Indicators = { ...INITIAL_INDICATORS };
+  if (indicatorOverrides) {
+    if (indicatorOverrides.foodSecurity !== undefined) newIndicators.foodSecurity = indicatorOverrides.foodSecurity;
+    if (indicatorOverrides.economicSecurity !== undefined) newIndicators.economicSecurity = indicatorOverrides.economicSecurity;
+  }
+  newIndicators.socialWellbeing = 100 - (newStellaState.Conflicto_social || INITIAL_STELLA_STOCKS.Conflicto_social);
+  newIndicators.politicalStability = 100 - (newStellaState.Colapso_politico || INITIAL_STELLA_STOCKS.Colapso_politico);
+  newIndicators.ppAgricola = newStellaState.PP_AGRICOLA || INITIAL_STELLA_STOCKS.PP_AGRICOLA;
+  newIndicators.ppAmbientalista = newStellaState.PP_AMBIENTALISTA || INITIAL_STELLA_STOCKS.PP_AMBIENTALISTA;
+  newIndicators.ppSocial = newStellaState.PP_SOCIAL || INITIAL_STELLA_STOCKS.PP_SOCIAL;
+  newIndicators.pbi = newStellaState.PBI_Real || INITIAL_STELLA_STOCKS.PBI_Real;
+  newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
+  newIndicators.treasuryReserves = newStellaState.Reservas_del_Tesoro || INITIAL_STELLA_STOCKS.Reservas_del_Tesoro;
+
+  const initialHistoricalDataPoint: HistoricalDataPoint = {
+    year: INITIAL_YEAR,
+    biodiversity: newIndicators.biodiversity,
+    foodSecurity: newIndicators.foodSecurity,
+    economicSecurity: newIndicators.economicSecurity,
+    socialWellbeing: newIndicators.socialWellbeing,
+    generalScore: newIndicators.generalScore,
+    co2EqEmissionsPerCapita: newIndicators.co2EqEmissionsPerCapita,
+    politicalStability: newIndicators.politicalStability,
+    pbi: newIndicators.pbi,
+    debt: newIndicators.debt,
+    ppAgricola: newIndicators.ppAgricola,
+    ppAmbientalista: newIndicators.ppAmbientalista,
+    ppSocial: newIndicators.ppSocial,
+    treasuryReserves: newStellaState.Reservas_del_Tesoro,
+  };
+
+  return {
+    gameStatePatch: {
+      year: INITIAL_YEAR,
+      currentLevel: levelNumber,
+      policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
+      landUses: newLandUses,
+      indicators: newIndicators,
+      stellaSpecificState: newStellaState,
+      pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
+      activeLevelConfig: newLevelConfig,
+      yearsSimulatedInCurrentLevel: 0,
+      level3EventsTriggeredCount: 0,
+      additionalTaxPressurePercentage: 0,
+      decarbonitoProactiveMessageSentInLevel: false,
+      lastConcludedLevelInfo: null,
+      sentLevelReflectionMessage: false,
+    },
+    initialHistoricalDataPoint,
+  };
+};
+
 // FIX: Removed React.FC type from component definition to align with modern functional component best practices and avoid potential assignment errors.
 export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
@@ -636,72 +731,16 @@ export const App = () => {
         }
 
         const newLevelNumber = prev.currentLevel + 1;
-        const newLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === newLevelNumber);
-        if (!newLevelConfig) return prev;
+        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(newLevelNumber);
+        if (!gameStatePatch.activeLevelConfig) return prev;
 
-        let newStellaState = JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS)) as StellaStocks;
-        let newLandUses = JSON.parse(JSON.stringify(INITIAL_LAND_USES));
-        let newIndicators = { ...INITIAL_INDICATORS };
-        let indicatorOverrides: InitialIndicatorOverrides | null = null;
-        
-        if (newLevelNumber === 2) {
-            newLandUses = JSON.parse(JSON.stringify(LEVEL_2_INITIAL_LAND_USES));
-            newStellaState = { ...newStellaState, ...LEVEL_2_INITIAL_STELLA_OVERRIDES };
-            indicatorOverrides = LEVEL_2_INITIAL_INDICATOR_OVERRIDES;
-        } else if (newLevelNumber === 3) {
-            newLandUses = JSON.parse(JSON.stringify(LEVEL_3_INITIAL_LAND_USES));
-            newStellaState = { ...newStellaState, ...LEVEL_3_INITIAL_STELLA_OVERRIDES };
-            indicatorOverrides = LEVEL_3_INITIAL_INDICATOR_OVERRIDES;
-        }
-
-        if (indicatorOverrides) {
-            if (indicatorOverrides.foodSecurity !== undefined) newIndicators.foodSecurity = indicatorOverrides.foodSecurity;
-            if (indicatorOverrides.economicSecurity !== undefined) newIndicators.economicSecurity = indicatorOverrides.economicSecurity;
-        }
-        newIndicators.socialWellbeing = 100 - (newStellaState.Conflicto_social || INITIAL_STELLA_STOCKS.Conflicto_social);
-        newIndicators.politicalStability = 100 - (newStellaState.Colapso_politico || INITIAL_STELLA_STOCKS.Colapso_politico);
-        newIndicators.ppAgricola = newStellaState.PP_AGRICOLA || INITIAL_STELLA_STOCKS.PP_AGRICOLA;
-        newIndicators.ppAmbientalista = newStellaState.PP_AMBIENTALISTA || INITIAL_STELLA_STOCKS.PP_AMBIENTALISTA;
-        newIndicators.ppSocial = newStellaState.PP_SOCIAL || INITIAL_STELLA_STOCKS.PP_SOCIAL;
-        newIndicators.pbi = newStellaState.PBI_Real || INITIAL_STELLA_STOCKS.PBI_Real;
-        newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
-        
-        const initialDataPointForNewLevel: HistoricalDataPoint = {
-            year: INITIAL_YEAR,
-            biodiversity: newIndicators.biodiversity,
-            foodSecurity: newIndicators.foodSecurity,
-            economicSecurity: newIndicators.economicSecurity,
-            socialWellbeing: newIndicators.socialWellbeing,
-            generalScore: newIndicators.generalScore,
-            co2EqEmissionsPerCapita: newIndicators.co2EqEmissionsPerCapita,
-            politicalStability: newIndicators.politicalStability,
-            pbi: newIndicators.pbi,
-            debt: newIndicators.debt,
-            ppAgricola: newIndicators.ppAgricola,
-            ppAmbientalista: newIndicators.ppAmbientalista,
-            ppSocial: newIndicators.ppSocial,
-            treasuryReserves: newStellaState.Reservas_del_Tesoro,
-        };
-        setHistoricalData([initialDataPointForNewLevel]);
+        setHistoricalData([initialHistoricalDataPoint]);
         setShowLevelIntroModalForLevel(newLevelNumber);
 
         return {
             ...prev,
-            year: INITIAL_YEAR,
-            currentLevel: newLevelNumber,
-            policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
-            landUses: newLandUses,
-            indicators: newIndicators,
-            stellaSpecificState: newStellaState,
-            pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
-            activeLevelConfig: newLevelConfig,
-            gameLog: [`Año ${INITIAL_YEAR} (N${newLevelNumber}): Nuevo Nivel Iniciado: ${newLevelConfig?.name}`].concat(prev.gameLog).slice(0, 100),
-            yearsSimulatedInCurrentLevel: 0,
-            level3EventsTriggeredCount: 0,
-            additionalTaxPressurePercentage: 0,
-            decarbonitoProactiveMessageSentInLevel: false,
-            lastConcludedLevelInfo: null, 
-            sentLevelReflectionMessage: false,
+            ...gameStatePatch,
+            gameLog: [`Año ${INITIAL_YEAR} (N${newLevelNumber}): Nuevo Nivel Iniciado: ${gameStatePatch.activeLevelConfig?.name}`].concat(prev.gameLog).slice(0, 100),
         };
     });
  }, []);
@@ -721,9 +760,20 @@ export const App = () => {
             }));
         }
     } else if (lastResult?.status === 'lost') {
+        const retryLevelNumber = lastResult.level;
+        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(retryLevelNumber);
+        if (!gameStatePatch.activeLevelConfig) {
+            setGameState(prev => ({ ...prev, lastConcludedLevelInfo: null }));
+            return;
+        }
+
+        setHistoricalData([initialHistoricalDataPoint]);
+
         setGameState(prev => ({
             ...prev,
-            lastConcludedLevelInfo: null
+            ...gameStatePatch,
+            gameOverReason: null,
+            gameLog: [`Año ${INITIAL_YEAR} (N${retryLevelNumber}): Nivel reiniciado tras no alcanzar los objetivos ("Volver a Intentar").`].concat(prev.gameLog).slice(0, 100),
         }));
     }
   }, [progressToNextLevel]);
@@ -1657,79 +1707,17 @@ export const App = () => {
     
     setGameState(prev => {
         if (prev.currentLevel === level) return prev;
-        
-        const newLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === level)!;
-        let newStellaState: StellaStocks;
-        let newLandUses: Record<LandUseType, LandUse>;
-        let indicatorOverrides: InitialIndicatorOverrides | null = null;
-        
-        switch (level) {
-            case 2:
-                newStellaState = { ...INITIAL_STELLA_STOCKS, ...LEVEL_2_INITIAL_STELLA_OVERRIDES };
-                newLandUses = JSON.parse(JSON.stringify(LEVEL_2_INITIAL_LAND_USES));
-                indicatorOverrides = LEVEL_2_INITIAL_INDICATOR_OVERRIDES;
-                break;
-            case 3:
-                newStellaState = { ...INITIAL_STELLA_STOCKS, ...LEVEL_3_INITIAL_STELLA_OVERRIDES };
-                newLandUses = JSON.parse(JSON.stringify(LEVEL_3_INITIAL_LAND_USES));
-                indicatorOverrides = LEVEL_3_INITIAL_INDICATOR_OVERRIDES;
-                break;
-            default: // Level 1
-                newStellaState = JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS));
-                newLandUses = JSON.parse(JSON.stringify(INITIAL_LAND_USES));
-                break;
-        }
 
-        const newIndicators = { ...INITIAL_INDICATORS };
-        if (indicatorOverrides) {
-            if (indicatorOverrides.foodSecurity !== undefined) newIndicators.foodSecurity = indicatorOverrides.foodSecurity;
-            if (indicatorOverrides.economicSecurity !== undefined) newIndicators.economicSecurity = indicatorOverrides.economicSecurity;
-        }
-        newIndicators.socialWellbeing = 100 - (newStellaState.Conflicto_social || INITIAL_STELLA_STOCKS.Conflicto_social);
-        newIndicators.politicalStability = 100 - (newStellaState.Colapso_politico || INITIAL_STELLA_STOCKS.Colapso_politico);
-        newIndicators.ppAgricola = newStellaState.PP_AGRICOLA || INITIAL_STELLA_STOCKS.PP_AGRICOLA;
-        newIndicators.ppAmbientalista = newStellaState.PP_AMBIENTALISTA || INITIAL_STELLA_STOCKS.PP_AMBIENTALISTA;
-        newIndicators.ppSocial = newStellaState.PP_SOCIAL || INITIAL_STELLA_STOCKS.PP_SOCIAL;
-        newIndicators.pbi = newStellaState.PBI_Real || INITIAL_STELLA_STOCKS.PBI_Real;
-        newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
-        newIndicators.treasuryReserves = newStellaState.Reservas_del_Tesoro || INITIAL_STELLA_STOCKS.Reservas_del_Tesoro;
+        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(level);
+        if (!gameStatePatch.activeLevelConfig) return prev;
 
-        const initialDataPointForNewLevel: HistoricalDataPoint = {
-            year: INITIAL_YEAR,
-            biodiversity: newIndicators.biodiversity,
-            foodSecurity: newIndicators.foodSecurity,
-            economicSecurity: newIndicators.economicSecurity,
-            socialWellbeing: newIndicators.socialWellbeing,
-            generalScore: newIndicators.generalScore,
-            co2EqEmissionsPerCapita: newIndicators.co2EqEmissionsPerCapita,
-            politicalStability: newIndicators.politicalStability,
-            pbi: newIndicators.pbi,
-            debt: newIndicators.debt,
-            ppAgricola: newIndicators.ppAgricola,
-            ppAmbientalista: newIndicators.ppAmbientalista,
-            ppSocial: newIndicators.ppSocial,
-            treasuryReserves: newIndicators.treasuryReserves,
-        };
-        setHistoricalData([initialDataPointForNewLevel]);
-        
+        setHistoricalData([initialHistoricalDataPoint]);
+
         logEvent(`Cambiado manualmente a Nivel ${level}. El estado del juego se ha reiniciado a los valores por defecto de este nivel.`);
 
         return {
             ...prev,
-            year: INITIAL_YEAR,
-            currentLevel: level,
-            policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
-            landUses: newLandUses,
-            indicators: newIndicators,
-            stellaSpecificState: newStellaState,
-            pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
-            activeLevelConfig: newLevelConfig,
-            yearsSimulatedInCurrentLevel: 0,
-            level3EventsTriggeredCount: 0,
-            additionalTaxPressurePercentage: 0,
-            decarbonitoProactiveMessageSentInLevel: false,
-            lastConcludedLevelInfo: null, 
-            sentLevelReflectionMessage: false,
+            ...gameStatePatch,
             gameOverReason: null,
         };
     });
