@@ -6,6 +6,34 @@ const T = {
   en: { title: 'DecarboNito Advisor', focus: 'Focus:', noKey: 'API Key not configured', thinking: 'DecarboNito is thinking...', placeholder: 'Ask DecarboNito...', inputLabel: 'Your question for DecarboNito', sendingLabel: 'Sending question', sendLabel: 'Send question', send: 'Send', noKeyMsg: 'Chatbot is disabled because the API Key is not configured.', askLabel: (q:string) => `Ask: ${q}` },
 } as const;
 
+const DecarboNitoIcon: React.FC<{ thinking?: boolean }> = ({ thinking }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className="h-6 w-6 mr-2 text-blue-400 flex-shrink-0"
+    aria-hidden="true"
+  >
+    {/* Antena: siempre con una animación sutil para que se sienta "vivo";
+        rebota mientras piensa, respira despacio en reposo. */}
+    <line x1="12" y1="2.5" x2="12" y2="5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="12" cy="2" r="1.3" fill="currentColor" className={thinking ? 'animate-bounce' : 'animate-pulse'} />
+
+    {/* Cabeza */}
+    <rect x="4" y="5.5" width="16" height="13" rx="4.5" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5" />
+
+    {/* "Orejas" laterales tipo robot */}
+    <line x1="4.5" y1="10" x2="2.5" y2="9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="19.5" y1="10" x2="21.5" y2="9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+
+    {/* Ojos: parpadean (pulsan) mientras DecarboNito está pensando */}
+    <circle cx="9" cy="12" r="1.7" fill="currentColor" className={thinking ? 'animate-pulse' : ''} />
+    <circle cx="15" cy="12" r="1.7" fill="currentColor" className={thinking ? 'animate-pulse' : ''} />
+
+    {/* Sonrisa */}
+    <path d="M9 15.5 Q12 17 15 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+  </svg>
+);
+
 interface ChatbotPanelProps {
   messages: ChatMessage[];
   onUserSubmit: (userInput: string) => Promise<void>;
@@ -54,10 +82,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
     <div className="bg-custom-light-gray rounded-lg shadow-xl flex flex-col flex-1 min-h-[400px]">
       <div className="p-4 border-b border-gray-700">
         <h3 className="text-xl font-semibold text-custom-accent flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M10 1.5a1 1 0 01.95.69l1.14 3.5a3.5 3.5 0 002.22 2.22l3.5 1.14a1 1 0 010 1.9l-3.5 1.14a3.5 3.5 0 00-2.22 2.22l-1.14 3.5a1 1 0 01-1.9 0l-1.14-3.5a3.5 3.5 0 00-2.22-2.22l-3.5-1.14a1 1 0 010-1.9l3.5-1.14a3.5 3.5 0 002.22-2.22l1.14-3.5a1 1 0 01.95-.69z" />
-            <path d="M16.5 1a.75.75 0 01.712.513l.334 1.001a1.5 1.5 0 00.94.94l1.001.334a.75.75 0 010 1.424l-1.001.334a1.5 1.5 0 00-.94.94l-.334 1.001a.75.75 0 01-1.424 0l-.334-1.001a1.5 1.5 0 00-.94-.94l-1.001-.334a.75.75 0 010-1.424l1.001-.334a1.5 1.5 0 00.94-.94l.334-1.001A.75.75 0 0116.5 1z" />
-          </svg>
+          <DecarboNitoIcon thinking={isLoading} />
           {t.title}
         </h3>
         {currentLevelName && <p className="text-xs text-gray-400 ml-8">{t.focus} {currentLevelName}</p>}
