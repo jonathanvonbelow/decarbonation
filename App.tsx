@@ -1696,7 +1696,7 @@ export const App = () => {
 
         if (policyWithEfficiencyWarning && policyWithEfficiencyWarning.currentEfficiency !== undefined) {
              const efficiencyPercentage = (policyWithEfficiencyWarning.currentEfficiency * 100).toFixed(0);
-             const warningMessage = `¡Atención! La eficiencia de la política "${policyWithEfficiencyWarning.name}" ha caído por debajo del 40% (actualmente ${efficiencyPercentage}%). Su impacto ahora es significativamente reducido. Considera reevaluar tu estrategia o si estás en Nivel 2+, aumenta el esfuerzo en sus instrumentos.`;
+             const warningMessage = `¡Atención! La eficiencia de la política "${policyWithEfficiencyWarning.name}" ha caído por debajo del 40% (actualmente ${efficiencyPercentage}%). Su impacto ahora es significativamente reducido. Considera reevaluar tu estrategia o, si estás en Nivel 2+, modifica el esfuerzo relativo entre sus instrumentos.`;
              addMessageToChat(warningMessage, 'system', 'policy_efficiency_warning');
              logEvent(warningMessage);
              policyWithEfficiencyWarning.previousEfficiencyForNotification = policyWithEfficiencyWarning.currentEfficiency;

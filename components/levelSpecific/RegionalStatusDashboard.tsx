@@ -20,7 +20,7 @@ const T = {
     population: 'Población:',
     keyFocus: 'Enfoque Clave:',
     viewDetails: (name: string) => `Ver detalles de ${name}`,
-    note: 'Nota: Los datos regionales son ilustrativos y reflejan disparidades potenciales y áreas de enfoque. Sus políticas nacionales influyen en estos resultados.',
+    note: 'Nota: Este panel es informativo/ilustrativo. No afecta directamente su puntaje ni otros indicadores del juego: visualiza posibles disparidades regionales a partir de sus decisiones de política a nivel nacional.',
   },
   en: {
     title: 'Regional Coordination Status',
@@ -30,7 +30,7 @@ const T = {
     population: 'Population:',
     keyFocus: 'Key Focus:',
     viewDetails: (name: string) => `View details for ${name}`,
-    note: 'Note: Regional data is illustrative and reflects potential disparities and focus areas. Your national policies influence these outcomes.',
+    note: 'Note: This panel is informational/illustrative only. It does not directly affect your score or other game indicators — it visualizes potential regional disparities based on your national-level policy choices.',
   },
 } as const;
 
