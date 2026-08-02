@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { GameState, Policy, LandUseType, LevelConfig, Pact, PolicyState, HistoricalDataPoint, InstrumentImpactHints } from '../types';
 import PolicyToggle from './PolicyToggle';
 import { POLICY_UI_ORDER, SIMULATION_YEARS_PER_ROUND, CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Text, LineChart, XAxis, YAxis, CartesianGrid, Legend, Line } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Text, LineChart, XAxis, YAxis, CartesianGrid, Legend, Line, ReferenceLine } from 'recharts';
 import RegionalStatusDashboard from './levelSpecific/RegionalStatusDashboard';
 import InnovationGlobalDashboard from './levelSpecific/InnovationGlobalDashboard';
 import Tooltip from './common/Tooltip';
@@ -114,7 +114,7 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
   );
 };
 
-const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; currentLevel: number }> = ({ historicalData, currentLevel }) => {
+const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; currentLevel: number; levelConfig?: LevelConfig }> = ({ historicalData, currentLevel, levelConfig }) => {
   const { language } = useLanguageContext();
   const T = {
     es: {
@@ -124,6 +124,7 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
       socialWell: 'Bienestar Social', polStab: 'Estab. Política',
       co2: 'CO2eq/cápita', score: 'Puntaje',
       ppAgr: 'Presión Agrícola', ppEnv: 'Presión Ambientalista', ppSoc: 'Presión Social',
+      minThreshold: 'Umbral mínimo', maxThreshold: 'Umbral máximo',
     },
     en: {
       title: 'Historical Trends', noData: 'Simulate at least one year to see trends.',
@@ -132,9 +133,12 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
       socialWell: 'Social Wellbeing', polStab: 'Pol. Stability',
       co2: 'CO2eq/capita', score: 'Score',
       ppAgr: 'Agricultural Pressure', ppEnv: 'Environmental Pressure', ppSoc: 'Social Pressure',
+      minThreshold: 'Minimum threshold', maxThreshold: 'Maximum threshold',
     },
   } as const;
   const t = T[language];
+  const winConditions = levelConfig?.winConditions;
+  const THRESHOLD_COLOR = '#94A3B8';
 
   if (historicalData.length < 2) {
     return (
@@ -169,6 +173,21 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               {currentLevel >= 2 && <Line type="monotone" dataKey="economicSecurity" name={t.econSec} stroke="#4299E1" dot={false} />}
               {currentLevel >= 2 && <Line type="monotone" dataKey="socialWellbeing" name={t.socialWell} stroke="#ED64A6" dot={false} />}
               {currentLevel >= 2 && <Line type="monotone" dataKey="politicalStability" name={t.polStab} stroke="#A0AEC0" dot={false} />}
+              {winConditions?.biodiversityMin !== undefined && (
+                <ReferenceLine y={winConditions.biodiversityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.biodiversity}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {currentLevel >= 2 && winConditions?.foodSecurityMin !== undefined && (
+                <ReferenceLine y={winConditions.foodSecurityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.foodSec}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {currentLevel >= 2 && winConditions?.economicSecurityMin !== undefined && (
+                <ReferenceLine y={winConditions.economicSecurityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.econSec}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {currentLevel >= 2 && winConditions?.bienestarSocialMin !== undefined && (
+                <ReferenceLine y={winConditions.bienestarSocialMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.socialWell}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {currentLevel >= 2 && winConditions?.politicalStabilityMin !== undefined && (
+                <ReferenceLine y={winConditions.politicalStabilityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.polStab}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -184,6 +203,12 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               <Legend />
               <Line type="monotone" yAxisId="left" dataKey="co2EqEmissionsPerCapita" name={t.co2} stroke="#FC8181" dot={false} />
               <Line type="monotone" yAxisId="right" dataKey="generalScore" name={t.score} stroke="#63B3ED" dot={false} />
+              {winConditions?.co2EqEmissionsPerCapitaMax !== undefined && (
+                <ReferenceLine yAxisId="left" y={winConditions.co2EqEmissionsPerCapitaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.co2}: ${t.maxThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {winConditions?.puntajeGeneralMin !== undefined && (
+                <ReferenceLine yAxisId="right" y={winConditions.puntajeGeneralMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.score}: ${t.minThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -201,6 +226,15 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               <Line type="monotone" dataKey="ppAgricola" name={t.ppAgr} stroke="#F6E05E" dot={false} />
               <Line type="monotone" dataKey="ppAmbientalista" name={t.ppEnv} stroke="#48BB78" dot={false} />
               <Line type="monotone" dataKey="ppSocial" name={t.ppSoc} stroke="#ED64A6" dot={false} />
+              {winConditions?.ppAgricolaMax !== undefined && (
+                <ReferenceLine y={winConditions.ppAgricolaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppAgr}: ${t.maxThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {winConditions?.ppAmbientalistaMax !== undefined && (
+                <ReferenceLine y={winConditions.ppAmbientalistaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppEnv}: ${t.maxThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
+              {winConditions?.ppSocialMax !== undefined && (
+                <ReferenceLine y={winConditions.ppSocialMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppSoc}: ${t.maxThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -368,7 +402,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      <HistoricalCharts historicalData={historicalData} currentLevel={currentLevel} />
+      <HistoricalCharts historicalData={historicalData} currentLevel={currentLevel} levelConfig={levelConfig} />
     </div>
   );
 };
