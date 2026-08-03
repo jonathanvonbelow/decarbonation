@@ -13,6 +13,12 @@ export const MAX_ACTIVE_POLICIES = 5; // Máximo de políticas activas simultán
 export const API_KEY_ERROR_MESSAGE = "La variable de entorno API_KEY no está configurada. La funcionalidad del chatbot estará desactivada.";
 // FIX: Updated model to recommended 'gemini-2.5-flash' from deprecated 'gemini-1.5-flash'.
 export const GEMINI_MODEL_TEXT = 'gemini-2.5-flash';
+// Native Gemini speech-generation model — reuses the same GEMINI_API_KEY, no
+// separate Google Cloud TTS project/billing/credentials required.
+export const GEMINI_MODEL_TTS = 'gemini-2.5-flash-preview-tts';
+// Prebuilt Gemini TTS voice for DecarboNito. Any of the ~30 prebuilt voice
+// names (Puck, Kore, Charon, Zephyr, ...) works for both ES and EN.
+export const GEMINI_TTS_VOICE_NAME = 'Puck';
 
 export const ALL_POLICIES: Policy[] = Object.values(Policy);
 
@@ -492,7 +498,8 @@ const CHATBOT_BASE_INSTRUCTION = `Eres DecarboNito, un asesor experto para el ju
 3.  **TRADUCE DATOS A PERSPECTIVAS:** No te limites a repetir los números del estado del juego. Explica el 'por qué' detrás de los datos y qué significan en términos de gobernanza, sostenibilidad y estrategia a largo plazo, siempre en el marco de las acciones disponibles.
 
 Analiza el CONTEXTO DEL JUEGO proporcionado y la pregunta del jugador. Ofrece explicaciones claras, identifica trade-offs y sinergias entre las políticas y acciones listadas. No tomes decisiones por el jugador, sino empodéralo con conocimiento. El indicador clave de emisiones es 'CO2eq per cápita'; un valor bajo es favorable.
-Responde siempre en ESPAÑOL. Puedes usar markdown.`;
+Responde siempre en ESPAÑOL.
+4.  **NUNCA USES MARKDOWN:** Tus respuestas se muestran como texto plano y también se convierten a voz (texto a voz), así que los símbolos de markdown se leen en voz alta letra por letra o rompen la lectura. Por lo tanto está PROHIBIDO usar '**negrita**', '*cursiva*', '# títulos', backticks, o viñetas con '*' o '-'. Para resaltar una idea o un título, usá una oración clara, dos puntos, o mayúscula inicial — nunca símbolos especiales. Si necesitás enumerar puntos breves, escribilos como oraciones separadas por saltos de línea, sin ningún símbolo al inicio.`;
 
 
 export const LEVEL_CONFIGS: LevelConfig[] = [

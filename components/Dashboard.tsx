@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GameState, Policy, LandUseType, LevelConfig, Pact, PolicyState, HistoricalDataPoint, InstrumentImpactHints } from '../types';
+import { GameState, Policy, LandUseType, LandUse, LevelConfig, Pact, PolicyState, HistoricalDataPoint, InstrumentImpactHints } from '../types';
 import PolicyToggle from './PolicyToggle';
 import { POLICY_UI_ORDER, SIMULATION_YEARS_PER_ROUND, CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Text, LineChart, XAxis, YAxis, CartesianGrid, Legend, Line, ReferenceLine } from 'recharts';
@@ -68,7 +68,7 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
   } as const;
   const t = T[language];
 
-  const data = Object.entries(landUses).map(([key, value]) => ({
+  const data = (Object.entries(landUses) as [string, LandUse][]).map(([key, value]) => ({
     name: getLandUseName(key, language),
     area: parseFloat(value.area.toFixed(1)),
   })).filter(d => d.area > 0);

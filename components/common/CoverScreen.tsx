@@ -58,7 +58,8 @@ const T = {
     startCta: 'Comenzar exploración',
     backCta: 'Volver al simulador',
     closeLabel: 'Cerrar',
-    illustrationAlt: 'Ilustración abstracta de transición climática',
+    illustrationAlt: 'Ilustración: transición de una economía de altas emisiones hacia la regeneración ambiental',
+    illustrationCaption: 'De las emisiones a la regeneración',
   },
   en: {
     eyebrow: 'IKI Project',
@@ -101,7 +102,8 @@ const T = {
     startCta: 'Start exploring',
     backCta: 'Back to the simulator',
     closeLabel: 'Close',
-    illustrationAlt: 'Abstract illustration of climate transition',
+    illustrationAlt: 'Illustration: transition from a high-emissions economy toward environmental regeneration',
+    illustrationCaption: 'From emissions to regeneration',
   },
 } as const;
 
@@ -152,26 +154,47 @@ const CoverScreen: React.FC<CoverScreenProps> = ({ mode = 'gate', onStart, onClo
         </div>
 
         <div className="overflow-y-auto flex-grow px-6 sm:px-8 py-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-          {/* Illustration placeholder: pure CSS/SVG abstract climate-transition motif
-              (no stock photography, no copyrighted characters). Swap for final art in a future pass. */}
+          {/* Illustration placeholder: pure CSS/SVG climate-transition motif — a factory
+              (high-emissions starting point) whose trajectory dips and then rises into a
+              tree (regeneration), read left-to-right like the gray-to-green background.
+              No stock photography, no copyrighted characters. Swap for final art in a
+              future pass. A visible caption backs up the motif so the concept doesn't
+              depend on reading it correctly. */}
           <div
-            className="w-full h-28 sm:h-36 rounded-lg mb-6 relative overflow-hidden bg-gradient-to-r from-gray-700 via-emerald-700 to-emerald-400 flex items-center justify-center"
+            className="w-full h-32 sm:h-40 rounded-lg mb-6 relative overflow-hidden bg-gradient-to-r from-gray-700 via-emerald-700 to-emerald-400 flex flex-col items-center justify-center gap-1.5"
             role="img"
             aria-label={t.illustrationAlt}
           >
-            <svg viewBox="0 0 200 60" className="w-2/3 h-2/3 opacity-90" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Rising bars: emissions trending down / regeneration trending up */}
-              <rect x="10" y="30" width="14" height="20" rx="2" fill="rgba(255,255,255,0.35)" />
-              <rect x="34" y="20" width="14" height="30" rx="2" fill="rgba(255,255,255,0.5)" />
-              <rect x="58" y="10" width="14" height="40" rx="2" fill="rgba(255,255,255,0.75)" />
-              {/* Abstract leaf / transition arrow */}
+            <svg viewBox="0 0 200 60" className="w-2/3 h-16 sm:h-20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Factory: the high-emissions starting point */}
+              <rect x="8" y="40" width="24" height="12" rx="1.5" fill="rgba(255,255,255,0.55)" />
+              <rect x="12" y="24" width="5" height="17" rx="1" fill="rgba(255,255,255,0.55)" />
+              <rect x="21" y="30" width="4" height="11" rx="1" fill="rgba(255,255,255,0.45)" />
+              {/* Trajectory: dips (transition strain) then rises sharply toward the tree */}
               <path
-                d="M100 45 C100 20, 130 10, 155 12 C150 30, 130 45, 100 45 Z"
-                fill="rgba(255,255,255,0.85)"
+                d="M36 26 C55 32, 68 46, 92 42 C118 38, 140 18, 163 10"
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                fill="none"
               />
-              <path d="M100 45 C112 35, 128 25, 150 15" stroke="rgba(16,60,40,0.6)" strokeWidth="2" fill="none" />
-              <circle cx="175" cy="18" r="9" fill="rgba(255,255,255,0.6)" />
+              <path
+                d="M156 4 L165 10 L155 15"
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              {/* Tree: the regenerative destination */}
+              <circle cx="178" cy="22" r="9" fill="rgba(255,255,255,0.95)" />
+              <circle cx="170" cy="26" r="6" fill="rgba(255,255,255,0.8)" />
+              <circle cx="186" cy="26" r="6" fill="rgba(255,255,255,0.8)" />
+              <rect x="175.5" y="30" width="5" height="12" rx="1.5" fill="rgba(255,255,255,0.95)" />
             </svg>
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-white/85 uppercase px-2 text-center">
+              {t.illustrationCaption}
+            </p>
           </div>
 
           <section className="mb-6">

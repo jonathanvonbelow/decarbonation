@@ -65,6 +65,6 @@ constants.ts         # CONTROL_PARAMS, INITIAL_*, LEVEL_CONFIGS
 - **controlParamsRef**: patron ref para que `runSimulationRound` (useCallback) acceda siempre al valor actual de `controlParams` sin re-crearse
 - **CP alias**: dentro de `runSimulationRound`, se usa `const CP = controlParamsRef.current` para todas las referencias a parametros de simulacion (permite override dinamico via FacilitatorPanel)
 
-## Errores de TypeScript pre-existentes
+## Errores de TypeScript
 
-Hay ~47 errores de TS pre-existentes en el repo (principalmente en `constants.ts` y `components/`). Son conocidos y no bloquean el build. Los cambios nuevos deben compilar limpio.
+`npx tsc --noEmit` esta limpio (0 errores) al 2026-08-03. El patron recurrente que causaba la mayoria de los errores previos era `Object.values()`/`Object.entries()` sobre campos tipados como `Record<K, V>` (p.ej. `landUses`, `policies`, `pacts`, `policy.instruments`), que TypeScript infiere como `unknown[]`/`unknown` en este proyecto — la solucion aplicada fue castear explicitamente el resultado, p.ej. `(Object.values(policy.instruments) as PolicyInstrument[])`. Los cambios nuevos deben compilar limpio.

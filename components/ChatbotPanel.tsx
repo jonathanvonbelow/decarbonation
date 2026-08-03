@@ -87,7 +87,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
   const t = T[language];
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  const speech = useSpeech();
+  const speech = useSpeech(apiKeyAvailable);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

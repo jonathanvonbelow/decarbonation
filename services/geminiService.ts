@@ -1,6 +1,6 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { GameState, Policy, PolicyState, LandUse, LandUseType, Pact, HistoricalDataPoint, ClosingSynthesis, Indicators } from '../types';
-import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, ALL_POLICIES } from '../constants';
+import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS, GEMINI_TTS_VOICE_NAME, ALL_POLICIES } from '../constants';
 import { Language } from '../hooks/useLanguage';
 import { getPolicyName, getIndicatorName } from '../i18n/gameData';
 
@@ -17,6 +17,72 @@ if (!API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
+
+// DecarboNito's replies are shown as plain text AND read aloud via TTS, so any
+// stray markdown from Gemini (it's instructed not to use it, but models can
+// slip) must be stripped here rather than rendered — asterisks/hashes/backticks
+// read aloud as literal symbols and otherwise show up unrendered in the chat bubble.
+const stripMarkdown = (text: string): string =>
+  text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/(?<!\*)\*(?!\*)([^*\n]+)\*(?!\*)/g, '$1')
+    .replace(/(?<!_)_(?!_)([^_\n]+)_(?!_)/g, '$1')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^[*-]\s+/gm, '')
+    .trim();
+
+export interface SynthesizedSpeech {
+  base64Pcm: string;
+  sampleRateHz: number;
+}
+
+// Gemini TTS returns raw 16-bit PCM; its mimeType looks like
+// "audio/L16;codec=pcm;rate=24000" — parse the rate, falling back to the
+// documented default when absent.
+const DEFAULT_TTS_SAMPLE_RATE_HZ = 24000;
+const parseSampleRateHz = (mimeType: string | undefined): number => {
+  const match = mimeType?.match(/rate=(\d+)/);
+  return match ? parseInt(match[1], 10) : DEFAULT_TTS_SAMPLE_RATE_HZ;
+};
+
+// Generates spoken audio for DecarboNito's replies via Gemini's native TTS —
+// reuses the same GEMINI_API_KEY as the chatbot, no separate Google Cloud TTS
+// project/billing/credentials needed. Returns raw PCM as base64; callers wrap
+// it in a playable container (see hooks/useSpeech.ts).
+export const synthesizeSpeech = async (
+  text: string,
+  language: Language,
+  signal?: AbortSignal
+): Promise<SynthesizedSpeech | null> => {
+  if (!API_KEY || !text.trim()) return null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL_TTS,
+      contents: text,
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: GEMINI_TTS_VOICE_NAME } },
+          languageCode: language === 'es' ? 'es-US' : 'en-US',
+        },
+        abortSignal: signal,
+      },
+    });
+
+    const part = response.candidates?.[0]?.content?.parts?.[0];
+    const base64Pcm = part?.inlineData?.data;
+    if (!base64Pcm) return null;
+
+    return { base64Pcm, sampleRateHz: parseSampleRateHz(part?.inlineData?.mimeType) };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') return null;
+    console.error("Error in synthesizeSpeech:", error);
+    return null;
+  }
+};
 
 // Helper function to create a concise summary of the game state
 const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTANCE' | 'LEVEL_REFLECTION' | 'NEWS_HEADLINES' = 'GENERAL_ASSISTANCE', language: Language = 'es'): string => {
@@ -120,7 +186,7 @@ export const askGemini = async (userInput: string, gameState: GameState, purpose
       }
     });
 
-    return response.text;
+    return stripMarkdown(response.text);
   } catch (error) {
     console.error("Error in askGemini:", error);
     if (error instanceof Error) {
@@ -180,7 +246,7 @@ export const generateNewsHeadlines = async (gameState: GameState, language: Lang
         const parsed = JSON.parse(jsonString);
         
         if (parsed && Array.isArray(parsed.headlines)) {
-            return parsed.headlines.slice(0, 3);
+            return parsed.headlines.slice(0, 3).map(stripMarkdown);
         }
         
         return [];
@@ -401,11 +467,14 @@ No uses la palabra "juego". Referite a la experiencia como "exploración de esce
 
     const parsed = JSON.parse(response.text.trim());
 
-    const decisionsTaken = typeof parsed?.decisionsTaken === 'string' ? parsed.decisionsTaken.trim() : '';
-    const tradeOffs = typeof parsed?.tradeOffs === 'string' ? parsed.tradeOffs.trim() : '';
-    const crossSectoralEffects = typeof parsed?.crossSectoralEffects === 'string' ? parsed.crossSectoralEffects.trim() : '';
+    const decisionsTaken = typeof parsed?.decisionsTaken === 'string' ? stripMarkdown(parsed.decisionsTaken) : '';
+    const tradeOffs = typeof parsed?.tradeOffs === 'string' ? stripMarkdown(parsed.tradeOffs) : '';
+    const crossSectoralEffects = typeof parsed?.crossSectoralEffects === 'string' ? stripMarkdown(parsed.crossSectoralEffects) : '';
     const reflectionQuestions = Array.isArray(parsed?.reflectionQuestions)
-      ? parsed.reflectionQuestions.filter((q: unknown): q is string => typeof q === 'string' && q.trim().length > 0).slice(0, 4)
+      ? parsed.reflectionQuestions
+          .filter((q: unknown): q is string => typeof q === 'string' && q.trim().length > 0)
+          .slice(0, 4)
+          .map(stripMarkdown)
       : [];
 
     if (!decisionsTaken || !tradeOffs || !crossSectoralEffects || reflectionQuestions.length === 0) {

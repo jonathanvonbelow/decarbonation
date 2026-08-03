@@ -86,7 +86,7 @@ const PolicyInstrumentsPanel: React.FC<PolicyInstrumentsPanelProps> = ({
               </div>
               {policy.instruments && Object.values(policy.instruments).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.values(policy.instruments).map((instrument) => (
+                  {(Object.values(policy.instruments) as PolicyInstrument[]).map((instrument) => (
                     <InstrumentControl
                       key={instrument.id} policyId={policy.id} instrument={instrument}
                       onEffortChange={handleInstrumentEffortChange} disabled={disabled}

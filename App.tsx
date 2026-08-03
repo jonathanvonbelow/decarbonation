@@ -878,8 +878,7 @@ export const App = () => {
             prompt += `  - Emisiones CO2eq/cápita: Objetivo <= ${winConditions.co2EqEmissionsPerCapitaMax} t/hab. Logrado: ${finalIndicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab\n`;
         }
          if (winConditions.nativeForestTotalMinPercentage !== undefined && level === 1) {
-            // FIX: Explicitly typed 'lu' to LandUse to resolve type inference issues with Object.values().reduce(), preventing property access errors on 'unknown'.
-            const currentTotalLandArea = Object.values(gameStateRef.current.landUses).reduce((sum, lu: LandUse) => sum + lu.area, 0);
+            const currentTotalLandArea = (Object.values(gameStateRef.current.landUses) as LandUse[]).reduce((sum, lu) => sum + lu.area, 0);
             const nativeForestArea = gameStateRef.current.landUses[LandUseType.ProtectedNativeForest].area + gameStateRef.current.landUses[LandUseType.UnprotectedNativeForest].area;
             const nativeForestPercentage = currentTotalLandArea > 0 ? (nativeForestArea / currentTotalLandArea) * 100 : 0;
             prompt += `  - % Bosque Nativo Total: Objetivo >= ${(winConditions.nativeForestTotalMinPercentage * 100).toFixed(0)}%. Logrado: ${nativeForestPercentage.toFixed(1)}%\n`;
@@ -1286,8 +1285,7 @@ export const App = () => {
     }
     
     if (gameStateRef.current.currentLevel >= 2) {
-        // FIX: Add explicit type annotation to fix potential 'unknown' type error on 'p'.
-        const policyNeedsEffort = Object.values(gameStateRef.current.policies).find((p: PolicyState) => 
+        const policyNeedsEffort = (Object.values(gameStateRef.current.policies) as PolicyState[]).find((p) =>
             p.isActive && 
             p.instruments && 
             Object.keys(p.instruments).length > 0 &&

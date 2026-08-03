@@ -85,7 +85,7 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
     return inn.low;
   };
 
-  const availablePacts = Object.values(pacts).filter(pact => year >= (pact.unlockYear || 0));
+  const availablePacts = (Object.values(pacts) as Pact[]).filter(pact => year >= (pact.unlockYear || 0));
   const activePactsCount = availablePacts.filter(pact => pact.isActive).length;
 
   return (
