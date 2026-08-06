@@ -67,3 +67,25 @@ URL Configuration (paso manual del usuario, fuera del alcance de este ciclo de c
 tanto, todo el desarrollo y QA de `v3` se prueba en modo demo (sin cuenta).
 
 **Origen.** Instrucción del usuario + `docs/v2.6/08_deploy_vercel_v26.md`.
+
+---
+
+## 2026-08-06 — Fase 1 (saneamiento) completada; hallazgo para la Fase 3 (i18n)
+
+**Decisión/hallazgo.** Al mover el código bajo `src/` encontré que ya existe un mecanismo de
+idioma parcial: `hooks/useLanguage.ts` + `contexts/LanguageContext.tsx` (toggle es/en persistido en
+`localStorage` bajo `decarbonationLanguage_v1`) y `i18n/gameData.ts` (187 líneas de contenido de
+dominio indexado por función, no por diccionario tipado). Ninguno de los dos es el sistema descrito
+en `12_i18n_completo.md` — las cadenas de interfaz siguen hardcodeadas con ternarios
+`language === 'es' ? '...' : '...'` inline en los componentes (confirma el diagnóstico del archivo
+`12`, capa A). Se renombró `i18n/gameData.ts` → `src/legacyContent/gameData.ts` para liberar
+`src/i18n/` para el sistema nuevo; la Fase 3 debe decidir si migra el contenido de `legacyContent`
+directamente a `src/i18n/content/` (probable) y si reutiliza la clave de `localStorage` existente
+para no perder la preferencia de idioma de usuarios que ya jugaron.
+
+**Verificación de la Fase 1.** `npm run build` limpio (tsc 0 errores, vite build verde, cero
+referencias a `esm.sh` en el output), `npm ls react react-dom` con una sola instancia deduplicada,
+y recorrido manual en el navegador (portada → login → modo demo → tablero) sin diferencias visuales
+ni errores de consola. Commit `5f415c7` en `origin/v3`.
+
+**Origen.** `mejora-general/files/09_saneamiento_repo.md`, `12_i18n_completo.md` §1.
