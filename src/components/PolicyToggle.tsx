@@ -1,7 +1,7 @@
 import React from 'react';
 import { PolicyState } from '../types';
 import Tooltip from './common/Tooltip';
-import { useLanguageContext } from '../contexts/LanguageContext';
+import { useT } from '../i18n';
 import { getPolicyName } from '../legacyContent/gameData';
 
 interface PolicyToggleProps {
@@ -12,24 +12,9 @@ interface PolicyToggleProps {
   currentLevel: number;
 }
 
-const T = {
-  es: {
-    currentEfficiency: 'Eficiencia Actual:',
-    efficiencyNote: 'La eficiencia varía con el tiempo y factores políticos.',
-    lockedUntil: (y: number) => `🔒 Bloqueada hasta el año ${y}.`,
-    efficiencyTitle: (e: string) => `Eficiencia: ${e}%`,
-  },
-  en: {
-    currentEfficiency: 'Current Efficiency:',
-    efficiencyNote: 'Efficiency varies over time and political factors.',
-    lockedUntil: (y: number) => `🔒 Locked until year ${y}.`,
-    efficiencyTitle: (e: string) => `Efficiency: ${e}%`,
-  },
-} as const;
 
 const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYear, policyLockInDuration, currentLevel }) => {
-  const { language } = useLanguageContext();
-  const t = T[language];
+  const { t, locale } = useT();
 
   const isLockedForDeactivation =
     policy.isActive &&
@@ -53,7 +38,7 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   };
 
   const efficiencyPercentage = policy.currentEfficiency !== undefined ? (policy.currentEfficiency * 100).toFixed(0) : null;
-  const displayName = getPolicyName(policy.id, language) || policy.name;
+  const displayName = getPolicyName(policy.id, locale) || policy.name;
 
   let baseTooltip: React.ReactNode;
   if (currentLevel >= 2 && policy.isActive && efficiencyPercentage !== null) {
@@ -62,9 +47,9 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
         <p className="mb-2">{policy.description}</p>
         <div className="border-t border-gray-600 pt-2 mt-2">
           <p className="font-semibold text-base text-center mb-1">
-            {t.currentEfficiency} <span className={getEfficiencyTextColor(policy.currentEfficiency)}>{efficiencyPercentage}%</span>
+            {t('policyToggle.currentEfficiency')} <span className={getEfficiencyTextColor(policy.currentEfficiency)}>{efficiencyPercentage}%</span>
           </p>
-          <p className="text-xs text-gray-400 text-center">{t.efficiencyNote}</p>
+          <p className="text-xs text-gray-400 text-center">{t('policyToggle.efficiencyNote')}</p>
         </div>
       </>
     );
@@ -77,7 +62,7 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
     const unlockYear = policy.activationYear + policyLockInDuration;
     tooltipContent = (
       <div>
-        <p className="font-semibold text-yellow-400 mb-2">{t.lockedUntil(unlockYear)}</p>
+        <p className="font-semibold text-yellow-400 mb-2">{t('policyToggle.lockedUntil', { year: unlockYear })}</p>
         {baseTooltip}
       </div>
     );
@@ -102,7 +87,7 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
               {displayName}
               {currentLevel >= 2 && policy.isActive && policy.currentEfficiency !== undefined && (
                 <span
-                  title={t.efficiencyTitle((policy.currentEfficiency * 100).toFixed(0))}
+                  title={t('policyToggle.efficiencyTitle', { value: (policy.currentEfficiency * 100).toFixed(0) })}
                   className={`inline-block w-3 h-3 rounded-full ml-2 ${getEfficiencyColor(policy.currentEfficiency)}`}
                 ></span>
               )}

@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import { useLanguageContext } from '../contexts/LanguageContext';
-const T = {
-  es: { title: 'Registro de Actividades', empty: 'Aún no se han registrado actividades.', expand: 'Expandir registro', collapse: 'Colapsar registro' },
-  en: { title: 'Activity Log', empty: 'No activities logged yet.', expand: 'Expand log', collapse: 'Collapse log' },
-} as const;
+import { useT } from '../i18n';
 
 interface GameLogPanelProps {
   logs: string[];
 }
 
 const GameLogPanel: React.FC<GameLogPanelProps> = ({ logs }) => {
-  const { language } = useLanguageContext();
-  const t = T[language];
+  const { t } = useT();
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -21,13 +16,13 @@ const GameLogPanel: React.FC<GameLogPanelProps> = ({ logs }) => {
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-700/30 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-accent focus:ring-opacity-50"
         aria-expanded={isExpanded}
-        aria-label={isExpanded ? t.collapse : t.expand}
+        aria-label={isExpanded ? t('gameLog.collapse') : t('gameLog.expand')}
       >
         <h3 className="text-lg font-semibold text-custom-accent flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 10a2 2 0 00-2 2v.5a.5.5 0 00.5.5h15a.5.5 0 00.5-.5V16a2 2 0 00-2-2H4z" clipRule="evenodd" />
           </svg>
-          {t.title}
+          {t('gameLog.title')}
           {!isExpanded && logs.length > 0 && (
             <span className="ml-2 text-xs bg-gray-600 text-gray-300 px-2 py-0.5 rounded-full">
               {logs.length}
@@ -56,7 +51,7 @@ const GameLogPanel: React.FC<GameLogPanelProps> = ({ logs }) => {
               </p>
             ))
           ) : (
-            <p className="text-sm text-gray-500 italic text-center pt-2">{t.empty}</p>
+            <p className="text-sm text-gray-500 italic text-center pt-2">{t('gameLog.empty')}</p>
           )}
         </div>
       )}

@@ -176,3 +176,57 @@ activa la agroecológica. Cero errores de consola en las tres rondas. `npm test`
 `npm run build` en verde después del rewire completo.
 
 **Origen.** Hallazgo propio durante la verificación de `mejora-general/files/16_auditoria_ecuaciones.md`.
+
+---
+
+## 2026-08-06 — Fase 3 (i18n, Capa A): alcance de esta pasada y arquitectura del puente
+
+**Hallazgo al empezar.** Contrario a lo que sugería el diagnóstico genérico del archivo `12`
+("cadenas hardcodeadas en ~22 componentes"), casi todos los componentes YA tienen un diccionario
+local `T = { es: {...}, en: {...} }` con `const t = T[language]` — no son ternarios sueltos. El
+problema real no es "no hay traducción", es que está **duplicada 25 veces** (una por componente,
+sin chequeo de completitud entre idiomas, sin fuente única) y que algunos componentes puntuales
+—`Toast.tsx` fue el caso encontrado— no tienen ninguna traducción en absoluto.
+
+**Arquitectura elegida: puente, no reemplazo simultáneo.** Se construyó el sistema tipado de
+`12_i18n_completo.md` §2 (`src/i18n/`: `I18nProvider`, `useT()`, diccionario `UI_ES`/`UI_EN`
+tipado estructuralmente uno contra el otro) y se montó una vez en `src/main.tsx`. En vez de migrar
+los ~25 componentes de punta a punta en esta pasada, `src/hooks/useLanguage.ts` se reescribió para
+delegar en `useT()` manteniendo su firma pública (`{ language, toggleLanguage }`) — así los ~21
+componentes que siguen sin migrar (listados explícitamente en `IGNORED_COMPONENTS` de
+`scripts/i18n-audit.mjs`) **siguen funcionando sin tocarlos**, y ahora comparten una sola fuente de
+verdad del idioma en vez de instancias de estado independientes por cada `<LanguageProvider>`
+montado. Se reutilizó la clave de `localStorage` existente (`decarbonationLanguage_v1`) para no
+resetear el idioma de usuarios que ya jugaron.
+
+**Nota técnica: `UI_ES` no lleva `as const`.** El propio pseudocódigo del archivo `12` lo pone con
+`as const` y tipa `en.ts` como `typeof UI_ES`; probado tal cual, eso falla: `as const` infiere tipos
+literales por hoja (`"Cerrar"` en vez de `string`), y `en.ts` no puede asignar `"Close"` a una
+propiedad tipada como el literal `"Cerrar"`. Se sacó el `as const` — la forma estructural que
+`FlattenKeys` necesita no depende de que los valores sean literales.
+
+**Migrados en esta pasada (orden sugerido por `12` §7, primeros cuatro):** `Toast.tsx` (sin
+i18n antes — ahora con `t('toast.close')`), `Header.tsx`, `GameLogPanel.tsx`, `PolicyToggle.tsx`
+(que además ahora le pasa `locale` de `useT()` a `getPolicyName`, no `language` de un contexto
+separado). Cada uno perdió su bloque `T = {...} as const` local y ahora usa `t('namespace.key', {
+interpolations })`.
+
+**`scripts/i18n-audit.mjs`**: implementado y en verde, pero con dos listas de exclusión explícitas
+(no una sola): `IGNORED_COMPONENTS` (Capa A pendiente, 21 componentes — decrece a medida que se
+migran) y `CAPA_B_C_PENDING` (8 archivos: `geminiService.ts`, `suggestionService.ts`,
+`descriptions.ts`, `types.ts` —los *valores* del enum `Policy` son prosa en español usada como ID—,
+y los 4 archivos de `src/sim/` cuyos mensajes de log se portaron literales en la Fase 2). Sin estas
+exclusiones el audit reportaba 209 hallazgos reales pero fuera de alcance de esta pasada; con ellas,
+el audit es una señal accionable del estado real, no ruido.
+
+**No se tocó `constants.ts`** (Capa B) ni los prompts de Gemini (Capa C) — quedan, junto con el
+resto de los ~21 componentes, para la Fase 12 ("Cierre de i18n") de este plan.
+
+**Verificación.** `npm test` (15/15, con la nueva suite `tests/i18n.spec.ts` de paridad de claves y
+placeholders es/en), `npm run build` limpio, `npm run i18n:audit` en verde con el conteo honesto de
+pendientes. En el navegador: togglear a inglés cambia correctamente Header, "Registro de
+Actividades"→"Activity Log", el toast de advertencia ("Cerrar"→"Close"), mientras que Dashboard
+(sin migrar, todavía con su propio `T[language]`) sigue funcionando igual que antes porque ahora
+lee el mismo estado de idioma compartido — cero regresiones, cero errores de consola.
+
+**Origen.** `mejora-general/files/12_i18n_completo.md`.

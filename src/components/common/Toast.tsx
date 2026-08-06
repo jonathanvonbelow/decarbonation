@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useT } from '../../i18n';
 
 interface ToastProps {
   message: string;
@@ -7,6 +8,7 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
+  const { t } = useT();
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -63,9 +65,9 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
         type="button"
         className="ml-auto -mx-1.5 -my-1.5 bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-600 rounded-lg focus:ring-2 focus:ring-gray-500 p-1.5 inline-flex h-8 w-8"
         onClick={onClose}
-        aria-label="Cerrar"
+        aria-label={t('toast.close')}
       >
-        <span className="sr-only">Cerrar</span>
+        <span className="sr-only">{t('toast.close')}</span>
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
         </svg>
