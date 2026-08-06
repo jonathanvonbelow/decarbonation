@@ -42,7 +42,9 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogPanel from './components/GameLogPanel';
-import { stepYear, createInitialState } from './sim';
+import { stepYear, createInitialState, evaluateLevel } from './sim';
+import WinRoutesPanel from './components/game/WinRoutesPanel';
+import { useT } from './i18n';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -404,33 +406,21 @@ const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfi
 // FIX: Removed React.FC type from component definition to align with modern functional component best practices and avoid potential assignment errors.
 export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
+  const { t } = useT();
   const { startSession, resetSession, saveFinalSnapshot, savePreSurvey, savePostSurvey, endSession } = useSessionPersistence(user?.id ?? null);
 
   const [gameState, setGameState] = useState<GameState>(() => {
-    const initialLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === 1);
+    const { gameStatePatch } = createInitialState(1);
     return {
-      year: INITIAL_YEAR,
-      currentLevel: 1,
-      policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
-      landUses: JSON.parse(JSON.stringify(INITIAL_LAND_USES)),
-      indicators: { ...INITIAL_INDICATORS },
+      ...gameStatePatch,
       finances: { ...INITIAL_FINANCES },
-      stellaSpecificState: JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS)),
-      gameLog: [`Año ${INITIAL_YEAR} (N1): Juego iniciado. Nivel 1: ${initialLevelConfig?.name}`],
+      gameLog: [`Año ${INITIAL_YEAR} (N1): Juego iniciado. Nivel 1: ${gameStatePatch.activeLevelConfig?.name}`],
       isSimulating: false,
-      activeLevelConfig: initialLevelConfig,
       gameOverReason: null,
       loanRequestedThisRound: 0,
-      pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
-      lastConcludedLevelInfo: null,
-      sentLevelReflectionMessage: false,
       currentEvent: null,
       newsHeadlines: [],
-      level3EventsTriggeredCount: 0,
-      additionalTaxPressurePercentage: 0,
-      decarbonitoProactiveMessageSentInLevel: false,
-      yearsSimulatedInCurrentLevel: 0,
-      wonLevels: [], 
+      wonLevels: [],
       _pendingLevelIntroTrigger: null,
     };
   });
@@ -1080,107 +1070,36 @@ export const App = () => {
     setShowPostSurvey(true);
   }, []);
 
-  const generateLevel3WinReason = (gameState: GameState): { reason: string, objectivesMetCount: number } => {
-    const wc = LEVEL_CONFIGS[2].winConditions;
-    if (!wc) return { reason: "Condiciones de victoria no encontradas.", objectivesMetCount: 0 };
+  // Phase 5 (mejora-general/files/17_multiples_vias_victoria.md): replaces the old
+  // level-3-only, flat-checklist reason generator with a route-aware one that works for every
+  // level. Module-level pure function (not a hook) so it does not need to join runSimulationRound
+  // useCallback's dependency array -- t() is passed in explicitly by the caller.
+  const generateRouteOutcomeReason = (
+    outcome: ReturnType<typeof evaluateLevel>,
+    t: (key: any, values?: Record<string, string | number>) => string,
+  ): string => {
+    const fmtVal = (n: number) => (Math.abs(n) >= 1000 ? n.toFixed(0) : n.toFixed(1));
 
-    const metObjectives: string[] = [];
-    const unmetObjectives: string[] = [];
-    let objectivesMetCount = 0;
-
-    const debtPbiRatio = gameState.stellaSpecificState.PBI_Real > 0 ? gameState.stellaSpecificState.Deuda / gameState.stellaSpecificState.PBI_Real : Infinity;
-    
-    if (wc.puntajeGeneralMin !== undefined) {
-        if (gameState.indicators.generalScore >= wc.puntajeGeneralMin) {
-            metObjectives.push(`✅ Puntaje General > ${wc.puntajeGeneralMin} (Logrado: ${gameState.indicators.generalScore.toFixed(0)})`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Puntaje General > ${wc.puntajeGeneralMin} (Faltó: ${gameState.indicators.generalScore.toFixed(0)})`);
-        }
-    }
-    if (wc.biodiversityMin !== undefined) {
-        if (gameState.indicators.biodiversity >= wc.biodiversityMin) {
-            metObjectives.push(`✅ Biodiversidad > ${wc.biodiversityMin}% (Logrado: ${gameState.indicators.biodiversity.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Biodiversidad > ${wc.biodiversityMin}% (Faltó: ${gameState.indicators.biodiversity.toFixed(1)}%)`);
-        }
-    }
-    if (wc.co2EqEmissionsPerCapitaMax !== undefined) {
-        if (gameState.indicators.co2EqEmissionsPerCapita <= wc.co2EqEmissionsPerCapitaMax) {
-            metObjectives.push(`✅ Emisiones CO2eq/cápita < ${wc.co2EqEmissionsPerCapitaMax} (Logrado: ${gameState.indicators.co2EqEmissionsPerCapita.toFixed(2)})`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Emisiones CO2eq/cápita < ${wc.co2EqEmissionsPerCapitaMax} (Faltó: ${gameState.indicators.co2EqEmissionsPerCapita.toFixed(2)})`);
-        }
-    }
-    if (wc.foodSecurityMin !== undefined) {
-        if (gameState.indicators.foodSecurity >= wc.foodSecurityMin) {
-            metObjectives.push(`✅ Seg. Alimentaria > ${wc.foodSecurityMin}% (Logrado: ${gameState.indicators.foodSecurity.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Seg. Alimentaria > ${wc.foodSecurityMin}% (Faltó: ${gameState.indicators.foodSecurity.toFixed(1)}%)`);
-        }
-    }
-    if (wc.economicSecurityMin !== undefined) {
-        if (gameState.indicators.economicSecurity >= wc.economicSecurityMin) {
-            metObjectives.push(`✅ Seg. Económica > ${wc.economicSecurityMin}% (Logrado: ${gameState.indicators.economicSecurity.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Seg. Económica > ${wc.economicSecurityMin}% (Faltó: ${gameState.indicators.economicSecurity.toFixed(1)}%)`);
-        }
-    }
-    if (wc.bienestarSocialMin !== undefined) {
-        if (gameState.indicators.socialWellbeing >= wc.bienestarSocialMin) {
-            metObjectives.push(`✅ Bienestar Social > ${wc.bienestarSocialMin}% (Logrado: ${gameState.indicators.socialWellbeing.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Bienestar Social > ${wc.bienestarSocialMin}% (Faltó: ${gameState.indicators.socialWellbeing.toFixed(1)}%)`);
-        }
-    }
-    if (wc.politicalStabilityMin !== undefined) {
-        if (gameState.indicators.politicalStability >= wc.politicalStabilityMin) {
-            metObjectives.push(`✅ Estab. Política > ${wc.politicalStabilityMin}% (Logrado: ${gameState.indicators.politicalStability.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Estab. Política > ${wc.politicalStabilityMin}% (Faltó: ${gameState.indicators.politicalStability.toFixed(1)}%)`);
-        }
-    }
-    if (wc.pbiMin !== undefined) {
-        if (gameState.indicators.pbi >= wc.pbiMin) {
-            metObjectives.push(`✅ PBI Real > ${wc.pbiMin} (Logrado: ${gameState.indicators.pbi.toFixed(0)})`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ PBI Real > ${wc.pbiMin} (Faltó: ${gameState.indicators.pbi.toFixed(0)})`);
-        }
-    }
-    if (wc.deudaPbiMax !== undefined) {
-        if (debtPbiRatio < wc.deudaPbiMax) {
-            metObjectives.push(`✅ Ratio Deuda/PBI < ${wc.deudaPbiMax} (Logrado: ${debtPbiRatio.toFixed(2)})`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Ratio Deuda/PBI < ${wc.deudaPbiMax} (Faltó: ${debtPbiRatio.toFixed(2)})`);
-        }
-    }
-    if (wc.colapsoPoliticoMax !== undefined) {
-        if (gameState.stellaSpecificState.Colapso_politico < wc.colapsoPoliticoMax) {
-            metObjectives.push(`✅ Colapso Político < ${wc.colapsoPoliticoMax}% (Logrado: ${gameState.stellaSpecificState.Colapso_politico.toFixed(1)}%)`);
-            objectivesMetCount++;
-        } else {
-            unmetObjectives.push(`❌ Colapso Político < ${wc.colapsoPoliticoMax}% (Faltó: ${gameState.stellaSpecificState.Colapso_politico.toFixed(1)}%)`);
-        }
+    if (outcome.achieved) {
+      const rp = outcome.routes.find((r) => r.route.id === outcome.achieved!.id)!;
+      const lines = rp.conditions.map((c) => {
+        const arrow = c.condition.dir === 'min' ? '>=' : '<=';
+        return `${c.met ? '✅' : '➖'} ${t(c.condition.labelKey)} ${arrow} ${fmtVal(c.condition.target)} (logrado: ${fmtVal(c.value)})`;
+      });
+      return `${t('routes.achieved', { route: t(outcome.achieved.nameKey) })}\n\n${lines.join('\n')}`;
     }
 
-    let reason = `¡Felicidades! Has alcanzado ${objectivesMetCount} de 10 objetivos clave, superando el umbral de 6 para ganar el Nivel 3.\n\n`;
-    if (metObjectives.length > 0) {
-        reason += `**Objetivos Cumplidos:**\n${metObjectives.join('\n')}\n\n`;
-    }
-    if (unmetObjectives.length > 0) {
-        reason += `**Áreas de Mejora:**\n${unmetObjectives.join('\n')}`;
-    }
-
-    return { reason, objectivesMetCount };
-};
+    const closest = outcome.closest;
+    const lines = closest.conditions.map((c) => {
+      const arrow = c.condition.dir === 'min' ? '>=' : '<=';
+      return `${c.met ? '✅' : '❌'} ${t(c.condition.labelKey)} ${arrow} ${fmtVal(c.condition.target)} (${fmtVal(c.value)})`;
+    });
+    const bottleneckText = closest.bottleneck ? t(closest.bottleneck.labelKey) : '';
+    const header = outcome.floorsMet
+      ? t('routes.closest', { route: t(closest.route.nameKey), condition: bottleneckText })
+      : `${t('routes.floorsBroken')}: ${outcome.failedFloors.map((f) => t(f.labelKey)).join(', ')}`;
+    return `${header}\n\n${lines.join('\n')}`;
+  };
 
   const runSimulationRound = useCallback(async () => {
     const CP = controlParamsRef.current;
@@ -1245,18 +1164,9 @@ export const App = () => {
         const levelTargetYear = tempGameState.activeLevelConfig?.targetYear || (INITIAL_YEAR + YEARS_PER_LEVEL * tempGameState.currentLevel);
 
         if (tempGameState.year >= levelTargetYear) {
-            const currentLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === tempGameState.currentLevel);
-            const conditionsMet = currentLevelConfig ? currentLevelConfig.progressionConditionsMet(tempGameState) : false;
-            let winReason = "";
-
-            if (tempGameState.currentLevel === 3 && conditionsMet) {
-                const { reason: detailedReason } = generateLevel3WinReason(tempGameState);
-                winReason = detailedReason;
-            } else {
-                winReason = conditionsMet 
-                    ? `¡Objetivos del Nivel ${tempGameState.currentLevel} alcanzados en el año ${tempGameState.year}!`
-                    : `Fin del ciclo del Nivel ${tempGameState.currentLevel}. No se cumplieron todos los objetivos.`;
-            }
+            const outcome = evaluateLevel(tempGameState, { ...tempGameState, indicators: tempGameState.levelBaseline });
+            const conditionsMet = outcome.won;
+            const winReason = generateRouteOutcomeReason(outcome, t);
 
             concludedLevelInfoForUpdate = {
                 level: tempGameState.currentLevel,
@@ -1265,12 +1175,12 @@ export const App = () => {
                 finalIndicators: JSON.parse(JSON.stringify(tempGameState.indicators)),
                 winConditions: tempGameState.activeLevelConfig?.winConditions
             };
-            
+
             if(conditionsMet) {
               tempGameState.wonLevels = [...new Set([...tempGameState.wonLevels, tempGameState.currentLevel])];
             }
-            
-            break; 
+
+            break;
         }
         
         if (tempGameState.gameOverReason) {
@@ -1298,7 +1208,7 @@ export const App = () => {
     setGameState({ ...tempGameState, isSimulating: false });
     updateHistoricalData(tempGameState);
 
-  }, [logEvent, addToast, addMessageToChat, updateHistoricalData]);
+  }, [logEvent, addToast, addMessageToChat, updateHistoricalData, t]);
   
   const setCurrentLevelManually = useCallback((level: number) => {
     if (level < 1 || level > MAX_LEVELS) {
@@ -1402,6 +1312,7 @@ export const App = () => {
             />
           </div>
           <div className="flex flex-col gap-6 h-full">
+            <WinRoutesPanel gameState={gameState} />
             <ChatbotPanel
               messages={chatMessages}
               onUserSubmit={handleUserChatSubmit}

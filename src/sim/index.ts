@@ -49,6 +49,7 @@ export * from './pressures';
 export * from './economy';
 export * from './score';
 export * from './events';
+export * from './winRoutes';
 
 export interface StepYearChatMessage {
   text: string;
@@ -226,7 +227,7 @@ export interface LevelInitializationResult {
     | 'year' | 'currentLevel' | 'policies' | 'landUses' | 'indicators' | 'stellaSpecificState'
     | 'pacts' | 'activeLevelConfig' | 'yearsSimulatedInCurrentLevel' | 'level3EventsTriggeredCount'
     | 'additionalTaxPressurePercentage' | 'decarbonitoProactiveMessageSentInLevel'
-    | 'lastConcludedLevelInfo' | 'sentLevelReflectionMessage'
+    | 'lastConcludedLevelInfo' | 'sentLevelReflectionMessage' | 'levelBaseline'
   >;
   initialHistoricalDataPoint: HistoricalDataPoint;
 }
@@ -308,6 +309,9 @@ export function createInitialState(levelNumber: number): LevelInitializationResu
       decarbonitoProactiveMessageSentInLevel: false,
       lastConcludedLevelInfo: null,
       sentLevelReflectionMessage: false,
+      // Snapshot for win-route progress bars (src/sim/winRoutes.ts) — "how far the player moved"
+      // is measured from here, not from zero.
+      levelBaseline: { ...newIndicators },
     },
     initialHistoricalDataPoint,
   };

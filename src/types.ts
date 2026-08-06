@@ -210,6 +210,11 @@ export interface GameState {
   decarbonitoProactiveMessageSentInLevel: boolean;
   yearsSimulatedInCurrentLevel: number;
   wonLevels: number[]; // Added to track successfully completed levels
+  // Indicators snapshot taken when the current level started (see src/sim/index.ts
+  // createInitialState). Win-route progress bars (src/sim/winRoutes.ts) measure "how far the
+  // player moved" from this baseline, not distance from zero — added in phase 5
+  // (mejora-general/files/17_multiples_vias_victoria.md).
+  levelBaseline: Indicators;
   _pendingLevelIntroTrigger: number | null; // Added for managing level intro display
 }
 

@@ -1,6 +1,10 @@
 
 
 import { Policy, PolicyState, LandUseType, LandUse, GameState, LevelConfig, StellaStocks, Pact, PolicyInstrument, RandomEvent, RandomEventEffect, RegionalZoneData, ControlParams, InitialIndicatorOverrides, InstrumentImpactHints } from './types';
+// Direct submodule import (not './sim') to avoid a circular dependency: src/sim/index.ts itself
+// imports LEVEL_CONFIGS/CONTROL_PARAMS from this file. src/sim/winRoutes.ts only depends on
+// ./types, so importing it directly here is safe.
+import { evaluateLevel } from './sim/winRoutes';
 
 export const INITIAL_YEAR = 2024;
 export const SIMULATION_YEARS_PER_ROUND = 1;
@@ -502,6 +506,19 @@ Responde siempre en ESPAÑOL.
 4.  **NUNCA USES MARKDOWN:** Tus respuestas se muestran como texto plano y también se convierten a voz (texto a voz), así que los símbolos de markdown se leen en voz alta letra por letra o rompen la lectura. Por lo tanto está PROHIBIDO usar '**negrita**', '*cursiva*', '# títulos', backticks, o viñetas con '*' o '-'. Para resaltar una idea o un título, usá una oración clara, dos puntos, o mayúscula inicial — nunca símbolos especiales. Si necesitás enumerar puntos breves, escribilos como oraciones separadas por saltos de línea, sin ningún símbolo al inicio.`;
 
 
+// Phase 5 (mejora-general/files/17_multiples_vias_victoria.md §3.4): `progressionConditionsMet`
+// external signature (gameState) => boolean is unchanged for every caller, but its body now
+// delegates to evaluateLevel's floors+routes logic instead of a single conjunctive AND.
+// `evaluateLevel` wants a full GameState for its baseline (route-progress-bar "how far you moved"
+// reference), but GameState only stores `levelBaseline: Indicators` (see types.ts) to avoid
+// doubling the state's storage footprint with a full per-level snapshot. Reads of non-indicator
+// fields (land use %, debt ratio, active pacts, instrument effort — used by a handful of
+// conditions) fall back to the *current* state inside this synthetic baseline, which is
+// functionally correct for the won/lost boolean (isConditionMet never reads the baseline) and
+// only affects the progress-bar percentage's accuracy for those specific conditions — logged in
+// docs/DESIGN_DECISIONS_LOG.md rather than expanding levelBaseline's shape for this phase.
+const routeBaseline = (s: GameState): GameState => ({ ...s, indicators: s.levelBaseline });
+
 export const LEVEL_CONFIGS: LevelConfig[] = [
   {
     levelNumber: 1,
@@ -518,20 +535,11 @@ Los indicadores clave son Biodiversidad, Emisiones de CO2eq per cápita, Porcent
 El objetivo principal es reducir las emisiones, mejorar la biodiversidad y proteger el bosque nativo. Recuérdale al jugador la importancia del sector AFOLU.
 Mantenlo simple y centrado en las políticas macro y sus efectos sobre el uso del suelo.`,
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL,
-    progressionConditionsMet: (gameState: GameState) => {
-        const wc = LEVEL_CONFIGS[0].winConditions;
-        if (!wc) return false;
-        const currentTotalLandArea = Object.values(gameState.landUses).reduce((sum, lu) => sum + lu.area, 0);
-        const nativeForestArea = gameState.landUses[LandUseType.ProtectedNativeForest].area + gameState.landUses[LandUseType.UnprotectedNativeForest].area;
-        const nativeForestPercentage = currentTotalLandArea > 0 ? nativeForestArea / currentTotalLandArea : 0;
-
-        return (
-            (wc.puntajeGeneralMin === undefined || gameState.indicators.generalScore >= wc.puntajeGeneralMin) &&
-            (wc.biodiversityMin === undefined || gameState.indicators.biodiversity >= wc.biodiversityMin) &&
-            (wc.co2EqEmissionsPerCapitaMax === undefined || gameState.indicators.co2EqEmissionsPerCapita <= wc.co2EqEmissionsPerCapitaMax) &&
-            (wc.nativeForestTotalMinPercentage === undefined || nativeForestPercentage >= wc.nativeForestTotalMinPercentage)
-        );
-    },
+    // Phase 5: floors + (conservation | production | innovation) — see src/sim/winRoutes.ts and
+    // the routeBaseline comment above. Old conjunctive winConditions below now only document the
+    // level's headline targets (LevelIntroModal reads it as a fallback) and feed the `equilibrium`
+    // route in the levels that still have one.
+    progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
     winConditions: {
       puntajeGeneralMin: 600,
       biodiversityMin: 40,
@@ -554,22 +562,8 @@ Ayuda al jugador a entender las **interacciones, sinergias y antagonismos** entr
 **No discutas préstamos ni presión fiscal adicional detalladamente;** son mecánicas del Nivel 3.
 El objetivo es mantener un equilibrio entre desarrollo económico, bienestar social y sostenibilidad ambiental, gestionando las presiones políticas.`,
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL, 
-    progressionConditionsMet: (gameState: GameState) => {
-        const wc = LEVEL_CONFIGS[1].winConditions;
-        if (!wc) return false;
-        return (
-            (wc.puntajeGeneralMin === undefined || gameState.indicators.generalScore >= wc.puntajeGeneralMin) &&
-            (wc.biodiversityMin === undefined || gameState.indicators.biodiversity >= wc.biodiversityMin) &&
-            (wc.co2EqEmissionsPerCapitaMax === undefined || gameState.indicators.co2EqEmissionsPerCapita <= wc.co2EqEmissionsPerCapitaMax) &&
-            (wc.foodSecurityMin === undefined || gameState.indicators.foodSecurity >= wc.foodSecurityMin) &&
-            (wc.economicSecurityMin === undefined || gameState.indicators.economicSecurity >= wc.economicSecurityMin) &&
-            (wc.bienestarSocialMin === undefined || gameState.indicators.socialWellbeing >= wc.bienestarSocialMin) &&
-            (wc.politicalStabilityMin === undefined || gameState.indicators.politicalStability >= wc.politicalStabilityMin) &&
-            (wc.ppAgricolaMax === undefined || gameState.indicators.ppAgricola < wc.ppAgricolaMax) &&
-            (wc.ppAmbientalistaMax === undefined || gameState.indicators.ppAmbientalista < wc.ppAmbientalistaMax) &&
-            (wc.ppSocialMax === undefined || gameState.indicators.ppSocial < wc.ppSocialMax)
-        );
-    },
+    // Phase 5: floors + (conservation | production | innovation) — see src/sim/winRoutes.ts.
+    progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
     winConditions: {
       puntajeGeneralMin: 480,
       biodiversityMin: 45,
@@ -596,26 +590,9 @@ Hay pactos internacionales más avanzados y eventos aleatorios más frecuentes e
 **REGLA ADICIONAL CLAVE PARA NIVEL 3:** Debes utilizar el 'Historial de Acciones Recientes' del jugador, proporcionado en el contexto, para dar consejos más personalizados y relevantes. Reconoce sus estrategias pasadas (ej. "Veo que has favorecido las políticas de conservación...") y enmarca tus recomendaciones en función de las decisiones que ha estado tomando. Discute las implicaciones a largo plazo de las decisiones financieras.
 El objetivo es demostrar un liderazgo integral. Ayuda al jugador a prepararse para el 'endgame', considerando todos los factores para un legado sostenible.`,
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL,
-     progressionConditionsMet: (gameState: GameState) => {
-        const wc = LEVEL_CONFIGS[2].winConditions;
-        if (!wc) return false;
-        
-        let conditionsMetCount = 0;
-        const debtPbiRatio = gameState.stellaSpecificState.PBI_Real > 0 ? gameState.stellaSpecificState.Deuda / gameState.stellaSpecificState.PBI_Real : Infinity;
-
-        if (wc.puntajeGeneralMin !== undefined && gameState.indicators.generalScore >= wc.puntajeGeneralMin) conditionsMetCount++;
-        if (wc.co2EqEmissionsPerCapitaMax !== undefined && gameState.indicators.co2EqEmissionsPerCapita <= wc.co2EqEmissionsPerCapitaMax) conditionsMetCount++;
-        if (wc.biodiversityMin !== undefined && gameState.indicators.biodiversity >= wc.biodiversityMin) conditionsMetCount++;
-        if (wc.foodSecurityMin !== undefined && gameState.indicators.foodSecurity >= wc.foodSecurityMin) conditionsMetCount++;
-        if (wc.economicSecurityMin !== undefined && gameState.indicators.economicSecurity >= wc.economicSecurityMin) conditionsMetCount++;
-        if (wc.bienestarSocialMin !== undefined && gameState.indicators.socialWellbeing >= wc.bienestarSocialMin) conditionsMetCount++;
-        if (wc.politicalStabilityMin !== undefined && gameState.indicators.politicalStability >= wc.politicalStabilityMin) conditionsMetCount++;
-        if (wc.pbiMin !== undefined && gameState.indicators.pbi >= wc.pbiMin) conditionsMetCount++;
-        if (wc.deudaPbiMax !== undefined && debtPbiRatio < wc.deudaPbiMax) conditionsMetCount++;
-        if (wc.colapsoPoliticoMax !== undefined && gameState.stellaSpecificState.Colapso_politico < wc.colapsoPoliticoMax) conditionsMetCount++;
-        
-        return conditionsMetCount >= 6;
-    },
+    // Phase 5: floors + (conservation | production | innovation | equilibrium). The old "6 of 10"
+    // conjunctive logic lives on unchanged as the `equilibrium` route in src/sim/winRoutes.ts.
+    progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
     winConditions: {
       puntajeGeneralMin: 700,
       co2EqEmissionsPerCapitaMax: 2,

@@ -270,3 +270,72 @@ i18n:audit` en verde. En el navegador: la app se ve pixel-idéntica a antes de e
 diferencias de color, tipografía o layout, como corresponde a una fase puramente aditiva.
 
 **Origen.** `mejora-general/files/11_design_system.md`.
+
+---
+
+## 2026-08-06 — Fase 5 (múltiples vías de victoria): floors + OR-de-rutas, `evaluateLevel` como fuente única
+
+**Decisión central: reemplazar el AND conjuntivo de 10 condiciones por "pisos + al menos una
+ruta".** Cada nivel define un set de `floors` (mínimos no negociables — sin ellos no se puede ganar
+por ninguna vía) y una lista de `WinRoute` con sus propias condiciones; `evaluateLevel` gana si los
+floors se cumplen Y al menos una ruta se cumple (`met`, o `minConditionsMet` de N-de-M para rutas
+tipo "6 de 10"). Se preservó la mecánica pre-Fase-5 exactamente como una ruta más, `equilibrium`
+(nivel 3, 6-de-10 condiciones) — cero regresión para quien jugaba "a la vieja usanza", nuevas rutas
+son estrictamente aditivas en términos de qué formas de ganar existen.
+
+**Desvíos confirmados frente al archivo `17`:**
+- `s.stella` del pseudocódigo no existe en este codebase — se usa `state.stellaSpecificState` real.
+- El archivo inventa un campo `Balance_Carbono_Anual` que no existe en `GameState`; se usó
+  `co2EqEmissionsPerCapita` (el indicador real que ya representa ese balance).
+- `carbonTechEffort` y `activePactsCount` (usados por varias condiciones) no tenían implementación
+  en el archivo — se escribieron a partir de los tipos reales (`stellaSpecificState`, `pacts`).
+- Los umbrales de nivel 2 y 3 estaban "solo esbozados como comentarios" en el archivo, sin números
+  concretos — se completaron y calibraron acá, no copiados de ningún lado.
+
+**Progreso relativo a la línea base del nivel, no a cero.** `GameState.levelBaseline` (nuevo campo)
+guarda los indicadores al inicio del nivel; `conditionProgress` mide avance como
+`(actual - baseline) / (target - baseline)`, no `actual / target`. Sin esto, un nivel que arranca
+con biodiversidad en 40 y una condición con target 90 mostraría ~44% de progreso en el año 0 aunque
+el jugador no haya hecho nada — confirmado con un test dedicado
+(`tests/sim/winRoutes.spec.ts`, "progress is measured from the baseline, not from zero").
+
+**Calibración: harness mínimo construido ahora, no diferido.** El archivo `17` §5 exige un harness
+de balance para calibrar umbrales, pero ese harness estaba planeado recién para una fase de
+auditoría posterior. Sin él, el primer paso de umbrales (extrapolados del ejemplo de nivel 1 del
+propio archivo) dejaba las tres rutas de los tres niveles completamente imposibles (0/15 corridas
+ganaban). Se construyó `scripts/simulate.ts` (7 estrategias, semilla única, ver header del archivo
+para las diferencias deliberadas contra el harness completo de 200 semillas/8 estrategias) y se
+recalibraron los umbrales contra su salida real, documentada en `reports/routes-calibration.md`.
+
+**Hallazgo real de auditoría, no un artefacto de calibración: decaimiento de eficiencia de
+políticas es severo y nunca se resetea.** `docs/audit-equations.md` ítem P-1 se actualizó de
+PENDIENTE a CORREGIR: `Tiempo_Activacion_X` solo se incrementa, nunca se resetea al desactivar una
+política (confirmado por grep en todo `src/sim/policies.ts` y el resto de `src/`), y la mayoría de
+las duraciones de decaimiento (5-7 años) son mucho menores que un nivel (30 años) — una política
+activada una sola vez queda con eficiencia casi nula bien antes de terminar el nivel. Esto explica
+por qué `economicSecurity` casi no responde a ninguna estrategia probada. **No se corrige en esta
+fase** — es un cambio de balance sobre ecuaciones ya congeladas en la Fase 2, necesita su propia
+calibración y tests de regresión dedicados; queda documentado y flagueado para una fase futura.
+
+**Calibración: cumple el mínimo de esta fase, no el estándar fino de `17` §5 todavía.**
+`reports/routes-calibration.md` documenta honestamente que solo 1 ruta distinta gana por nivel en
+esta corrida de 7 estrategias (el criterio pide ≥3), porque faltan estrategias específicamente
+afines a `production`/`innovation` per se (distintas de "todo verde"). El objetivo mínimo de esta
+fase sí se cumple: `do_nothing` nunca gana, cada nivel es ganable, y el mecanismo de rutas
+múltiples reemplaza correctamente el AND conjuntivo sin romper nada. El balance fino queda pendiente
+para el harness completo (200 semillas, 8 estrategias canónicas).
+
+**`WinRoutesPanel.tsx` nuevo, correctamente i18n desde el inicio.** Usa `useT()`/`useFormat()` de la
+Fase 3 en vez de un `T[language]` local — `npm run i18n:audit` confirma que no necesitó ninguna
+entrada nueva en las listas de exclusión.
+
+**Verificación.** `npx vitest run` (24/24, 9 tests nuevos en `tests/sim/winRoutes.spec.ts`: lógica
+de `evaluateRoute` con rutas sintéticas — met/progress/bottleneck/minConditionsMet/monotonicidad/
+progreso relativo a baseline — más integración contra `LEVEL_ROUTES` real). `npm run build` limpio.
+`npm run i18n:audit` en verde. En el navegador (modo demo, nivel 1): el panel "Rutas de victoria"
+renderiza las 3 rutas del nivel 1 en español con barras de progreso, tagline y texto de cuello de
+botella por condición faltante (p. ej. "Te falta: Seguridad alimentaria"), cero errores de consola
+de la aplicación (los dos mensajes de consola observados son ruido genérico de extensión de Chrome,
+no relacionados con la app).
+
+**Origen.** `mejora-general/files/17_multiples_vias_victoria.md`.
