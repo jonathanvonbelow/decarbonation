@@ -63,6 +63,10 @@ const IGNORED_COMPONENTS = [
   'src/components/facilitator/FacilitatorPanel.tsx',
   'src/components/auth/LoginScreen.tsx',
   'src/App.tsx',
+  // Dev-only test bench (mejora-general/files/13_decarbonito_character.md §5.3), mounted only
+  // behind #dev/decarbonito (src/main.tsx) -- never reachable in the normal play flow, so its
+  // labels are out of Capa A scope the same way scripts/*.ts (outside src/) are.
+  'src/components/decarbonito/DecarboNitoLab.tsx',
 ];
 
 // Accented characters plus high-frequency Spanish function words.

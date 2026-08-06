@@ -339,3 +339,69 @@ de la aplicación (los dos mensajes de consola observados son ruido genérico de
 no relacionados con la app).
 
 **Origen.** `mejora-general/files/17_multiples_vias_victoria.md`.
+
+---
+
+## 2026-08-06 — Fase 6 (personaje DecarboNito): avatar SVG+Motion puro, y un hallazgo de entorno
+
+**Componente aislado, tal como pide el archivo `13`.** `src/components/decarbonito/DecarboNitoAvatar.tsx`
+no conoce el estado del juego — solo recibe `state`/`emotion`/`tone`/`size`/`targetAngle`/`beamLength`
+y emite `onStateComplete`. La lógica de *cuándo* mostrar cada estado (actividad del chat, umbrales de
+indicadores, `highlight_element`) queda para la Fase 7 (`14_decarbonito_overlay.md`), sin ninguna
+dependencia todavía en ese sentido. Implementado casi verbatim desde el código completo que trae el
+archivo `13` §5.2 (14 estados, 6 expresiones, 4 tonos, brazos/antena/haz animables por separado).
+
+**Hallazgo real de entorno, no de este código: el proyecto no tenía `@types/react` instalado.**
+Al escribir `DecarboNitoAvatar.tsx` con `React.FC<DnAvatarProps>` y pasar la prop `state` a un
+par de helpers propios con firma estricta (`ONE_SHOT: DnState[]`, `pick(v, s: DnState)`), `tsc`
+reportó "Argument of type 'string' is not assignable to parameter of type 'DnState'" — un error real,
+pero desconcertante porque `state === 'sleep'` y otras comparaciones con el mismo valor no fallaban.
+Investigado a fondo (ver el repro aislado usado para diagnosticarlo): `node_modules/react` no trae
+sus propios `.d.ts` y **`@types/react`/`@types/react-dom` no estaban en `package.json` ni instalados
+transitivamente por ningún paquete** — `React.FC<P>` resolvía a un tipo sin información real (`any`),
+así que cada componente de la app viene tipando sus props exactamente así desde siempre. Esto nunca se
+notó porque ningún otro componente pasaba una prop hacia una función local con firma estricta como esta
+— la mayoría de los usos son comparaciones (`===`) o se renderizan directo, y ninguno de esos casos
+delata el problema. Es decir: `npx tsc --noEmit` "limpio" en todas las fases anteriores nunca estuvo
+verificando de verdad la forma de las props de React.
+
+**Se instaló `@types/react`/`@types/react-dom` (v19) y se verificó el radio de impacto antes de
+persistirlo** — igual que la Fase 5 construyó un harness para no calibrar a ciegas, acá se instaló
+primero con `--no-save` para medir el daño: con tipos reales, **cero errores nuevos aparecieron en
+ninguno de los ~40 archivos preexistentes** — todos los errores nuevos (5, luego 4 tras encadenar
+fixes) fueron exclusivamente en el `DecarboNitoAvatar.tsx` recién escrito. Con esa señal (el resto del
+código es realista aunque nunca se comprobaron los tipos de React), se persistió la dependencia de
+verdad (`npm install --save-dev`) en vez de dejarla como parche temporal.
+
+**Ajuste propio, no error del archivo `13`: los objetos `*Variants` no pueden ser `as const`.**
+El pseudocódigo del archivo tipa `bodyVariants`/`armLeftVariants`/`armRightVariants`/`ringVariants`
+con `as const`. Con tipos reales de Motion, eso convierte los arrays de keyframes (`[0, -4, 0]`) en
+tuplas `readonly`, que el tipo `Target`/`StyleKeyframesDefinition` de Motion rechaza (espera
+`AnyResolvedKeyframe[]`, mutable). Se tipó cada objeto como `Variants` (de `motion/react`) en su lugar
+— mantiene la seguridad de tipos para las claves de estado sin pelear con la mutabilidad de los
+arrays. `pick()` se simplificó de `<T extends object>(v: T, s: DnState): keyof T` a
+`(v: Variants, s: DnState): string`, porque con `Variants` (un tipo indexado) `keyof T` pasa a ser
+`string | number`, incompatible con `VariantLabels` de Motion (`string | string[]`).
+
+**Banco de pruebas visual, según §5.3.** `src/components/decarbonito/DecarboNitoLab.tsx`, montado
+detrás de `#dev/decarbonito` (chequeo de hash en `src/main.tsx`, antes de `I18nProvider`/`App` — nunca
+toca auth/Supabase/estado de juego). Controles reales para `emotion`/`tone`/`size`/`targetAngle`/
+`beamLength` (el archivo `13` los deja "omitidos por brevedad"), grilla de los 14 estados, y un log de
+`onStateComplete` visible para confirmar que cada estado de una sola pasada dispara exactamente una
+vez. Excluido de `IGNORED_COMPONENTS` del audit de i18n con nota explícita: nunca es alcanzable desde
+el flujo de juego normal, mismo criterio que excluye `scripts/*.ts`.
+
+**Verificación.** `npx tsc --noEmit` limpio (0 errores, con `@types/react` instalado de verdad por
+primera vez). `npx vitest run` 24/24 sin cambios. `npm run build` limpio. `npm run i18n:audit` en
+verde. En el navegador, `#dev/decarbonito`: los 14 estados renderizan sin errores de consola de la
+app: `point` orienta cuerpo/brazo/haz hacia `targetAngle`, `celebrate` dispara destellos, el log de
+`onStateComplete` confirma un solo disparo por estado de una pasada. A 32 px (`tone="critical"`,
+`emotion="alarmed"`) la silueta sigue siendo reconocible y antena/brazos se ocultan correctamente
+(`detail="minimal"` por debajo de 40 px), como pide la verificación del archivo `13`.
+
+**No verificado en este ciclo:** `prefers-reduced-motion` no se emuló en el navegador (requeriría
+forzar la media query vía DevTools/CDP); la rama de código (`useReducedMotion()` colapsando `anim` a
+`'idle'`) se revisó por lectura, no se probó visualmente. Pendiente de una pasada de accesibilidad más
+adelante (Fase 9 o una auditoría dedicada).
+
+**Origen.** `mejora-general/files/13_decarbonito_character.md`.
