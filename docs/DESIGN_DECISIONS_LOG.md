@@ -230,3 +230,43 @@ Actividades"→"Activity Log", el toast de advertencia ("Cerrar"→"Close"), mie
 lee el mismo estado de idioma compartido — cero regresiones, cero errores de consola.
 
 **Origen.** `mejora-general/files/12_i18n_completo.md`.
+
+---
+
+## 2026-08-06 — Fase 4 (sistema de diseño): tokens aditivos, no reemplazo
+
+**Decisión central: aditivo, no "reemplaza por completo" como dice el archivo `11`.** El propio
+archivo dice reemplazar el `index.css` de la Fase 1 entero. Hacerlo ahora — antes de que la Fase 10
+(`19_estetica_visual.md`) haya re-vestido una sola pantalla con los tokens nuevos — dejaría la app
+en vivo sin colores durante un número indefinido de fases (`bg-custom-gray`, `text-custom-accent`,
+etc. dejarían de existir de un día para el otro, y ~25 componentes los siguen usando). Se optó por
+sumar la paleta nueva (`basalt-*`, `chlorophyll`, `ochre`, `ember`, `hydro`, `indigo-ink`, `bloom`),
+la tipografía (`Bricolage Grotesque`, `Instrument Sans`, `IBM Plex Mono`, autohospedadas vía
+`@fontsource`) y los tokens de movimiento **al lado** de los tokens de la Fase 1, no en su lugar.
+Los tokens viejos se eliminan recién cuando la Fase 10 haya migrado a todos sus consumidores —
+verificable en ese momento con `grep -rn "custom-gray\|custom-light-gray\|custom-accent" src/`.
+
+**Primitivas construidas, sin consumidores todavía.** `src/components/ui/`: `Panel`, `Button`,
+`StatTile` (con una integración nueva no prevista en el archivo `11` — usa `useFormat()` de la
+Fase 3 para formatear números según el locale, en vez de `toLocaleString(undefined, ...)`),
+`Switch`, `EffortSlider`, `Badge`, `Modal`, `Sparkline`, `chartTheme.ts`, `LevelAmbience.tsx`. El
+archivo `11` solo da código completo para `Panel`/`Button`/`StatTile`; el resto (`Switch`,
+`EffortSlider`, `Badge`, `Modal`, `Sparkline`) son implementaciones propias a partir de las notas
+de §4.4, seguidas del piso de accesibilidad de §7 (área táctil ≥44px, `role="switch"`, foco
+atrapado en `Modal`, restauración de foco, bloqueo de scroll). Cablearlas a pantallas reales es
+tarea de la Fase 10.
+
+**No se creó un `Tooltip.tsx` nuevo.** El archivo `11` dice "conservar el existente pero mejorar
+apertura por teclado" — se deja así para cuando la Fase 10 lo toque, en vez de crear una versión
+paralela sin usar.
+
+**Nota técnica: `as const` en `es.ts` de la Fase 3 no es el único lugar donde el pseudocódigo del
+paquete no compila tal cual** — acá no hubo un problema equivalente, pero se vuelve a confirmar el
+patrón de "verificar con `tsc`, no asumir que el código de los archivos `.md` compila".
+
+**Verificación.** `npm test` (15/15), `npm run build` limpio (fuentes bundleadas correctamente,
+`@font-face` inerte hasta que algún componente use `font-display`/`font-mono`), `npm run
+i18n:audit` en verde. En el navegador: la app se ve pixel-idéntica a antes de esta fase — cero
+diferencias de color, tipografía o layout, como corresponde a una fase puramente aditiva.
+
+**Origen.** `mejora-general/files/11_design_system.md`.

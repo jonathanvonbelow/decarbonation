@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <defs>
+    <filter id="warp">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0022" numOctaves="4" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="140"/>
+    </filter>
+  </defs>
+  <g filter="url(#warp)" fill="none" stroke="#6FD08C" stroke-opacity="0.055" stroke-width="1">
+    <!-- Concentric rings warped by noise, read as topographic contour lines -->
+    <circle cx="360" cy="360" r="60"/>
+    <circle cx="360" cy="360" r="110"/>
+    <circle cx="360" cy="360" r="160"/>
+    <circle cx="360" cy="360" r="210"/>
+    <circle cx="360" cy="360" r="260"/>
+    <circle cx="360" cy="360" r="310"/>
+    <circle cx="360" cy="360" r="360"/>
+    <circle cx="360" cy="360" r="410"/>
+  </g>
+</svg>
