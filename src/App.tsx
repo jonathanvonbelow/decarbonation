@@ -29,7 +29,6 @@ import {
 } from './constants';
 import { Dashboard } from './components/Dashboard';
 import Header from './components/Header';
-import ChatbotPanel from './components/ChatbotPanel';
 import { askGemini, generateNewsHeadlines } from './services/geminiService';
 import { getSuggestedQuestions } from './services/suggestionService';
 import LevelUpBanner from './components/common/LevelUpBanner';
@@ -41,10 +40,12 @@ import FacilitatorManual from './components/facilitator/FacilitatorManual';
 import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
-import GameLogPanel from './components/GameLogPanel';
+import GameLogDrawer from './components/GameLogDrawer';
 import { stepYear, createInitialState, evaluateLevel } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
+import { DecarboNitoProvider, dnApiRef } from './components/decarbonito/DecarboNitoProvider';
+import DecarboNitoLayer from './components/decarbonito/DecarboNitoLayer';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -598,10 +599,15 @@ export const App = () => {
     if (!apiKeyAvailable) {
       addMessageToChat(API_KEY_ERROR_MESSAGE, 'system', 'system_error');
       logEvent(API_KEY_ERROR_MESSAGE);
+      dnApiRef.current?.notify(API_KEY_ERROR_MESSAGE, { priority: 3, tone: 'critical', immediate: true });
+      dnApiRef.current?.play('facepalm', 'alarmed');
     } else {
       const initialBotMessage = "¡Hola! Soy DecarboNito, tu asesor. ¿En qué puedo ayudarte con DecarboNation?";
       if (chatMessages.length === 0 || (chatMessages.length > 0 && !chatMessages.some(m => m.text === initialBotMessage && m.sender === 'bot'))) {
          addMessageToChat(initialBotMessage, 'bot', 'standard');
+         // Arranque de partida (14_decarbonito_overlay.md §7): globo + wave, once.
+         dnApiRef.current?.say(initialBotMessage, { priority: 1, immediate: true });
+         dnApiRef.current?.play('wave');
       }
     }
   }, [apiKeyAvailable, addMessageToChat, logEvent, chatMessages.length]);
@@ -612,17 +618,22 @@ export const App = () => {
 
     addMessageToChat(userInput, 'user');
     setIsBotLoading(true);
+    dnApiRef.current?.setBusy(true);
 
     try {
       const botResponseText = await askGemini(userInput, gameStateRef.current, 'GENERAL_ASSISTANCE', getActiveLanguage());
       addMessageToChat(botResponseText, 'bot');
+      dnApiRef.current?.play('nod', 'happy');
     } catch (error) {
       console.error("Error comunicándose con Gemini:", error);
       const errorMessageText = error instanceof Error ? error.message : "Lo siento, tuve problemas para procesar tu solicitud.";
       addMessageToChat(`Error: ${errorMessageText}`, 'system', 'system_error');
       logEvent(`Error del chatbot: ${errorMessageText}`);
+      dnApiRef.current?.notify(errorMessageText, { priority: 3, tone: 'critical', immediate: true });
+      dnApiRef.current?.play('facepalm', 'alarmed');
     } finally {
       setIsBotLoading(false);
+      dnApiRef.current?.setBusy(false);
     }
   }, [isBotLoading, apiKeyAvailable, addMessageToChat, logEvent]);
   
@@ -637,6 +648,12 @@ export const App = () => {
     if (!hasSentFinalDecarbonitoMessage) {
       setHasSentFinalDecarbonitoMessage(true);
       handleLessonsLearnedStart();
+      // Fin de partida (14_decarbonito_overlay.md §7): the source table's "abre conversación con
+      // debriefing" is already served here by ClosingSynthesisModal (a full-screen modal, not the
+      // floating panel) — opening the conversation panel on top of it would double up on the same
+      // moment. DecarboNito still reacts visibly with the right expression for the outcome.
+      const won = gameState.gameOverReason.toLowerCase().includes('victoria');
+      dnApiRef.current?.play('explain', won ? 'happy' : 'alarmed');
     }
   }, [gameState.gameOverReason, hasSentFinalDecarbonitoMessage, handleLessonsLearnedStart]);
 
@@ -745,8 +762,16 @@ export const App = () => {
     const lastInfo = gameState.lastConcludedLevelInfo;
     
     if (lastInfo && !levelEndInfo) {
+        // Nivel superado / no superado (14_decarbonito_overlay.md §7): notify + celebrate on a
+        // win; a gentler "worry" nudge (not in the source table, but its silence there reads as
+        // an omission, not a deliberate "say nothing" — a loss with zero DecarboNito reaction
+        // would read as a bug) on a loss. Both are notifications (persist until dismissed), not
+        // ephemeral bubbles, since the player may be mid-read of the level-end banner already.
         if (lastInfo.status === 'won') {
+            dnApiRef.current?.notify(t('dn.levelWon'), { priority: 3, tone: 'success', immediate: true });
+            dnApiRef.current?.play('celebrate', 'happy');
         } else {
+            dnApiRef.current?.play('worry', 'alarmed');
         }
         setLevelEndInfo({
             level: lastInfo.level,
@@ -824,23 +849,28 @@ export const App = () => {
       }
 
       setIsBotLoading(true);
+      dnApiRef.current?.setBusy(true);
       askGemini(prompt, gameStateRef.current, 'LEVEL_REFLECTION', getActiveLanguage())
         .then(response => {
           addMessageToChat(response, 'bot', 'level_event');
           logEvent(`Reflexión de DecarboNito para Nivel ${level} recibida.`);
           setGameState(prev => ({ ...prev, sentLevelReflectionMessage: true }));
+          dnApiRef.current?.play('explain', 'neutral');
         })
         .catch(error => {
           const errorMsg = `Error obteniendo reflexión de DecarboNito para Nivel ${level}: ${error instanceof Error ? error.message : String(error)}`;
           addMessageToChat(errorMsg, 'system', 'system_error');
           logEvent(errorMsg);
+          dnApiRef.current?.notify(errorMsg, { priority: 3, tone: 'critical', immediate: true });
+          dnApiRef.current?.play('facepalm', 'alarmed');
         })
         .finally(() => {
           setIsBotLoading(false);
+          dnApiRef.current?.setBusy(false);
         });
     }
 
-  }, [gameState.lastConcludedLevelInfo, gameState.sentLevelReflectionMessage, apiKeyAvailable, addMessageToChat, logEvent, gameStateRef, showClosingSynthesisModal, levelEndInfo]);
+  }, [gameState.lastConcludedLevelInfo, gameState.sentLevelReflectionMessage, apiKeyAvailable, addMessageToChat, logEvent, gameStateRef, showClosingSynthesisModal, levelEndInfo, t]);
 
 
   const updateHistoricalData = useCallback((currentState: GameState) => {
@@ -1134,6 +1164,11 @@ export const App = () => {
     }
     
     setGameState(prev => ({ ...prev, isSimulating: true }));
+    // "Simular Próximo Año" is this codebase's unit of a player-initiated simulation action —
+    // the closest analogue to the source file's "cada simulateYear" for resetting the
+    // proactivity budget (§4.2 rule 3), even though one click advances SIMULATION_YEARS_PER_ROUND
+    // simulated years, not exactly one.
+    dnApiRef.current?.resetProactiveBudget();
 
     // Give React a moment to render the "isSimulating" state before blocking the thread
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -1196,7 +1231,19 @@ export const App = () => {
         const stepResult = stepYear(tempGameState, Math.random, CP);
         tempGameState = stepResult.next;
         stepResult.logs.forEach(msg => logEvent(msg));
-        stepResult.chatMessages.forEach(msg => addMessageToChat(msg.text, 'system', msg.emphasisType));
+        stepResult.chatMessages.forEach(msg => {
+          addMessageToChat(msg.text, 'system', msg.emphasisType);
+          // Evento aleatorio / noticia / advertencia de eficiencia (14_decarbonito_overlay.md §7):
+          // routed through the queue (not `immediate`) so a year with several events doesn't spam
+          // the player — the proactivity budget and queue caps apply exactly like any other
+          // notification.
+          if (msg.emphasisType === 'game_event') {
+            dnApiRef.current?.notify(msg.text, { priority: 2, tone: 'normal' });
+            dnApiRef.current?.play('peek');
+          } else if (msg.emphasisType === 'policy_efficiency_warning') {
+            dnApiRef.current?.notify(msg.text, { priority: 2, tone: 'caution' });
+          }
+        });
 
     } // end for loop
 
@@ -1265,6 +1312,7 @@ export const App = () => {
   // FIX: Added return statement to App component to render the UI and fix the error in index.tsx
   return (
     <LanguageProvider>
+    <DecarboNitoProvider>
     <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
       <Header
         year={gameState.year}
@@ -1294,37 +1342,44 @@ export const App = () => {
         </div>
       )}
 
-      <main className="container mx-auto p-4 lg:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Dashboard
-              gameState={gameState}
-              historicalData={historicalData}
-              togglePolicy={togglePolicy}
-              runSimulationRound={runSimulationRound}
-              gameOver={!!gameState.gameOverReason}
-              levelConfig={gameState.activeLevelConfig}
-              requestLoan={requestLoan}
-              togglePact={togglePact}
-              handleInstrumentEffortChange={handleInstrumentEffortChange}
-              handleAdditionalTaxPressureChange={handleAdditionalTaxPressureChange}
-              instrumentImpactHints={INSTRUMENT_IMPACT_HINTS}
-            />
-          </div>
-          <div className="flex flex-col gap-6 h-full">
-            <WinRoutesPanel gameState={gameState} />
-            <ChatbotPanel
-              messages={chatMessages}
-              onUserSubmit={handleUserChatSubmit}
-              isLoading={isBotLoading}
-              apiKeyAvailable={apiKeyAvailable}
-              currentLevelName={gameState.activeLevelConfig?.name || ''}
-              suggestedQuestions={currentSuggestedQuestions}
-            />
-            <GameLogPanel logs={gameState.gameLog} />
-          </div>
-        </div>
+      {/*
+        Reflow (14_decarbonito_overlay.md §6.1): the board used to share width with a permanent
+        chat column (`lg:col-span-2` of 3); DecarboNito is now a floating overlay instead, so the
+        board gets the full width. `pb-24` reserves the bottom lane where the avatar docks and
+        GameLogDrawer lives so neither covers the simulate button on short viewports.
+
+        WinRoutesPanel renders as its own full-width block after Dashboard rather than woven into
+        Dashboard's internal grid (the source spec's "8 + 4 columns" split) — reworking Dashboard's
+        internal layout is visual restructuring that belongs to phase 10 (estetica_visual.md),
+        which re-skins every screen onto the phase-4 design tokens; doing it piecemeal here would
+        fight that later pass. See docs/DESIGN_DECISIONS_LOG.md, phase 7 entry.
+      */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 pb-24 space-y-6">
+        <Dashboard
+          gameState={gameState}
+          historicalData={historicalData}
+          togglePolicy={togglePolicy}
+          runSimulationRound={runSimulationRound}
+          gameOver={!!gameState.gameOverReason}
+          levelConfig={gameState.activeLevelConfig}
+          requestLoan={requestLoan}
+          togglePact={togglePact}
+          handleInstrumentEffortChange={handleInstrumentEffortChange}
+          handleAdditionalTaxPressureChange={handleAdditionalTaxPressureChange}
+          instrumentImpactHints={INSTRUMENT_IMPACT_HINTS}
+        />
+        <WinRoutesPanel gameState={gameState} />
       </main>
+
+      <GameLogDrawer logs={gameState.gameLog} />
+      <DecarboNitoLayer
+        messages={chatMessages}
+        onUserSubmit={handleUserChatSubmit}
+        isLoading={isBotLoading}
+        apiKeyAvailable={apiKeyAvailable}
+        currentLevelName={gameState.activeLevelConfig?.name || ''}
+        suggestedQuestions={currentSuggestedQuestions}
+      />
 
       {levelEndInfo && (
         <LevelUpBanner
@@ -1421,6 +1476,7 @@ export const App = () => {
         ))}
       </div>
     </div>
+    </DecarboNitoProvider>
     </LanguageProvider>
   );
 };

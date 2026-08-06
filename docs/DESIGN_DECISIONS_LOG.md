@@ -405,3 +405,104 @@ forzar la media query vía DevTools/CDP); la rama de código (`useReducedMotion(
 adelante (Fase 9 o una auditoría dedicada).
 
 **Origen.** `mejora-general/files/13_decarbonito_character.md`.
+
+---
+
+## 2026-08-06 — Fase 7 (capa flotante DecarboNito): de columna fija a overlay, tablero a ancho completo
+
+**La fase más grande del ciclo hasta ahora.** Reemplaza la columna de chat fija (30-40% del ancho
+permanente) por una capa `fixed inset-0 pointer-events-none` con el avatar, un globo de diálogo,
+una pila de notificaciones y un panel de conversación flotante — todos con `pointer-events: auto`
+propio, nunca bloqueando el tablero debajo ("regla de oro" del archivo `14`). `ChatbotPanel.tsx` y
+`GameLogPanel.tsx` se eliminaron por completo (reemplazados por `ConversationPanel.tsx` y
+`GameLogDrawer.tsx`); no quedan imports colgantes (verificado por grep y por `tsc --noEmit` limpio).
+
+**Arquitectura construida, las cuatro piezas del archivo `14` §2:**
+- `decarbonito/anchors.ts` — registro `AnchorId → DOMRect`, casi verbatim del archivo fuente.
+- `decarbonito/DecarboNitoProvider.tsx` — estado, cola de mensajes con las 6 reglas de §4.2
+  (un globo a la vez, silencio mínimo de 6s, presupuesto de 2 mensajes espontáneos por ronda de
+  simulación, deduplicación de tips, `sleep` a los 90s de inactividad del jugador con despertar
+  `peek` ante eventos), y la API imperativa (`say`/`notify`/`play`/`moveTo`/`focusOn`/`release`/
+  `openConversation`/`dismiss`/`setBusy`/`resetProactiveBudget`/`setNotifyMode`/`setHidden`/
+  `setCorner`).
+- `decarbonito/DecarboNitoLayer.tsx` — posicionamiento (dock/anchor/free), arrastre a esquinas con
+  `motion`'s `drag`, globo vía `@floating-ui/react` (`flip`+`shift`+`arrow`, la única dependencia
+  nueva que pide el archivo), pila de notificaciones, anillo de resaltado, menú contextual.
+- `decarbonito/ConversationPanel.tsx` — reemplaza `ChatbotPanel.tsx`; misma lógica de voz
+  (`useSpeech`) y modelo de datos (`chatMessages`) que antes, ahora flotante y anclada al avatar.
+
+**Desvío arquitectónico deliberado: `dnApiRef`, no una reestructuración de `App.tsx`.**
+`runSimulationRound`, los handlers de chat y el efecto de fin de nivel viven en el componente
+`App` de nivel superior, que queda *por encima* de `<DecarboNitoProvider>` en el árbol (lo renderiza
+como parte de su propio JSX) — no pueden usar `useDecarboNito()`. Partir las ~1400 líneas de
+`App.tsx` en un componente descendiente del provider se evaluó como demasiado invasivo para esta
+fase. En su lugar, el provider publica su API en `dnApiRef.current` en cada render (mismo patrón
+que `window.__dn`, pero siempre activo en vez de solo-dev); el orden de efectos de React (hijos
+antes que padres) garantiza que `dnApiRef.current` ya está poblado cuando los efectos de `App`
+corren. Documentado en el propio archivo con una nota explicando por qué existe.
+
+**Integración con eventos del juego — cobertura real, verificada contra el motor, no asumida.**
+Al revisar `src/sim/index.ts` antes de mapear la fila "evento aleatorio / noticia" de la tabla del
+archivo `14` §7, se confirmó que el motor ya emite `chatMessages` tipados `game_event` (eventos
+aleatorios) y `policy_efficiency_warning` (caída de eficiencia) — ambos se enrutan a `dn.notify`
+dentro de `runSimulationRound`, con prioridad 2 y sujetos a la cola (no `immediate`). Además:
+arranque de partida (globo + `wave`), nivel superado (notificación persistente + `celebrate`),
+esperando a Gemini (`setBusy`), error de API (notificación crítica + `facepalm`), acción de chat
+completada (`nod`). **No implementado, documentado como pendiente real:** la fila "indicador cruza
+umbral de precaución/crítico" — requiere una tabla de umbrales y comparación año-a-año que no existe
+todavía (I-4/I-5 en `docs/audit-equations.md` siguen `PENDIENTE`); y "acción del agente ejecutada",
+que no aplica hasta la Fase 8 (el agente no existe todavía).
+
+**Reflow de `App.tsx`: ancho completo, `WinRoutesPanel` fuera de la grilla interna de `Dashboard`.**
+El archivo `14` §6.1 pide reventar `Dashboard` en una grilla de 12 columnas (políticas 8 + rutas de
+victoria 4). Se optó por dejar `Dashboard.tsx` intacto por dentro y renderizar `WinRoutesPanel` como
+un bloque propio de ancho completo después de `Dashboard` — reescribir la grilla interna es
+restructuración visual que le corresponde a la Fase 10 (`19_estetica_visual.md`, el re-vestido con
+los tokens `basalt-*`), y tocarla a medias acá competiría con ese trabajo. `WinRoutesPanel` sigue
+sin migrar a los tokens v3, tal como se documentó en su propia fase.
+
+**Anclas instrumentadas: 23 registradas en runtime (nivel 1), no las ~30+ que definiría el nivel 3.**
+`useAnchor` se agregó a `Header` (score/year/levelBadge/localeSwitch/helpButton), `Dashboard`
+(6 `IndicatorCard` con `anchorId`, `landUseChart`, `historyChart`, `simulateButton`, `policyList`),
+`PolicyToggle` (una fila por política, 10 en este juego) y `WinRoutesPanel`. **No instrumentado,
+documentado como pendiente:** `instrumentPanel`/`instrumentSlider` (`PolicyInstrumentsPanel.tsx`,
+nivel 2+) y `pactList`/`loanControl`/`taxSlider` (`InnovationGlobalDashboard.tsx`, nivel 3) — quedan
+para cuando la Fase 8 (agente) o la Fase 9 (tutoriales) necesiten señalarlos específicamente, en vez
+de instrumentar todo por adelantado sin un consumidor todavía. El checkpoint del archivo `14`
+(`window.__dn.listAnchors().length >= 20`) se cumple igual: 23 anclas registradas en nivel 1.
+
+**Simplificaciones frente al archivo `14`, todas documentadas en vez de aplicadas en silencio:**
+- Sin portal DOM real a `#dn-root` — un `div fixed` cumple el mismo rol visual sin la plomería de
+  un target de portal separado, dado que ya se monta una sola vez al final del árbol de `App.tsx`.
+- `moveTo()` resuelve su promesa con una espera fija de 600ms (no una señal real de "llegada"), ya
+  que el spring visual real vive en `DecarboNitoLayer` (vía `motion`), no en el provider.
+- El anillo de resaltado no oscurece el resto de la pantalla en "modo tutorial" — no existe todavía
+  un modo tutorial (Fase 9); se implementó solo el anillo pulsante, sin el `box-shadow` que apagaría
+  el resto de la interfaz.
+- Panel de conversación: hoja inferior móvil simplificada (ancho completo fijo, sin drag handle
+  para cerrar arrastrando) y sin el modo `expanded` de 720px para lecturas largas.
+- La semántica de silenciamiento: "Silenciar avisos" suprime bubble+notificación para toda
+  prioridad excepto 3 (que sigue mostrándose); "Solo avisos críticos" hace lo mismo por otra vía —
+  ambos coexisten como toggles independientes en el menú contextual, no como un enum estrictamente
+  exclusivo que el archivo fuente tampoco especifica con ese nivel de detalle.
+
+**Verificación.** `npx tsc --noEmit` limpio (0 errores) tras toda la reescritura. `npx vitest run`
+24/24 sin cambios. `npm run build` limpio. `npm run i18n:audit` en verde (22 Capa A pendientes, uno
+menos que antes de esta fase — `ChatbotPanel.tsx` desapareció de la lista al eliminarse el archivo).
+En el navegador (modo demo, nivel 1): el tablero ocupa el 100% del ancho, el avatar flota en la
+esquina inferior derecha por defecto, clic lo abre en modo conversación (con historial, sugerencias
+y voz intactos), Escape lo cierra, el cajón de registro de actividad aparece como barra inferior
+colapsada. `window.__dn.listAnchors().length` devuelve 23. `window.__dn.focusOn('simulate-button',
+{text})` mueve el avatar junto al botón, dibuja el anillo de resaltado en la posición correcta
+(verificado por DOM, no solo visualmente) y muestra el globo con el texto pasado, que se
+autodescarta a los 6s. Togglear una política y simular un año corre la ronda completa sin errores —
+el bucle principal del juego sigue intacto después de la reescritura. Cero errores de consola de la
+aplicación (los 8 mensajes observados son el mismo ruido de extensión de Chrome de fases anteriores,
+sin entradas nuevas).
+
+**No verificado en este ciclo:** Lighthouse Accessibility (checkpoint 9 del archivo `14`), el
+trampeo de foco completo del panel de conversación (se implementó un ciclo Tab/Shift+Tab básico, no
+una librería de foco dedicada), y el comportamiento visual en viewport móvil real (menos de 768px) —
+solo revisado por lectura del CSS condicional, no en un dispositivo/emulador.
+
+**Origen.** `mejora-general/files/14_decarbonito_overlay.md`.

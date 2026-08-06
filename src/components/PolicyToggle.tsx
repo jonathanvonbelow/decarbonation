@@ -3,6 +3,7 @@ import { PolicyState } from '../types';
 import Tooltip from './common/Tooltip';
 import { useT } from '../i18n';
 import { getPolicyName } from '../legacyContent/gameData';
+import { ANCHORS, useAnchor } from './decarbonito/anchors';
 
 interface PolicyToggleProps {
   policy: PolicyState;
@@ -39,6 +40,7 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
 
   const efficiencyPercentage = policy.currentEfficiency !== undefined ? (policy.currentEfficiency * 100).toFixed(0) : null;
   const displayName = getPolicyName(policy.id, locale) || policy.name;
+  const rowRef = useAnchor<HTMLDivElement>(ANCHORS.policyRow(policy.id), displayName);
 
   let baseTooltip: React.ReactNode;
   if (currentLevel >= 2 && policy.isActive && efficiencyPercentage !== null) {
@@ -71,7 +73,7 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   }
 
   return (
-    <div className={`p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out
+    <div ref={rowRef} className={`p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out
       ${policy.isActive ? 'bg-green-700 hover:bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}
       ${isLockedForDeactivation ? 'opacity-80' : ''}
     `}>

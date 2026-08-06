@@ -3,6 +3,8 @@ import React from 'react';
 import { MAX_LEVELS } from '../constants';
 import Tooltip from './common/Tooltip';
 import { useT } from '../i18n';
+import { ANCHORS, useAnchor } from './decarbonito/anchors';
+import { useDecarboNito } from './decarbonito/DecarboNitoProvider';
 
 interface HeaderProps {
   year: number;
@@ -48,6 +50,12 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t, locale, setLocale } = useT();
   const toggleLanguage = () => setLocale(locale === 'es' ? 'en' : 'es');
+  const dn = useDecarboNito();
+  const scoreRef = useAnchor<HTMLDivElement>(ANCHORS.score, t('header.score'));
+  const yearRef = useAnchor<HTMLDivElement>(ANCHORS.year, t('header.year'));
+  const levelRef = useAnchor<HTMLDivElement>(ANCHORS.levelBadge, t('header.level'));
+  const localeRef = useAnchor<HTMLButtonElement>(ANCHORS.localeSwitch, t('header.toggleLanguageLabel'));
+  const helpRef = useAnchor<HTMLButtonElement>(ANCHORS.helpButton, t('header.tutorial'));
 
   return (
     <header className="bg-custom-light-gray text-white p-4 shadow-md">
@@ -58,6 +66,7 @@ const Header: React.FC<HeaderProps> = ({
           </h1>
           <div className="flex flex-wrap items-center ml-2 sm:ml-4">
             <button
+              ref={helpRef}
               onClick={onShowTutorial}
               className="m-1 px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
               aria-label={t('header.tutorial')}
@@ -103,6 +112,7 @@ const Header: React.FC<HeaderProps> = ({
               </button>
             )}
             <button
+              ref={localeRef}
               onClick={toggleLanguage}
               className="m-1 px-3 py-1.5 text-xs text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-gray-400"
               aria-label={t('header.toggleLanguageLabel')}
@@ -113,11 +123,11 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
         <div className="flex space-x-4 sm:space-x-6 items-center">
-          <div className="text-center">
+          <div ref={levelRef} className="text-center">
             <span className="block text-xs text-gray-400 uppercase">{t('header.level')}</span>
             <span className="text-xl font-semibold">{level}</span>
           </div>
-          <div className="text-center">
+          <div ref={yearRef} className="text-center">
             <span className="block text-xs text-gray-400 uppercase">{t('header.year')}</span>
             {targetYear ? (
               <Tooltip text={t('header.yearTooltip', { target: targetYear })} position="bottom">
@@ -128,7 +138,7 @@ const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           <Tooltip text={scoreTooltipText} position="bottom">
-            <div className="text-center cursor-help">
+            <div ref={scoreRef} className="text-center cursor-help">
               <span className="block text-xs text-gray-400 uppercase">{t('header.score')}</span>
               <span className={`text-xl font-semibold ${scoreColorClass}`}>
                 {score.toFixed(1)}
@@ -136,6 +146,16 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </Tooltip>
           {gameOver && <span className="text-lg font-semibold text-red-500 px-2 py-1 bg-red-900 rounded">{t('header.gameOver')}</span>}
+          {dn.hidden && (
+            <button
+              onClick={() => dn.setHidden(false)}
+              className="w-10 h-10 rounded-full bg-hydro text-basalt-950 flex items-center justify-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-hydro"
+              aria-label={t('dn.menu.hide')}
+              title={t('dn.avatarLabel')}
+            >
+              🤖
+            </button>
+          )}
           <button
             onClick={onToggleFacilitatorPanel}
             className="text-gray-400 hover:text-gray-200 text-xl ml-2 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded"

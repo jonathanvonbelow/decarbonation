@@ -2,6 +2,7 @@ import React from 'react';
 import type { GameState } from '../../types';
 import { evaluateLevel, type RouteId } from '../../sim';
 import { useT, useFormat } from '../../i18n';
+import { ANCHORS, useAnchor } from '../decarbonito/anchors';
 
 interface WinRoutesPanelProps {
   gameState: GameState;
@@ -25,12 +26,16 @@ export const WinRoutesPanel: React.FC<WinRoutesPanelProps> = ({ gameState }) => 
   const fmt = useFormat();
   const baseline: GameState = { ...gameState, indicators: gameState.levelBaseline };
   const outcome = evaluateLevel(gameState, baseline);
+  // useAnchor sets the same data-dn-anchor attribute this panel already carried, but now the id
+  // is also registered in the live registry (src/components/decarbonito/anchors.ts) so DecarboNito
+  // and the tutorial engine (phase 9) can actually find and point at this panel, not just style it.
+  const panelRef = useAnchor<HTMLDivElement>(ANCHORS.winRoutesPanel, t('routes.panelTitle'));
 
   const sortedRoutes = [...outcome.routes].sort((a, b) => b.progress - a.progress);
   const leaderId: RouteId | null = sortedRoutes[0]?.route.id ?? null;
 
   return (
-    <div className="bg-custom-light-gray rounded-lg shadow-xl p-4" data-dn-anchor="win-routes-panel">
+    <div ref={panelRef} className="bg-custom-light-gray rounded-lg shadow-xl p-4">
       <h3 className="text-lg font-semibold text-custom-accent mb-1">{t('routes.panelTitle')}</h3>
       <p className="text-xs text-gray-400 mb-3">{t('routes.panelSubtitle')}</p>
 

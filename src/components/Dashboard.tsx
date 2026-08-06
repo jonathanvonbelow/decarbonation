@@ -11,6 +11,7 @@ import PolicyInstrumentsPanel from './PolicyInstrumentsPanel';
 import EventsNewsPanel from './levelSpecific/EventsNewsPanel';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getLandUseName } from '../legacyContent/gameData';
+import { ANCHORS, useAnchor, type AnchorId } from './decarbonito/anchors';
 
 interface DashboardProps {
   gameState: GameState;
@@ -26,9 +27,12 @@ interface DashboardProps {
   instrumentImpactHints: InstrumentImpactHints;
 }
 
-const IndicatorCard: React.FC<{ title: string; value: string | number; color?: string; unit?: string; tooltip?: string; isWinCondition?: boolean; winLabel?: string }> = ({ title, value, color = 'text-custom-accent', unit = '', tooltip, isWinCondition, winLabel = '⭐' }) => {
+const IndicatorCard: React.FC<{ title: string; value: string | number; color?: string; unit?: string; tooltip?: string; isWinCondition?: boolean; winLabel?: string; anchorId?: AnchorId }> = ({ title, value, color = 'text-custom-accent', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId }) => {
+  // Registered even when no consumer points at it yet (phase 8/9's job) — cheap, and it's what
+  // lets `window.__dn.listAnchors()` see every indicator from day one of the overlay.
+  const anchorRef = useAnchor<HTMLDivElement>(anchorId ?? `unused:${title}`, title);
   const cardContent = (
-    <div className="bg-gray-700 p-3 rounded-lg shadow-md text-center h-full flex flex-col justify-center relative">
+    <div ref={anchorId ? anchorRef : undefined} className="bg-gray-700 p-3 rounded-lg shadow-md text-center h-full flex flex-col justify-center relative">
       {isWinCondition && (
         <Tooltip text={winLabel}>
           <span className="absolute top-1 right-1 text-yellow-400 text-lg" aria-label={winLabel}>⭐</span>
@@ -62,6 +66,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, name, v
 
 const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = ({ landUses }) => {
   const { language } = useLanguageContext();
+  const chartRef = useAnchor<HTMLDivElement>(ANCHORS.landUseChart, 'Land use distribution');
   const T = {
     es: { title: 'Distribución de Uso del Suelo (kHa)', tooltip: 'Muestra cómo se divide el territorio nacional entre diferentes usos (bosques, cultivos, pasturas, etc.). Cada uso tiene un impacto distinto en el carbono y la biodiversidad.', noData: 'No hay datos de uso de suelo para mostrar.' },
     en: { title: 'Land Use Distribution (kHa)', tooltip: 'Shows how national territory is divided among different uses (forests, crops, pastures, etc.). Each use has a distinct impact on carbon and biodiversity.', noData: 'No land use data to display.' },
@@ -77,14 +82,14 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
 
   if (data.length === 0) {
     return (
-      <div className="bg-custom-light-gray p-4 rounded-lg shadow-xl flex items-center justify-center h-full">
+      <div ref={chartRef} className="bg-custom-light-gray p-4 rounded-lg shadow-xl flex items-center justify-center h-full">
         <p className="text-gray-400">{t.noData}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-custom-light-gray p-4 rounded-lg shadow-xl">
+    <div ref={chartRef} className="bg-custom-light-gray p-4 rounded-lg shadow-xl">
       <Tooltip text={t.tooltip}>
         <h3 className="text-lg font-semibold mb-2 text-custom-accent inline-block cursor-help">{t.title}</h3>
       </Tooltip>
@@ -116,6 +121,7 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
 
 const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; currentLevel: number; levelConfig?: LevelConfig }> = ({ historicalData, currentLevel, levelConfig }) => {
   const { language } = useLanguageContext();
+  const chartRef = useAnchor<HTMLDivElement>(ANCHORS.historyChart, 'Historical trends');
   const T = {
     es: {
       title: 'Tendencias Históricas', noData: 'Simula al menos un año para ver las tendencias.',
@@ -142,7 +148,7 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
 
   if (historicalData.length < 2) {
     return (
-      <div className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
+      <div ref={chartRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
         <h3 className="text-xl font-semibold mb-2 text-custom-accent">{t.title}</h3>
         <p className="text-gray-400">{t.noData}</p>
       </div>
@@ -156,7 +162,7 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
   };
 
   return (
-    <div className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
+    <div ref={chartRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
       <h3 className="text-xl font-semibold mb-4 text-custom-accent">{t.title}</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
@@ -251,6 +257,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { language } = useLanguageContext();
   const { indicators, policies, year, currentLevel, stellaSpecificState } = gameState;
   const activePolicies = Object.values(policies).filter((p: PolicyState) => p.isActive);
+  const simulateRef = useAnchor<HTMLButtonElement>(ANCHORS.simulateButton, 'Simulate next year');
+  const policyListRef = useAnchor<HTMLDivElement>(ANCHORS.policyList, 'Policy panel');
 
   const T = {
     es: {
@@ -323,15 +331,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <IndicatorCard title={t.biodiversity} value={indicators.biodiversity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
-        <IndicatorCard title={t.co2} value={indicators.co2EqEmissionsPerCapita.toFixed(2)} unit=" t" color={indicators.co2EqEmissionsPerCapita > 8 ? 'text-red-400' : indicators.co2EqEmissionsPerCapita > 4 ? 'text-yellow-400' : 'text-green-400'} isWinCondition={isWinCondition('co2EqEmissionsPerCapita')} tooltip={t.co2Tip} winLabel={t.winStar} />
+        <IndicatorCard anchorId={ANCHORS.indicatorBiodiversity} title={t.biodiversity} value={indicators.biodiversity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
+        <IndicatorCard anchorId={ANCHORS.indicatorEmissions} title={t.co2} value={indicators.co2EqEmissionsPerCapita.toFixed(2)} unit=" t" color={indicators.co2EqEmissionsPerCapita > 8 ? 'text-red-400' : indicators.co2EqEmissionsPerCapita > 4 ? 'text-yellow-400' : 'text-green-400'} isWinCondition={isWinCondition('co2EqEmissionsPerCapita')} tooltip={t.co2Tip} winLabel={t.winStar} />
 
         {currentLevel >= 2 && (
           <>
-            <IndicatorCard title={t.foodSec} value={indicators.foodSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.econSec} value={indicators.economicSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.socialWell} value={indicators.socialWellbeing.toFixed(1)} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.polStab} value={indicators.politicalStability.toFixed(1)} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
+            <IndicatorCard anchorId={ANCHORS.indicatorFoodSecurity} title={t.foodSec} value={indicators.foodSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
+            <IndicatorCard anchorId={ANCHORS.indicatorEconomicSecurity} title={t.econSec} value={indicators.economicSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
+            <IndicatorCard anchorId={ANCHORS.indicatorSocialWellbeing} title={t.socialWell} value={indicators.socialWellbeing.toFixed(1)} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
+            <IndicatorCard anchorId={ANCHORS.indicatorPoliticalStability} title={t.polStab} value={indicators.politicalStability.toFixed(1)} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
             <IndicatorCard title={t.ppAgr} value={indicators.ppAgricola.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppAgricola, true, 45, 65)} isWinCondition={isWinCondition('ppAgricola')} tooltip={t.ppAgrTip} winLabel={t.winStar} />
             <IndicatorCard title={t.ppEnv} value={indicators.ppAmbientalista.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppAmbientalista, true, 45, 65)} isWinCondition={isWinCondition('ppAmbientalista')} tooltip={t.ppEnvTip} winLabel={t.winStar} />
             <IndicatorCard title={t.ppSoc} value={indicators.ppSocial.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppSocial, true, 45, 65)} isWinCondition={isWinCondition('ppSocial')} tooltip={t.ppSocTip} winLabel={t.winStar} />
@@ -360,7 +368,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </span>
           </Tooltip>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div ref={policyListRef} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {POLICY_UI_ORDER.map(policyId => (
             <PolicyToggle
               key={policyId}
@@ -394,6 +402,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="mt-6 flex justify-center">
         <button
+          ref={simulateRef}
           onClick={runSimulationRound}
           disabled={gameState.isSimulating || gameOver}
           className="px-8 py-4 text-lg font-bold text-white bg-green-600 rounded-lg shadow-lg hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition-all transform hover:scale-105"

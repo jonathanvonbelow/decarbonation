@@ -49,7 +49,6 @@ const IGNORED_COMPONENTS = [
   'src/components/levelSpecific/RegionalDetailModal.tsx',
   'src/components/Dashboard.tsx',
   'src/components/common/CoverScreen.tsx',
-  'src/components/ChatbotPanel.tsx',
   'src/components/player/PlayerManual.tsx',
   'src/components/game/ClosingSynthesisModal.tsx',
   'src/components/game/GameSummaryPanel.tsx',
