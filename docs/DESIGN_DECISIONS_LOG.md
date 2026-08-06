@@ -89,3 +89,90 @@ y recorrido manual en el navegador (portada → login → modo demo → tablero)
 ni errores de consola. Commit `5f415c7` en `origin/v3`.
 
 **Origen.** `mejora-general/files/09_saneamiento_repo.md`, `12_i18n_completo.md` §1.
+
+---
+
+## 2026-08-06 — Fase 2 (auditoría de ecuaciones): alcance ajustado y primer hallazgo real
+
+**Decisión: verificación adaptada.** El procedimiento de `16_auditoria_ecuaciones.md` §2.4 pide
+capturar un snapshot del comportamiento actual *antes* de mover código, parcheando `Math.random`.
+Intentar esto contra la UI real vía automatización de navegador resultó frágil (los clics sobre los
+toggles de política eran intermitentes en este entorno) y no daba una línea de base confiable. Se
+adaptó la verificación a: (1) port carácter-por-carácter de cada fórmula desde `App.tsx` — sin
+reescribir ni "mejorar" nada — con revisión manual línea por línea contra el texto original leído
+íntegro; (2) tests de invariantes (`tests/sim/invariants.spec.ts`) sobre miles de años simulados con
+`fast-check`; (3) tests de determinismo y pureza (`tests/sim/stepYear.spec.ts`); (4) verificación
+visual manual en el navegador tras el rewire de `App.tsx` (mismo criterio que la Fase 1). Esto cubre
+bugs de extracción (transcripción, orden de operaciones) con alta confianza, aunque no es una prueba
+bit-a-bit de que el comportamiento de hoy es idéntico al de ayer — ese hueco se cierra con el tiempo
+a medida que las fases siguientes ejercitan el motor extraído.
+
+**Alcance reducido, explícito.** Se difieren a la Fase 5 (cuando `17_multiples_vias_victoria.md` los
+necesita para calibrar rutas): el harness Monte Carlo completo (`scripts/simulate.ts`), las 8
+estrategias sintéticas, `reports/balance.md` y la tabla completa de 25 puntos de
+`docs/audit-equations.md` §4. Se implementó un subconjunto de 6 invariantes (de los 14 del archivo
+`16` §3) — los más baratos de verificar y los que más señal dan sobre bugs de extracción: INV-01,
+INV-02, INV-03/04, INV-05, INV-06, INV-13. El resto (INV-07, 08, 09, 10, 11✓ ya cubierto, 12, 14)
+queda pendiente para cuando el harness de la Fase 5 los necesite.
+
+**Hallazgo real (no es un bug de extracción): el área de uso del suelo no se conserva cuando
+ocurren eventos aleatorios.** `tests/sim/invariants.spec.ts` con `fast-check` y randomness real
+encontró una pérdida de ~16 kHa en una corrida "no hacer nada" (semilla 525859253). Verificado con
+un script de depuración: la matriz de transición de uso del suelo en sí **conserva el área
+exactamente** (los cuatro términos de transferencia se cancelan algebraicamente — confirmado a mano
+sobre `landUse.ts`), y una vez que el evento aleatorio deja de dispararse la conservación se
+mantiene perfectamente año a año. La pérdida ocurre una sola vez, temprano, coincidiendo con un
+evento con efecto `landUseChange`. Es candidato a `docs/audit-equations.md` ítem **L-1**
+("¿Toda tasa A→B resta de A exactamente lo que suma a B?") aplicado a los efectos de eventos, no a
+las tasas base. **No se corrige en esta fase** (regla del propio paquete: extraer y congelar
+primero, arreglar después con su propio test de regresión) — el test `INV-01` se ajustó para medir
+la conservación sobre el núcleo determinista (sin eventos) mientras este hallazgo queda pendiente de
+auditoría puntual evento por evento.
+
+**Verificación de la Fase 2 (extracción).** `src/sim/*` no importa React ni `@google/genai`
+(`grep -r "from 'react'" src/sim/` vacío). `npm run build` y `npm test` en verde (12/12 tests).
+`docs/audit-equations.md` creado con la tabla de ~25 ítems de `16` §4, la mayoría `PENDIENTE`
+(auditoría contra fuentes académicas no realizada en este ciclo) salvo los que este hallazgo ya
+resolvió parcialmente (L-1, L-2 con nota).
+
+**Origen.** `mejora-general/files/16_auditoria_ecuaciones.md`.
+
+---
+
+## 2026-08-06 — Fase 2: rewire de `App.tsx` y bug real encontrado (no relacionado a las ecuaciones)
+
+**Rewire.** `runSimulationRound` ya no contiene el bloque inline de ~380 líneas: llama a
+`stepYear(tempGameState, Math.random, CP)` (archivo `src/sim/index.ts`) y reparte `logs`/
+`chatMessages` a los mismos `logEvent`/`addMessageToChat` de siempre. `CP` sigue viniendo de
+`controlParamsRef.current` (no de un import estático), así que el override en vivo del
+`FacilitatorPanel` sigue funcionando exactamente igual. También se reemplazó la función local
+`buildLevelInitializationState` (duplicada) por `createInitialState` del módulo `sim`, en sus tres
+sitios de uso (`progressToNextLevel`, `handleCloseLevelEndModal`, `setCurrentLevelManually`).
+
+**Bug real encontrado y corregido: `togglePolicy` y `togglePact` mutaban estado compartido.**
+Al verificar el rewire en el navegador (`npm run dev`), activar una política nunca "prendía": cada
+clic —incluso invocando el handler de React directamente, sin pasar por el DOM— terminaba en
+`isActive: false`. Causa raíz: `const newPolicies = { ...prev.policies }` es una copia superficial;
+`newPolicies[policyId]` sigue siendo la MISMA referencia que `prev.policies[policyId]`, y el código
+la mutaba en el lugar (`policyToggled.isActive = true`). React 18 `StrictMode` (activo en
+`src/main.tsx` vía `<React.StrictMode>`, sólo en desarrollo) invoca los actualizadores de estado dos
+veces; la primera pasada (que se descarta) ya mutaba `prev` al ser la misma referencia, así que la
+segunda pasada (la que sí se aplica) partía de un `prev` corrompido y el toggle terminaba
+cancelándose a sí mismo. **Invisible en producción** (`StrictMode` no duplica invocaciones fuera de
+desarrollo), por eso nunca se había reportado. Corregido clonando la política (`JSON.parse(JSON.
+stringify(prev.policies))`, igual que ya hacía `handleInstrumentEffortChange` en el mismo archivo) y
+el pacto tocado (`{ ...newPacts[pactId] }`, sin `JSON.stringify` porque `Pact.effects` es una
+función) antes de mutar. No estaba en el alcance de la Fase 2 (es un bug de manejo de estado en
+`App.tsx`, no de las ecuaciones), pero bloqueaba la verificación manual de *esta* fase y de todas las
+que siguen en modo desarrollo, así que se corrigió en el momento en vez de reportarlo y seguir de
+largo.
+
+**Verificación end-to-end.** Con el fix, activar dos políticas (Agroecológicas + Conservación de
+Bienes Naturales) y simular 3 años en el navegador real dio una trayectoria coherente con las
+fórmulas portadas: biodiversidad 40,0→40,2→…→40,5%; uso del suelo con Bosque Nativo Protegido
+apareciendo desde 0% y creciendo (0→1,1→3,0%) exactamente por el flujo BNNP→BNP que activa la
+política de conservación; Cultivos Convencionales bajando (20→19,4→18,1%) por el flujo CC→CA que
+activa la agroecológica. Cero errores de consola en las tres rondas. `npm test` (12/12) y
+`npm run build` en verde después del rewire completo.
+
+**Origen.** Hallazgo propio durante la verificación de `mejora-general/files/16_auditoria_ecuaciones.md`.

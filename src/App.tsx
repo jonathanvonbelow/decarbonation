@@ -42,6 +42,7 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogPanel from './components/GameLogPanel';
+import { stepYear, createInitialState } from './sim';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -400,101 +401,6 @@ const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfi
     }
 };
 
-// Single source of truth for (re)initializing all per-level game state (year, land uses, Stella
-// stocks/indicators, policies, pacts, level counters, etc). Used whenever the game needs to reset to
-// the initial conditions of a given level: starting the next level after a win (progressToNextLevel),
-// manually jumping to a level via the header controls (setCurrentLevelManually), and retrying the
-// current level after a loss (handleCloseLevelEndModal's 'lost' branch). Keeping this logic in one
-// place ensures all three paths reset exactly the same fields.
-interface LevelInitializationResult {
-  gameStatePatch: Pick<GameState,
-    | 'year'
-    | 'currentLevel'
-    | 'policies'
-    | 'landUses'
-    | 'indicators'
-    | 'stellaSpecificState'
-    | 'pacts'
-    | 'activeLevelConfig'
-    | 'yearsSimulatedInCurrentLevel'
-    | 'level3EventsTriggeredCount'
-    | 'additionalTaxPressurePercentage'
-    | 'decarbonitoProactiveMessageSentInLevel'
-    | 'lastConcludedLevelInfo'
-    | 'sentLevelReflectionMessage'
-  >;
-  initialHistoricalDataPoint: HistoricalDataPoint;
-}
-
-const buildLevelInitializationState = (levelNumber: number): LevelInitializationResult => {
-  const newLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === levelNumber);
-
-  let newStellaState = JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS)) as StellaStocks;
-  let newLandUses: Record<LandUseType, LandUse> = JSON.parse(JSON.stringify(INITIAL_LAND_USES));
-  let indicatorOverrides: InitialIndicatorOverrides | null = null;
-
-  if (levelNumber === 2) {
-    newLandUses = JSON.parse(JSON.stringify(LEVEL_2_INITIAL_LAND_USES));
-    newStellaState = { ...newStellaState, ...LEVEL_2_INITIAL_STELLA_OVERRIDES };
-    indicatorOverrides = LEVEL_2_INITIAL_INDICATOR_OVERRIDES;
-  } else if (levelNumber === 3) {
-    newLandUses = JSON.parse(JSON.stringify(LEVEL_3_INITIAL_LAND_USES));
-    newStellaState = { ...newStellaState, ...LEVEL_3_INITIAL_STELLA_OVERRIDES };
-    indicatorOverrides = LEVEL_3_INITIAL_INDICATOR_OVERRIDES;
-  }
-
-  const newIndicators: Indicators = { ...INITIAL_INDICATORS };
-  if (indicatorOverrides) {
-    if (indicatorOverrides.foodSecurity !== undefined) newIndicators.foodSecurity = indicatorOverrides.foodSecurity;
-    if (indicatorOverrides.economicSecurity !== undefined) newIndicators.economicSecurity = indicatorOverrides.economicSecurity;
-  }
-  newIndicators.socialWellbeing = 100 - (newStellaState.Conflicto_social || INITIAL_STELLA_STOCKS.Conflicto_social);
-  newIndicators.politicalStability = 100 - (newStellaState.Colapso_politico || INITIAL_STELLA_STOCKS.Colapso_politico);
-  newIndicators.ppAgricola = newStellaState.PP_AGRICOLA || INITIAL_STELLA_STOCKS.PP_AGRICOLA;
-  newIndicators.ppAmbientalista = newStellaState.PP_AMBIENTALISTA || INITIAL_STELLA_STOCKS.PP_AMBIENTALISTA;
-  newIndicators.ppSocial = newStellaState.PP_SOCIAL || INITIAL_STELLA_STOCKS.PP_SOCIAL;
-  newIndicators.pbi = newStellaState.PBI_Real || INITIAL_STELLA_STOCKS.PBI_Real;
-  newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
-  newIndicators.treasuryReserves = newStellaState.Reservas_del_Tesoro || INITIAL_STELLA_STOCKS.Reservas_del_Tesoro;
-
-  const initialHistoricalDataPoint: HistoricalDataPoint = {
-    year: INITIAL_YEAR,
-    biodiversity: newIndicators.biodiversity,
-    foodSecurity: newIndicators.foodSecurity,
-    economicSecurity: newIndicators.economicSecurity,
-    socialWellbeing: newIndicators.socialWellbeing,
-    generalScore: newIndicators.generalScore,
-    co2EqEmissionsPerCapita: newIndicators.co2EqEmissionsPerCapita,
-    politicalStability: newIndicators.politicalStability,
-    pbi: newIndicators.pbi,
-    debt: newIndicators.debt,
-    ppAgricola: newIndicators.ppAgricola,
-    ppAmbientalista: newIndicators.ppAmbientalista,
-    ppSocial: newIndicators.ppSocial,
-    treasuryReserves: newStellaState.Reservas_del_Tesoro,
-  };
-
-  return {
-    gameStatePatch: {
-      year: INITIAL_YEAR,
-      currentLevel: levelNumber,
-      policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
-      landUses: newLandUses,
-      indicators: newIndicators,
-      stellaSpecificState: newStellaState,
-      pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
-      activeLevelConfig: newLevelConfig,
-      yearsSimulatedInCurrentLevel: 0,
-      level3EventsTriggeredCount: 0,
-      additionalTaxPressurePercentage: 0,
-      decarbonitoProactiveMessageSentInLevel: false,
-      lastConcludedLevelInfo: null,
-      sentLevelReflectionMessage: false,
-    },
-    initialHistoricalDataPoint,
-  };
-};
-
 // FIX: Removed React.FC type from component definition to align with modern functional component best practices and avoid potential assignment errors.
 export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
@@ -797,7 +703,7 @@ export const App = () => {
         }
 
         const newLevelNumber = prev.currentLevel + 1;
-        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(newLevelNumber);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(newLevelNumber);
         if (!gameStatePatch.activeLevelConfig) return prev;
 
         setHistoricalData([initialHistoricalDataPoint]);
@@ -827,7 +733,7 @@ export const App = () => {
         }
     } else if (lastResult?.status === 'lost') {
         const retryLevelNumber = lastResult.level;
-        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(retryLevelNumber);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(retryLevelNumber);
         if (!gameStatePatch.activeLevelConfig) {
             setGameState(prev => ({ ...prev, lastConcludedLevelInfo: null }));
             return;
@@ -980,7 +886,12 @@ export const App = () => {
   const togglePolicy = useCallback((policyId: Policy) => {
     setGameState(prev => {
       const currentYear = prev.year;
-      const newPolicies = { ...prev.policies };
+      // Deep clone (not `{ ...prev.policies }`): a shallow copy still shares the nested
+      // PolicyState/instrument objects with `prev`, and the code below mutates them in place.
+      // Under React 18 StrictMode, state updaters run twice; the first (discarded) pass would
+      // otherwise corrupt `prev` itself, and the second pass would then toggle right back —
+      // reproducible in `npm run dev` (StrictMode is dev-only, so this was invisible in prod).
+      const newPolicies = JSON.parse(JSON.stringify(prev.policies)) as Record<Policy, PolicyState>;
       const policyToggled = newPolicies[policyId];
 
       if (!policyToggled.isActive) { 
@@ -1102,8 +1013,12 @@ export const App = () => {
   const togglePact = useCallback((pactId: string) => {
     setGameState(prev => {
       const newPacts = { ...prev.pacts };
-      const pactToggled = newPacts[pactId];
-      if (!pactToggled) return prev;
+      if (!newPacts[pactId]) return prev;
+      // Clone just this pact (not JSON deep-clone: `effects` is a function and would be
+      // stripped) before mutating it below — same shared-reference/StrictMode issue as
+      // togglePolicy above.
+      const pactToggled = { ...newPacts[pactId] };
+      newPacts[pactId] = pactToggled;
 
       if (prev.year < (pactToggled.unlockYear || 0)) {
         const message = `El pacto '${pactToggled.name}' aún no está disponible (disponible en ${pactToggled.unlockYear}).`;
@@ -1358,390 +1273,20 @@ export const App = () => {
             break; 
         }
         
-        if(tempGameState.gameOverReason) {
+        if (tempGameState.gameOverReason) {
              setGameState(prev => ({ ...prev, ...tempGameState, isSimulating: false }));
              return;
         }
 
-        tempGameState.year++;
-        tempGameState.yearsSimulatedInCurrentLevel++;
-        const currentYear = tempGameState.year;
-        let policies = tempGameState.policies;
-        let landUses = tempGameState.landUses;
-        let indicators = tempGameState.indicators;
-        let stellaState = tempGameState.stellaSpecificState;
-        const currentLevel = tempGameState.currentLevel;
-        const additionalTaxPressurePercentage = tempGameState.additionalTaxPressurePercentage;
-        
-        stellaState.Poblacion_Total *= (1 + CP.Tasa_Crecimiento_Poblacional_Base);
-
-        Object.values(policies).forEach((p: PolicyState) => {
-            if (p.isActive && p.activationYear === undefined) {
-                p.activationYear = currentYear;
-                logEvent(`Política '${p.name}' activada y confirmada para el año ${currentYear}.`);
-            }
-        });
-
-        let eventOccurredThisYear = false;
-        const yearsElapsedInCurrentLevel = tempGameState.yearsSimulatedInCurrentLevel -1; 
-        
-        const processRandomEventEffects = (effects: RandomEventEffect[]) => {
-             effects.forEach(eff => {
-                if (eff.landUseChange) {
-                    const { target, changeAbsolute_kHa } = eff.landUseChange;
-                    if (landUses[target]) {
-                        const originalArea = landUses[target].area;
-                        landUses[target].area = Math.max(0, originalArea + changeAbsolute_kHa);
-                        logEvent(`Efecto de evento: Área de '${landUses[target].name}' cambió en ${changeAbsolute_kHa.toFixed(1)} kHa.`);
-                    }
-                } else if (eff.indicator) {
-                    let currentValue: number | boolean;
-                    let targetObject: any;
-                    let targetKey: string | number | symbol;
-
-                    if (eff.indicator.startsWith('stella.')) {
-                        targetKey = eff.indicator.substring('stella.'.length) as NumericStellaKeys;
-                        targetObject = stellaState;
-                        currentValue = stellaState[targetKey];
-                    } else {
-                        targetKey = eff.indicator as keyof Indicators;
-                        targetObject = indicators;
-                        currentValue = indicators[targetKey as keyof Indicators];
-                    }
-
-                    if (typeof currentValue !== 'number') {
-                        const warningMsg = `Se intentó aplicar un efecto numérico a la propiedad no numérica '${eff.indicator}'. Efecto omitido.`;
-                        console.warn(warningMsg);
-                        logEvent(`Advertencia del sistema: ${warningMsg}`);
-                        return; // Corresponds to 'continue' in a for loop
-                    }
-
-                    let newValue: number = currentValue;
-                    if (eff.changeAbsolute !== undefined) {
-                        newValue = currentValue + eff.changeAbsolute;
-                    } else if (eff.changePercentage !== undefined) {
-                        newValue = currentValue * (1 + eff.changePercentage);
-                    }
-                    
-                    if (targetObject === indicators && !['co2EqEmissionsPerCapita', 'pbi', 'treasuryReserves', 'debt', 'generalScore', 'ppAgricola', 'ppAmbientalista', 'ppSocial'].includes(targetKey as string)) {
-                        newValue = Math.max(0, Math.min(100, newValue));
-                    } else if (targetKey === 'Colapso_politico' || targetKey === 'Conflicto_social' || targetKey === 'PP_AGRICOLA' || targetKey === 'PP_AMBIENTALISTA' || targetKey === 'PP_SOCIAL') {
-                            newValue = Math.max(0, Math.min(100, newValue));
-                    }
-                        
-                    if (eff.indicator.startsWith('stella.')) {
-                        (targetObject as StellaStocks)[targetKey as NumericStellaKeys] = newValue;
-                    } else {
-                        (targetObject as Indicators)[targetKey as NumericIndicatorKeys] = newValue;
-                    }
-                }
-            });
-            if (effects.some(e => e.indicator === 'stella.Conflicto_social')) indicators.socialWellbeing = Math.max(0, Math.min(100, 100 - stellaState.Conflicto_social));
-            if (effects.some(e => e.indicator === 'stella.Colapso_politico')) indicators.politicalStability = Math.max(0, Math.min(100, 100 - stellaState.Colapso_politico));
-            if (effects.some(e => e.indicator === 'stella.PBI_Real')) indicators.pbi = stellaState.PBI_Real;
-            if (effects.some(e => e.indicator === 'stella.Reservas_del_Tesoro')) indicators.treasuryReserves = stellaState.Reservas_del_Tesoro;
-            if (effects.some(e => e.indicator === 'stella.Deuda')) indicators.debt = stellaState.Deuda;
-            if (effects.some(e => e.indicator === 'stella.PP_AGRICOLA')) indicators.ppAgricola = stellaState.PP_AGRICOLA;
-            if (effects.some(e => e.indicator === 'stella.PP_AMBIENTALISTA')) indicators.ppAmbientalista = stellaState.PP_AMBIENTALISTA;
-            if (effects.some(e => e.indicator === 'stella.PP_SOCIAL')) indicators.ppSocial = stellaState.PP_SOCIAL;
-        };
-
-
-        if (tempGameState.currentLevel < 3) { 
-            for (const event of ALL_RANDOM_EVENTS) {
-                if (event.minLevel && tempGameState.currentLevel < event.minLevel) continue;
-                
-                const triggerRoll = Math.random();
-                if (triggerRoll < event.triggerChance(tempGameState)) {
-                    tempGameState.currentEvent = event;
-                    logEvent(`EVENTO (Año ${tempGameState.year}): ${event.name} - ${event.description}`);
-                    const effects = event.effects(tempGameState);
-                    processRandomEventEffects(effects);
-                    eventOccurredThisYear = true;
-                    break; 
-                }
-            }
-        } else { 
-            let eventTriggerProbability = 0.05; 
-
-            const timeStressFactor = (yearsElapsedInCurrentLevel / YEARS_PER_LEVEL) * 0.15; 
-            eventTriggerProbability += timeStressFactor;
-
-            if (indicators.socialWellbeing < 50) {
-                eventTriggerProbability += 0.10; 
-            }
-
-            if (indicators.politicalStability < 50) {
-                eventTriggerProbability += 0.10; 
-            }
-
-            const avgPressure = (indicators.ppAgricola + indicators.ppAmbientalista + indicators.ppSocial) / 3;
-            if (avgPressure > 65) {
-                eventTriggerProbability += 0.12; 
-            }
-            
-            const finalEventChance = Math.min(0.60, eventTriggerProbability);
-
-            if (Math.random() < finalEventChance) {
-                const eligibleEvents = ALL_RANDOM_EVENTS.filter(e => 
-                    (e.minLevel === undefined || e.minLevel <= tempGameState.currentLevel)
-                );
-                
-                if (eligibleEvents.length > 0) {
-                    // FIX: Explicitly type reduce accumulator to fix type inference issue.
-                    const totalWeight = eligibleEvents.reduce((sum: number, event: RandomEvent) => sum + event.triggerChance(tempGameState), 0);
-                    
-                    if (totalWeight > 0) {
-                        let randomNum = Math.random() * totalWeight;
-                        let chosenEvent: RandomEvent | null = null;
-
-                        for (const event of eligibleEvents) {
-                            const eventWeight = event.triggerChance(tempGameState);
-                            if (randomNum < eventWeight) {
-                                chosenEvent = event;
-                                break;
-                            }
-                            randomNum -= eventWeight;
-                        }
-                        
-                        if (!chosenEvent) {
-                            chosenEvent = eligibleEvents.find(e => e.triggerChance(tempGameState) > 0) || eligibleEvents[0];
-                        }
-                        
-                        if(chosenEvent) {
-                            tempGameState.currentEvent = chosenEvent;
-                            logEvent(`EVENTO (N3-Dinámico, Año ${tempGameState.year}): ${chosenEvent.name} - ${chosenEvent.description}`);
-                            addMessageToChat(`¡Evento Inesperado! ${chosenEvent.name}: ${chosenEvent.description}`, 'system', 'game_event');
-                            const effects = chosenEvent.effects(tempGameState);
-                            processRandomEventEffects(effects);
-                            eventOccurredThisYear = true;
-                        }
-                    } else {
-                        logEvent(`Nivel 3: Intento de evento dinámico fallido. Ningún evento elegible tenía >0 peso de activación.`);
-                    }
-                }
-            }
-        }
-
-        // FIX: Explicitly typed 'p' as PolicyState to resolve type inference issues where Object.values().forEach() was inferring 'p' as 'unknown', causing property access errors.
-        Object.values(policies).forEach((p: PolicyState) => {
-            if (!p.stellaName) return; 
-            const tiempoActivacionKey = `Tiempo_Activacion_${p.stellaName}` as NumericStellaKeys;
-            if (p.isActive && tiempoActivacionKey in stellaState) {
-                (stellaState as any)[tiempoActivacionKey] = ((stellaState as any)[tiempoActivacionKey] || 0) + 1;
-            }
-
-            if (p.isActive && p.efficiencyDecayDuration && p.efficiencyDecayDuration > 0 && p.initialEfficiency) {
-                const yearsActive = (stellaState as any)[tiempoActivacionKey] || 0;
-                const newEfficiency = p.initialEfficiency * Math.exp(-yearsActive / p.efficiencyDecayDuration);
-                p.currentEfficiency = Math.max(0, newEfficiency);
-            }
-        });
-        
-        let totalPolicyCost = 0;
-        Object.values(policies).forEach((p: PolicyState) => {
-            if (p.isActive) {
-                totalPolicyCost += p.costFactor * stellaState.PBI_Real;
-            }
-        });
-
-        let totalPactCost = 0;
-        Object.values(tempGameState.pacts).forEach((pact: Pact) => {
-            if (pact.isActive && pact.annualCost) {
-                totalPactCost += pact.annualCost;
-            }
-        });
-        
-        // --- START OF RESTORED SIMULATION LOGIC ---
-
-        // 1. Apply pact effects
-        Object.values(tempGameState.pacts).forEach((pact: Pact) => {
-            if (pact.isActive) {
-                const effects = pact.effects(indicators, stellaState);
-                if (effects.indicators) indicators = { ...indicators, ...effects.indicators };
-                if (effects.stellaStocks) stellaState = { ...stellaState, ...effects.stellaStocks };
-            }
-        });
-
-        // 2. Land Use Transitions
-        let landUseChangeFactors = { tasa_BNNP_a_BNP: 1, tasa_BNNP_a_CC: 1, tasa_BNNP_a_CA: 1, tasa_CA_a_BNNP: 1, tasa_CC_a_CA: 1 };
-        Object.values(tempGameState.pacts).forEach((pact: Pact) => {
-            if (pact.isActive) {
-                const effects = pact.effects(indicators, stellaState);
-                if (effects.landUseChangeFactors) {
-                    landUseChangeFactors.tasa_BNNP_a_BNP *= effects.landUseChangeFactors.tasa_BNNP_a_BNP ?? 1;
-                    landUseChangeFactors.tasa_BNNP_a_CC *= effects.landUseChangeFactors.tasa_BNNP_a_CC ?? 1;
-                    landUseChangeFactors.tasa_BNNP_a_CA *= effects.landUseChangeFactors.tasa_BNNP_a_CA ?? 1;
-                    landUseChangeFactors.tasa_CA_a_BNNP *= effects.landUseChangeFactors.tasa_CA_a_BNNP ?? 1;
-                    landUseChangeFactors.tasa_CC_a_CA *= effects.landUseChangeFactors.tasa_CC_a_CA ?? 1;
-                }
-            }
-        });
-
-        const effCR = getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel);
-        const effAS = getPolicyEfficiency(policies[Policy.Agroecological], currentLevel);
-        const effPAI = getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel);
-        const effFRA = getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel);
-
-        const tasa_BNNP_a_BNP_final = (CP.Tasa_de_BNNP_a_BNP_Base + (effCR * 0.05)) * landUseChangeFactors.tasa_BNNP_a_BNP;
-        const cambio_BNNP_a_BNP = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_BNP_final;
-        const tasa_BNNP_a_CC_final = (CP.Tasa_de_BNNP_a_CC_Base + (effPAI * 0.04) + (effFRA * 0.01)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CC;
-        const cambio_BNNP_a_CC = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_CC_final;
-        const tasa_BNNP_a_CA_final = (CP.Tasa_de_BNNP_a_CA_Base + (effAS * 0.02)) * (1 - effCR) * landUseChangeFactors.tasa_BNNP_a_CA;
-        const cambio_BNNP_a_CA = landUses[LandUseType.UnprotectedNativeForest].area * tasa_BNNP_a_CA_final;
-        const tasa_CA_a_BNNP_final = (CP.Tasa_de_CA_a_BNNP_Base + (effAS * 0.01)) * landUseChangeFactors.tasa_CA_a_BNNP;
-        const cambio_CA_a_BNNP = landUses[LandUseType.AgroecologicalCrops].area * tasa_CA_a_BNNP_final;
-        const tasa_CC_a_CA_final = (CP.Tasa_de_CC_a_CA_Base + (effAS * 0.03)) * (1 - effPAI * 0.5) * landUseChangeFactors.tasa_CC_a_CA;
-        const cambio_CC_a_CA = landUses[LandUseType.ConventionalCrops].area * tasa_CC_a_CA_final;
-
-        const newLandUses = JSON.parse(JSON.stringify(landUses)) as Record<LandUseType, LandUse>;
-        newLandUses[LandUseType.ProtectedNativeForest].area += cambio_BNNP_a_BNP;
-        newLandUses[LandUseType.ConventionalCrops].area += cambio_BNNP_a_CC - cambio_CC_a_CA;
-        newLandUses[LandUseType.AgroecologicalCrops].area += cambio_BNNP_a_CA + cambio_CC_a_CA - cambio_CA_a_BNNP;
-        newLandUses[LandUseType.UnprotectedNativeForest].area -= (cambio_BNNP_a_BNP + cambio_BNNP_a_CC + cambio_BNNP_a_CA - cambio_CA_a_BNNP);
-        Object.keys(newLandUses).forEach(key => { newLandUses[key as LandUseType].area = Math.max(0, newLandUses[key as LandUseType].area); });
-        landUses = newLandUses;
-        tempGameState.landUses = newLandUses;
-
-        // 3. Financial Calculations
-        const pbiGrowthRate = CP.Tasa_Base_Crecimiento_PBI + (getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * 0.01) + (getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * 0.005) - (additionalTaxPressurePercentage * CP.PBIGrowth_Reduction_Factor_Per_Tax_Point);
-        stellaState.PBI_Real *= (1 + pbiGrowthRate);
-        const taxIncome = stellaState.PBI_Real * (CP.Tasa_Impositiva_General_Sobre_PBI + (additionalTaxPressurePercentage / 100));
-        const interestRate = (CP[`Tasa_de_interes_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.03;
-        const interestPayment = stellaState.Deuda * interestRate;
-        const debtPaymentRate = (CP[`Pago_deuda_anual_Nivel_${currentLevel}` as keyof ControlParams] as number) || 0.1;
-        const debtPrincipalPayment = stellaState.Deuda * debtPaymentRate;
-        const totalExpenses = totalPolicyCost + totalPactCost + interestPayment + debtPrincipalPayment;
-
-        stellaState.Reservas_del_Tesoro += (taxIncome - totalExpenses);
-        if (tempGameState.loanRequestedThisRound > 0) {
-            stellaState.Reservas_del_Tesoro += tempGameState.loanRequestedThisRound;
-            stellaState.Deuda += tempGameState.loanRequestedThisRound;
-            logEvent(`Préstamo de ${tempGameState.loanRequestedThisRound.toFixed(0)} procesado. Deuda y Reservas actualizadas.`);
-            tempGameState.loanRequestedThisRound = 0;
-        }
-        stellaState.Deuda = Math.max(0, stellaState.Deuda - debtPrincipalPayment);
-
-        // 4. Indicator calculations
-        indicators.biodiversity = calculateBiodiversityChange(policies, landUses, indicators.biodiversity, currentLevel);
-        indicators.foodSecurity = calculateFoodSecurityChange(policies, landUses, indicators, currentLevel);
-        indicators.economicSecurity = calculateEconomicSecurityChange(policies, landUses, indicators, currentLevel, additionalTaxPressurePercentage);
-        stellaState.Conflicto_social = calculateSocialConflictChange(policies, landUses, stellaState, indicators, currentLevel, additionalTaxPressurePercentage);
-        indicators.socialWellbeing = 100 - stellaState.Conflicto_social;
-        stellaState.Colapso_politico = calculatePoliticalCollapseChange(stellaState, indicators);
-        indicators.politicalStability = 100 - stellaState.Colapso_politico;
-        
-        // 5. CO2 Emissions calculation
-        let totalEmissions = 0, totalSequestration = 0;
-        // FIX: Add explicit type annotation to fix potential 'unknown' type error on 'lu'.
-        Object.values(landUses).forEach((lu: LandUse) => { totalEmissions += lu.area * lu.emissionRate; totalSequestration += lu.area * lu.sequestrationRate; });
-        const effCN = getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel);
-        const effPSE = getPolicyEfficiency(policies[Policy.EnergySubsidies], currentLevel);
-        const effPAI_emissions = getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel);
-        if (effCN > 0) {
-            const renInst = policies[Policy.CarbonNeutrality].instruments?.["C_Fomento_Energias_Renovables_No_Convencionales"];
-            const ccsInst = policies[Policy.CarbonNeutrality].instruments?.["C_Investigacion_Desarrollo_Captura_Carbono"];
-            if (renInst?.effortPercentage > 0) totalEmissions *= (1 - (CP.Factor_Reduccion_Emisiones_Renovables_PCN * (renInst.effortPercentage / 100)));
-            if (ccsInst?.effortPercentage > 0) totalSequestration += CP.Factor_Aumento_Secuestro_CAC_PCN * (ccsInst.effortPercentage / 100);
-        }
-        if (effPSE > 0) totalEmissions *= (1 + CP.Factor_Aumento_Emisiones_Fosiles_PSE * effPSE);
-        if (effPAI_emissions > 0) totalEmissions *= (1 + CP.Factor_Aumento_Emisiones_AgroIntensivo_PPAI * effPAI_emissions);
-        indicators.co2EqEmissionsPerCapita = Math.max(0, ((totalEmissions - totalSequestration) * CP.FACTOR_C_A_CO2EQ * CP.CO2_EMISSIONS_SCALING_FACTOR) / stellaState.Poblacion_Total);
-
-        // 6. Political Pressure
-        let ppAgricolaImpulse = 0, ppAmbientalistaImpulse = 0, ppSocialImpulse = 0;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Agricola_PAS;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CP.Factor_Presion_Agricola_PGS;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Agricola_PPAI;
-        ppAgricolaImpulse += getPolicyEfficiency(policies[Policy.AgriculturalExports], currentLevel) * CP.Factor_Presion_Agricola_PPEA;
-        if (indicators.economicSecurity < CP.Umbral_PP_Agricola_SegEconomica) ppAgricolaImpulse += (CP.Umbral_PP_Agricola_SegEconomica - indicators.economicSecurity) * CP.Sensibilidad_PP_Agricola_SegEconomica;
-        if (indicators.foodSecurity < CP.Umbral_PP_Agricola_SegAlimentaria) ppAgricolaImpulse += (CP.Umbral_PP_Agricola_SegAlimentaria - indicators.foodSecurity) * CP.Sensibilidad_PP_Agricola_SegAlimentaria;
-        stellaState.PP_AGRICOLA += ppAgricolaImpulse - (stellaState.PP_AGRICOLA * 0.1);
-        
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Ambiental_PAS;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CP.Factor_Presion_Ambiental_PCR;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) * CP.Factor_Presion_Ambiental_PGS;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CP.Factor_Presion_Ambiental_PAGUA;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CP.Factor_Presion_Ambiental_PCN;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Ambiental_PPAI_Neg;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CP.Factor_Presion_Ambiental_PFRA_Neg;
-        ppAmbientalistaImpulse += getPolicyEfficiency(policies[Policy.EnergySubsidies], currentLevel) * CP.Factor_Presion_Ambiental_PSE_Neg;
-        if (indicators.biodiversity < CP.Umbral_PP_Ambiental_Biodiversidad) ppAmbientalistaImpulse += (CP.Umbral_PP_Ambiental_Biodiversidad - indicators.biodiversity) * CP.Sensibilidad_PP_Ambiental_Biodiversidad;
-        if (indicators.co2EqEmissionsPerCapita > CP.Umbral_PP_Ambiental_CO2PerCapita) ppAmbientalistaImpulse += (indicators.co2EqEmissionsPerCapita - CP.Umbral_PP_Ambiental_CO2PerCapita) * CP.Sensibilidad_PP_Ambiental_CO2PerCapita;
-        stellaState.PP_AMBIENTALISTA += ppAmbientalistaImpulse - (stellaState.PP_AMBIENTALISTA * 0.1);
-
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) * CP.Factor_Presion_Social_PAS;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.SustainableWaterManagement], currentLevel) * CP.Factor_Presion_Social_PAGUA;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel) * CP.Factor_Presion_Social_PCN;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) * CP.Factor_Presion_Social_PCR;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) * CP.Factor_Presion_Social_PPAI_Neg;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.ForeignInvestment], currentLevel) * CP.Factor_Presion_Social_PPIE_Neg;
-        ppSocialImpulse += getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) * CP.Factor_Presion_Social_PFRA_Neg;
-        if (indicators.socialWellbeing < CP.Umbral_PP_Social_BienestarSocial) ppSocialImpulse += (CP.Umbral_PP_Social_BienestarSocial - indicators.socialWellbeing) * CP.Sensibilidad_PP_Social_BienestarSocial;
-        ppSocialImpulse += additionalTaxPressurePercentage * CP.PPSocial_Increase_Factor_Per_Tax_Point;
-        stellaState.PP_SOCIAL += ppSocialImpulse - (stellaState.PP_SOCIAL * CP.Tasa_disipacion_social);
-        
-        stellaState.PP_AGRICOLA = Math.max(0, Math.min(100, stellaState.PP_AGRICOLA));
-        stellaState.PP_AMBIENTALISTA = Math.max(0, Math.min(100, stellaState.PP_AMBIENTALISTA));
-        stellaState.PP_SOCIAL = Math.max(0, Math.min(100, stellaState.PP_SOCIAL));
-
-        // 7. Update final indicators from stella state
-        indicators.pbi = stellaState.PBI_Real;
-        indicators.debt = stellaState.Deuda;
-        indicators.treasuryReserves = stellaState.Reservas_del_Tesoro;
-        indicators.ppAgricola = stellaState.PP_AGRICOLA;
-        indicators.ppAmbientalista = stellaState.PP_AMBIENTALISTA;
-        indicators.ppSocial = stellaState.PP_SOCIAL;
-        Object.keys(indicators).forEach(keyStr => {
-            const key = keyStr as keyof Indicators;
-            if (!['co2EqEmissionsPerCapita', 'pbi', 'treasuryReserves', 'debt', 'generalScore'].includes(key as string)) {
-                indicators[key] = Math.max(0, Math.min(100, indicators[key]));
-            }
-        });
-
-        // 8. Recalculate Score
-        const carbonScore = Math.max(0, 100 - (indicators.co2EqEmissionsPerCapita / CP.Referencia_Max_CO2_per_Capita_Puntaje) * 100);
-        let finalScore = 0;
-        if (currentLevel === 1) {
-            // Added small economic component to teach that sustainability requires fiscal viability
-            const econScore = Math.min(100, Math.max(0, indicators.economicSecurity));
-            finalScore = (indicators.biodiversity * 0.40) + (carbonScore * 0.45) + (econScore * 0.15);
-        } else if (currentLevel === 2) {
-            const avgPressure = (indicators.ppAgricola + indicators.ppAmbientalista + indicators.ppSocial) / 3;
-            const polPressureScore = Math.max(0, 100 - avgPressure);
-            const avgExternalities = (indicators.foodSecurity + indicators.economicSecurity + indicators.socialWellbeing + indicators.politicalStability) / 4;
-            finalScore = (indicators.biodiversity * 0.15) + (carbonScore * 0.20) + (polPressureScore * 0.30) + (avgExternalities * 0.35);
-        } else {
-            const avgPressure = (indicators.ppAgricola + indicators.ppAmbientalista + indicators.ppSocial) / 3;
-            const polPressureScore = Math.max(0, 100 - avgPressure);
-            const avgExternalities = (indicators.foodSecurity + indicators.economicSecurity + indicators.socialWellbeing + indicators.politicalStability) / 4;
-            const pbiScore = Math.min(100, (indicators.pbi / 25000) * 100);
-            finalScore = (indicators.biodiversity * 0.10) + (carbonScore * 0.15) + (polPressureScore * 0.20) + (avgExternalities * 0.25) + (pbiScore * 0.30);
-        }
-        indicators.generalScore = finalScore * 10;
-        
-        // 9. Check Game Over conditions
-        if (indicators.politicalStability <= 5) tempGameState.gameOverReason = "Colapso Político: La nación ha caído en un estado de ingobernabilidad total.";
-        else if (indicators.biodiversity <= 5) tempGameState.gameOverReason = "Colapso Ecológico: La pérdida de biodiversidad ha provocado una catástrofe irreversible.";
-        else if (currentLevel >= 2 && indicators.foodSecurity <= 10) tempGameState.gameOverReason = "Hambruna: La incapacidad de alimentar a la población ha generado una crisis humanitaria.";
-        else if (stellaState.Reservas_del_Tesoro < -(stellaState.PBI_Real * 0.2) && stellaState.Deuda > stellaState.PBI_Real * 1.5) tempGameState.gameOverReason = "Bancarrota Nacional: La deuda insostenible y la falta de reservas han llevado a la quiebra.";
-
-        // --- END OF RESTORED SIMULATION LOGIC ---
-
-// FIX: Add explicit type annotation for 'p' in the find method to resolve 'unknown' type errors on property access.
-        const policyWithEfficiencyWarning = Object.values(policies).find((p: PolicyState) => {
-            if (!p.isActive || p.currentEfficiency === undefined || p.previousEfficiencyForNotification === undefined) return false;
-            const threshold = 0.40;
-            return p.currentEfficiency < threshold && p.previousEfficiencyForNotification >= threshold;
-        });
-
-        if (policyWithEfficiencyWarning && policyWithEfficiencyWarning.currentEfficiency !== undefined) {
-             const efficiencyPercentage = (policyWithEfficiencyWarning.currentEfficiency * 100).toFixed(0);
-             const warningMessage = `¡Atención! La eficiencia de la política "${policyWithEfficiencyWarning.name}" ha caído por debajo del 40% (actualmente ${efficiencyPercentage}%). Su impacto ahora es significativamente reducido. Considera reevaluar tu estrategia o, si estás en Nivel 2+, modifica el esfuerzo relativo entre sus instrumentos.`;
-             addMessageToChat(warningMessage, 'system', 'policy_efficiency_warning');
-             logEvent(warningMessage);
-             policyWithEfficiencyWarning.previousEfficiencyForNotification = policyWithEfficiencyWarning.currentEfficiency;
-        }
+        // Advances exactly one simulated year through the pure engine (src/sim). CP comes from
+        // controlParamsRef so a live FacilitatorPanel override still applies; Math.random is
+        // passed through as-is to keep the same unpredictability players always had (a seeded
+        // RNG is available in src/sim/rng.ts for tests and the future balance harness, see
+        // mejora-general/files/16_auditoria_ecuaciones.md).
+        const stepResult = stepYear(tempGameState, Math.random, CP);
+        tempGameState = stepResult.next;
+        stepResult.logs.forEach(msg => logEvent(msg));
+        stepResult.chatMessages.forEach(msg => addMessageToChat(msg.text, 'system', msg.emphasisType));
 
     } // end for loop
 
@@ -1764,7 +1309,7 @@ export const App = () => {
     setGameState(prev => {
         if (prev.currentLevel === level) return prev;
 
-        const { gameStatePatch, initialHistoricalDataPoint } = buildLevelInitializationState(level);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(level);
         if (!gameStatePatch.activeLevelConfig) return prev;
 
         setHistoricalData([initialHistoricalDataPoint]);
