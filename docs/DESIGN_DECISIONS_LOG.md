@@ -506,3 +506,110 @@ una librería de foco dedicada), y el comportamiento visual en viewport móvil r
 solo revisado por lectura del CSS condicional, no en un dispositivo/emulador.
 
 **Origen.** `mejora-general/files/14_decarbonito_overlay.md`.
+
+---
+
+## 2026-08-06 — Fase 8 (agente de acciones de DecarboNito): lenguaje natural que opera la interfaz
+
+**Arquitectura construida, siguiendo el principio rector del archivo `15` al pie de la letra: el
+agente nunca toca el estado directamente.** Cada acción `mutate`/`advance` llama exactamente el
+mismo handler que un clic humano (`togglePolicy`, `handleInstrumentEffortChange`,
+`handleAdditionalTaxPressureChange`, `requestLoan`, `togglePact`, `runSimulationRound`) — ninguna
+validación ni efecto secundario existente se saltea.
+
+- `src/game/uiActionRegistry.ts` (nuevo): 15 de las 16 acciones del catálogo del archivo `15` §3.2
+  (`start_tutorial_chapter` excluida — la Fase 9 no existe todavía; exponer una herramienta que
+  siempre falla sería peor que no exponerla. `set_level`/`reset_game` excluidas por diseño del
+  propio archivo, metajuego). Cada acción define `schema` (zod), `validate`, `preview`, `execute`,
+  `anchorFor` opcional.
+- `src/services/decarbonitoAgent.ts` (nuevo): `buildTools` (filtra por nivel y modo — `observer`
+  expone cero herramientas `mutate`/`advance`), `agentTurn` (bucle de hasta 5 pasos), `executeCall`
+  (coreografía: viajar+señalar → confirmar si corresponde → ejecutar → telemetría).
+- `src/components/decarbonito/DecarboNitoProvider.tsx` extendido: `confirm()` (tarjeta de
+  confirmación en el globo, con temporizador de 30s que cancela solo), `AgentMode`
+  (`observer`/`assist`/`tutorial` — este último definido pero sin usuario hasta la Fase 9),
+  `?mode=observer` en la URL fija y deshabilita el selector (instancias de evaluación, §7).
+  `dnModeRef` se agrega al mismo patrón de escape (`dnApiRef`) de la Fase 7, porque `App.tsx` sigue
+  por encima del provider en el árbol.
+- `src/components/decarbonito/ConversationPanel.tsx`: selector de modo Observador/Asistente en el
+  header del panel, deshabilitado y con aviso cuando el modo viene fijado por URL.
+- `src/App.tsx`: `handleUserChatSubmit` ahora llama `agentTurn()` en vez de `askGemini()` directo —
+  el modelo decide por sí mismo si solo responde o invoca una herramienta. Nuevo
+  `gameHandlersRef` (sincronizado por un efecto después de que todos los handlers reales están
+  definidos, ya que `handleUserChatSubmit` se declara ~500 líneas antes que `runSimulationRound` en
+  este archivo) y `agentHistoryRef` (memoria conversacional multi-turno del agente, formato
+  `Content[]` de Gemini — separada de `chatMessages`, que es solo texto para mostrar).
+
+**Desvío deliberado y verificado, no supuesto: el modelo NO se migró a `gemini-3.6-flash`.**
+El archivo `15` §4.1 pide migrar a `gemini-3.6-flash`/`@google/genai@^2.15.0` porque
+`gemini-2.5-flash` "se retira el 16 de octubre de 2026". No hay forma de confirmar desde este
+entorno que `gemini-3.6-flash` sea un modelo real y disponible — hardcodearlo como default habría
+arriesgado romper el agente en la primera llamada real. Se mantuvo `GEMINI_MODEL_TEXT`
+(`gemini-2.5-flash`, ya verificado funcionando en esta misma app) como default, ahora configurable
+por variable de entorno (`process.env.GEMINI_MODEL`, agregado al `define` de `vite.config.ts`) —
+cumple igual el principio del archivo fuente ("Model id is configuration, never a literal") sin
+apostar a un nombre de modelo no verificable. Confirmado en el navegador con la key real de
+`.env.local`: las llamadas van a `.../models/gemini-2.5-flash:generateContent` y responden 200.
+
+**`zod-to-json-schema` no se instaló.** El archivo `15` lo pide, pero `zod` v4 (instalado,
+`^4.4.3`) trae `z.toJSONSchema()` nativo — se probó (`target: 'openapi-3.0'`, el mismo formato que
+pide `@google/genai`'s `parametersJsonSchema`) y funciona sin la dependencia extra. Se instaló y
+luego se desinstaló al confirmar la duplicación.
+
+**Proxy de servidor construido, no conectado todavía.** `api/gemini.ts` (Vercel Edge Function con
+rate limit + degradación a modelo de respaldo) existe y está listo para desplegar, pero el agente
+sigue llamando al SDK de Gemini directamente desde el cliente — igual que los tres call sites
+preexistentes de `geminiService.ts` (chat, titulares, TTS), que YA exponen `GEMINI_API_KEY` en el
+bundle del cliente vía el `define` de `vite.config.ts` (un problema real y preexistente, no
+introducido en esta fase). Migrar los cuatro call sites al proxy es una tarea separada: este
+entorno de desarrollo no puede correr una Edge Function de Vercel (`npm run dev` solo sirve la app
+de Vite, no `/api/*`), así que nada enrutado por acá podría verificarse de punta a punta sin un
+despliegue real. Construirlo ahora y conectarlo después (con un preview real de Vercel para probar)
+se juzgó más seguro que migrar a ciegas.
+
+**Telemetría: tabla `game_events` no existía, se creó la migración real, no se aplicó.**
+El archivo `15` §7 da un `ALTER TABLE game_events ADD COLUMN ...`, pero el esquema real de este
+proyecto (`supabase/schema.sql`) no tiene esa tabla — solo `game_sessions` y `annual_snapshots`
+(una fila cada una). En vez de aplicar a ciegas un `ALTER` sobre una tabla inexistente contra el
+proyecto de Supabase en producción, se escribió `supabase/agent_telemetry_migration.sql` (tabla
+nueva, mismas convenciones de `schema.sql`: UUID + `gen_random_uuid()`, RLS con políticas "tabla:
+acción propia") — **no aplicada**, requiere que alguien con acceso al proyecto la corra a mano.
+`src/services/agentTelemetry.ts` funciona sin ese paso: `INSERT` falla en silencio (con una
+advertencia en consola, una sola vez por sesión) hasta que la migración se aplique.
+
+**`dn.confirm()` reutiliza el sistema de globos de la Fase 7**, no un componente nuevo: llama
+`showBubble()` con `ttl: null` y dos `actions`, resolviendo la promesa desde los `onSelect` o desde
+un `setTimeout` de 30s. Confirmado en vivo que el timeout funciona (ver verificación).
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 43/43 (19 tests nuevos:
+`tests/agent/registry.spec.ts` — nombres únicos, gating por modo/nivel, límite de políticas activas,
+bloqueo por lock-in, `anchorFor` no nulo para toda acción `mutate` — y `tests/agent/loop.spec.ts`,
+con el SDK de `@google/genai` mockeado — `MAX_STEPS` corta el bucle, errores de validación vuelven
+como `functionResponse` en vez de lanzar excepción, `simulate_year` siempre pide confirmación
+incluso en modo `tutorial`). `npm run build` limpio. `npm run i18n:audit` en verde (9 archivos
+Capa B/C pendientes, uno más que antes: `decarbonitoAgent.ts` se agregó a la lista, mismo criterio
+que `geminiService.ts`).
+
+**En el navegador, con la API key real de `.env.local` (no simulado):**
+- Modo Asistente: "Activá la política de conservación de los bienes naturales" → el modelo llamó
+  `activate_policy` con el id exacto correcto, DecarboNito viajó hasta la fila de esa política y la
+  señaló con el anillo de resaltado, apareció la tarjeta de confirmación, se confirmó, la política
+  quedó activa (`Activas: 1/5`, checkbox verde) y el globo final explicó el trade-off ("Observa
+  cómo afecta la biodiversidad y el porcentaje de bosque nativo") — exactamente la regla 3 de la
+  instrucción de operación.
+- Modo Observador: se interceptó el `fetch` al endpoint de Gemini para inspeccionar el cuerpo real
+  de la petición — confirmado que la lista de herramientas enviada en modo `observer` excluye por
+  completo `activate_policy` y cualquier otra acción `mutate`/`advance` (solo
+  `list_policies`/`explain_indicator`/`read_state`/`diagnose_trajectory`/`highlight_element`/
+  `open_panel`/`show_chart`). Pedir "Activá la política de ganadería sostenible" en este modo no
+  cambió `Activas: 1/5`.
+- Confirmado incidentalmente que el timeout de 30s de `confirm()` funciona: un pedido de
+  activación cuya confirmación quedó sin resolver por más de 30s (mientras se investigaba otra
+  cosa) se autocanceló con el mensaje "cancelada por el jugador", sin intervención.
+- Cero errores de consola de la aplicación en todo el flujo.
+
+**No verificado en este ciclo:** el proxy `api/gemini.ts` (no desplegable localmente, ver arriba),
+la escritura real en `game_events` (la migración no está aplicada en el Supabase del proyecto), y
+el modo `tutorial` (sin caller todavía — se comporta como `assist` hasta la Fase 9).
+
+**Origen.** `mejora-general/files/15_decarbonito_agent_actions.md`.

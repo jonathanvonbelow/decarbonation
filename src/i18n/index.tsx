@@ -84,6 +84,16 @@ export function useT(): I18nValue {
   return ctx;
 }
 
+/**
+ * Locale-parametrized translator for code that runs outside a component tree — the action
+ * registry (src/game/uiActionRegistry.ts) and the agent loop (src/services/decarbonitoAgent.ts,
+ * phase 8) build player- and model-facing strings from plain functions, not hooks, since tool
+ * descriptions and validation messages are constructed per-call rather than rendered.
+ */
+export function tFor(locale: Locale, key: TranslationKey, values?: Interpolations): string {
+  return interpolate(resolve(DICTS[locale], key), values);
+}
+
 /* ── Number and date formatting (es-AR uses comma decimals; en-US uses dot) ─────────────────── */
 
 export function useFormat() {

@@ -54,6 +54,19 @@ export type DnMessageOpts = Partial<
 
 export type DnNotifyMode = 'all' | 'criticalOnly' | 'muted';
 
+/** Agent operation modes (mejora-general/files/15_decarbonito_agent_actions.md §1). `tutorial` is
+ * a defined-but-unused value until phase 9 (18_tutoriales_v3.md) builds guided chapters — the type
+ * exists now so the registry/agent code doesn't need touching again when that phase flips it on. */
+export type AgentMode = 'observer' | 'assist' | 'tutorial';
+
+export interface ConfirmOptions {
+  text: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  /** ms before auto-cancelling. Default 30000 per §4.3. */
+  timeoutMs?: number;
+}
+
 export interface DnApi {
   say(text: string, opts?: DnMessageOpts): string;
   notify(text: string, opts?: DnMessageOpts): string;
@@ -69,6 +82,9 @@ export interface DnApi {
   setNotifyMode(mode: DnNotifyMode): void;
   setHidden(hidden: boolean): void;
   setCorner(corner: DnCorner): void;
+  /** Renders a confirmation card in the bubble (preview text + accept/cancel). Resolves `false`
+   * on cancel or timeout. Used by the agent (phase 8) before any mutating action in `assist` mode. */
+  confirm(opts: ConfirmOptions): Promise<boolean>;
 }
 
 interface DnContextValue extends DnApi {
@@ -83,6 +99,10 @@ interface DnContextValue extends DnApi {
   notifyMode: DnNotifyMode;
   hidden: boolean;
   onStateComplete: (finished: DnState) => void;
+  mode: AgentMode;
+  setMode: (mode: AgentMode) => void;
+  /** True when `?mode=observer` is present in the URL — the mode selector must be disabled. */
+  modeLockedByUrl: boolean;
 }
 
 const DecarboNitoContext = createContext<DnContextValue | null>(null);
@@ -98,12 +118,18 @@ const DecarboNitoContext = createContext<DnContextValue | null>(null);
  */
 export const dnApiRef: { current: DnApi | null } = { current: null };
 
+/** Same escape hatch as `dnApiRef`, for the one piece of state App.tsx's agent wiring needs to
+ * read that isn't part of the imperative `DnApi` surface: the current `AgentMode`. */
+export const dnModeRef: { current: AgentMode } = { current: 'assist' };
+
 const PLACEMENT_KEY = 'decarbonation.dn.placement';
 const NOTIFY_MODE_KEY = 'decarbonation.dn.notifyMode';
 const HIDDEN_KEY = 'decarbonation.dn.hidden';
+const AGENT_MODE_KEY = 'decarbonation.dn.agentMode';
 const MIN_SILENCE_MS = 6000;
 const MAX_QUEUE = 3;
 const IDLE_SLEEP_MS = 90000;
+const CONFIRM_TIMEOUT_MS = 30000;
 
 let seq = 0;
 const genId = () => `dn-${Date.now()}-${seq++}`;
@@ -131,6 +157,25 @@ function loadHidden(): boolean {
   try { return localStorage.getItem(HIDDEN_KEY) === 'true'; } catch { return false; }
 }
 
+/** `?mode=observer` forces observer mode for the whole session — evaluation instances (§7 of the
+ * source file) pin it this way instead of trusting a client-side toggle the player could flip. */
+function urlForcedMode(): AgentMode | null {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('mode');
+    return fromUrl === 'observer' ? 'observer' : null;
+  } catch { return null; }
+}
+
+function loadAgentMode(): AgentMode {
+  const forced = urlForcedMode();
+  if (forced) return forced;
+  try {
+    const raw = localStorage.getItem(AGENT_MODE_KEY);
+    if (raw === 'observer' || raw === 'assist') return raw;
+  } catch { /* ignore */ }
+  return 'assist'; // default for free play per source §1
+}
+
 export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<DnState>('idle');
   const [emotion, setEmotion] = useState<DnEmotion>('neutral');
@@ -142,6 +187,8 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [highlight, setHighlight] = useState<AnchorId | null>(null);
   const [notifyMode, setNotifyModeState] = useState<DnNotifyMode>(loadNotifyMode);
   const [hidden, setHiddenState] = useState<boolean>(loadHidden);
+  const modeLockedByUrl = useMemo(() => urlForcedMode() !== null, []);
+  const [mode, setModeState] = useState<AgentMode>(loadAgentMode);
 
   const currentRef = useRef<DnMessage | null>(null);
   const queueRef = useRef<DnMessage[]>([]);
@@ -157,6 +204,7 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => { currentRef.current = current; }, [current]);
   useEffect(() => { notifyModeRef.current = notifyMode; }, [notifyMode]);
   useEffect(() => { placementRef.current = placement; }, [placement]);
+  useEffect(() => { dnModeRef.current = mode; }, [mode]);
 
   const clearDismissTimer = () => {
     if (dismissTimerRef.current !== null) { window.clearTimeout(dismissTimerRef.current); dismissTimerRef.current = null; }
@@ -365,6 +413,34 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const setCorner = useCallback((corner: DnCorner) => { void moveTo({ kind: 'dock', corner }); }, [moveTo]);
 
+  const setMode = useCallback((next: AgentMode) => {
+    if (modeLockedByUrl) return; // evaluation instances: the selector is disabled in the UI too, this is the belt-and-suspenders check
+    setModeState(next);
+    try { localStorage.setItem(AGENT_MODE_KEY, next); } catch { /* ignore */ }
+  }, [modeLockedByUrl]);
+
+  const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
+    return new Promise((resolve) => {
+      let settled = false;
+      const id = genId();
+      const settle = (value: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) window.clearTimeout(timer);
+        resolve(value);
+      };
+      const timer = window.setTimeout(() => { settle(false); dismiss(id); }, opts.timeoutMs ?? CONFIRM_TIMEOUT_MS);
+      showBubble({
+        id, text: opts.text, surface: 'bubble', tone: 'normal', priority: 2, ttl: null,
+        actions: [
+          { labelKey: 'agent.confirm.yes', label: opts.confirmLabel, onSelect: () => settle(true) },
+          { labelKey: 'agent.confirm.no', label: opts.cancelLabel, onSelect: () => settle(false) },
+        ],
+        createdAt: Date.now(),
+      });
+    });
+  }, [showBubble, dismiss]);
+
   // 'C' opens/closes the conversation panel; Esc closes it (also handled locally by the panel
   // for focus-trap reasons, kept here too as a safety net for when focus is elsewhere).
   useEffect(() => {
@@ -385,28 +461,28 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const isDevHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
   useEffect(() => {
     if (!isDevHost) return;
-    (window as any).__dn = { say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, listAnchors: () => import('./anchors').then((m) => m.listAnchors()) };
+    (window as any).__dn = { say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, confirm, listAnchors: () => import('./anchors').then((m) => m.listAnchors()) };
     return () => { delete (window as any).__dn; };
-  }, [isDevHost, say, notify, play, moveTo, focusOn, release, openConversation, closeConversation]);
+  }, [isDevHost, say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, confirm]);
 
   useEffect(() => {
     dnApiRef.current = {
       say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss,
-      setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner,
+      setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, confirm,
     };
     return () => { dnApiRef.current = null; };
-  }, [say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss, setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner]);
+  }, [say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss, setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, confirm]);
 
   const value = useMemo<DnContextValue>(() => ({
     state, emotion, placement, current, notifications, conversationOpen, conversationSeed,
-    highlight, notifyMode, hidden,
+    highlight, notifyMode, hidden, mode, setMode, modeLockedByUrl,
     say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss,
-    setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete,
+    setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete, confirm,
   }), [
     state, emotion, placement, current, notifications, conversationOpen, conversationSeed,
-    highlight, notifyMode, hidden,
+    highlight, notifyMode, hidden, mode, setMode, modeLockedByUrl,
     say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss,
-    setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete,
+    setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete, confirm,
   ]);
 
   return <DecarboNitoContext.Provider value={value}>{children}</DecarboNitoContext.Provider>;

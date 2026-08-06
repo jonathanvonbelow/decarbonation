@@ -21,6 +21,9 @@ const IGNORED = [/^src\/i18n\//, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\
 // pendiente" sino directamente otro alcance.
 const CAPA_B_C_PENDING = [
   'src/services/geminiService.ts',
+  // Fase 8 (15_decarbonito_agent_actions.md): system-instruction prose the model reads (Capa C),
+  // same category as geminiService.ts above -- not UI copy the player reads directly.
+  'src/services/decarbonitoAgent.ts',
   'src/services/suggestionService.ts',
   'src/components/equations/descriptions.ts',
   // Policy/LandUseType enum *values* are themselves Spanish prose used as stable IDs throughout

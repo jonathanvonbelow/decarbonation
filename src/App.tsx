@@ -44,8 +44,11 @@ import GameLogDrawer from './components/GameLogDrawer';
 import { stepYear, createInitialState, evaluateLevel } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
-import { DecarboNitoProvider, dnApiRef } from './components/decarbonito/DecarboNitoProvider';
+import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
 import DecarboNitoLayer from './components/decarbonito/DecarboNitoLayer';
+import { agentTurn } from './services/decarbonitoAgent';
+import type { GameHandlers, ActionContext } from './game/uiActionRegistry';
+import type { Content } from '@google/genai';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -408,7 +411,7 @@ const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfi
 export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
   const { t } = useT();
-  const { startSession, resetSession, saveFinalSnapshot, savePreSurvey, savePostSurvey, endSession } = useSessionPersistence(user?.id ?? null);
+  const { sessionIdRef, startSession, resetSession, saveFinalSnapshot, savePreSurvey, savePostSurvey, endSession } = useSessionPersistence(user?.id ?? null);
 
   const [gameState, setGameState] = useState<GameState>(() => {
     const { gameStatePatch } = createInitialState(1);
@@ -438,6 +441,17 @@ export const App = () => {
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'info' | 'warning' | 'error'}[]>([]);
 
   const gameStateRef = useRef(gameState);
+  // Fase 8 (mejora-general/files/15_decarbonito_agent_actions.md): the agent's GameHandlers are
+  // the exact same callbacks the UI uses (togglePolicy, runSimulationRound, ...), but several of
+  // them are defined much later in this component than handleUserChatSubmit. Rather than reorder
+  // ~500 lines of working code, a ref is synced by a small effect right after the last handler is
+  // declared (see `[gameHandlersRef sync]` below) — always populated before a player can actually
+  // type into the chat, since that requires the component to have already rendered once.
+  const gameHandlersRef = useRef<GameHandlers | null>(null);
+  // Multi-turn conversational memory for the agent's tool-use loop (Content[], Gemini's own
+  // history format) — separate from `chatMessages` (the display-only bubble history) because the
+  // model needs the raw functionCall/functionResponse parts, not the human-readable bubble text.
+  const agentHistoryRef = useRef<Content[]>([]);
   
   const [tutorialSeen, setTutorialSeen] = useState<boolean>(() => {
     try {
@@ -613,29 +627,46 @@ export const App = () => {
   }, [apiKeyAvailable, addMessageToChat, logEvent, chatMessages.length]);
 
 
+  // Fase 8 (15_decarbonito_agent_actions.md): routes through the tool-use agent loop instead of a
+  // plain askGemini() Q&A call — the model now decides for itself whether to just answer or call
+  // one of the 15 registered actions (src/game/uiActionRegistry.ts). GameHandlers/dn come from the
+  // refs above/from phase 7 since this component sits above <DecarboNitoProvider> in the tree.
   const handleUserChatSubmit = useCallback(async (userInput: string) => {
     if (!userInput.trim() || isBotLoading || !apiKeyAvailable) return;
+    const dn = dnApiRef.current;
+    const handlers = gameHandlersRef.current;
+    if (!dn || !handlers) return; // provider/handlers not mounted yet — can't happen once the game screen is interactive
 
     addMessageToChat(userInput, 'user');
     setIsBotLoading(true);
-    dnApiRef.current?.setBusy(true);
+    dn.setBusy(true);
 
     try {
-      const botResponseText = await askGemini(userInput, gameStateRef.current, 'GENERAL_ASSISTANCE', getActiveLanguage());
-      addMessageToChat(botResponseText, 'bot');
-      dnApiRef.current?.play('nod', 'happy');
+      const ctx: ActionContext = {
+        state: gameStateRef.current,
+        locale: getActiveLanguage(),
+        handlers,
+        dn,
+        sessionId: sessionIdRef.current,
+      };
+      const result = await agentTurn(userInput, ctx, dnModeRef.current, agentHistoryRef.current);
+      agentHistoryRef.current = result.history;
+      if (result.text) {
+        addMessageToChat(result.text, 'bot');
+        dn.play('nod', 'happy');
+      }
     } catch (error) {
-      console.error("Error comunicándose con Gemini:", error);
+      console.error("Error comunicándose con el agente de DecarboNito:", error);
       const errorMessageText = error instanceof Error ? error.message : "Lo siento, tuve problemas para procesar tu solicitud.";
       addMessageToChat(`Error: ${errorMessageText}`, 'system', 'system_error');
       logEvent(`Error del chatbot: ${errorMessageText}`);
-      dnApiRef.current?.notify(errorMessageText, { priority: 3, tone: 'critical', immediate: true });
-      dnApiRef.current?.play('facepalm', 'alarmed');
+      dn.notify(errorMessageText, { priority: 3, tone: 'critical', immediate: true });
+      dn.play('facepalm', 'alarmed');
     } finally {
       setIsBotLoading(false);
-      dnApiRef.current?.setBusy(false);
+      dn.setBusy(false);
     }
-  }, [isBotLoading, apiKeyAvailable, addMessageToChat, logEvent]);
+  }, [isBotLoading, apiKeyAvailable, addMessageToChat, logEvent, sessionIdRef]);
   
   const handleLessonsLearnedStart = useCallback(() => {
     setShowClosingSynthesisModal(true);
@@ -1256,7 +1287,16 @@ export const App = () => {
     updateHistoricalData(tempGameState);
 
   }, [logEvent, addToast, addMessageToChat, updateHistoricalData, t]);
-  
+
+  // [gameHandlersRef sync] — see the ref's declaration near the top of this component. Every
+  // handler the agent's registry needs is stable by this point in the render.
+  useEffect(() => {
+    gameHandlersRef.current = {
+      togglePolicy, handleInstrumentEffortChange, togglePact,
+      handleAdditionalTaxPressureChange, requestLoan, runSimulationRound,
+    };
+  }, [togglePolicy, handleInstrumentEffortChange, togglePact, handleAdditionalTaxPressureChange, requestLoan, runSimulationRound]);
+
   const setCurrentLevelManually = useCallback((level: number) => {
     if (level < 1 || level > MAX_LEVELS) {
       logEvent(`Intento de cambiar a un nivel inválido: ${level}`);

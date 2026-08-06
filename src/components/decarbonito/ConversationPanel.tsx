@@ -13,6 +13,7 @@ import { ChatMessage } from '../../types';
 import { useT } from '../../i18n';
 import { useSpeech } from '../../hooks/useSpeech';
 import { DecarboNitoAvatar } from './DecarboNitoAvatar';
+import { useDecarboNito } from './DecarboNitoProvider';
 
 interface ConversationPanelProps {
   messages: ChatMessage[];
@@ -43,6 +44,7 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
   messages, onUserSubmit, isLoading, apiKeyAvailable, currentLevelName, suggestedQuestions, anchorEl, onClose,
 }) => {
   const { t, locale } = useT();
+  const dn = useDecarboNito();
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -158,6 +160,33 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
         >
           &#10005;
         </button>
+      </div>
+
+      {/* Agent mode selector (15_decarbonito_agent_actions.md §1) — observer (read/point only) vs.
+          assist (can mutate state, always with confirmation). `tutorial` isn't offered here yet;
+          it only turns on from within a guided chapter (phase 9). Locked when ?mode=observer is
+          in the URL (evaluation instances). */}
+      <div className="px-3 py-1.5 border-b border-basalt-700 flex items-center gap-2 shrink-0 text-[12px]">
+        <span className="text-ash-dim">{t('conversation.mode.label')}:</span>
+        <div className="flex gap-1" role="radiogroup" aria-label={t('conversation.mode.label')}>
+          {(['observer', 'assist'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={dn.mode === m}
+              disabled={dn.modeLockedByUrl}
+              onClick={() => dn.setMode(m)}
+              title={t(m === 'observer' ? 'conversation.mode.observerHint' : 'conversation.mode.assistHint')}
+              className={`px-2 py-0.5 rounded-full transition-colors ${
+                dn.mode === m ? 'bg-hydro text-basalt-950' : 'bg-basalt-700 text-ash hover:text-bone'
+              } ${dn.modeLockedByUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {t(m === 'observer' ? 'conversation.mode.observer' : 'conversation.mode.assist')}
+            </button>
+          ))}
+        </div>
+        {dn.modeLockedByUrl && <span className="text-ash-dim italic">{t('conversation.mode.lockedByUrl')}</span>}
       </div>
 
       <div className="flex-grow p-3 space-y-2 overflow-y-auto min-h-0">
