@@ -2,7 +2,7 @@ import React from 'react';
 import { PolicyState } from '../types';
 import Tooltip from './common/Tooltip';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { getPolicyName } from '../i18n/gameData';
+import { getPolicyName } from '../legacyContent/gameData';
 
 interface PolicyToggleProps {
   policy: PolicyState;

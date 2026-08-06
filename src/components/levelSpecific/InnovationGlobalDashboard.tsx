@@ -3,7 +3,7 @@ import { GameState, LevelConfig, Pact } from '../../types';
 import Tooltip from '../common/Tooltip';
 import { CONTROL_PARAMS } from '../../constants';
 import { useLanguageContext } from '../../contexts/LanguageContext';
-import { getPactName, INNOVATION_DATA_NAMES } from '../../i18n/gameData';
+import { getPactName, INNOVATION_DATA_NAMES } from '../../legacyContent/gameData';
 
 interface InnovationGlobalDashboardProps {
   levelConfig: LevelConfig;

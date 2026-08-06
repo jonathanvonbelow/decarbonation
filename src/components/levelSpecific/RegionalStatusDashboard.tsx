@@ -4,7 +4,7 @@ import { GameState, LevelConfig, RegionalZoneData, DisplayRegionalZoneData } fro
 import RegionalDetailModal from './RegionalDetailModal';
 import { INITIAL_REGIONAL_ZONES_DATA, INITIAL_YEAR } from '../../constants';
 import { useLanguageContext } from '../../contexts/LanguageContext';
-import { getRegionName, REGION_CONTENT } from '../../i18n/gameData';
+import { getRegionName, REGION_CONTENT } from '../../legacyContent/gameData';
 
 interface RegionalStatusDashboardProps {
   levelConfig: LevelConfig;

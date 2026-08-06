@@ -10,7 +10,7 @@ import Tooltip from './common/Tooltip';
 import PolicyInstrumentsPanel from './PolicyInstrumentsPanel';
 import EventsNewsPanel from './levelSpecific/EventsNewsPanel';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { getLandUseName } from '../i18n/gameData';
+import { getLandUseName } from '../legacyContent/gameData';
 
 interface DashboardProps {
   gameState: GameState;

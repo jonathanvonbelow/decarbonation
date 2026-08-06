@@ -3,7 +3,7 @@ import React from 'react';
 import { Policy, PolicyState, PolicyInstrument } from '../types';
 import Tooltip from './common/Tooltip';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { getPolicyName, getInstrumentName } from '../i18n/gameData';
+import { getPolicyName, getInstrumentName } from '../legacyContent/gameData';
 
 interface PolicyInstrumentsPanelProps {
   activePolicies: PolicyState[];

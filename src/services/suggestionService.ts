@@ -2,7 +2,7 @@
 import { GameState, Policy, PolicyState } from '../types';
 import { INITIAL_YEAR, MAX_ACTIVE_POLICIES } from '../constants';
 import { Language } from '../hooks/useLanguage';
-import { getPolicyName, getPactName } from '../i18n/gameData';
+import { getPolicyName, getPactName } from '../legacyContent/gameData';
 
 const MAX_SUGGESTIONS = 4;
 

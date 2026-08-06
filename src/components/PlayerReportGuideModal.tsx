@@ -1,7 +1,7 @@
 import React from 'react';
 import { PLAYER_REPORT_GUIDE_QUESTIONS } from '../constants';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { REPORT_GUIDE_SECTIONS } from '../i18n/gameData';
+import { REPORT_GUIDE_SECTIONS } from '../legacyContent/gameData';
 
 const T = {
   es: { title: 'Guía de Reflexión Post-Juego / Lecciones Aprendidas', closeLabel: 'Cerrar guía', intro: 'Has llegado al final de esta etapa. Tómate un momento para reflexionar sobre tu experiencia. Usa las siguientes preguntas como guía. Puedes discutir tus respuestas con DecarboNito en el chat.', startReflection: 'Iniciar Reflexión con DecarboNito', closeBtn: 'Cerrar Guía' },

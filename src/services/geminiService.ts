@@ -2,7 +2,7 @@ import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { GameState, Policy, PolicyState, LandUse, LandUseType, Pact, HistoricalDataPoint, ClosingSynthesis, Indicators } from '../types';
 import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS, GEMINI_TTS_VOICE_NAME, ALL_POLICIES } from '../constants';
 import { Language } from '../hooks/useLanguage';
-import { getPolicyName, getIndicatorName } from '../i18n/gameData';
+import { getPolicyName, getIndicatorName } from '../legacyContent/gameData';
 
 // Suffix appended to the system instruction to enforce response language
 const LANGUAGE_INSTRUCTION: Record<Language, string> = {
