@@ -19,7 +19,7 @@ interface CoverScreenProps {
 const T = {
   es: {
     eyebrow: 'Proyecto IKI',
-    institutions: 'FCF-UNaM · Fundación Bariloche · CONICET',
+    institutions: 'Fundación Bariloche · FCF-UNaM · CONICET',
     subtitle: 'Simulador estratégico y laboratorio de escenarios de política climática',
     whatIsTitle: 'Qué es DecarboNation',
     whatIsBody: [
@@ -63,7 +63,7 @@ const T = {
   },
   en: {
     eyebrow: 'IKI Project',
-    institutions: 'FCF-UNaM · Fundación Bariloche · CONICET',
+    institutions: 'Fundación Bariloche · FCF-UNaM · CONICET',
     subtitle: 'A strategic simulator and scenario laboratory for climate policy',
     whatIsTitle: 'What DecarboNation is',
     whatIsBody: [
@@ -130,9 +130,10 @@ const CoverScreen: React.FC<CoverScreenProps> = ({ mode = 'gate', onStart, onClo
     >
       <div className="bg-custom-light-gray rounded-lg shadow-2xl max-w-3xl w-full text-gray-100 max-h-[95vh] flex flex-col animate-fade-in-scale-up overflow-hidden">
         {/* Header: wordmark + institutional mentions.
-            NOTE: no real institutional logo image assets exist in this repo yet (FCF-UNaM,
-            Fundación Bariloche, CONICET, proyecto IKI). These are styled-text placeholders,
-            intentionally NOT <img> tags, pending real logo files from the funder. */}
+            NOTE: no real institutional logo image assets exist in this repo yet (Fundación
+            Bariloche, FCF-UNaM, CONICET, proyecto IKI). These are styled-text placeholders,
+            intentionally NOT <img> tags, pending real logo files from the funder. Fundación
+            Bariloche leads the project -- listed first, per the user's correction. */}
         <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 relative border-b border-gray-700">
           {mode === 'about' && onClose && (
             <button

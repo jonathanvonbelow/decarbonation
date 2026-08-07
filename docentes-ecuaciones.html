@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecarboNation — Hoja de ecuaciones</title>
+    <meta name="description" content="Cómo funciona el modelo por dentro: las siete familias de ecuaciones que gobiernan la simulación, y qué tan auditadas están." />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="canonical" href="https://decarbonation.vercel.app/docentes/ecuaciones">
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" style="--level-tint: 232 97 60; --level-tint-alpha: 0.05;">
+    <header class="border-b border-basalt-700 print:hidden">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+            🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-12 max-w-3xl">
+      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden">← Paquete para docentes</a>
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">
+        <span data-lang="es">Hoja de ecuaciones</span>
+        <span data-lang="en" hidden>Equations sheet</span>
+      </h1>
+      <p class="text-ash mb-2">
+        <span data-lang="es">Para estudiantes avanzados, revisores o cualquiera que quiera abrir la caja negra. No es material de primera clase — para eso está el <a href="/docentes/plan-clase" class="text-hydro hover:underline">plan de clase</a>.</span>
+        <span data-lang="en" hidden>For advanced students, reviewers, or anyone who wants to open the black box. Not first-class material — that's what the <a href="/docentes/plan-clase" class="text-hydro hover:underline">lesson plan</a> is for.</span>
+      </p>
+
+      <section class="mt-10 mb-8">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Cómo está armado el modelo</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>How the model is built</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="panel p-5">
+            <h3 class="font-semibold text-bone mb-1" data-lang="es">Parámetros de control global</h3>
+            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Global control parameters</h3>
+            <p class="text-sm text-ash" data-lang="es">Ajustan la sensibilidad y las constantes de la simulación. Modificarlos cambia drásticamente el comportamiento del juego.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Tune the simulation's sensitivity and constants. Changing them drastically alters the game's behavior.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-bone mb-1" data-lang="es">Políticas</h3>
+            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Policies</h3>
+            <p class="text-sm text-ash" data-lang="es">Definiciones base para cada política: costos y dinámica de eficiencia a lo largo del tiempo.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Base definitions for each policy: costs and efficiency dynamics over time.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-bone mb-1" data-lang="es">Usos del suelo</h3>
+            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Land uses</h3>
+            <p class="text-sm text-ash" data-lang="es">Propiedades base para cada tipo de uso del suelo: tasas de emisión y secuestro de carbono.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Base properties for each land use type: carbon emission and sequestration rates.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-bone mb-1" data-lang="es">Ecuaciones fundamentales</h3>
+            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Core equations</h3>
+            <p class="text-sm text-ash" data-lang="es">Las fórmulas que interrelacionan esas variables para producir los resultados anuales.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The formulas that interrelate those variables to produce each year's results.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Las siete familias de ecuaciones</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>The seven equation families</h2>
+        <div class="space-y-4">
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">1. Eficiencia de política</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>1. Policy efficiency</h3>
+            <p class="text-sm text-ash" data-lang="es">Determina cuán efectiva es una política en un año determinado. Disminuye con el tiempo (decaimiento exponencial) y se ve afectada por el entorno político.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Determines how effective a policy is in a given year. It decreases over time (exponential decay) and is affected by the political environment.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">2. Balance de carbono</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>2. Carbon balance</h3>
+            <p class="text-sm text-ash" data-lang="es">La ecuación central para el cambio climático. Calcula la diferencia neta entre el carbono capturado por los ecosistemas y el emitido por las actividades humanas cada año.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The central equation for climate change. Calculates the net difference between carbon captured by ecosystems and carbon emitted by human activity each year.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">3. Cálculo de indicadores</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>3. Indicator calculation</h3>
+            <p class="text-sm text-ash" data-lang="es">Fórmula genérica para indicadores socio-ambientales como la Biodiversidad: una suma ponderada de los efectos de las políticas y los usos del suelo.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Generic formula for socio-environmental indicators like Biodiversity: a weighted sum of the effects of policies and land uses.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">4. Presión política (Nivel 2+)</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>4. Political pressure (Level 2+)</h3>
+            <p class="text-sm text-ash" data-lang="es">Modela cómo aumenta o disminuye el descontento de los grupos de interés (agrícola, ambientalista, social) en respuesta a los indicadores.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Models how discontent among interest groups (agricultural, environmentalist, social) rises or falls in response to indicators.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">5. Economía</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>5. Economy</h3>
+            <p class="text-sm text-ash" data-lang="es">Fórmulas que gobiernan la macroeconomía de la nación: crecimiento del PBI, impuestos, intereses, amortización de deuda y balance de las finanzas públicas.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Formulas governing the nation's macroeconomy: GDP growth, taxes, interest, debt amortization, and the balance of public finances.</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">6. Estabilidad y conflicto</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>6. Stability and conflict</h3>
+            <p class="text-sm text-ash" data-lang="es">Ecuaciones que determinan la cohesión social y la estabilidad del gobierno. Cruciales para evitar las condiciones de fin de juego (colapso político, ecológico, hambruna, bancarrota).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Equations determining social cohesion and government stability. Crucial for avoiding game-over conditions (political or ecological collapse, famine, bankruptcy).</p>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">7. Puntaje general</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>7. General score</h3>
+            <p class="text-sm text-ash" data-lang="es">Calcula el Puntaje General. Los componentes y sus pesos cambian en cada nivel para reflejar los desafíos de esa etapa.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Calculates the General Score. Components and their weights change each level to reflect that stage's challenges.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel p-6 mb-8">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="es">Rigor y auditoría: qué está verificado y qué no</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="en" hidden>Rigor and audit: what's verified and what isn't</h2>
+        <p class="text-ash text-sm mb-3" data-lang="es">
+          El equipo audita cada fórmula contra su fuente original y publica los hallazgos, incluidos los que no
+          quedan bien. Dos ejemplos reales, no maquillados:
+        </p>
+        <p class="text-ash text-sm mb-3" data-lang="en" hidden>
+          The team audits every formula against its original source and publishes the findings, including the ones
+          that don't look good. Two real examples, not touched up:
+        </p>
+        <ul class="text-sm text-ash space-y-2 mb-4 list-disc list-inside">
+          <li data-lang="es"><strong class="text-bone">Decaimiento de eficiencia (P-1):</strong> con los parámetros actuales, una política activada una sola vez pierde casi toda su eficiencia mucho antes de terminar el nivel — y el contador de tiempo activo nunca se resetea al desactivarla, así que ni siquiera reactivarla ayuda como debería. Esto explica por qué algunos indicadores casi no responden a ninguna estrategia probada. Documentado, no corregido todavía: cambiarlo altera el balance del juego entero y necesita su propia calibración.</li>
+          <li data-lang="en" hidden><strong class="text-bone">Efficiency decay (P-1):</strong> with current parameters, a policy activated once loses nearly all its efficiency well before the level ends — and the active-time counter never resets when deactivated, so even reactivating it doesn't help the way it should. This explains why some indicators barely respond to any tested strategy. Documented, not fixed yet: changing it shifts the whole game's balance and needs its own calibration.</li>
+          <li data-lang="es"><strong class="text-bone">Conservación de área (L-1):</strong> un test automático encontró que, con eventos aleatorios activos, ~16 kHa de superficie no se conservan exactamente entre usos del suelo — probablemente un evento que suma o resta área sin la transferencia pareada correspondiente. Pendiente de revisar evento por evento.</li>
+          <li data-lang="en" hidden><strong class="text-bone">Area conservation (L-1):</strong> an automated test found that, with random events active, ~16 kHa of area isn't exactly conserved across land uses — likely one event that adds or removes area without the matching paired transfer. Pending an event-by-event review.</li>
+        </ul>
+        <p class="text-sm text-ash-dim" data-lang="es">
+          La auditoría técnica completa (qué está OK, qué falta corregir, qué falta documentar, ítem por ítem) es
+          pública: <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">descargar el detalle técnico completo</a>.
+        </p>
+        <p class="text-sm text-ash-dim" data-lang="en" hidden>
+          The full technical audit (what's OK, what needs fixing, what needs documenting, item by item) is public:
+          <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">download the full technical detail</a>.
+        </p>
+      </section>
+
+      <p class="text-xs text-ash-dim">
+        <span data-lang="es">Para ver estos mismos valores en vivo, actualizados con los datos de una partida real, usá el botón "Ecuaciones" dentro del juego (pide una contraseña — se la pedís al equipo del proyecto).</span>
+        <span data-lang="en" hidden>To see these same values live, updated with data from a real session, use the "Equations" button inside the game (it asks for a password — request it from the project team).</span>
+      </p>
+    </main>
+
+    <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
+      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
+      <a href="/" class="hover:text-ash underline">Inicio</a>
+    </footer>
+
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

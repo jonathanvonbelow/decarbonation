@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Paquete para docentes</title>
-    <meta name="description" content="Materiales para llevar DecarboNation al aula: guía de facilitación, consignas de debriefing y hoja de ecuaciones, sin formulario." />
+    <meta name="description" content="Materiales para llevar DecarboNation al aula: guía de facilitación, plan de clase, diapositivas de encuadre, consignas de debriefing y hoja de ecuaciones, sin formulario." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes">
     <link rel="stylesheet" href="/src/index.css" />
@@ -30,28 +30,26 @@
       </p>
 
       <!--
-        Honestidad de contenido (20_landing_shareables.md §8): de los seis materiales que pide la
-        fuente, solo tres existen de verdad en este repo (guía de facilitación, hoja de
-        ecuaciones -- adaptada de la auditoría del modelo -- y las consignas de debriefing,
-        armadas en esta misma fase a partir de las cinco preguntas ya aprobadas del informe de
-        cierre). "Plan de clase" y "Diapositivas de encuadre" no existen como archivos en
-        ningún lugar del proyecto (buscado en mejora-general/ y docs/) -- son documentos de
-        contenido que hay que autorar, no código; se listan como pendientes en vez de inventar
-        un PDF vacío. Ver docs/DESIGN_DECISIONS_LOG.md, fase 11.
+        Cada recurso tiene su propia página con el diseño del sitio (mismo src/index.css que la
+        landing), no un link directo a un archivo -- pedido explícito del usuario tras el primer
+        deploy de la fase 11, cuando "Plan de clase" y "Diapositivas" todavía no existían y el
+        resto eran descargas crudas. Los archivos .md originales (guía, hoja de ecuaciones) siguen
+        disponibles como descarga secundaria desde su propia página, para quien prefiera
+        imprimir/exportar con pandoc. Ver docs/DESIGN_DECISIONS_LOG.md.
       -->
       <div class="space-y-4">
-        <a href="/docentes/guia-facilitacion.md" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+        <a href="/docentes/guia" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
           <div>
             <h2 class="font-semibold text-bone" data-lang="es">Guía de facilitación</h2>
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Facilitation guide</h2>
-            <p class="text-sm text-ash" data-lang="es">Guion de debriefing paso a paso para taller (10–15 min por ronda). Markdown — exportá a PDF con pandoc si preferís imprimir.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Step-by-step debriefing script for workshops (10–15 min per round). Markdown — export to PDF with pandoc if you'd rather print it.</p>
+            <p class="text-sm text-ash" data-lang="es">Guion de debriefing paso a paso para taller (10–15 min por ronda).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Step-by-step debriefing script for workshops (10–15 min per round).</p>
           </div>
-          <span class="text-hydro text-sm shrink-0" data-lang="es">Descargar →</span>
-          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Download →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
         </a>
 
-        <a href="/docentes/consignas-debriefing.html" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+        <a href="/docentes/consignas" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
           <div>
             <h2 class="font-semibold text-bone" data-lang="es">Consignas de debriefing imprimibles</h2>
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Printable debriefing prompts</h2>
@@ -62,33 +60,41 @@
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
         </a>
 
-        <a href="/docentes/hoja-de-ecuaciones.md" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+        <a href="/docentes/ecuaciones" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
           <div>
             <h2 class="font-semibold text-bone" data-lang="es">Hoja de ecuaciones (avanzado)</h2>
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Equations sheet (advanced)</h2>
-            <p class="text-sm text-ash" data-lang="es">Documentación técnica de cada fórmula del modelo, contrastada con su fuente original. Pensada para estudiantes avanzados o revisores, no para la primera clase.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Technical documentation of every model formula, checked against its original source. For advanced students or reviewers, not the first class.</p>
+            <p class="text-sm text-ash" data-lang="es">Cómo funciona el modelo por dentro, y qué tan auditado está. Para estudiantes avanzados o revisores.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>How the model works internally, and how audited it is. For advanced students or reviewers.</p>
           </div>
-          <span class="text-hydro text-sm shrink-0" data-lang="es">Descargar →</span>
-          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Download →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
         </a>
 
-        <div class="panel p-5 opacity-60">
-          <h2 class="font-semibold text-bone" data-lang="es">Plan de clase</h2>
-          <h2 class="font-semibold text-bone" data-lang="en" hidden>Lesson plan</h2>
-          <p class="text-sm text-ash-dim" data-lang="es">Próximamente.</p>
-          <p class="text-sm text-ash-dim" data-lang="en" hidden>Coming soon.</p>
-        </div>
+        <a href="/docentes/plan-clase" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Plan de clase</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Lesson plan</h2>
+            <p class="text-sm text-ash" data-lang="es">Una clase de 90 minutos, minuto a minuto, alineada a los tres objetivos de aprendizaje.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>A 90-minute class, minute by minute, aligned to the three learning objectives.</p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
+        </a>
 
-        <div class="panel p-5 opacity-60">
-          <h2 class="font-semibold text-bone" data-lang="es">Diapositivas de encuadre</h2>
-          <h2 class="font-semibold text-bone" data-lang="en" hidden>Framing slides</h2>
-          <p class="text-sm text-ash-dim" data-lang="es">Próximamente.</p>
-          <p class="text-sm text-ash-dim" data-lang="en" hidden>Coming soon.</p>
-        </div>
+        <a href="/docentes/diapositivas" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Diapositivas de encuadre</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Framing slides</h2>
+            <p class="text-sm text-ash" data-lang="es">Diez láminas para proyectar antes de jugar (~10 minutos).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Ten slides to project before playing (~10 minutes).</p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
+        </a>
       </div>
 
-      <section class="mt-14">
+      <section id="faq" class="mt-14 scroll-mt-20">
         <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Preguntas frecuentes de aula</h2>
         <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Classroom FAQ</h2>
         <div class="space-y-5">

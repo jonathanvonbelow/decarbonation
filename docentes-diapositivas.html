@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecarboNation — Diapositivas de encuadre</title>
+    <meta name="description" content="Diez láminas para proyectar antes de jugar: qué es DecarboNation, cómo funciona, y qué se va a obtener al final." />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="canonical" href="https://decarbonation.vercel.app/docentes/diapositivas">
+    <link rel="stylesheet" href="/src/index.css" />
+    <style>
+      .slide { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; scroll-margin-top: 80px; }
+      @media print {
+        .slide { min-height: auto; page-break-after: always; padding: 2rem 0; }
+        body { background: #08100e !important; }
+      }
+    </style>
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" style="--level-tint: 111 208 140; --level-tint-alpha: 0.06;">
+    <header class="border-b border-basalt-700 print:hidden sticky top-0 bg-basalt-950/90 backdrop-blur z-10">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+            🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-3xl print:hidden">
+      <a href="/docentes" class="text-sm text-hydro hover:underline">← Paquete para docentes</a>
+      <h1 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">Diapositivas de encuadre</h1>
+      <p class="text-ash text-sm">Diez láminas para proyectar antes de jugar (~10 minutos) — desplazate o imprimí, cada bloque es una lámina.</p>
+    </div>
+
+    <main class="container mx-auto px-4 max-w-3xl">
+
+      <section class="slide panel p-10 text-center mb-8">
+        <span class="label-eyebrow mb-3">Proyecto IKI · Fundación Bariloche · FCF-UNaM · CONICET</span>
+        <h2 class="text-4xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">DecarboNation</h2>
+        <p class="text-lg text-ash">Un simulador estratégico y laboratorio de escenarios de política climática</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">1 / 10 — El problema</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">AFOLU decide más de lo que parece</h2>
+        <p class="text-ash">La agricultura, la silvicultura y otros usos de la tierra (AFOLU) son, a la vez, una fuente
+        importante de emisiones y la única vía real de secuestro de carbono a gran escala. Cualquier política
+        climática seria tiene que pasar por ahí — y ahí es exactamente donde chocan la mitigación, la producción de
+        alimentos, la biodiversidad y la estabilidad social. Ese choque es lo que vamos a explorar hoy.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">2 / 10 — Qué es</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Un laboratorio, no una competencia</h2>
+        <p class="text-ash">DecarboNation no tiene una única forma correcta de ganar. Es un entorno controlado para
+        ensayar combinaciones de políticas, ver sus trade-offs y comparar trayectorias de descarbonización sin pagar
+        el costo de probarlas en la realidad. No hay una respuesta que memorizar — el objetivo es entender la lógica
+        del sistema.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">3 / 10 — Cómo funciona</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Activar → simular → mirar qué cambió</h2>
+        <p class="text-ash">Cada ronda es igual: activás o ajustás políticas, presionás "Simular próximo año", y los
+        doce indicadores del país reaccionan. Un asesor (DecarboNito) te avisa cuando algo se te está por escapar,
+        pero nunca decide por vos.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">4 / 10 — Los tres niveles</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Cada nivel suma una capa de realidad</h2>
+        <ul class="text-ash space-y-2 list-disc list-inside">
+          <li><strong class="text-chlorophyll">Nivel 1 — Estrategia Nacional Fundacional:</strong> biodiversidad, emisiones, bosque nativo. Activar/desactivar políticas.</li>
+          <li><strong class="text-ochre">Nivel 2 — Coordinación Regional:</strong> suma seguridad alimentaria y económica, bienestar social, presiones políticas e instrumentos de esfuerzo.</li>
+          <li><strong class="text-ember">Nivel 3 — Liderazgo Global:</strong> suma finanzas (deuda, préstamos, impuestos) y pactos internacionales.</li>
+        </ul>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">5 / 10 — Qué vas a decidir</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Diez políticas, con costos reales</h2>
+        <p class="text-ash">Desde políticas agroecológicas hasta subsidios energéticos o agricultura intensiva. Cada
+        una tiene un costo fiscal, una eficiencia que decae con el tiempo si no se atiende, y efectos cruzados sobre
+        varios indicadores a la vez — nada es gratis ni aislado.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">6 / 10 — Las tensiones del sistema</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">No existe una jugada sin costo</h2>
+        <p class="text-ash">Conservar bosque nativo compite con seguridad alimentaria. Bajar emisiones rápido puede
+        disparar la presión del sector agrícola. Subsidiar energía barata sube las emisiones. Cada decisión reasigna
+        el problema a otro lado del sistema — nunca lo elimina. Encontrar esas tensiones en su propia partida es el
+        corazón del ejercicio.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">7 / 10 — Qué vas a poder hacer después</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Tres objetivos concretos</h2>
+        <ol class="text-ash space-y-2 list-decimal list-inside">
+          <li>Explicar por qué una política barata en lo económico puede salir cara en biodiversidad o presión social.</li>
+          <li>Identificar qué indicadores compiten entre sí al perseguir la carbono-neutralidad.</li>
+          <li>Argumentar a favor de una de tres vías de descarbonización, con datos de tu propia partida.</li>
+        </ol>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">8 / 10 — Cómo vamos a jugar hoy</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Las reglas de esta sesión</h2>
+        <p class="text-ash mb-2">Sin cuenta, sin registro. Jugás individualmente o en grupos chicos. Antes de simular
+        cada año, vas a poder predecir hacia dónde creés que se mueven tres indicadores — no hace falta acertar, es
+        para que prestes atención al camino, no solo al resultado final.</p>
+        <p class="text-ash">No hay una única respuesta correcta. Si alguien "rompe" el juego probando algo extremo,
+        mejor — eso también enseña algo.</p>
+      </section>
+
+      <section class="slide panel p-10 mb-8">
+        <span class="label-eyebrow mb-3">9 / 10 — Qué te llevás</span>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3">Un informe de tu propia partida</h2>
+        <p class="text-ash">Al terminar, cada persona recibe una síntesis automática: qué decidiste, qué trade-offs
+        identificaste, qué efectos intersectoriales viste, y preguntas de reflexión abiertas. No es una nota — es un
+        insumo para la conversación que viene después.</p>
+      </section>
+
+      <section class="slide panel p-10 text-center mb-8">
+        <span class="label-eyebrow mb-3">10 / 10</span>
+        <h2 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Empecemos</h2>
+        <p class="text-ash mb-6">15 a 40 minutos. Sin registro. Andá a tu computadora o celular y entrá a:</p>
+        <p class="text-xl font-mono text-hydro">decarbonation.vercel.app/play</p>
+      </section>
+
+    </main>
+
+    <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
+      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
+      <a href="/" class="hover:text-ash underline">Inicio</a>
+    </footer>
+
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

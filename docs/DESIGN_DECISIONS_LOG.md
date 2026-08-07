@@ -1084,3 +1084,78 @@ la corrección se basa en el diagnóstico exacto de la causa (URL de redirect ca
 en una suposición.
 
 **Origen.** Reporte directo del usuario tras el deploy de la fase 11.
+
+## 2026-08-07 — Segundo hotfix post-deploy: CTA sin "sin registro", paquete docente completo (5 páginas nuevas), corrección institucional
+
+**Pedido del usuario, tres partes.**
+
+1. **Botón "Jugar ahora":** sacar el sufijo "(sin registro)" / "(no signup)" del CTA principal de
+   la landing (`index.html`, `#cta-play`). El párrafo de subtítulo, que también menciona "sin
+   registro" como dato descriptivo, no es el botón -- se dejó igual.
+2. **Paquete docente completo:** de los cinco recursos listados en `/docentes`, dos eran
+   "Próximamente" (Plan de clase, Diapositivas de encuadre) y los otros tres eran links directos a
+   archivos (`.md`/`.html` planos), no páginas con el diseño del sitio. Pedido explícito: una
+   página por recurso, con el mismo sistema de diseño que la landing, y contenido completo (no
+   más placeholders).
+3. **Corrección institucional:** "Es un proyecto de Fundación Bariloche principalmente no de FCF."
+   Antes de tocar código se le preguntó al usuario cómo debía quedar exactamente FCF-UNaM (sacarla
+   del todo vs. reordenar) -- eligió: Fundación Bariloche primero como institución líder, FCF-UNaM
+   se mantiene después como colaboradora.
+
+**Institucional.** Reordenado en las cuatro menciones que existían (`index.html`: eyebrow del
+hero, JSON-LD, bloque de rigor, footer; `src/components/common/CoverScreen.tsx`: pantalla "Acerca
+de" dentro del juego; `public/docentes/consignas-debriefing.html`). El bloque de rigor pasó de
+"Desarrollado en la FCF-UNaM junto a Fundación Bariloche y CONICET" a "Desarrollado por Fundación
+Bariloche, junto a la FCF-UNaM y CONICET" -- no es solo reordenar la lista, el verbo también
+cambia para reflejar liderazgo, no solo participación.
+
+**Cinco páginas nuevas** (`docentes-guia.html`, `docentes-consignas.html`, `docentes-ecuaciones.html`,
+`docentes-plan-clase.html`, `docentes-diapositivas.html`), cada una un entry de Vite más
+(`vite.config.ts`) con rewrite propio en `vercel.json` (`/docentes/guia`, `/docentes/consignas`,
+`/docentes/ecuaciones`, `/docentes/plan-clase`, `/docentes/diapositivas`), todas importando
+`/src/index.css` como la landing -- ningún React, mismo patrón que `index.html`/`docentes.html`
+desde la fase 11.
+
+- **Guía de facilitación** y **hoja de ecuaciones**: contenido reformateado desde los `.md` que ya
+  existían (`docs/guia_facilitador_debriefing.md`, `docs/audit-equations.md`) -- la hoja de
+  ecuaciones en particular NO es el volcado crudo de la auditoría técnica (esa tabla interna con
+  estados PENDIENTE/CORREGIR no es material pedagógico); en su lugar presenta las 7 familias de
+  ecuaciones del `EquationsManual` in-app (fase 12) más un resumen honesto de dos hallazgos reales
+  de la auditoría (P-1: el decaimiento de eficiencia de política, L-1: la conservación de área con
+  eventos activos), con el detalle técnico completo linkeado aparte para quien lo quiera.
+- **Consignas de debriefing**: reconstruida con el mismo diseño de landing pero con una hoja de
+  estilos `@media print` que vuelve a fondo blanco/tipografía serif al imprimir -- la versión
+  oscura original (`public/docentes/consignas-debriefing.html`) queda como descarga de imprenta
+  directa para quien la prefiera.
+- **Plan de clase** (contenido nuevo, no existía en ningún lado del proyecto): una clase de 90
+  minutos minuto a minuto (apertura 10' → juego Nivel 1 ~40' → debriefing 25' → cierre 10'),
+  alineada a los tres objetivos de aprendizaje ya publicados en la landing, con variantes para 60
+  minutos y para dos clases (agregando Nivel 2), y una sección de "evidencia de aprendizaje" que
+  señala que el informe de cierre que la app ya genera es, en sí mismo, la evidencia -- no hace
+  falta instrumentación nueva.
+- **Diapositivas de encuadre** (contenido nuevo): diez láminas en una página desplazable (o
+  imprimible con salto de página por lámina vía `@media print`), desde "qué es DecarboNation" hasta
+  el CTA final "Empecemos" con la URL del juego -- pensadas para proyectar ~10 minutos antes de
+  jugar, cubriendo el problema (AFOLU), la mecánica, los tres niveles, las tensiones del sistema,
+  los objetivos de aprendizaje y qué se obtiene al final.
+
+`docentes.html` reescrito para linkear a las 5 páginas nuevas en vez de a archivos; `sitemap.xml`
+con las 5 URLs nuevas; ancla `#faq` agregada a la sección de preguntas de aula para que el plan de
+clase pueda linkearla directamente.
+
+**Deliberadamente no bilingüe.** Las cinco páginas nuevas son mayormente en español (la hoja de
+ecuaciones y las consignas sí tienen `data-lang` es/en completo, por ser más cortas; guía, plan de
+clase y diapositivas no) -- coherente con que todo el contenido fuente del que parten (la guía, la
+auditoría) siempre fue solo en español. Traducir ~800 líneas de contenido nuevo al inglés en esta
+misma pasada no se hizo; queda como trabajo pendiente explícito, no silencioso.
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 93/93 (sin tests nuevos -- HTML/
+contenido, no lógica). `npm run build` limpio, 8 entries de Vite. `npm run i18n:audit` limpio.
+Verificado en navegador local (`npm run dev`, no las URLs limpias -- esas dependen de los rewrites
+de `vercel.json`, que Vite dev no interpreta, mismo límite ya documentado en la fase 11): landing
+con el botón "Jugar ahora" sin sufijo y el orden institucional correcto, `/docentes.html` con los
+cinco recursos linkeando "Ver"/"Abrir" en vez de "Descargar", y las páginas
+`docentes-guia.html`/`docentes-diapositivas.html`/`docentes-plan-clase.html` renderizando con el
+diseño esperado y cero errores de consola.
+
+**Origen.** Reporte directo del usuario tras el deploy de la fase 11 (segunda ronda).

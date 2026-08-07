@@ -2,7 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/play", "destination": "/play.html" },
-    { "source": "/docentes", "destination": "/docentes.html" }
+    { "source": "/docentes", "destination": "/docentes.html" },
+    { "source": "/docentes/guia", "destination": "/docentes-guia.html" },
+    { "source": "/docentes/consignas", "destination": "/docentes-consignas.html" },
+    { "source": "/docentes/ecuaciones", "destination": "/docentes-ecuaciones.html" },
+    { "source": "/docentes/plan-clase", "destination": "/docentes-plan-clase.html" },
+    { "source": "/docentes/diapositivas", "destination": "/docentes-diapositivas.html" }
   ],
   "headers": [
     {

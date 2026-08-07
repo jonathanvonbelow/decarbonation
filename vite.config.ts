@@ -44,6 +44,14 @@ export default defineConfig(({ mode }) => {
             main: path.resolve(__dirname, 'index.html'),
             play: path.resolve(__dirname, 'play.html'),
             docentes: path.resolve(__dirname, 'docentes.html'),
+            // One page per teacher resource (user request, post-launch): each gets the landing's
+            // own design system, not a raw file download. vercel.json maps these to clean
+            // /docentes/<resource> URLs, same rewrite pattern as /play and /docentes above.
+            docentesGuia: path.resolve(__dirname, 'docentes-guia.html'),
+            docentesConsignas: path.resolve(__dirname, 'docentes-consignas.html'),
+            docentesEcuaciones: path.resolve(__dirname, 'docentes-ecuaciones.html'),
+            docentesPlanClase: path.resolve(__dirname, 'docentes-plan-clase.html'),
+            docentesDiapositivas: path.resolve(__dirname, 'docentes-diapositivas.html'),
           },
         },
       },

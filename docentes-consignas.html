@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecarboNation — Consignas de debriefing</title>
+    <meta name="description" content="Las cinco preguntas de reflexión del informe de cierre, en español e inglés, listas para imprimir." />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="canonical" href="https://decarbonation.vercel.app/docentes/consignas">
+    <link rel="stylesheet" href="/src/index.css" />
+    <style>
+      /* Impresión: mismas cinco preguntas, pero papel blanco y tipografía serif -- una pantalla
+         oscura no imprime bien y desperdicia tinta. El contenido no cambia entre pantalla e
+         impresión, solo la hoja de estilo. */
+      @media print {
+        body { background: #fff !important; color: #111 !important; }
+        .panel { background: transparent !important; border: none !important; }
+        h1, h2 { color: #111 !important; }
+        .text-ash, .text-ash-dim { color: #333 !important; }
+        .answer-line { border-bottom: 1px solid #999; }
+      }
+      .answer-line { display: block; border-bottom: 1px solid var(--color-basalt-600); height: 1.8em; margin-top: 0.3em; }
+    </style>
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" style="--level-tint: 111 208 140; --level-tint-alpha: 0.05;">
+    <header class="border-b border-basalt-700 print:hidden">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+            🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-12 max-w-2xl">
+      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden">← Paquete para docentes</a>
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">
+        <span data-lang="es">Consignas de debriefing</span>
+        <span data-lang="en" hidden>Debriefing prompts</span>
+      </h1>
+      <p class="text-ash mb-10">
+        <span data-lang="es">Las mismas cinco preguntas que usa el informe de cierre individual dentro de la app — para repartir en papel al final de un taller.</span>
+        <span data-lang="en" hidden>The same five questions the individual closing report uses inside the app — to hand out on paper at the end of a workshop.</span>
+      </p>
+
+      <section class="panel p-6">
+        <p class="text-ash mb-6" data-lang="es">Cinco preguntas, sin apuro. Podés dejar alguna en blanco.</p>
+        <p class="text-ash mb-6" data-lang="en" hidden>Five questions, no rush. You can leave some blank.</p>
+        <ol class="space-y-6">
+          <li>
+            <p class="text-bone" data-lang="es">¿Qué esperabas que pasara al principio que no pasó?</p>
+            <p class="text-bone" data-lang="en" hidden>What did you expect to happen at the start that didn't?</p>
+            <span class="answer-line"></span>
+          </li>
+          <li>
+            <p class="text-bone" data-lang="es">¿Cuál fue el trade-off más difícil y por qué lo resolviste así?</p>
+            <p class="text-bone" data-lang="en" hidden>What was the hardest trade-off, and why did you resolve it that way?</p>
+            <span class="answer-line"></span>
+          </li>
+          <li>
+            <p class="text-bone" data-lang="es">¿La ruta que lograste es la que te habías propuesto? ¿Cuándo cambiaste de idea?</p>
+            <p class="text-bone" data-lang="en" hidden>Is the route you achieved the one you set out for? When did you change your mind?</p>
+            <span class="answer-line"></span>
+          </li>
+          <li>
+            <p class="text-bone" data-lang="es">¿Qué harías distinto con el conocimiento que tenés ahora?</p>
+            <p class="text-bone" data-lang="en" hidden>What would you do differently with what you know now?</p>
+            <span class="answer-line"></span>
+          </li>
+          <li>
+            <p class="text-bone" data-lang="es">¿Qué de esto se parece a una decisión real de política pública que conozcas?</p>
+            <p class="text-bone" data-lang="en" hidden>What does this resemble in a real public-policy decision you know of?</p>
+            <span class="answer-line"></span>
+          </li>
+        </ol>
+      </section>
+
+      <p class="text-xs text-ash-dim mt-6 print:hidden">
+        <span data-lang="es">¿Preferís un solo archivo con las dos columnas (es/en) ya impresas juntas? Descargá la versión de impresión directa:</span>
+        <span data-lang="en" hidden>Prefer a single file with both languages already printed side by side? Download the direct-print version:</span>
+        <a href="/docentes/consignas-debriefing.html" class="text-hydro hover:underline">consignas-debriefing.html</a>
+      </p>
+    </main>
+
+    <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
+      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
+      <a href="/" class="hover:text-ash underline">Inicio</a>
+    </footer>
+
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>
