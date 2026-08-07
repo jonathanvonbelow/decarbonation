@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/play", "destination": "/play.html" },
+    { "source": "/docentes", "destination": "/docentes.html" }
+  ],
+  "headers": [
+    {
+      "source": "/docentes/(.*).md",
+      "headers": [
+        { "key": "Content-Type", "value": "text/markdown; charset=utf-8" }
+      ]
+    }
+  ]
+}

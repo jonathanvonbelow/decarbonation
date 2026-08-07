@@ -31,6 +31,10 @@ interface DashboardProps {
   predictionSelections: PredictionSelections;
   onPredictionChange: (next: PredictionSelections) => void;
   lastPredictionResults: PredictionResult[] | null;
+  /** Phase 11 (20_landing_shareables.md §4): when set, only these policy ids render in the panel
+   *  — the "tres políticas disponibles, no diez" restriction for `/play?demo=1`. Undefined in a
+   *  normal session (all ten show, exactly today's behavior). */
+  demoPolicyIds?: Policy[];
 }
 
 /**
@@ -312,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   gameState, historicalData, togglePolicy, runSimulationRound, gameOver,
   levelConfig, requestLoan, togglePact, handleInstrumentEffortChange,
   handleAdditionalTaxPressureChange, instrumentImpactHints,
-  predictionSelections, onPredictionChange, lastPredictionResults,
+  predictionSelections, onPredictionChange, lastPredictionResults, demoPolicyIds,
 }) => {
   const { language } = useLanguageContext();
   const { indicators, policies, year, currentLevel, stellaSpecificState } = gameState;
@@ -440,7 +444,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-sm text-ash-dim italic mb-4">🛰️ {t.noActivePolicies}</p>
         )}
         <div ref={policyListRef} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {POLICY_UI_ORDER.map(policyId => (
+          {(demoPolicyIds ? POLICY_UI_ORDER.filter(id => demoPolicyIds.includes(id)) : POLICY_UI_ORDER).map(policyId => (
             <PolicyToggle
               key={policyId}
               policy={policies[policyId]}

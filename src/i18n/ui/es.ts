@@ -328,6 +328,14 @@ export const UI_ES = {
     },
     printMode: 'Modo taller (imprimir)',
     close: 'Cerrar informe',
+    share: {
+      button: 'Compartir resultado',
+      copied: '¡Copiado!',
+    },
+    demo: {
+      notice: 'Esto fue una muestra. La partida completa tiene tres niveles, finanzas y pactos.',
+      cta: 'Empezar la partida completa',
+    },
   },
   errorBoundary: {
     title: 'Algo se rompió',

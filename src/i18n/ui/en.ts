@@ -331,6 +331,14 @@ export const UI_EN: UIShape = {
     },
     printMode: 'Workshop mode (print)',
     close: 'Close report',
+    share: {
+      button: 'Share result',
+      copied: 'Copied!',
+    },
+    demo: {
+      notice: 'This was a sample. The full game has three levels, finances, and pacts.',
+      cta: 'Start the full game',
+    },
   },
   errorBoundary: {
     title: 'Something broke',

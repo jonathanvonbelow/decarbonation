@@ -28,3 +28,19 @@ root.render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// Phase 11 (20_landing_shareables.md §6): registers the shell-caching service worker (public/
+// sw.js) so the game keeps working with the network down mid-workshop. Only ever runs from
+// play.html (this module is never loaded by the landing or /docentes). Gated on hostname rather
+// than `import.meta.env.DEV`/`PROD` -- this project deliberately declares no ambient vite/client
+// types (see src/i18n/index.tsx's own comment on the same tradeoff) -- registering under `vite
+// dev` would cache dev's unbundled module graph and fight HMR, which is not what "cache the
+// shell" means here.
+const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+if ('serviceWorker' in navigator && !isLocalDev) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('[sw] registration failed:', err);
+    });
+  });
+}

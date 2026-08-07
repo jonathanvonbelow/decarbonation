@@ -21,6 +21,7 @@ import { evaluateLevel } from '../../sim';
 import { useDecarboNito } from '../decarbonito/DecarboNitoProvider';
 import { saveReflectionAnswers, type ReflectionAnswers } from '../../services/reflectionResponses';
 import type { PredictionResult } from './predictions';
+import { logFunnelEvent } from '../../services/funnelTelemetry';
 
 const GEMINI_TIMEOUT_MS = 20000;
 
@@ -33,9 +34,12 @@ interface DebriefingModalProps {
   sessionId?: string | null;
   onClose: () => void;
   onRestart?: () => void;
+  /** Phase 11 (20_landing_shareables.md §4): true for a `/play?demo=1` run. Swaps the "next"
+   *  tab's CTA for the demo-specific one ("esto fue una muestra..." + link to the full game). */
+  isDemo?: boolean;
 }
 
-const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historicalData, predictionResults, sessionId, onClose, onRestart }) => {
+const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historicalData, predictionResults, sessionId, onClose, onRestart, isDemo }) => {
   const { t, locale } = useT();
   const dn = useDecarboNito();
   const [tab, setTab] = useState<Tab>('evidence');
@@ -72,6 +76,36 @@ const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historical
     const correct = predictionResults.filter((r) => r.correct).length;
     return { correct, total: predictionResults.length, pct: Math.round((correct / predictionResults.length) * 100) };
   }, [predictionResults]);
+
+  // Fase 11 (20_landing_shareables.md §5): "resultado compartible". La tarjeta con imagen OG
+  // dinámica (@vercel/og, api/og.tsx, /r/:id firmado) que pide la fuente NO se construyó --
+  // requiere una Vercel Edge Function nueva y este entorno de desarrollo no puede ejecutar
+  // funciones edge para verificarla (mismo límite ya documentado en api/gemini.ts desde la fase
+  // 8). En su lugar: un resumen de texto plano, compartido vía `navigator.share()` en móvil o
+  // copiado al portapapeles en escritorio -- menos vistoso, pero real y verificable acá.
+  const [shareCopied, setShareCopied] = useState(false);
+  const handleShare = async () => {
+    const routeName = outcome.achieved ? t(outcome.achieved.nameKey as any) : t(outcome.closest.route.nameKey as any);
+    const lines = [
+      `DecarboNation — ${t('header.level')} ${gameState.currentLevel} · ${gameState.year}`,
+      routeName,
+      `${t('header.score')} ${gameState.indicators.generalScore.toFixed(0)}`,
+      predictionStats ? t('debriefing.predictionAccuracy', { correct: predictionStats.correct, total: predictionStats.total, pct: predictionStats.pct }) : null,
+      'decarbonation.vercel.app',
+    ].filter((l): l is string => !!l);
+    const text = lines.join('\n');
+
+    logFunnelEvent('share_clicked', { surface: 'debrief' });
+    if (navigator.share) {
+      try { await navigator.share({ text }); } catch { /* user cancelled the native share sheet */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2500);
+      } catch { /* clipboard denied -- silently do nothing rather than throw */ }
+    }
+  };
 
   const handleSave = () => {
     saveReflectionAnswers(answers, gameState.currentLevel, sessionId);
@@ -189,6 +223,18 @@ const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historical
 
           {/* Screen 3 — what's next. Not printed: purely navigational. */}
           <section className={tab === 'next' ? 'block space-y-3 print:hidden' : 'hidden'}>
+            {isDemo && (
+              // §4: "esto fue una muestra; la partida completa tiene tres niveles, finanzas y
+              // pactos" + botón para empezar la partida completa. `href="/play"` (sin `?demo=1`)
+              // recarga en modo completo -- una recarga real, no un cambio de estado en memoria,
+              // porque el propio flag `isDemoRef` de App.tsx solo se lee una vez al montar.
+              <div className="p-3 bg-hydro/10 border border-hydro/40 rounded-lg">
+                <p className="text-sm text-bone mb-2">{t('debriefing.demo.notice')}</p>
+                <a href="/play" className="inline-block px-3 py-1.5 text-xs bg-hydro text-basalt-950 font-semibold rounded-md">
+                  {t('debriefing.demo.cta')}
+                </a>
+              </div>
+            )}
             {outcome.achieved && (
               <div className="p-3 bg-gray-800 rounded-lg">
                 <p className="text-sm text-gray-200 mb-2">{t('debriefing.next.routeSuggestion', { route: t(outcome.achieved.nameKey as any) })}</p>
@@ -201,6 +247,9 @@ const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historical
             )}
             <button className="block text-sm text-blue-300 hover:text-blue-200" onClick={onClose}>{t('debriefing.next.manualLink')}</button>
             <button className="block text-sm text-blue-300 hover:text-blue-200" onClick={onClose}>{t('debriefing.next.equationsLink')}</button>
+            <button onClick={handleShare} className="px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-md">
+              {shareCopied ? t('debriefing.share.copied') : t('debriefing.share.button')}
+            </button>
           </section>
         </div>
 

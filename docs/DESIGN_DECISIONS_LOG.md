@@ -838,3 +838,122 @@ seteado directamente, no un valor derivado de una ref en cada render), así que 
 de código.
 
 **Origen.** `mejora-general/files/19_estetica_visual.md`.
+
+## 2026-08-07 — Fase 11 (landing, difusión y embudo): sitio de tres páginas estáticas, `/play?demo=1`, y un recorte deliberado de la tarjeta OG dinámica
+
+**Alcance recortado de entrada.** El archivo 20 completo es comparable en tamaño a varias fases
+anteriores juntas (landing completa, `@vercel/og` + firma HMAC + `/r/:id` dinámico, PWA con service
+worker, embudo de analítica de 8 eventos, y seis materiales docentes). Antes de escribir código se
+tomaron decisiones de alcance explícitas, documentadas acá en vez de descubiertas a mitad de
+implementación:
+- **Se construyó de verdad:** landing estática de tres páginas (`/`, `/play`, `/docentes`),
+  `/play?demo=1`, metadatos SEO + JSON-LD + sitemap + robots, PWA (manifest + service worker de
+  shell), embudo de 8 eventos vía Supabase, y un "compartir" de solo texto (no imagen).
+- **Se recortó, documentado en el propio código:** la tarjeta de resultado con imagen OG dinámica
+  de §5-6 (`@vercel/og`, `api/og.tsx`, firma HMAC, `/r/:id`). Motivo real, no pereza: este entorno
+  de desarrollo no puede ejecutar Vercel Edge Functions (`npm run dev` solo sirve la app Vite, no
+  `/api/*`) -- exactamente la misma limitación que ya bloqueó terminar de cablear `api/gemini.ts`
+  en la fase 8, documentada ahí. Escribir una función edge nueva con firma criptográfica que no se
+  puede probar de punta a punta en este entorno se juzgó más riesgoso que no escribirla. El video/
+  GIF de 20s de la demostración (§3) tampoco se construyó -- no hay herramienta de grabación de
+  pantalla ni de generación de assets en este entorno -- reemplazado por una micro-animación
+  CSS/SVG de 8s en loop que representa la misma secuencia (documentado en el propio `index.html`).
+
+**Arquitectura de tres páginas.** `index.html` (landing) y `play.html` (el juego, lo que
+`index.html` era antes de esta fase) ahora son entradas separadas del build multi-página de Vite
+(`vite.config.ts`, `build.rollupOptions.input`); `vercel.json` (nuevo -- no existía ningún archivo
+de configuración de Vercel en el repo, el deploy usaba detección automática de framework) agrega
+rewrites para las URLs limpias `/play` y `/docentes`. La landing importa `src/index.css` (el
+sistema de tokens completo de la fase 4/10) directamente y no importa React en ningún lado: medida
+real tras el primer build, `assets/landing-*.js` pesa 1.6 kB (1.0 kB gzip) y el HTML+CSS+JS
+combinado de la landing es ≈93 kB sin comprimir / ≈20.5 kB gzip -- comparable en términos de
+transferencia real al "~40 kB" que pide §2, aunque por encima en bytes crudos si se cuenta el CSS
+compartido con el juego completo (que incluye reglas @font-face para fuentes que la landing nunca
+llega a descargar, al no usar esos pesos).
+
+**Bug real encontrado y corregido durante la implementación:** la primera versión de
+`src/services/funnelTelemetry.ts` (usada también desde `src/landing.ts`) importaba
+`services/supabaseService.ts`, que a su vez importa el cliente completo de `@supabase/supabase-js`
+-- medido en el primer build: 213.7 kB (55.6 kB gzip) SOLO por ese import, en la landing que debía
+pesar ~40 kB total. Corregido creando `src/services/funnelTelemetryLite.ts`, un segundo logger para
+el mismo evento/tabla `funnel_events` que usa `fetch()` directo contra el endpoint REST de Supabase
+en vez de importar el SDK -- el juego completo (`play.html`) sigue usando el cliente real vía
+`funnelTelemetry.ts` sin cambios, porque ya carga `@supabase/supabase-js` de todos modos para
+auth/sesión, así que ahí no hay nada que optimizar. La duplicación entre ambos archivos es
+deliberada (frontera de tamaño de bundle, documentada en el comentario de cada uno), no descuido.
+
+**`/play?demo=1` (App.tsx).** Corrida de nivel 1 acotada a `DEMO_YEARS = 5` (la fuente dice "5 años,
+no 15"; este codebase usa `YEARS_PER_LEVEL = 30` real, no 15 -- 5 de 30 preserva la misma
+proporción de "acotado" que pedía la fuente con 5 de 15, adaptado al número real). Tres políticas
+curadas (`DEMO_POLICY_IDS`: Agroecológicas, Carbono Neutralidad, Agrícolas Intensivas -- una
+"barata pero sucia" y dos de contraste) en vez de diez, filtradas en `Dashboard.tsx` vía la nueva
+prop `demoPolicyIds`. Apertura en frío siempre activa (`resetTutorialProgress()` al montar si
+`isDemo`). Al concluir el nivel, `DebriefingModal` muestra un aviso + CTA a `/play` (recarga real,
+sin `?demo=1`) en vez del flujo normal de progresión de nivel. Verificado en vivo (Chrome MCP,
+`/play.html?demo=1`): año objetivo 2024/2029 correcto, exactamente 3 políticas en el panel, apertura
+en frío disparada, estado vacío de "sin políticas activas" (fase 10) coherente con las tres
+políticas nuevas.
+
+**Embudo de analítica (§7).** `src/services/funnelTelemetry.ts` (juego) + `funnelTelemetryLite.ts`
+(landing) implementan los 8 eventos de la tabla fuente, mismo patrón "degradar con gracia" que el
+resto de la telemetría del proyecto (`predictionTelemetry.ts`, etc.) -- la tabla `funnel_events` no
+está migrada en el Supabase real, así que esto avisa una vez y no rompe nada mientras tanto.
+`landing_view`/`play_click` desde `src/landing.ts` (gateado por `data-page="landing"` para no
+dispararse también en `/docentes`); `game_start`/`first_decision`/`year_simulated`/
+`level_completed`/`debrief_completed` desde `App.tsx`; `share_clicked` desde el nuevo botón
+"Compartir resultado" de `DebriefingModal`. Simplificación documentada en el propio código:
+`debrief_completed` no lleva `questions_answered` (esa cuenta vive en el estado local del modal, no
+se justificó agregar un callback solo para exponerla).
+
+**"Compartir resultado" (§5, versión recortada).** Sin imagen OG dinámica (ver arriba), el botón
+nuevo en `DebriefingModal` arma un resumen de texto plano (nivel, año, ruta lograda o más cercana,
+puntaje, % de predicciones acertadas si las hubo, y el dominio) y usa `navigator.share()` en
+dispositivos que lo soportan, o copia al portapapeles con feedback visual ("¡Copiado!") si no.
+
+**PWA y offline.** `public/manifest.webmanifest` con un solo ícono SVG (`sizes: "any"`) en vez de
+PNGs 192/512 -- no existía ningún asset de ícono en el repo antes de esta fase (el favicon apuntaba
+a `/vite.svg`, un archivo que nunca existió realmente, bug preexistente corregido de paso) y no hay
+herramienta de generación de imágenes en este entorno; funciona bien en Chrome/Android, el ícono de
+pantalla de inicio en iOS puede no coincidir (Safari históricamente prefiere PNG). `public/sw.js`:
+service worker de una sola estrategia (stale-while-revalidate, mismo origen, GET únicamente, nunca
+`/api/*`) en vez de una lista de precaché generada por build (no se agregó `vite-plugin-pwa` ni
+`workbox` como dependencia nueva esta fase) -- el tradeoff documentado en el propio archivo es que
+la primera visita a un deploy nuevo tiene que ser online.
+
+**SEO.** `<title>`/`<meta description>` descriptivos y distintos por página, JSON-LD
+`SoftwareApplication` + `LearningResource` en la landing, `sitemap.xml`, `robots.txt`. El `og:image`
+que pide §6 se omitió a propósito (comentado en el `<head>` de `index.html`/`play.html`): no existe
+ningún PNG 1200×630 en el repo y no hay herramienta de generación de imágenes acá -- una referencia
+rota se ve peor en WhatsApp/LinkedIn/X que la ausencia de la etiqueta.
+
+**Paquete docente (§8), honestidad de contenido.** De los seis materiales que pide la fuente, tres
+existen de verdad: la guía de facilitación (`docs/guia_facilitador_debriefing.md`, ya existente,
+copiada a `public/docentes/`), una "hoja de ecuaciones" adaptada de `docs/audit-equations.md` (un
+documento de auditoría técnica, no un worksheet pulido para estudiantes -- etiquetado como tal), y
+unas consignas de debriefing imprimibles armadas en esta fase a partir de las cinco preguntas ya
+aprobadas del informe de cierre (`src/i18n/ui/{es,en}.ts`). "Plan de clase" y "diapositivas de
+encuadre" no existen en ningún lugar del proyecto (buscado en `mejora-general/` y `docs/`) y se
+listan como "Próximamente" en vez de inventar contenido. Bug encontrado y corregido en el camino:
+los `.md` servidos desde `public/docentes/` se veían con acentos rotos (`GuÃ­a` en vez de `Guía`) --
+el servidor no declaraba `charset=utf-8` para `text/markdown`; corregido con una regla de headers en
+`vercel.json` (`Content-Type: text/markdown; charset=utf-8`) para la ruta `/docentes/*.md`. Esta
+corrección solo aplica al deploy real de Vercel -- `npm run dev` sigue sirviendo esos archivos sin
+el header y por lo tanto con el mismo problema visual, verificado y documentado, no un bug latente
+sin detectar.
+
+**No verificado en este ciclo:** el service worker no se probó offline de verdad (requiere un
+deploy real o simular red desconectada en el navegador, no hecho en esta sesión). Las vistas previas
+de WhatsApp/LinkedIn/X (verificación §Verificación ítem 3 de la fuente) no se pudieron probar sin un
+deploy público. Lighthouse no corrió (mismo motivo que la fase 10: no hay deploy contra el cual
+auditar desde este entorno).
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 87/87 (sin tests nuevos esta fase --
+el trabajo es mayormente HTML estático + wiring, no lógica pura nueva salvo el filtro de políticas
+de demo, ya cubierto por el tipado). `npm run build` limpio, tres entradas (`index.html`,
+`play.html`, `docentes.html`). `npm run i18n:audit` en verde. En navegador (Chrome MCP, servidor
+dev puerto 3001): landing completa recorrida sección por sección, conmutador es/en funcional y
+persistente entre páginas (mismo `localStorage` key que el juego), `/docentes.html` con los tres
+materiales reales descargables, `/play.html?demo=1` con las cuatro restricciones de demo activas
+simultáneamente y sin errores de consola.
+
+**Origen.** `mejora-general/files/20_landing_shareables.md`.

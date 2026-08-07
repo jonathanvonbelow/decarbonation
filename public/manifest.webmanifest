@@ -1,0 +1,13 @@
+{
+  "name": "DecarboNation",
+  "short_name": "DecarboNation",
+  "description": "Simulador estratégico de política climática del sector AFOLU.",
+  "start_url": "/play",
+  "display": "standalone",
+  "background_color": "#08100e",
+  "theme_color": "#08100e",
+  "lang": "es",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

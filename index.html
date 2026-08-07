@@ -1,14 +1,324 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DecarboNation</title>
-</head>
-  <body class="bg-level-ambience text-gray-100">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <title>DecarboNation — Simulador de política climática AFOLU</title>
+    <meta name="description" content="Dirigí la política climática de un país. 15–40 minutos. Sin registro. Un simulador estratégico del sector AFOLU para aula, taller o autoexploración." />
+
+    <!-- Open Graph / Twitter Card (20_landing_shareables.md §6). og:image intencionalmente
+         omitido: no existe ningún asset PNG 1200x630 en este repo y no hay herramienta de
+         generación de imágenes en este entorno -- publicar una referencia rota se ve peor en
+         WhatsApp/LinkedIn/X que omitir la etiqueta (la mayoría de los clientes cae a
+         título+descripción sin imagen). Agregar /og-default.png antes de este deploy real y
+         restaurar la etiqueta -- ver docs/DESIGN_DECISIONS_LOG.md, fase 11. -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="DecarboNation — Simulador de política climática AFOLU">
+    <meta property="og:description" content="Dirigí la política climática de un país. 15–40 minutos. Sin registro.">
+    <meta property="og:url" content="https://decarbonation.vercel.app/">
+    <meta name="twitter:card" content="summary">
+
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#08100e">
+    <link rel="canonical" href="https://decarbonation.vercel.app/">
+
+    <!-- Mismos tokens del juego (11_design_system.md / 19_estetica_visual.md), no una hoja
+         aparte -- así landing y juego se ven como la misma cosa (§2 de este archivo). -->
+    <link rel="stylesheet" href="/src/index.css" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "DecarboNation",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Any (web browser)",
+          "url": "https://decarbonation.vercel.app/",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "description": "Simulador estratégico de política climática del sector AFOLU (agricultura, silvicultura y otros usos de la tierra) para exploración de escenarios, aula y talleres."
+        },
+        {
+          "@type": "LearningResource",
+          "name": "DecarboNation",
+          "learningResourceType": "Simulation",
+          "educationalLevel": "Secondary, Higher education, Professional development",
+          "about": "Climate policy, AFOLU, decarbonization, public policy simulation",
+          "inLanguage": ["es", "en"],
+          "provider": {
+            "@type": "Organization",
+            "name": "FCF-UNaM, Fundación Bariloche, CONICET — Proyecto IKI"
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" data-page="landing" style="--level-tint: 111 208 140; --level-tint-alpha: 0.05;">
+
+    <!-- ══════════════════════════ HEADER ══════════════════════════ -->
+    <header class="border-b border-basalt-700">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <span class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</span>
+        <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+          🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- ══════════════════════════ HERO ══════════════════════════ -->
+      <section class="container mx-auto px-4 pt-12 pb-10 sm:pt-16 sm:pb-14">
+        <div class="max-w-3xl">
+          <span class="label-eyebrow">Proyecto IKI · FCF-UNaM · Fundación Bariloche · CONICET</span>
+          <h1 class="mt-2 text-3xl sm:text-5xl font-bold font-[var(--font-display)] leading-tight">
+            <span data-lang="es">Dirigí la política climática de un país. Vas a poder explicar por qué chocan mitigación y economía.</span>
+            <span data-lang="en" hidden>Run a country's climate policy. You'll be able to explain why mitigation and the economy collide.</span>
+          </h1>
+          <p class="mt-4 text-base sm:text-lg text-ash max-w-2xl">
+            <span data-lang="es">Un simulador estratégico del sector AFOLU: activás políticas, simulás años, y un asesor te avisa lo que se te está por escapar. 15–40 minutos, sin registro.</span>
+            <span data-lang="en" hidden>A strategic AFOLU-sector simulator: activate policies, simulate years, and an advisor flags what's about to slip past you. 15–40 minutes, no signup.</span>
+          </p>
+          <div class="mt-7 flex flex-wrap items-center gap-4">
+            <a href="/play" id="cta-play" class="px-6 py-3 bg-chlorophyll text-basalt-950 font-semibold rounded-lg hover:brightness-110 transition-colors text-base sm:text-lg">
+              <span data-lang="es">Jugar ahora (sin registro)</span>
+              <span data-lang="en" hidden>Play now (no signup)</span>
+            </a>
+            <a href="/play?demo=1" id="cta-demo" class="text-sm text-hydro hover:underline">
+              <span data-lang="es">Ver una demo guiada de 8 minutos →</span>
+              <span data-lang="en" hidden>See an 8-minute guided demo →</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ DEMOSTRACIÓN ══════════════════════════
+           §3 pide un video/GIF de 20s en loop. No hay herramienta de grabación de pantalla ni
+           asset de video en este entorno -- se construyó en su lugar una micro-animación
+           CSS/SVG que representa la misma secuencia (activar política → simular → indicadores
+           cambian → informe), sin audio, coherente con el resto de la landing en costo (0 kB
+           de video) y consistente con el patrón ya usado en CoverScreen.tsx para su
+           ilustración. Documentado como sustituto, no como el asset real pedido. -->
+      <section class="container mx-auto px-4 pb-14">
+        <div class="panel p-4 sm:p-6 max-w-3xl mx-auto" role="img"
+             aria-label="Animación: activar una política, simular un año, los indicadores cambian y aparece un informe">
+          <div class="demo-strip">
+            <div class="demo-frame demo-frame-1">
+              <span class="label-eyebrow">Panel de Políticas</span>
+              <div class="demo-toggle"><div class="demo-toggle-dot"></div></div>
+              <span class="text-sm text-bone">Políticas Agroecológicas</span>
+            </div>
+            <div class="demo-frame demo-frame-2">
+              <span class="label-eyebrow">Simular Próximo Año</span>
+              <div class="demo-bar"><div class="demo-bar-fill"></div></div>
+            </div>
+            <div class="demo-frame demo-frame-3">
+              <span class="label-eyebrow">CO2eq/cápita</span>
+              <span class="text-2xl font-bold text-chlorophyll">▼ 0.4 t</span>
+            </div>
+            <div class="demo-frame demo-frame-4">
+              <span class="label-eyebrow">Informe del año</span>
+              <span class="text-sm text-bone" data-lang="es">Biodiversidad subió, emisiones bajaron.</span>
+              <span class="text-sm text-bone" data-lang="en" hidden>Biodiversity rose, emissions fell.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ QUÉ ES ══════════════════════════ -->
+      <section class="container mx-auto px-4 pb-14 max-w-3xl">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Qué es</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>What it is</h2>
+        <ul class="space-y-3 text-base sm:text-lg text-ash">
+          <li data-lang="es">Activás y ajustás políticas climáticas reales (agroecología, carbono neutralidad, subsidios energéticos) y ves sus efectos cruzados en biodiversidad, economía y presión social.</li>
+          <li data-lang="en" hidden>You activate and tune real climate policies (agroecology, carbon neutrality, energy subsidies) and see their cross-effects on biodiversity, economy and social pressure.</li>
+          <li data-lang="es">Dura entre 15 y 40 minutos, según cuántos niveles juegues.</li>
+          <li data-lang="en" hidden>It takes 15–40 minutes, depending on how many levels you play.</li>
+          <li data-lang="es">Al final te llevás un informe de tu propia partida: qué decidiste, qué tensiones enfrentaste, qué aprenderías distinto la próxima vez.</li>
+          <li data-lang="en" hidden>At the end you get a report on your own session: what you decided, what tensions you faced, what you'd do differently next time.</li>
+        </ul>
+      </section>
+
+      <!-- ══════════════════════════ PARA QUIÉN ══════════════════════════
+           No existe un "kit de convocatoria" en este repo (buscado en mejora-general/ y docs/)
+           del que reusar texto literal, como pide §3 -- las cuatro tarjetas de abajo se
+           redactaron de cero a partir de los públicos que el propio juego ya sirve (docente,
+           facilitador de taller, investigador/institución, formulador de política), no de un
+           documento fuente que no existe. Documentado en docs/DESIGN_DECISIONS_LOG.md. -->
+      <section class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Para quién</h2>
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>Who it's for</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Docentes</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Teachers</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Una actividad de 90 minutos lista para el aula, con guía de facilitación y preguntas de cierre incluidas.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A ready-made 90-minute classroom activity, with a facilitation guide and closing questions included.</p>
+              <a href="/docentes" class="text-sm text-hydro hover:underline" data-lang="es">Ver paquete docente →</a>
+              <a href="/docentes" class="text-sm text-hydro hover:underline" data-lang="en" hidden>See teacher package →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Facilitadores de taller</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Workshop facilitators</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Panel en vivo para ajustar parámetros y proyectar una partida frente a la sala, sin perder el hilo del grupo.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A live panel to tune parameters and project a session in front of the room, without losing the group's thread.</p>
+              <a href="/play?demo=1" class="text-sm text-hydro hover:underline" data-lang="es">Probar la demo de 8 min →</a>
+              <a href="/play?demo=1" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Try the 8-min demo →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Investigadores e instituciones</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Researchers and institutions</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Un modelo con ecuaciones documentadas y una auditoría pública, no una caja negra.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A model with documented equations and a public audit, not a black box.</p>
+              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="es">Ver el rigor del modelo →</a>
+              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="en" hidden>See the model's rigor →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Formuladores de política</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Policymakers</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Un entorno seguro para ensayar trade-offs antes de defenderlos en una mesa real.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A safe environment to rehearse trade-offs before defending them at a real table.</p>
+              <a href="/play" class="text-sm text-hydro hover:underline" data-lang="es">Jugar ahora →</a>
+              <a href="/play" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Play now →</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ QUÉ SE APRENDE ══════════════════════════ -->
+      <section class="container mx-auto px-4 py-14 max-w-3xl">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Qué se aprende</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>What you'll learn</h2>
+        <ol class="space-y-4 text-base sm:text-lg text-ash list-decimal list-inside">
+          <li data-lang="es">Vas a poder explicar por qué una política barata en lo económico puede salir cara en biodiversidad o presión social.</li>
+          <li data-lang="en" hidden>You'll be able to explain why a policy that's cheap economically can turn out costly in biodiversity or social pressure.</li>
+          <li data-lang="es">Vas a poder identificar qué indicadores compiten entre sí cuando se persigue la carbono-neutralidad.</li>
+          <li data-lang="en" hidden>You'll be able to identify which indicators compete with each other when pursuing carbon neutrality.</li>
+          <li data-lang="es">Vas a poder argumentar a favor de una de tres vías de descarbonización distintas, con datos de tu propia partida.</li>
+          <li data-lang="en" hidden>You'll be able to argue for one of three different decarbonization routes, with data from your own session.</li>
+        </ol>
+      </section>
+
+      <!-- ══════════════════════════ RIGOR ══════════════════════════ -->
+      <section id="rigor" class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4 max-w-3xl">
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Rigor del modelo</h2>
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Model rigor</h2>
+          <ul class="space-y-2 text-base text-ash">
+            <li data-lang="es">📐 Modelo de simulación con ecuaciones documentadas, no una caja negra.</li>
+            <li data-lang="en" hidden>📐 Simulation model with documented equations, not a black box.</li>
+            <li data-lang="es">🔍 Auditoría propia de cada fórmula frente a su fuente original, con hallazgos publicados.</li>
+            <li data-lang="en" hidden>🔍 In-house audit of every formula against its original source, with published findings.</li>
+            <li data-lang="es">🏛️ Desarrollado en la FCF-UNaM junto a Fundación Bariloche y CONICET.</li>
+            <li data-lang="en" hidden>🏛️ Developed at FCF-UNaM together with Fundación Bariloche and CONICET.</li>
+            <li data-lang="es">💶 Financiado por el proyecto IKI.</li>
+            <li data-lang="en" hidden>💶 Funded by the IKI project.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ DOCENTES ══════════════════════════ -->
+      <section class="container mx-auto px-4 py-14 max-w-3xl text-center">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-3" data-lang="es">¿Sos docente?</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-3" data-lang="en" hidden>Are you a teacher?</h2>
+        <p class="text-ash mb-5" data-lang="es">Guía de facilitación, plan de clase y consignas de debriefing, listos para descargar.</p>
+        <p class="text-ash mb-5" data-lang="en" hidden>Facilitation guide, lesson plan and debriefing prompts, ready to download.</p>
+        <a href="/docentes" class="inline-block px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
+          <span data-lang="es">Ver paquete docente</span>
+          <span data-lang="en" hidden>See teacher package</span>
+        </a>
+      </section>
+
+      <!-- ══════════════════════════ PREGUNTAS ══════════════════════════ -->
+      <section class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4 max-w-3xl">
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Preguntas frecuentes</h2>
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>Frequently asked questions</h2>
+          <div class="space-y-5">
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Es gratis?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Is it free?</h3>
+              <p class="text-sm text-ash" data-lang="es">Sí, sin costo.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, at no cost.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Necesito registrarme?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Do I need to sign up?</h3>
+              <p class="text-sm text-ash" data-lang="es">No. Podés jugar en modo demo sin cuenta; iniciar sesión con Google es opcional y solo sirve para guardar tu progreso entre sesiones.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>No. You can play in demo mode without an account; signing in with Google is optional and only used to save your progress between sessions.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Funciona en el celular?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Does it work on mobile?</h3>
+              <p class="text-sm text-ash" data-lang="es">Sí, aunque la experiencia es más cómoda en una pantalla más grande (tablet o computadora) por la cantidad de indicadores en pantalla.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, though it's more comfortable on a larger screen (tablet or computer) given how many indicators are on screen at once.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Está en inglés?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Is it available in English?</h3>
+              <p class="text-sm text-ash" data-lang="es">Sí, español e inglés, con un conmutador dentro del juego.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, Spanish and English, with a switcher inside the game.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Qué datos guardan?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>What data do you store?</h3>
+              <p class="text-sm text-ash" data-lang="es">Tus decisiones de juego, tus predicciones y tus respuestas del informe de cierre, si elegís completarlo. En modo demo no se guarda nada. No guardamos tu identidad, tu correo (salvo el de tu cuenta de Google si iniciás sesión) ni transcripciones de chat sin tu consentimiento. Podés pedir que se elimine tu información escribiendo al contacto del pie de página.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Your in-game decisions, your predictions, and your closing-report answers if you choose to complete it. Nothing is saved in demo mode. We don't store your identity, your email (other than your Google account email if you sign in), or chat transcripts without your consent. You can request deletion of your data by writing to the contact in the footer.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Puedo usarlo en mi curso?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Can I use it in my course?</h3>
+              <p class="text-sm text-ash" data-lang="es">Sí, es justamente para eso. Empezá por el paquete docente.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, that's exactly what it's for. Start with the teacher package.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ══════════════════════════ PIE ══════════════════════════ -->
+    <footer class="py-10 text-center text-xs text-ash-dim">
+      <p>FCF-UNaM · Fundación Bariloche · CONICET · Proyecto IKI</p>
+      <p class="mt-2">
+        <a href="mailto:contacto@decarbonation.example" class="hover:text-ash underline" data-lang="es">Contacto</a>
+        <a href="mailto:contacto@decarbonation.example" class="hover:text-ash underline" data-lang="en" hidden>Contact</a>
+        · <span data-lang="es">Licencia por definir</span><span data-lang="en" hidden>License to be defined</span>
+        · <a href="https://github.com/jonathanvonbelow/decarbonation" class="hover:text-ash underline" data-lang="es">Repositorio</a>
+        <a href="https://github.com/jonathanvonbelow/decarbonation" class="hover:text-ash underline" data-lang="en" hidden>Repository</a>
+      </p>
+    </footer>
+
+    <style>
+      /* Micro-animación de la sección "Demostración" -- sustituto del GIF/video pedido por §3
+         (ver comentario junto a esa sección). Cuatro "frames" con fade cruzado en loop de 8s. */
+      .demo-strip { position: relative; height: 88px; }
+      .demo-frame {
+        position: absolute; inset: 0; display: flex; align-items: center; gap: 12px;
+        opacity: 0; animation: demoFade 8s infinite;
+      }
+      .demo-frame-1 { animation-delay: 0s; }
+      .demo-frame-2 { animation-delay: 2s; }
+      .demo-frame-3 { animation-delay: 4s; }
+      .demo-frame-4 { animation-delay: 6s; }
+      @keyframes demoFade {
+        0%, 2% { opacity: 0; }
+        4%, 21% { opacity: 1; }
+        23%, 100% { opacity: 0; }
+      }
+      .demo-toggle { width: 40px; height: 22px; border-radius: 9999px; background: var(--color-chlorophyll); position: relative; }
+      .demo-toggle-dot { width: 16px; height: 16px; border-radius: 9999px; background: var(--color-bone); position: absolute; top: 3px; right: 3px; }
+      .demo-bar { flex: 1; height: 8px; border-radius: 9999px; background: var(--color-basalt-700); overflow: hidden; max-width: 220px; }
+      .demo-bar-fill { height: 100%; width: 0%; background: var(--color-hydro); animation: demoBarFill 2s ease-out; animation-delay: 2s; animation-iteration-count: 1; }
+      @keyframes demoBarFill { to { width: 100%; } }
+      @media (prefers-reduced-motion: reduce) {
+        .demo-frame { animation: none; opacity: 1; position: static; }
+        .demo-strip { height: auto; display: flex; flex-direction: column; gap: 8px; }
+      }
+    </style>
+
+    <script type="module" src="/src/landing.ts"></script>
   </body>
 </html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecarboNation — Paquete para docentes</title>
+    <meta name="description" content="Materiales para llevar DecarboNation al aula: guía de facilitación, consignas de debriefing y hoja de ecuaciones, sin formulario." />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="canonical" href="https://decarbonation.vercel.app/docentes">
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" style="--level-tint: 111 208 140; --level-tint-alpha: 0.05;">
+    <header class="border-b border-basalt-700">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
+        <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+          🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-12 max-w-3xl">
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mb-2">
+        <span data-lang="es">Paquete para docentes</span>
+        <span data-lang="en" hidden>Teacher package</span>
+      </h1>
+      <p class="text-ash mb-10">
+        <span data-lang="es">Descargas directas, sin formulario. Todo en español e inglés donde ya existe.</span>
+        <span data-lang="en" hidden>Direct downloads, no form. Everything in Spanish and English where it already exists.</span>
+      </p>
+
+      <!--
+        Honestidad de contenido (20_landing_shareables.md §8): de los seis materiales que pide la
+        fuente, solo tres existen de verdad en este repo (guía de facilitación, hoja de
+        ecuaciones -- adaptada de la auditoría del modelo -- y las consignas de debriefing,
+        armadas en esta misma fase a partir de las cinco preguntas ya aprobadas del informe de
+        cierre). "Plan de clase" y "Diapositivas de encuadre" no existen como archivos en
+        ningún lugar del proyecto (buscado en mejora-general/ y docs/) -- son documentos de
+        contenido que hay que autorar, no código; se listan como pendientes en vez de inventar
+        un PDF vacío. Ver docs/DESIGN_DECISIONS_LOG.md, fase 11.
+      -->
+      <div class="space-y-4">
+        <a href="/docentes/guia-facilitacion.md" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Guía de facilitación</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Facilitation guide</h2>
+            <p class="text-sm text-ash" data-lang="es">Guion de debriefing paso a paso para taller (10–15 min por ronda). Markdown — exportá a PDF con pandoc si preferís imprimir.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Step-by-step debriefing script for workshops (10–15 min per round). Markdown — export to PDF with pandoc if you'd rather print it.</p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Descargar →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Download →</span>
+        </a>
+
+        <a href="/docentes/consignas-debriefing.html" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Consignas de debriefing imprimibles</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Printable debriefing prompts</h2>
+            <p class="text-sm text-ash" data-lang="es">Las cinco preguntas de reflexión, en español e inglés, listas para imprimir (Ctrl/Cmd+P).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The five reflection questions, in Spanish and English, ready to print (Ctrl/Cmd+P).</p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Abrir →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
+        </a>
+
+        <a href="/docentes/hoja-de-ecuaciones.md" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Hoja de ecuaciones (avanzado)</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Equations sheet (advanced)</h2>
+            <p class="text-sm text-ash" data-lang="es">Documentación técnica de cada fórmula del modelo, contrastada con su fuente original. Pensada para estudiantes avanzados o revisores, no para la primera clase.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Technical documentation of every model formula, checked against its original source. For advanced students or reviewers, not the first class.</p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Descargar →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Download →</span>
+        </a>
+
+        <div class="panel p-5 opacity-60">
+          <h2 class="font-semibold text-bone" data-lang="es">Plan de clase</h2>
+          <h2 class="font-semibold text-bone" data-lang="en" hidden>Lesson plan</h2>
+          <p class="text-sm text-ash-dim" data-lang="es">Próximamente.</p>
+          <p class="text-sm text-ash-dim" data-lang="en" hidden>Coming soon.</p>
+        </div>
+
+        <div class="panel p-5 opacity-60">
+          <h2 class="font-semibold text-bone" data-lang="es">Diapositivas de encuadre</h2>
+          <h2 class="font-semibold text-bone" data-lang="en" hidden>Framing slides</h2>
+          <p class="text-sm text-ash-dim" data-lang="es">Próximamente.</p>
+          <p class="text-sm text-ash-dim" data-lang="en" hidden>Coming soon.</p>
+        </div>
+      </div>
+
+      <section class="mt-14">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Preguntas frecuentes de aula</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Classroom FAQ</h2>
+        <div class="space-y-5">
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Qué hago si un grupo termina antes que el resto?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>What if a group finishes before the rest?</h3>
+            <p class="text-sm text-ash" data-lang="es">Sugeríles que reinicien el nivel probando una ruta distinta a la que ganaron, o que avancen al siguiente nivel si ya está habilitado.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Suggest they restart the level trying a different route than the one they won by, or move to the next level if it's already unlocked.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Y si no hay internet en la sala?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>What if there's no internet in the room?</h3>
+            <p class="text-sm text-ash" data-lang="es">La simulación corre en el navegador de cada participante; solo el asesor DecarboNito necesita red. Si el juego ya se abrió una vez en ese dispositivo, sigue siendo jugable sin conexión — el asesor avisa claramente cuando no puede responder.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The simulation runs in each participant's browser; only the DecarboNito advisor needs a network. If the game has already been opened once on that device, it stays playable offline — the advisor clearly says when it can't respond.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Y si alguien quiere "romper" el juego?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>What if someone wants to "break" the game?</h3>
+            <p class="text-sm text-ash" data-lang="es">Dejalo. Después preguntale qué aprendió rompiéndolo — casi siempre encuentra un límite real del modelo, que es en sí mismo un buen punto de debriefing.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Let them. Afterward, ask what they learned by breaking it — they almost always find a real limit of the model, which is itself a good debriefing point.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="py-10 text-center text-xs text-ash-dim">
+      <a href="/" class="hover:text-ash underline" data-lang="es">← Volver al inicio</a>
+      <a href="/" class="hover:text-ash underline" data-lang="en" hidden>← Back home</a>
+    </footer>
+
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

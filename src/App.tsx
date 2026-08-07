@@ -56,7 +56,31 @@ import {
   evaluateBadges, loadEarnedBadges, saveEarnedBadges, loadRoutesWonPerLevel, saveRoutesWonPerLevel,
   recordRouteWin, type BadgeId, type RoutesWonPerLevel,
 } from './game/badges';
+import { resetProgress as resetTutorialProgress } from './components/tutorial/progress';
+import { logFunnelEvent } from './services/funnelTelemetry';
 
+// Fase 11 (20_landing_shareables.md §4): "/play?demo=1" -- una corrida acotada de nivel 1 para
+// enlace de correo institucional, botón de la landing, y proyección en vivo de un facilitador.
+// `DEMO_YEARS = 5` (la fuente dice "5 años, no 15" -- este codebase usa YEARS_PER_LEVEL=30 real,
+// no 15; 5 de 30 preserva la misma proporción de "acotado" que pedía la fuente, documentado en
+// docs/DESIGN_DECISIONS_LOG.md). Tres políticas curadas en vez de diez: una de bajo costo
+// ambiental (P-PAI, ver src/game/badges.ts SHORTCUT_POLICIES), una de conservación (P-AS) y la
+// de carbono-neutralidad que da nombre al juego -- alcanza para que el contraste "barato pero
+// sucio" vs. "cuesta más, rinde distinto" aparezca en 5 años.
+const DEMO_YEARS = 5;
+const DEMO_POLICY_IDS: Policy[] = [Policy.Agroecological, Policy.CarbonNeutrality, Policy.IntensiveAgriculture];
+
+function isDemoModeFromUrl(): boolean {
+  try { return new URLSearchParams(window.location.search).get('demo') === '1'; } catch { return false; }
+}
+
+/** Shallow-overrides `activeLevelConfig.targetYear` so a demo run's level 1 concludes after
+ *  DEMO_YEARS instead of the real YEARS_PER_LEVEL — used only on the initial state (a demo run
+ *  never progresses past level 1's conclusion; see the CTA in DebriefingModal instead). */
+function withDemoTargetYear<T extends { activeLevelConfig?: LevelConfig }>(patch: T): T {
+  if (!patch.activeLevelConfig) return patch;
+  return { ...patch, activeLevelConfig: { ...patch.activeLevelConfig, targetYear: INITIAL_YEAR + DEMO_YEARS } };
+}
 
 type LevelNumber = 1 | 2 | 3;
 type CumplimientoKeyStrings = `Cumplimiento_Nivel_${LevelNumber}`;
@@ -419,9 +443,13 @@ export const App = () => {
   const { authStage, user, handleGoogleLogin, handleDemo, handleSignOut } = useAuth();
   const { t } = useT();
   const { sessionIdRef, startSession, resetSession, saveFinalSnapshot, savePreSurvey, savePostSurvey, endSession } = useSessionPersistence(user?.id ?? null);
+  // Computed once from the URL at mount (`?demo=1` never changes without a full reload) -- see
+  // the DEMO_YEARS/DEMO_POLICY_IDS block near the top of this file.
+  const isDemoRef = useRef<boolean>(isDemoModeFromUrl());
 
   const [gameState, setGameState] = useState<GameState>(() => {
-    const { gameStatePatch } = createInitialState(1);
+    const { gameStatePatch: rawPatch } = createInitialState(1);
+    const gameStatePatch = isDemoRef.current ? withDemoTargetYear(rawPatch) : rawPatch;
     return {
       ...gameStatePatch,
       finances: { ...INITIAL_FINANCES },
@@ -471,6 +499,12 @@ export const App = () => {
   const allPredictionResultsRef = useRef<PredictionResult[]>([]);
   const predictionStreakRef = useRef<Partial<Record<PredictedIndicatorKey, number>>>({});
   const lastPolicyChangeYearRef = useRef<number>(INITIAL_YEAR);
+  // Fase 11 (§7): "first_decision — seconds_since_start", la métrica de tiempo-a-primera-acción
+  // que la fase 9 (18_tutoriales_v3.md) nombra pero nunca terminó de cablear a telemetría — solo
+  // se guarda localmente. `sessionStartTimeRef` se fija una vez al montar (mismo momento que
+  // `game_start`); `firstDecisionLoggedRef` evita loguear más de una vez por sesión.
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const firstDecisionLoggedRef = useRef(false);
 
   // Fase 10 (19_estetica_visual.md §7): insignias. `earnedBadges` y `routesWonPerLevel` persisten
   // en localStorage (across sesiones, ver src/game/badges.ts) porque "Pluralista" pide ganar el
@@ -579,6 +613,15 @@ export const App = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.currentLevel, gameState.gameOverReason, authStage]);
+
+  // Fase 11 (20_landing_shareables.md §4, §7): arranque de una corrida de demo. Corre una sola
+  // vez al montar (a diferencia del efecto de arriba, que corre en cada cambio de nivel) --
+  // `game_start` es un evento de embudo, no algo que deba repetirse por cada nivel jugado.
+  useEffect(() => {
+    if (isDemoRef.current) resetTutorialProgress(); // "Apertura en frío... siempre activa" (§4)
+    logFunnelEvent('game_start', { mode: isDemoRef.current ? 'demo' : 'full', locale: getActiveLanguage() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Ayuda/Tutorial en el header ahora abre el menú de capítulos (TutorialRunner.tsx) en vez del
   // modal de 9 pantallas eliminado.
@@ -706,6 +749,12 @@ export const App = () => {
   // mismo en vez de en el efecto que evalúa el resto de las insignias.
   const awardApprenticeBadge = useCallback(() => {
     debriefingCompletedRef.current = true;
+    // `questions_answered` from §7's table isn't threaded through here -- that count lives in
+    // DebriefingModal's own local state, and plumbing a callback into it just for this one
+    // property wasn't judged worth the extra prop for what's already an approximate signal
+    // (closing the modal, not literally "answered N questions"). Logged without it; documented
+    // in docs/DESIGN_DECISIONS_LOG.md.
+    logFunnelEvent('debrief_completed', {});
     setEarnedBadges((prev) => {
       if (prev.includes('apprentice')) return prev;
       const merged = [...prev, 'apprentice' as BadgeId];
@@ -911,6 +960,15 @@ export const App = () => {
       ? evaluateLevel(gameState, { ...gameState, indicators: gameState.levelBaseline })
       : null;
 
+    // Logged for both won/lost -- `status` lets the funnel SQL (§7) filter to actual wins; a
+    // lost level still concludes and is worth counting for "how far people got".
+    logFunnelEvent('level_completed', {
+      level: lastInfo.level,
+      status: lastInfo.status,
+      route: outcome?.achieved?.id ?? null,
+      score: gameState.indicators.generalScore,
+    });
+
     if (outcome?.won && outcome.achieved) {
       routesWonPerLevelRef.current = recordRouteWin(routesWonPerLevelRef.current, lastInfo.level, outcome.achieved.id);
       saveRoutesWonPerLevel(routesWonPerLevelRef.current);
@@ -943,6 +1001,7 @@ export const App = () => {
   }, [gameState.lastConcludedLevelInfo, t]);
 
   const updateHistoricalData = useCallback((currentState: GameState) => {
+    logFunnelEvent('year_simulated', { year: currentState.year, level: currentState.currentLevel });
     const currentYearData: HistoricalDataPoint = {
       year: currentState.year,
       biodiversity: currentState.indicators.biodiversity,
@@ -974,6 +1033,10 @@ export const App = () => {
 
   const togglePolicy = useCallback((policyId: Policy) => {
     lastPolicyChangeYearRef.current = gameStateRef.current.year; // fila 6 de los consejos JIT (§6)
+    if (!firstDecisionLoggedRef.current) {
+      firstDecisionLoggedRef.current = true;
+      logFunnelEvent('first_decision', { seconds_since_start: Math.round((Date.now() - sessionStartTimeRef.current) / 1000) });
+    }
     setGameState(prev => {
       const currentYear = prev.year;
       // Deep clone (not `{ ...prev.policies }`): a shallow copy still shares the nested
@@ -1503,6 +1566,7 @@ export const App = () => {
           predictionSelections={predictionSelections}
           onPredictionChange={setPredictionSelections}
           lastPredictionResults={lastPredictionResults}
+          demoPolicyIds={isDemoRef.current ? DEMO_POLICY_IDS : undefined}
         />
         <WinRoutesPanel gameState={gameState} />
       </main>
@@ -1546,6 +1610,7 @@ export const App = () => {
           sessionId={sessionIdRef.current}
           onClose={handleClosingSynthesisDismissed}
           onRestart={() => setCurrentLevelManually(gameState.currentLevel)}
+          isDemo={isDemoRef.current}
         />
       )}
 

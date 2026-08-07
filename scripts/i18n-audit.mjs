@@ -12,7 +12,14 @@
 import { readFileSync } from 'node:fs';
 import { glob } from 'node:fs/promises';
 
-const IGNORED = [/^src\/i18n\//, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\/legacyContent\//];
+const IGNORED = [
+  /^src\/i18n\//, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\/legacyContent\//,
+  // Phase 11 (20_landing_shareables.md): the landing's own tiny module. Structurally outside the
+  // React i18n system (useT/t() don't exist here -- the landing ships zero React on purpose, see
+  // index.html's own comment), so its one aria-label string is handled by the same `data-lang`
+  // toggle pattern the landing HTML uses everywhere else, not by this module.
+  /^src\/landing\.ts$/,
+];
 
 // Capa B (contenido de dominio) y Capa C (prompts de IA) del archivo 12 -- estrategias de
 // migracion distintas a la Capa A (interfaz) que cubre esta fase. Ver docs/DESIGN_DECISIONS_LOG.md,

@@ -31,6 +31,21 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         sourcemap: true,
+        // Phase 11 (20_landing_shareables.md §2): the landing is a separate, React-free static
+        // page at "/" so it doesn't ship the game's ~480kB gzip bundle to a visitor who hasn't
+        // decided to play yet. `index.html` (landing) and `docentes.html` are both plain HTML
+        // sharing only `src/index.css` (design tokens) and `src/landing.ts` (lang toggle +
+        // funnel events) -- neither imports React. `play.html` is the actual game SPA, what
+        // `index.html` used to be before this phase. Vercel routes the clean `/play` and
+        // `/docentes` URLs to these files via vercel.json rewrites (see that file's own comment
+        // for why a rewrite, not a rename, was used).
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            play: path.resolve(__dirname, 'play.html'),
+            docentes: path.resolve(__dirname, 'docentes.html'),
+          },
+        },
       },
     };
 });
