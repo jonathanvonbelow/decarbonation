@@ -1049,3 +1049,38 @@ build` limpio. `npm run i18n:audit` en verde. En navegador (Chrome MCP, `/play.h
 inglés correctos -- confirma el fix de `POLICY_NAMES` en vivo, no solo por test.
 
 **Origen.** `mejora-general/files/12_i18n_completo.md` §4 (Capa B), §5 (Capa C).
+
+## 2026-08-07 — Hotfix post-deploy: el login con Google quedaba roto por la separación landing/juego
+
+**Síntoma reportado.** Tras el deploy a producción de la fase 11, el usuario reportó que la
+pantalla de entrada solo ofrecía "continuar sin cuenta" -- el login con Google parecía no estar
+disponible, pese a que `LoginScreen.tsx` siempre renderiza los dos botones sin condición alguna.
+
+**Diagnóstico en vivo (Chrome MCP, `decarbonation.vercel.app` real, no local).** El botón de
+"Ingresar con Google" SÍ dispara el flujo de OAuth y Google SÍ autentica -- pero
+`supabase.auth.signInWithOAuth({ provider: 'google' })` sin un `redirectTo` explícito usa la
+"Site URL" configurada en el proyecto de Supabase como destino del callback, que apunta a la raíz
+del dominio. Antes de la fase 11 eso era correcto (la raíz *era* la app). Después de la fase 11,
+la raíz es `index.html`, la landing estática sin React de `20_landing_shareables.md` -- no tiene
+ningún cliente de Supabase que pueda leer el fragmento `#access_token=...` que Google devuelve.
+Capturado en vivo: tras autenticar, la URL terminaba en
+`https://decarbonation.vercel.app/#access_token=eyJ...` -- el token quedaba ahí, sin consumir, y
+el usuario veía la landing de marketing en lugar del juego. Si volvía a hacer clic en "Jugar
+ahora", entraba a `/play` sin sesión (el fragmento nunca se guardó), como si el login nunca hubiera
+pasado -- de ahí que "solo" el modo demo pareciera funcionar.
+
+**Corrección.** Un parámetro `redirectTo` explícito en `signInWithGoogle()`
+(`src/services/supabaseService.ts`) apuntando a `${window.location.origin}/play` -- la única
+página que efectivamente monta `src/main.tsx` y puede completar el callback. No requiere tocar
+configuración del proyecto de Supabase (Site URL/Redirect URLs en su dashboard), que queda como
+estaba; el fix vive enteramente en el código.
+
+**Verificación.** `npx tsc --noEmit` limpio, `npx vitest run` 93/93, `npm run build` limpio.
+Diagnosticado con una sesión de Google real ya autenticada en el navegador de prueba (no se
+ingresó ninguna credencial nueva -- el flujo OAuth ya estaba autorizado de una prueba previa del
+usuario y solo se observó a dónde redirigía). No se pudo re-verificar el flujo completo post-fix
+en producción dentro de esta sesión porque requeriría un nuevo deploy y una re-autenticación real;
+la corrección se basa en el diagnóstico exacto de la causa (URL de redirect capturada en vivo), no
+en una suposición.
+
+**Origen.** Reporte directo del usuario tras el deploy de la fase 11.

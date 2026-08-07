@@ -15,7 +15,18 @@ export const supabase =
 
 export async function signInWithGoogle(): Promise<void> {
   if (!supabase) return;
-  await supabase.auth.signInWithOAuth({ provider: 'google' });
+  // Explicit redirectTo (phase 11 regression, fixed post-deploy): without this, Supabase sends
+  // the OAuth callback back to the project's configured Site URL, which is the bare domain root
+  // -- since 20_landing_shareables.md split the site into a React-free static landing at "/" and
+  // the actual game at "/play", the callback landed on a page with no Supabase client to consume
+  // the "#access_token=..." fragment, silently discarding the session. The player would land back
+  // on the marketing page, the token would sit unused in the URL, and Google sign-in would look
+  // completely broken -- "only demo mode works" was the reported symptom. `/play` is the only
+  // page that can actually complete the callback (it's the one that boots src/main.tsx).
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${window.location.origin}/play` },
+  });
 }
 
 export async function signOut(): Promise<void> {
