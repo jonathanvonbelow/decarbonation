@@ -732,3 +732,109 @@ arranque de `board`) — su lógica es la misma del motor ya verificado, pero ca
 no se cronometró ni se revisó visualmente.
 
 **Origen.** `mejora-general/files/18_tutoriales_v3.md`.
+
+## 2026-08-06 — Fase 10 (estética y game feel): reskin al sistema v3, contadores animados, insignias, y un bug real de raíz encontrado y corregido
+
+**Reskin.** `Header.tsx`, `Dashboard.tsx` (tiles de indicadores + contenedores de gráficos/políticas),
+`PolicyToggle.tsx` y `WinRoutesPanel.tsx` migrados de los tokens phase-1 (`bg-custom-light-gray`,
+`text-custom-accent`, `bg-gray-700`, `text-green-400`/`text-yellow-400`/`text-red-400` sueltos) a los
+tokens v3 construidos en la fase 4 pero nunca consumidos hasta ahora: `panel`, `label-eyebrow`,
+`basalt-{950,900,800,700,600}`, `bone`, `ash`/`ash-dim`, `chlorophyll`/`ochre`/`ember`/`hydro`. Los
+otros ~18 archivos que aún usan los tokens viejos quedan fuera de alcance deliberadamente — mismo
+límite que la fase 4 ya documentó, no una omisión nueva. `ACCENT_CLASSES` de `WinRoutesPanel` pasó de
+clases Tailwind sueltas (`border-green-500 text-green-400`) a los tokens con el mismo nombre semántico
+que ya traían sus keys (`chlorophyll`/`ochre`/`hydro`/`bone`), sin tocar la lógica de rutas.
+
+**Ambiente por nivel.** Se activaron dos primitivas construidas en la fase 4 con comentarios propios
+de "esto lo consume la fase 10": la utility CSS `bg-level-ambience` (glow radial `--level-tint` +
+textura `contour.svg` tileada, reemplazando el `bg-custom-gray` plano de `<body>`) y
+`LevelAmbience.tsx` (efecto que escribe `--level-tint`/`--level-tint-alpha` según `currentLevel`),
+ahora montado en `App.tsx`. Simplificación respecto al §6 de la fuente: una sola textura + tinte de
+color en vez de tres ilustraciones per-nivel bespoke, y sin el cross-fade de 1.2s entre niveles (el
+CSS no anima `background-image`; implementarlo bien requeriría dos capas superpuestas con opacity
+cruzada, que no es lo mismo que "cambiar una custom property" — dejado fuera, documentado en el
+propio comentario de `src/index.css`).
+
+**Contador animado + delta + pulso, y un bug real.** `src/hooks/useCountUp.ts` (nuevo: `usePrevious`
++ `useCountUp`, rAF con ease-out-cubic, respeta `prefers-reduced-motion`) alimenta un rediseño
+completo de `IndicatorCard` en `Dashboard.tsx`: valor animado (900ms, escalonado 60ms por tile vía
+`index`), píldora de delta (`▲`/`▼`, 4s, `chlorophyll`/`ember`) y un pulso de 600ms
+(`ring-2 ring-ochre`) al cruzar de tier de color — usado como proxy barato de "cruzó un umbral de
+riesgo" comparando el string de clase de color entre renders, en vez de plomear el tier crudo como
+prop nueva. **Al verificar esto en vivo (Chrome MCP, no solo por tipado) la píldora de delta no
+aparecía nunca**, pese a que el valor sí se actualizaba correctamente en pantalla. Diagnóstico con
+`console.log` inyectado temporalmente: `delta` se calculaba en el cuerpo del render a partir de
+`usePrevious(value)`, pero el propio efecto interno de `usePrevious` (`ref.current = value`) corre
+en el mismo commit que el `setShowDelta(true)` que dispara el re-render que debía *pintar* la
+píldora — para cuando ese re-render ocurre, `prevValue` ya alcanzó a `value` y `delta` se lee como
+`0`, así que la condición `delta !== 0` nunca es verdadera aunque `showDelta` sí lo sea. Corregido
+congelando `{delta, good}` en su propio `useState` en el momento en que se calcula dentro del efecto
+(antes de que la ref avance), en vez de recalcularlo en cada render a partir de una ref que puede
+haber cambiado. Verificado de nuevo en vivo tras el fix: `▼ 0.17` en `chlorophyll` visible ~1s
+después de simular. Este bug no lo habría atrapado `npx tsc --noEmit` ni `npx vitest run` — ninguno
+ejerce el timing real de dos efectos-en-el-mismo-commit-más-un-re-render; solo apareció al
+interactuar con la app real, que es exactamente la razón por la que este ciclo incluye una pasada de
+verificación en navegador y no se conforma con "compila y los tests pasan".
+
+**Insignias (§7).** `src/game/badges.ts` (nuevo) implementa las nueve condiciones de la tabla fuente
+como funciones puras individualmente testeadas en `tests/sim/badges.spec.ts` (28 tests, el archivo
+que el propio checklist de verificación de la fuente pide por nombre) más un orquestador
+`evaluateBadges`. Persistencia vía `localStorage` (mismo patrón degradable que
+`predictions.ts`) porque "Pluralista" pide ganar el mismo nivel por las tres rutas *en partidas
+distintas* — no tiene sentido resetear eso al recargar. Presentación: solo la insignia más reciente
+en el header (`Header.tsx`, prop `latestBadge`), como pide el §7 ("fila discreta... solo la última
+obtenida"); la grilla completa de perfil **no se construyó** (no hay pantalla de "perfil" en este
+codebase todavía). Tres adaptaciones documentadas dentro del propio `badges.ts` porque los datos que
+la condición literal pide no existen tal cual en este codebase: (1) "balance de carbono positivo"
+usa `co2EqEmissionsPerCapita <= 0` porque `computeCarbonBalance` (fase 2, `src/sim/carbon.ts`)
+clampea el resultado en `Math.max(0, ...)` — un balance genuinamente positivo siempre se ve como
+exactamente `0`, nunca negativo; (2) "política de bajo costo ambiental" (Sin Atajos) no tiene un
+campo de costo-tier en `PolicyState`, así que se interpretó como las tres políticas cuyo propio
+mecanismo empeora emisiones o afloja supervisión (`EnergySubsidies`, `IntensiveAgriculture`,
+`FlexibleEnvironmentalRegulations`); (3) "80% en un nivel" (Pronosticadora) se aproximó a 80% de
+aciertos acumulados en la sesión completa, porque `PredictionResult` no lleva tag de nivel y el
+acumulador de `App.tsx` nunca se resetea por nivel. "Negociadora" (bajar las tres presiones bajo 50
+en el mismo año) lee `history` en vez del snapshot vivo de indicadores, y exige al menos un año
+simulado — de lo contrario una partida recién arrancada (presiones en 0 por defecto) ganaría la
+insignia sin que el jugador hiciera nada.
+
+**Estados vacíos y error boundary (§8).** Fila de "sin políticas activas" agregada arriba de la
+grilla de `PolicyToggle`s en `Dashboard.tsx` (texto únicamente — la "ilustración tenue del
+territorio" que pide la fuente no existe como asset y no se justifica un SVG nuevo solo para esto,
+más aún respetando el presupuesto de §9). `src/components/common/ErrorBoundary.tsx` (nuevo, no
+existía ningún error boundary en el codebase antes de esta fase) envuelve todo `main.tsx`, por
+*fuera* de `I18nProvider`, para que un error dentro del propio provider también quede atrapado; como
+consecuencia no puede usar el hook `useT()` y en su lugar usa la función `tFor(locale, key)` ya
+existente + un `detectLocale()` recién exportado desde `src/i18n/index.tsx` (antes privado al
+módulo). Adaptación documentada en el propio componente: la fuente pide mostrar "estado, semilla y
+botón de reporte", pero `runSimulationRound` pasa `Math.random` real, no el RNG sembrado de
+`src/sim/rng.ts` (que existe solo para tests/el harness de balance, según su propio comentario de
+fase 2) — no hay semilla que mostrar en una partida real. El bloque de reporte copiable lleva en su
+lugar mensaje/stack del error, timestamp y URL.
+
+**Deliberadamente no construido, documentado sin ambigüedad:** la grilla de 12 columnas con "Cinta de
+Carbono" de §2 (rediseño de layout completo, fuera de alcance de una fase de "acabado visual" sobre
+un tablero que ya funciona); la coreografía de 6 segundos del "Informe Anual" con "ficha del año"
+de §4 (depende de un desglose causal de `SimTrace` que no existe, mismo hueco que ya bloqueó parte
+del debriefing en la fase 9); el theming de gráficos con `chartTheme.ts` más allá de lo que ya
+traían (radar chart, transición animada de la torta, líneas de referencia) — `chartTheme.ts` sigue
+sin consumidores, igual que `StatTile`/`Button`/`Badge` de la fase 4; sonido (explícitamente opcional
+en la fuente); auditoría formal de Lighthouse (§9) — el build sigue emitiendo un chunk único de
+~1.75MB/480kB-gzip, sin `React.lazy` para Recharts, mismo estado que antes de esta fase.
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 87/87 (28 tests nuevos en
+`tests/sim/badges.spec.ts`). `npm run build` limpio (mismo warning de chunk >500kB que ya existía).
+`npm run i18n:audit` en verde. En navegador (Chrome MCP, servidor dev puerto 3001, modo demo):
+Header y tiles de Dashboard reskinados visibles con la textura de `bg-level-ambience` de fondo;
+`WinRoutesPanel` reskinado confirmado (Vía de la Innovación/Transición Productiva/Integridad
+Ecológica en hydro/ochre/chlorophyll); activar una política y simular confirmó el conteo animado del
+valor, y — tras el fix del bug de arriba — la píldora de delta apareciendo y desapareciendo a los
+~4s; cero errores de consola de la aplicación en todo el recorrido (fuera de un
+`ReferenceError: loadEarnedBadges is not defined` transitorio capturado por HMR a mitad de una
+edición, no presente tras recargar). El pulso de 600ms por cruce de tier no se verificó visualmente
+en esta sesión (no se logró forzar un cruce de tier real en el tiempo disponible); su lógica es
+estructuralmente idéntica a `showDelta` salvo que no sufre el bug de arriba (`pulse` es un booleano
+seteado directamente, no un valor derivado de una ref en cada render), así que se aceptó por lectura
+de código.
+
+**Origen.** `mejora-general/files/19_estetica_visual.md`.

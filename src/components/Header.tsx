@@ -5,6 +5,7 @@ import Tooltip from './common/Tooltip';
 import { useT } from '../i18n';
 import { ANCHORS, useAnchor } from './decarbonito/anchors';
 import { useDecarboNito } from './decarbonito/DecarboNitoProvider';
+import type { BadgeId } from '../game/badges';
 
 interface HeaderProps {
   year: number;
@@ -25,6 +26,10 @@ interface HeaderProps {
   wonLevels: number[];
   onToggleFacilitatorPanel: () => void;
   onAbandon?: () => void;
+  /** Most recently earned badge, or null. §7: "fila discreta en el header (solo la última
+   *  obtenida) + grilla completa en el perfil" -- the profile grid doesn't exist yet (deferred,
+   *  see docs/DESIGN_DECISIONS_LOG.md), so this chip is the entire presentation for now. */
+  latestBadge?: BadgeId | null;
 }
 
 
@@ -47,6 +52,7 @@ const Header: React.FC<HeaderProps> = ({
   wonLevels,
   onToggleFacilitatorPanel,
   onAbandon,
+  latestBadge,
 }) => {
   const { t, locale, setLocale } = useT();
   const toggleLanguage = () => setLocale(locale === 'es' ? 'en' : 'es');
@@ -58,45 +64,45 @@ const Header: React.FC<HeaderProps> = ({
   const helpRef = useAnchor<HTMLButtonElement>(ANCHORS.helpButton, t('header.tutorial'));
 
   return (
-    <header className="bg-custom-light-gray text-white p-4 shadow-md">
+    <header className="bg-basalt-900 text-bone p-4 border-b border-basalt-700">
       <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center">
         <div className="flex items-center mb-2 sm:mb-0">
-          <h1 className="text-3xl font-bold text-custom-accent tracking-tight">
-            DecarboNation <span className="text-xl text-blue-300">{headerSuffix}</span>
+          <h1 className="text-3xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">
+            DecarboNation <span className="text-xl text-hydro">{headerSuffix}</span>
           </h1>
           <div className="flex flex-wrap items-center ml-2 sm:ml-4">
             <button
               ref={helpRef}
               onClick={onShowTutorial}
-              className="m-1 px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="m-1 px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-hydro"
               aria-label={t('header.tutorial')}
             >
               {t('header.tutorial')}
             </button>
             <button
               onClick={onShowPlayerManual}
-              className="m-1 px-3 py-1.5 text-xs bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="m-1 px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-hydro"
               aria-label={t('header.playerManual')}
             >
               {t('header.playerManual')}
             </button>
             <button
               onClick={onShowFacilitatorManual}
-              className="m-1 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="m-1 px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-hydro"
               aria-label={t('header.facilitators')}
             >
               {t('header.facilitators')}
             </button>
             <button
               onClick={onShowEquationsManual}
-              className="m-1 px-3 py-1.5 text-xs bg-rose-700 hover:bg-rose-800 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="m-1 px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-hydro"
               aria-label={t('header.equations')}
             >
               {t('header.equations')}
             </button>
             <button
               onClick={onShowAbout}
-              className="m-1 px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="m-1 px-3 py-1.5 text-xs bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ash-dim"
               aria-label={t('header.about')}
               title={t('header.about')}
             >
@@ -105,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({
             {onAbandon && !gameOver && (
               <button
                 onClick={onAbandon}
-                className="m-1 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-700 hover:border-red-500 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="m-1 px-3 py-1.5 text-xs text-ember hover:brightness-125 border border-ember/40 hover:border-ember rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ember"
                 aria-label={t('header.abandon')}
               >
                 {t('header.abandon')}
@@ -114,7 +120,7 @@ const Header: React.FC<HeaderProps> = ({
             <button
               ref={localeRef}
               onClick={toggleLanguage}
-              className="m-1 px-3 py-1.5 text-xs text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-gray-400"
+              className="m-1 px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-ash-dim"
               aria-label={t('header.toggleLanguageLabel')}
               title={t('header.toggleLanguageLabel')}
             >
@@ -124,11 +130,11 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         <div className="flex space-x-4 sm:space-x-6 items-center">
           <div ref={levelRef} className="text-center">
-            <span className="block text-xs text-gray-400 uppercase">{t('header.level')}</span>
+            <span className="label-eyebrow">{t('header.level')}</span>
             <span className="text-xl font-semibold">{level}</span>
           </div>
           <div ref={yearRef} className="text-center">
-            <span className="block text-xs text-gray-400 uppercase">{t('header.year')}</span>
+            <span className="label-eyebrow">{t('header.year')}</span>
             {targetYear ? (
               <Tooltip text={t('header.yearTooltip', { target: targetYear })} position="bottom">
                 <span className="text-xl font-semibold cursor-help">{`${year} / ${targetYear}`}</span>
@@ -139,13 +145,21 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <Tooltip text={scoreTooltipText} position="bottom">
             <div ref={scoreRef} className="text-center cursor-help">
-              <span className="block text-xs text-gray-400 uppercase">{t('header.score')}</span>
+              <span className="label-eyebrow">{t('header.score')}</span>
               <span className={`text-xl font-semibold ${scoreColorClass}`}>
                 {score.toFixed(1)}
               </span>
             </div>
           </Tooltip>
-          {gameOver && <span className="text-lg font-semibold text-red-500 px-2 py-1 bg-red-900 rounded">{t('header.gameOver')}</span>}
+          {gameOver && <span className="text-lg font-semibold text-ember px-2 py-1 bg-ember/15 rounded">{t('header.gameOver')}</span>}
+          {latestBadge && (
+            <Tooltip text={t(`badges.${latestBadge}.desc` as any)} position="bottom">
+              <div className="text-center cursor-help">
+                <span className="label-eyebrow">{t('badges.latestLabel')}</span>
+                <span className="text-sm font-semibold text-chlorophyll">🏅 {t(`badges.${latestBadge}.name` as any)}</span>
+              </div>
+            </Tooltip>
+          )}
           {dn.hidden && (
             <button
               onClick={() => dn.setHidden(false)}
@@ -158,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({
           )}
           <button
             onClick={onToggleFacilitatorPanel}
-            className="text-gray-400 hover:text-gray-200 text-xl ml-2 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded"
+            className="text-ash hover:text-bone text-xl ml-2 focus:outline-none focus:ring-1 focus:ring-ash-dim rounded"
             aria-label={t('header.facilitatorPanel')}
             title={t('header.facilitatorPanel')}
           >
@@ -167,7 +181,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
       {levelName && !gameOver && (
-        <div className="text-center text-base text-gray-300 mt-1 sm:mt-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:top-12">{t('header.currentFocus')}: {levelName}</div>
+        <div className="text-center text-base text-ash mt-1 sm:mt-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:top-12">{t('header.currentFocus')}: {levelName}</div>
       )}
       {!gameOver && (
         <div className="container mx-auto flex justify-center space-x-2 mt-2">
@@ -185,8 +199,8 @@ const Header: React.FC<HeaderProps> = ({
                   onClick={() => setCurrentLevelManually(levelNum)}
                   disabled={isDisabled}
                   className={`px-3 py-1 text-xs rounded transition-colors mr-1 last:mr-0
-                    ${level === levelNum ? 'bg-blue-700 text-white cursor-default' :
-                      (gameOver ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white')
+                    ${level === levelNum ? 'bg-hydro text-basalt-950 cursor-default' :
+                      (gameOver ? 'bg-basalt-700 text-ash-dim cursor-not-allowed' : 'bg-basalt-700 hover:bg-basalt-600 text-bone')
                     }
                   `}
                   aria-disabled={isDisabled}

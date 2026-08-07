@@ -148,7 +148,25 @@
   }
 }
 
-/* `bg-custom-gray text-gray-100` stays on <body> in index.html as plain Tailwind utility
-   classes for now — `custom-gray` still resolves via @theme above. Phase 10 replaces this with
-   the basalt-950 background + the level-tint radial gradient + the contour texture
-   (public/textures/contour.svg), at which point the phase-1 tokens above get removed. */
+/* Phase 10 (19_estetica_visual.md §6): the basalt-950 background + a level-tint radial glow +
+   the tiled contour texture (public/textures/contour.svg), replacing the flat `bg-custom-gray`
+   that was on <body> — see index.html. LevelAmbience.tsx (phase 4) writes --level-tint/
+   --level-tint-alpha per level; this utility is what actually reads them, which is why mounting
+   it had "zero visible effect" until now (its own comment, phase 4).
+   Deliberate simplification of §6's per-level *illustration* (curvas de nivel / retícula
+   regional / retícula global as three distinct images): one texture, recolored only by the tint
+   glow, not three bespoke backgrounds — a defensible scope cut for this pass, not an invented
+   substitute (see docs/DESIGN_DECISIONS_LOG.md, phase 10 entry). Old `custom-gray` token is NOT
+   removed here (18 components still consume it) — additive, same as every phase-4 addition. */
+@utility bg-level-ambience {
+  background-color: var(--color-basalt-950);
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% -10%, rgb(var(--level-tint) / var(--level-tint-alpha)), transparent 70%),
+    url('/textures/contour.svg');
+  background-repeat: no-repeat, repeat;
+  background-size: auto, 480px 480px;
+  /* §6 also asks for a 1.2s cross-fade between levels — not implemented: `transition` on a
+     multi-layer `background-image` (gradient + texture url) is unreliably animatable across
+     browsers; a real crossfade would need a two-layer structure this pass doesn't build. The
+     tint still updates instantly on level change (docs/DESIGN_DECISIONS_LOG.md, phase 10 entry). */
+}

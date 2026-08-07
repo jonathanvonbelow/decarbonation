@@ -35,8 +35,11 @@ function interpolate(template: string, values?: Interpolations): string {
   return template.replace(/\{(\w+)\}/g, (_, k) => (values[k] !== undefined ? String(values[k]) : `{${k}}`));
 }
 
-/** Reads the initial locale: ?lang= > localStorage > navigator > 'es'. */
-function detectLocale(): Locale {
+/** Reads the initial locale: ?lang= > localStorage > navigator > 'es'. Exported (not just used
+ *  internally by I18nProvider) so code that renders outside the provider -- ErrorBoundary, which
+ *  has to wrap I18nProvider itself so a crash inside the provider is still caught -- can still
+ *  look up the player's locale via `tFor` without a React context. */
+export function detectLocale(): Locale {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('lang');
     if (fromUrl === 'es' || fromUrl === 'en') return fromUrl;

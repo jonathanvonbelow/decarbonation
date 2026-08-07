@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, Policy, LandUseType, LandUse, LevelConfig, Pact, PolicyState, HistoricalDataPoint, InstrumentImpactHints } from '../types';
 import PolicyToggle from './PolicyToggle';
 import { POLICY_UI_ORDER, SIMULATION_YEARS_PER_ROUND, CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
@@ -14,6 +14,7 @@ import { getLandUseName } from '../legacyContent/gameData';
 import { ANCHORS, useAnchor, type AnchorId } from './decarbonito/anchors';
 import PredictionStrip from './tutorial/PredictionStrip';
 import type { PredictionResult, PredictionSelections } from './tutorial/predictions';
+import { usePrevious, useCountUp } from '../hooks/useCountUp';
 
 interface DashboardProps {
   gameState: GameState;
@@ -32,19 +33,72 @@ interface DashboardProps {
   lastPredictionResults: PredictionResult[] | null;
 }
 
-const IndicatorCard: React.FC<{ title: string; value: string | number; color?: string; unit?: string; tooltip?: string; isWinCondition?: boolean; winLabel?: string; anchorId?: AnchorId }> = ({ title, value, color = 'text-custom-accent', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId }) => {
+/**
+ * Reskinned onto the v3 `panel`/basalt tokens (19_estetica_visual.md §2) and given the "changes
+ * are visible" treatment from §3: the displayed number counts from the previous value instead of
+ * jumping, a delta pill shows for 4s after each change, and the border pulses briefly when the
+ * color tier itself changes (a cheap proxy for "crossed a risk threshold" — `getIndicatorColor`
+ * already returns a different class per tier, so comparing the class string catches the same
+ * crossings without needing to plumb the raw tier through as its own prop).
+ */
+const IndicatorCard: React.FC<{
+  title: string; value: number; precision?: number; color?: string; unit?: string;
+  tooltip?: string; isWinCondition?: boolean; winLabel?: string; anchorId?: AnchorId;
+  invert?: boolean; index?: number;
+}> = ({ title, value, precision = 1, color = 'text-chlorophyll', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId, invert = false, index = 0 }) => {
   // Registered even when no consumer points at it yet (phase 8/9's job) — cheap, and it's what
   // lets `window.__dn.listAnchors()` see every indicator from day one of the overlay.
   const anchorRef = useAnchor<HTMLDivElement>(anchorId ?? `unused:${title}`, title);
+  const prevValue = usePrevious(value);
+  const prevColor = usePrevious(color);
+  const animated = useCountUp(prevValue ?? value, value, 900, index * 60);
+
+  const [showDelta, setShowDelta] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  // The pill's delta/direction can't be derived from `prevValue` at render time the way `animated`
+  // is: `usePrevious`'s own effect advances its ref to the new `value` on the very same commit
+  // that calls `setShowDelta(true)` below, so by the re-render that actually paints the pill,
+  // `prevValue` has already caught up to `value` and a render-time `value - prevValue` would read
+  // back as 0. Freezing the delta into its own state at the moment it's computed (inside the
+  // effect, before that ref moves) avoids the staleness.
+  const [frozenDelta, setFrozenDelta] = useState<{ delta: number; good: boolean } | null>(null);
+
+  useEffect(() => {
+    if (prevValue === undefined || value === prevValue) return;
+    const d = value - prevValue;
+    setFrozenDelta({ delta: d, good: invert ? d < 0 : d > 0 });
+    setShowDelta(true);
+    const t = setTimeout(() => setShowDelta(false), 4000); // §3: pill stays 4s then fades
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  useEffect(() => {
+    if (prevColor === undefined || prevColor === color) return;
+    setPulse(true);
+    const t = setTimeout(() => setPulse(false), 600); // §3: 600ms pulse on threshold cross
+    return () => clearTimeout(t);
+  }, [color, prevColor]);
+
   const cardContent = (
-    <div ref={anchorId ? anchorRef : undefined} className="bg-gray-700 p-3 rounded-lg shadow-md text-center h-full flex flex-col justify-center relative">
+    <div
+      ref={anchorId ? anchorRef : undefined}
+      className={`panel p-3 text-center h-full flex flex-col justify-center gap-1 relative transition-shadow duration-300 ${pulse ? 'ring-2 ring-ochre' : ''}`}
+    >
       {isWinCondition && (
         <Tooltip text={winLabel}>
-          <span className="absolute top-1 right-1 text-yellow-400 text-lg" aria-label={winLabel}>⭐</span>
+          <span className="absolute top-1.5 right-1.5 text-ochre text-lg leading-none" aria-label={winLabel}>⭐</span>
         </Tooltip>
       )}
-      <h4 className="text-xs sm:text-sm text-gray-400 font-semibold">{title}</h4>
-      <p className={`text-xl sm:text-2xl font-bold ${color}`}>{typeof value === 'number' ? value.toFixed(2) : value}{unit}</p>
+      <h4 className="label-eyebrow">{title}</h4>
+      <p className={`text-xl sm:text-2xl font-bold ${color}`}>
+        <span data-numeric>{animated.toFixed(precision)}{unit}</span>
+        {showDelta && frozenDelta && frozenDelta.delta !== 0 && (
+          <span data-numeric className={`ml-1.5 text-[13px] align-middle ${frozenDelta.good ? 'text-chlorophyll' : 'text-ember'}`}>
+            {frozenDelta.delta > 0 ? '▲' : '▼'} {Math.abs(frozenDelta.delta).toFixed(precision)}
+          </span>
+        )}
+      </p>
     </div>
   );
   return tooltip ? (
@@ -87,16 +141,16 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
 
   if (data.length === 0) {
     return (
-      <div ref={chartRef} className="bg-custom-light-gray p-4 rounded-lg shadow-xl flex items-center justify-center h-full">
+      <div ref={chartRef} className="panel p-4 flex items-center justify-center h-full">
         <p className="text-gray-400">{t.noData}</p>
       </div>
     );
   }
 
   return (
-    <div ref={chartRef} className="bg-custom-light-gray p-4 rounded-lg shadow-xl">
+    <div ref={chartRef} className="panel p-4">
       <Tooltip text={t.tooltip}>
-        <h3 className="text-lg font-semibold mb-2 text-custom-accent inline-block cursor-help">{t.title}</h3>
+        <h3 className="text-lg font-semibold mb-2 text-chlorophyll font-[var(--font-display)] inline-block cursor-help">{t.title}</h3>
       </Tooltip>
       <ResponsiveContainer width="100%" height={200}>
         <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
@@ -153,8 +207,8 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
 
   if (historicalData.length < 2) {
     return (
-      <div ref={chartRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
-        <h3 className="text-xl font-semibold mb-2 text-custom-accent">{t.title}</h3>
+      <div ref={chartRef} className="panel p-6 mt-6">
+        <h3 className="text-xl font-semibold mb-2 text-chlorophyll font-[var(--font-display)]">{t.title}</h3>
         <p className="text-gray-400">{t.noData}</p>
       </div>
     );
@@ -167,8 +221,8 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
   };
 
   return (
-    <div ref={chartRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
-      <h3 className="text-xl font-semibold mb-4 text-custom-accent">{t.title}</h3>
+    <div ref={chartRef} className="panel p-6 mt-6">
+      <h3 className="text-xl font-semibold mb-4 text-chlorophyll font-[var(--font-display)]">{t.title}</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
           <h4 className="text-lg font-semibold text-blue-300 mb-2">{t.sustainability}</h4>
@@ -286,6 +340,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       policyPanelTip: (m:number,d:number) => `Puedes activar hasta ${m} políticas simultáneamente. Una vez activada, una política se bloquea por ${d} años.`,
       simulate: (y:number) => `Simular Próximo Año (${y})`,
       simulating: 'Simulando...',
+      noActivePolicies: 'Tu nación está en piloto automático. Activá tu primera política.',
     },
     en: {
       winStar: 'This indicator is a key objective to win the current level.',
@@ -306,6 +361,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       policyPanelTip: (m:number,d:number) => `You can activate up to ${m} policies simultaneously. Once activated, a policy is locked for ${d} years.`,
       simulate: (y:number) => `Simulate Next Year (${y})`,
       simulating: 'Simulating...',
+      noActivePolicies: 'Your nation is on autopilot. Activate your first policy.',
     },
   } as const;
   const t = T[language];
@@ -319,15 +375,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return conditions[keyMin] !== undefined || conditions[keyMax] !== undefined || conditions[keyPercentageMin] !== undefined;
   };
 
+  // v3 tokens (19_estetica_visual.md §2): ember/ochre/chlorophyll instead of the phase-1
+  // red/yellow/green — same three-tier logic, reskinned.
   const getIndicatorColor = (value: number, isInverse: boolean = false, low: number = 40, mid: number = 65): string => {
     if (isInverse) {
-      if (value > mid) return 'text-red-400';
-      if (value > low) return 'text-yellow-400';
-      return 'text-green-400';
+      if (value > mid) return 'text-ember';
+      if (value > low) return 'text-ochre';
+      return 'text-chlorophyll';
     } else {
-      if (value < low) return 'text-red-400';
-      if (value < mid) return 'text-yellow-400';
-      return 'text-green-400';
+      if (value < low) return 'text-ember';
+      if (value < mid) return 'text-ochre';
+      return 'text-chlorophyll';
     }
   };
 
@@ -337,25 +395,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <IndicatorCard anchorId={ANCHORS.indicatorBiodiversity} title={t.biodiversity} value={indicators.biodiversity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
-        <IndicatorCard anchorId={ANCHORS.indicatorEmissions} title={t.co2} value={indicators.co2EqEmissionsPerCapita.toFixed(2)} unit=" t" color={indicators.co2EqEmissionsPerCapita > 8 ? 'text-red-400' : indicators.co2EqEmissionsPerCapita > 4 ? 'text-yellow-400' : 'text-green-400'} isWinCondition={isWinCondition('co2EqEmissionsPerCapita')} tooltip={t.co2Tip} winLabel={t.winStar} />
+        <IndicatorCard index={0} anchorId={ANCHORS.indicatorBiodiversity} title={t.biodiversity} value={indicators.biodiversity} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
+        <IndicatorCard index={1} anchorId={ANCHORS.indicatorEmissions} title={t.co2} value={indicators.co2EqEmissionsPerCapita} precision={2} unit=" t" invert color={indicators.co2EqEmissionsPerCapita > 8 ? 'text-ember' : indicators.co2EqEmissionsPerCapita > 4 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('co2EqEmissionsPerCapita')} tooltip={t.co2Tip} winLabel={t.winStar} />
 
         {currentLevel >= 2 && (
           <>
-            <IndicatorCard anchorId={ANCHORS.indicatorFoodSecurity} title={t.foodSec} value={indicators.foodSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
-            <IndicatorCard anchorId={ANCHORS.indicatorEconomicSecurity} title={t.econSec} value={indicators.economicSecurity.toFixed(1)} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
-            <IndicatorCard anchorId={ANCHORS.indicatorSocialWellbeing} title={t.socialWell} value={indicators.socialWellbeing.toFixed(1)} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
-            <IndicatorCard anchorId={ANCHORS.indicatorPoliticalStability} title={t.polStab} value={indicators.politicalStability.toFixed(1)} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.ppAgr} value={indicators.ppAgricola.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppAgricola, true, 45, 65)} isWinCondition={isWinCondition('ppAgricola')} tooltip={t.ppAgrTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.ppEnv} value={indicators.ppAmbientalista.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppAmbientalista, true, 45, 65)} isWinCondition={isWinCondition('ppAmbientalista')} tooltip={t.ppEnvTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.ppSoc} value={indicators.ppSocial.toFixed(1)} unit="%" color={getIndicatorColor(indicators.ppSocial, true, 45, 65)} isWinCondition={isWinCondition('ppSocial')} tooltip={t.ppSocTip} winLabel={t.winStar} />
+            <IndicatorCard index={2} anchorId={ANCHORS.indicatorFoodSecurity} title={t.foodSec} value={indicators.foodSecurity} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
+            <IndicatorCard index={3} anchorId={ANCHORS.indicatorEconomicSecurity} title={t.econSec} value={indicators.economicSecurity} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
+            <IndicatorCard index={4} anchorId={ANCHORS.indicatorSocialWellbeing} title={t.socialWell} value={indicators.socialWellbeing} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
+            <IndicatorCard index={5} anchorId={ANCHORS.indicatorPoliticalStability} title={t.polStab} value={indicators.politicalStability} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
+            <IndicatorCard index={6} title={t.ppAgr} value={indicators.ppAgricola} unit="%" invert color={getIndicatorColor(indicators.ppAgricola, true, 45, 65)} isWinCondition={isWinCondition('ppAgricola')} tooltip={t.ppAgrTip} winLabel={t.winStar} />
+            <IndicatorCard index={7} title={t.ppEnv} value={indicators.ppAmbientalista} unit="%" invert color={getIndicatorColor(indicators.ppAmbientalista, true, 45, 65)} isWinCondition={isWinCondition('ppAmbientalista')} tooltip={t.ppEnvTip} winLabel={t.winStar} />
+            <IndicatorCard index={8} title={t.ppSoc} value={indicators.ppSocial} unit="%" invert color={getIndicatorColor(indicators.ppSocial, true, 45, 65)} isWinCondition={isWinCondition('ppSocial')} tooltip={t.ppSocTip} winLabel={t.winStar} />
           </>
         )}
         {currentLevel >= 3 && (
           <>
-            <IndicatorCard title={t.pbi} value={indicators.pbi.toFixed(0)} color={indicators.pbi > 14000 ? 'text-green-400' : indicators.pbi > 11000 ? 'text-yellow-400' : 'text-red-400'} isWinCondition={isWinCondition('pbi')} tooltip={t.pbiTip} winLabel={t.winStar} />
-            <IndicatorCard title={t.debt} value={indicators.debt.toFixed(0)} color={debtRatio > 0.8 ? 'text-red-400' : debtRatio > 0.5 ? 'text-yellow-400' : 'text-green-400'} isWinCondition={isWinCondition('deudaPbi')} tooltip={t.debtTip(debtRatio.toFixed(2))} winLabel={t.winStar} />
-            <IndicatorCard title={t.reserves} value={indicators.treasuryReserves.toFixed(0)} color={indicators.treasuryReserves < 0 ? 'text-red-400' : reservesRatio < 0.05 ? 'text-yellow-400' : 'text-green-400'} tooltip={t.reservesTip} winLabel={t.winStar} />
+            <IndicatorCard index={9} title={t.pbi} value={indicators.pbi} precision={0} color={indicators.pbi > 14000 ? 'text-chlorophyll' : indicators.pbi > 11000 ? 'text-ochre' : 'text-ember'} isWinCondition={isWinCondition('pbi')} tooltip={t.pbiTip} winLabel={t.winStar} />
+            <IndicatorCard index={10} title={t.debt} value={indicators.debt} precision={0} invert color={debtRatio > 0.8 ? 'text-ember' : debtRatio > 0.5 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('deudaPbi')} tooltip={t.debtTip(debtRatio.toFixed(2))} winLabel={t.winStar} />
+            <IndicatorCard index={11} title={t.reserves} value={indicators.treasuryReserves} precision={0} color={indicators.treasuryReserves < 0 ? 'text-ember' : reservesRatio < 0.05 ? 'text-ochre' : 'text-chlorophyll'} tooltip={t.reservesTip} winLabel={t.winStar} />
           </>
         )}
       </div>
@@ -365,15 +423,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {gameState.currentLevel === 3 && <EventsNewsPanel currentEvent={gameState.currentEvent} newsHeadlines={gameState.newsHeadlines} gameState={gameState} />}
       </div>
 
-      <div className="bg-custom-light-gray p-6 rounded-lg shadow-xl">
+      <div className="panel p-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-          <h3 className="text-xl font-semibold text-custom-accent">{t.policyPanel}</h3>
+          <h3 className="text-xl font-semibold text-chlorophyll font-[var(--font-display)]">{t.policyPanel}</h3>
           <Tooltip text={t.policyPanelTip(MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION)}>
-            <span className="text-sm text-gray-400 cursor-help bg-gray-700 px-3 py-1 rounded-full">
+            <span className="text-sm text-ash cursor-help bg-basalt-700 px-3 py-1 rounded-full">
               {t.activePolicies(activePolicies.length, MAX_ACTIVE_POLICIES)}
             </span>
           </Tooltip>
         </div>
+        {activePolicies.length === 0 && (
+          // §8 row 1: "Sin políticas activas". The spec also asks for a "tenue territory
+          // illustration" -- skipped (no such asset exists yet and one more SVG works against the
+          // §9 JS budget); the text alone still turns "nothing is toggled on" from a blank default
+          // into a deliberate, named state.
+          <p className="text-sm text-ash-dim italic mb-4">🛰️ {t.noActivePolicies}</p>
+        )}
         <div ref={policyListRef} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {POLICY_UI_ORDER.map(policyId => (
             <PolicyToggle

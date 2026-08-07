@@ -9,16 +9,15 @@ interface WinRoutesPanelProps {
 }
 
 const ACCENT_CLASSES: Record<string, string> = {
-  chlorophyll: 'border-green-500 text-green-400',
-  ochre: 'border-yellow-500 text-yellow-400',
-  hydro: 'border-blue-400 text-blue-300',
-  bone: 'border-gray-300 text-gray-200',
+  chlorophyll: 'border-chlorophyll text-chlorophyll',
+  ochre: 'border-ochre text-ochre',
+  hydro: 'border-hydro text-hydro',
+  bone: 'border-ash-dim text-ash',
 };
 
 /**
- * "Rutas de Victoria" panel (mejora-general/files/17_multiples_vias_victoria.md §4.1). Uses the
- * *existing* Tailwind tokens (bg-custom-light-gray, etc.), not the phase-4 basalt-* palette —
- * consistent with the "phase 10 does the reskin" boundary from that phase's design log entry.
+ * "Rutas de Victoria" panel (mejora-general/files/17_multiples_vias_victoria.md §4.1). Reskinned
+ * onto the v3 basalt/chlorophyll/ochre/hydro/ember token system in phase 10 (19_estetica_visual.md).
  * Cards sort by progress descending and never label any route as "the correct one".
  */
 export const WinRoutesPanel: React.FC<WinRoutesPanelProps> = ({ gameState }) => {
@@ -35,12 +34,12 @@ export const WinRoutesPanel: React.FC<WinRoutesPanelProps> = ({ gameState }) => 
   const leaderId: RouteId | null = sortedRoutes[0]?.route.id ?? null;
 
   return (
-    <div ref={panelRef} className="bg-custom-light-gray rounded-lg shadow-xl p-4">
-      <h3 className="text-lg font-semibold text-custom-accent mb-1">{t('routes.panelTitle')}</h3>
-      <p className="text-xs text-gray-400 mb-3">{t('routes.panelSubtitle')}</p>
+    <div ref={panelRef} className="panel p-4">
+      <h3 className="text-lg font-semibold text-chlorophyll font-[var(--font-display)] mb-1">{t('routes.panelTitle')}</h3>
+      <p className="text-xs text-ash mb-3">{t('routes.panelSubtitle')}</p>
 
       {!outcome.floorsMet && (
-        <p className="text-xs text-red-400 mb-3 border border-red-700 rounded px-2 py-1">
+        <p className="text-xs text-ember mb-3 border border-ember/40 rounded px-2 py-1">
           {t('routes.floorsBroken')}: {outcome.failedFloors.map((f) => t(f.labelKey as any)).join(', ')}
         </p>
       )}
@@ -58,20 +57,20 @@ export const WinRoutesPanel: React.FC<WinRoutesPanelProps> = ({ gameState }) => 
                 <span className="font-semibold text-sm">{t(rp.route.nameKey as any)}</span>
                 <span className="text-xs tabular-nums">{fmt.pct(rp.progress * 100, 0)}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-700 overflow-hidden mb-2">
+              <div className="h-1.5 rounded-full bg-basalt-700 overflow-hidden mb-2">
                 <div
                   className="h-full rounded-full bg-current transition-[width] duration-300"
                   style={{ width: `${rp.progress * 100}%` }}
                 />
               </div>
-              <p className="text-[11px] text-gray-400 mb-1">{t(rp.route.taglineKey as any)}</p>
+              <p className="text-[11px] text-ash mb-1">{t(rp.route.taglineKey as any)}</p>
               {!rp.met && rp.bottleneck && (
-                <p className="text-[11px] text-gray-300">
+                <p className="text-[11px] text-ash">
                   {t('routes.bottleneck', { condition: t(rp.bottleneck.labelKey as any), gap: '' }).replace(' ()', '')}
                 </p>
               )}
               {rp.met && (
-                <p className="text-[11px] text-green-400">✓ {t('routes.achieved', { route: t(rp.route.nameKey as any) })}</p>
+                <p className="text-[11px] text-chlorophyll">✓ {t('routes.achieved', { route: t(rp.route.nameKey as any) })}</p>
               )}
             </div>
           );

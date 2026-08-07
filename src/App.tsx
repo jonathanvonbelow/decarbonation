@@ -48,9 +48,14 @@ import { agentTurn } from './services/decarbonitoAgent';
 import type { GameHandlers, ActionContext } from './game/uiActionRegistry';
 import type { Content } from '@google/genai';
 import TutorialRunner, { tutorialApiRef } from './components/tutorial/TutorialRunner';
+import LevelAmbience from './components/ui/LevelAmbience';
 import DebriefingModal from './components/tutorial/DebriefingModal';
 import { evaluatePredictions, type PredictedIndicatorKey, type PredictionResult, type PredictionSelections } from './components/tutorial/predictions';
 import { logPrediction } from './services/predictionTelemetry';
+import {
+  evaluateBadges, loadEarnedBadges, saveEarnedBadges, loadRoutesWonPerLevel, saveRoutesWonPerLevel,
+  recordRouteWin, type BadgeId, type RoutesWonPerLevel,
+} from './game/badges';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -466,6 +471,15 @@ export const App = () => {
   const allPredictionResultsRef = useRef<PredictionResult[]>([]);
   const predictionStreakRef = useRef<Partial<Record<PredictedIndicatorKey, number>>>({});
   const lastPolicyChangeYearRef = useRef<number>(INITIAL_YEAR);
+
+  // Fase 10 (19_estetica_visual.md §7): insignias. `earnedBadges` y `routesWonPerLevel` persisten
+  // en localStorage (across sesiones, ver src/game/badges.ts) porque "Pluralista" pide ganar el
+  // mismo nivel por las tres rutas *en partidas distintas* -- no tiene sentido resetear eso al
+  // recargar la página. `evaluateAndAwardBadges` es el único punto de entrada: recibe el contexto
+  // fresco, difiere contra lo ya ganado, persiste y notifica solo lo nuevo.
+  const [earnedBadges, setEarnedBadges] = useState<BadgeId[]>(() => loadEarnedBadges());
+  const routesWonPerLevelRef = useRef<RoutesWonPerLevel>(loadRoutesWonPerLevel());
+  const debriefingCompletedRef = useRef<boolean>(false);
   const [showFacilitatorManual, setShowFacilitatorManual] = useState(false);
   const [showPlayerManual, setShowPlayerManual] = useState(false);
   const [showEquationsManual, setShowEquationsManual] = useState(false);
@@ -687,15 +701,32 @@ export const App = () => {
   // modal's onClose instead guarantees a strict survey-after-synthesis sequence, with the
   // synthesis modal always shown first for every ending (won/lost/abandoned) and the survey
   // skipped only for an abandoned session, matching the previous behavior.
+  // Insignia "Aprendiz" (19_estetica_visual.md §7): se otorga al cerrar el informe de cierre de
+  // una partida -- no hay un evento de "nivel concluido" que la dispare, así que se marca acá
+  // mismo en vez de en el efecto que evalúa el resto de las insignias.
+  const awardApprenticeBadge = useCallback(() => {
+    debriefingCompletedRef.current = true;
+    setEarnedBadges((prev) => {
+      if (prev.includes('apprentice')) return prev;
+      const merged = [...prev, 'apprentice' as BadgeId];
+      saveEarnedBadges(merged);
+      dnApiRef.current?.notify(t('badges.earnedToast', { name: t('badges.apprentice.name' as any) }), { priority: 1, tone: 'success' });
+      return merged;
+    });
+  }, [t]);
+
   const handleClosingSynthesisDismissed = useCallback(() => {
     setShowClosingSynthesisModal(false);
+    // The synthesis modal is shown (and closed) for every ending, abandoned included -- see the
+    // comment above -- so "completed the closing report" holds regardless of `reason`.
+    awardApprenticeBadge();
     const reason = gameStateRef.current.gameOverReason;
     if (reason && reason !== 'Partida abandonada por el jugador.') {
       const resultado = reason.toLowerCase().includes('victoria') ? 'victoria' : 'derrota';
       setPostSurveyResult(resultado);
       setShowPostSurvey(true);
     }
-  }, []);
+  }, [awardApprenticeBadge]);
 
 
  const progressToNextLevel = useCallback(() => {
@@ -867,6 +898,49 @@ export const App = () => {
 
   }, [gameState.lastConcludedLevelInfo, gameState.sentLevelReflectionMessage, apiKeyAvailable, addMessageToChat, logEvent, gameStateRef, showClosingSynthesisModal, levelEndInfo, t]);
 
+  // Fase 10 (19_estetica_visual.md §7): evalúa insignias cada vez que un nivel concluye (recomputa
+  // el mismo evaluateLevel que ya usa WinRoutesPanel -- lastConcludedLevelInfo solo guarda
+  // won/lost, no la ruta lograda). `lastConcludedLevelInfo` pasa por `null` en cada progresión de
+  // nivel (progressToNextLevel / reintentar), así que esta condición corre exactamente una vez por
+  // conclusión real, nunca en cada render.
+  useEffect(() => {
+    const lastInfo = gameState.lastConcludedLevelInfo;
+    if (!lastInfo) return;
+
+    const outcome = lastInfo.status === 'won'
+      ? evaluateLevel(gameState, { ...gameState, indicators: gameState.levelBaseline })
+      : null;
+
+    if (outcome?.won && outcome.achieved) {
+      routesWonPerLevelRef.current = recordRouteWin(routesWonPerLevelRef.current, lastInfo.level, outcome.achieved.id);
+      saveRoutesWonPerLevel(routesWonPerLevelRef.current);
+    }
+
+    const currentlyEarned = evaluateBadges({
+      gameState,
+      history: historicalData,
+      outcome,
+      predictionResults: allPredictionResultsRef.current,
+      routesWonPerLevel: routesWonPerLevelRef.current,
+      debriefingCompleted: debriefingCompletedRef.current,
+    });
+
+    setEarnedBadges((prev) => {
+      const added = currentlyEarned.filter((id) => !prev.includes(id));
+      if (added.length === 0) return prev;
+      const merged = [...prev, ...added];
+      saveEarnedBadges(merged);
+      added.forEach((id) => {
+        dnApiRef.current?.notify(t('badges.earnedToast', { name: t(`badges.${id}.name` as any) }), { priority: 1, tone: 'success' });
+      });
+      return merged;
+    });
+    // Deliberately keyed on lastConcludedLevelInfo alone (see comment above) -- gameState/
+    // historicalData are read fresh inside, not tracked as reactive deps, since re-running on
+    // every historicalData tick (i.e. every simulated year) would just re-check the same
+    // already-earned badges over and over for no benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.lastConcludedLevelInfo, t]);
 
   const updateHistoricalData = useCallback((currentState: GameState) => {
     const currentYearData: HistoricalDataPoint = {
@@ -1371,7 +1445,7 @@ export const App = () => {
   return (
     <LanguageProvider>
     <DecarboNitoProvider>
-    <div className="bg-custom-gray min-h-screen text-gray-200 font-sans">
+    <div className="min-h-screen text-gray-200 font-sans">
       <Header
         year={gameState.year}
         targetYear={gameState.activeLevelConfig?.targetYear}
@@ -1391,6 +1465,7 @@ export const App = () => {
         wonLevels={gameState.wonLevels}
         onToggleFacilitatorPanel={() => setShowFacilitatorPanel(p => !p)}
         onAbandon={handleAbandonGame}
+        latestBadge={earnedBadges[earnedBadges.length - 1] ?? null}
       />
 
       {authStage === 'demo' && (
@@ -1442,6 +1517,7 @@ export const App = () => {
         suggestedQuestions={currentSuggestedQuestions}
       />
       <TutorialRunner gameState={gameState} sessionId={sessionIdRef.current} />
+      <LevelAmbience level={gameState.currentLevel} />
 
       {levelEndInfo && (
         <LevelUpBanner

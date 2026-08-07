@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { I18nProvider } from './i18n';
 import { DecarboNitoLab } from './components/decarbonito/DecarboNitoLab';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -18,10 +19,12 @@ const isDecarboNitoLab = window.location.hash.startsWith('#dev/decarbonito');
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    {isDecarboNitoLab ? <DecarboNitoLab /> : (
-      <I18nProvider>
-        <App />
-      </I18nProvider>
-    )}
+    <ErrorBoundary>
+      {isDecarboNitoLab ? <DecarboNitoLab /> : (
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      )}
+    </ErrorBoundary>
   </React.StrictMode>
 );

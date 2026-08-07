@@ -8,9 +8,8 @@ const TINTS: Record<number, string> = {
 
 /**
  * Side-effect-only component: shifts the ambient background tint (--level-tint CSS custom
- * property, declared in src/index.css) when the level changes. Not mounted anywhere yet — the
- * body background it's meant to drive is still the flat phase-1 `bg-custom-gray`, and wiring
- * both together is phase 10's job.
+ * property, declared in src/index.css) when the level changes. Mounted in App.tsx (phase 10) —
+ * the `bg-level-ambience` utility it drives replaced the flat phase-1 `bg-custom-gray` on <body>.
  */
 export const LevelAmbience: React.FC<{ level: number }> = ({ level }) => {
   useEffect(() => {
