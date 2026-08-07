@@ -613,3 +613,122 @@ la escritura real en `game_events` (la migración no está aplicada en el Supaba
 el modo `tutorial` (sin caller todavía — se comporta como `assist` hasta la Fase 9).
 
 **Origen.** `mejora-general/files/15_decarbonito_agent_actions.md`.
+
+---
+
+## 2026-08-06 — Fase 9 (tutoriales, predicción y debriefing v3): de 9 pantallas de texto a un ciclo predicción → acción → sorpresa → reflexión
+
+**La fase de mayor superficie del ciclo hasta ahora** — motor de capítulos guiados nuevo, mecánica
+de predicción nueva (una mecánica de juego real, no solo UI), consejos justo a tiempo, y una
+reescritura completa del debriefing de cierre. Se cierran además dos huecos que fases anteriores
+habían dejado documentados a propósito.
+
+**Apertura en frío (§3), reemplaza el modal de bienvenida de 9 pantallas.** Al entrar por primera
+vez ya no aparece ningún modal: el tablero se ve directamente y DecarboNito ofrece una decisión real
+("¿expandimos la agricultura intensiva o protegemos el bosque nativo?"), sin bloquear nada. Verificado
+en vivo con una sesión de navegador nueva: la apertura se dispara sola, activar una política avanza
+el paso vía el evento real `policyActivated`, simular un año avanza vía `yearSimulated`, y el paso
+final ofrece la bifurcación "Mostrame"/"Explorar" — un caso especial, no generalizado en el modelo de
+pasos, porque es el único punto de ramificación de los 9 capítulos.
+
+**Motor de capítulos guiados (§4) — `src/components/tutorial/`.** `types.ts` (modelo de datos casi
+literal del archivo fuente), `chapters.ts` (los 9 capítulos de la tabla §4.3: coldOpen, board,
+policies, routes, prediction, decarbonito, instruments, pressures, finance — deliberadamente
+livianos, 2-4 pasos cada uno, para que el motor real importara más que igualar el conteo exacto de
+palabras del archivo fuente), `TutorialRunner.tsx` (el motor: viaje+señalamiento vía `dn.focusOn`,
+avance reactivo por `predicate`/`gameEvent` comparando el `gameState` de un paso al siguiente,
+`anchorClick`/`timeout` vía listeners directos, persistencia en `localStorage` con reanudación por
+paso tras recargar), `progress.ts`. Capítulos de nivel 2-3 se disparan la primera vez que su
+`trigger` se cumple, no al entrar al nivel — enseñar el instrumento cuando hace falta, no antes.
+Verificado en vivo: menú de capítulos completo, bloqueo correcto de capítulos de nivel superior,
+"Completado"/"Repasar de nuevo" reflejando el progreso real guardado.
+
+**Hueco cerrado de la Fase 7: `instrumentPanel`/`instrumentSlider`/`pactList`/`loanControl`/
+`taxSlider` ahora tienen anclas reales.** Documentados como pendientes en la Fase 7 porque nada
+todavía los necesitaba señalar; los capítulos `instruments`/`finance` de esta fase sí, así que se
+instrumentaron con `useAnchor` en `PolicyInstrumentsPanel.tsx` e `InnovationGlobalDashboard.tsx`.
+
+**Hueco cerrado de la Fase 7: `spotlight` en `dn.focusOn()`.** El archivo `14` ya especificaba el
+oscurecimiento de pantalla (`box-shadow: 0 0 0 9999px rgba(8,14,12,.55)`) pero no había ningún
+consumidor todavía; esta fase lo agrega a `DecarboNitoProvider`/`DecarboNitoLayer` y lo usa en cada
+paso de capítulo marcado `spotlight: true`.
+
+**Mecánica de predicción (§5) — la pieza pedagógica central, según el propio archivo fuente.**
+`predictions.ts` (funciones puras: `actualDirection` con el umbral "flat" del 1% del rango del
+indicador — documentado el rango elegido para CO₂eq/cápita, 15 t, ya que la simulación no define un
+máximo teórico; `evaluatePredictions`), `PredictionStrip.tsx` (activada por defecto, se puede
+ocultar, persiste la preferencia), wireado en `runSimulationRound` de `App.tsx` capturando el estado
+antes/después de cada ronda (que en este proyecto ya es exactamente 1 año por clic —
+`SIMULATION_YEARS_PER_ROUND = 1` — así que no hizo falta lidiar con predicciones multi-año).
+Verificado en vivo: la tira renderiza sus 3 indicadores con flechas, integrada arriba del botón de
+simular. **Desvío honesto, no un atajo silencioso:** la frase de error tras una predicción fallida
+da magnitud y dirección reales ("bajó 3,1"), pero NO inventa una atribución causal específica
+("...porque la conversión a cultivos convencionales pesó más") como sugiere el ejemplo del archivo
+fuente — `SimTrace` (`src/sim/trace.ts`) solo tiene el delta antes/después por indicador desde que
+se extrajo en la Fase 2; el desglose por término contribuyente que haría esa frase honesta sigue
+pendiente (mismo hueco que la Fase 2 dejó documentado, ahora con una segunda razón concreta para
+cerrarlo). `predictions_migration.sql` (nueva tabla, no aplicada, mismo patrón best-effort de la
+Fase 8) adapta el `bigint identity` sin RLS del pseudocódigo a `UUID` + RLS "tabla: acción propia",
+consistente con el resto de `supabase/schema.sql`.
+
+**Consejos justo a tiempo (§6) — 5 de las 8 filas de la tabla, elegidas por lo barato que era
+evaluarlas con el estado ya disponible en `runSimulationRound`:** esfuerzo cero en política activa
+(nivel 2+), tesoro negativo, 3 años sin cambiar ninguna política (rastreado con
+`lastPolicyChangeYearRef`, actualizado en `togglePolicy`), ninguna ruta > 60% a 2 años del fin del
+nivel, y racha de 3 predicciones falladas en el mismo indicador. **No implementadas, documentadas:**
+"5 políticas activas y se intenta una sexta" (ya tiene su propio aviso vía `addToast`/`logEvent` en
+`togglePolicy` desde antes de esta fase — agregar un segundo canal por `dn.notify` se juzgó
+redundante) y "una presión > 70 dos años seguidos" (necesitaría rastrear el histórico año a año de
+las presiones, no solo el valor actual).
+
+**Debriefing estructurado (§7) — `DebriefingModal.tsx` reemplaza `ClosingSynthesisModal.tsx` Y
+el archivo muerto `PlayerReportGuideModal.tsx`** (confirmado por grep: nunca se importaba desde
+ningún lado — arrastraba una función de reflexión ya cubierta, sin usar, desde antes de este ciclo).
+Reutiliza sin tocar el pipeline de síntesis con IA ya existente (`geminiService.ts`'s
+`generateClosingSynthesis`/`buildFallbackSynthesis`, 4 secciones no evaluativas) como base de la
+Pantalla 1, y agrega lo que el archivo fuente pide y el modal viejo no tenía: ruta lograda/más
+cercana (Fase 5's `evaluateLevel`) y precisión de predicción de la sesión. Pantalla 2: las 5
+preguntas fijas de reflexión con guardado (`reflection_responses_migration.sql`, no aplicada) y un
+botón "Hablar con DecarboNito" por pregunta (usa `dn.openConversation(seed)` — el `conversationSeed`
+de la Fase 7 existía en el provider pero nunca se leía desde ningún lado; ahora sí, en
+`ConversationPanel` no hacía falta tocarlo porque el seed solo importa como contexto inicial del
+pedido). Pantalla 3: sugerencia de ruta alternativa + reinicio del nivel, enlaces al manual.
+**No implementado, documentado:** el "perfil estratégico contra el promedio de todos los jugadores"
+(necesita una consulta agregada entre sesiones, infraestructura real que esta fase no construye) y
+los "tres años de mayor cambio" (mismo hueco de `SimTrace` mencionado arriba — atribuir "el mayor
+cambio" sin el desglose causal sería una afirmación no verificable). Modo taller: botón que llama
+`window.print()` con reglas `print:` de Tailwind mostrando las pantallas 1+2 apiladas — construido,
+**no verificado visualmente** (imprimir no es fácilmente probable en este entorno de navegador
+automatizado).
+
+**Manual del Jugador actualizado en 2 de los 3 puntos que pide §4.4** (chat flotante y rutas de
+victoria, en ambos idiomas) — la "capacidad de operación del asesor" se integró dentro del mismo
+párrafo del chat flotante en vez de como una cuarta sección separada, ya que ambos describen al
+mismo DecarboNito.
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 59/59 (16 tests nuevos:
+`tests/tutorial/predictions.spec.ts` — direcciones, umbral flat, filtrado por lo realmente predicho
+— y `tests/tutorial/chapters.spec.ts` — ids únicos, toda `textKey`/`titleKey` resuelve en ambos
+idiomas, todo `anchor` referenciado es una anclas estática real registrada, capítulos de nivel 2+
+declaran `trigger`). `npm run build` limpio. `npm run i18n:audit` en verde (19 Capa A pendientes,
+3 menos que antes — `TutorialModal.tsx`/`ClosingSynthesisModal.tsx`/`PlayerReportGuideModal.tsx`
+salieron de la lista al eliminarse esos archivos).
+
+**En el navegador, sesión nueva (localStorage limpio para `decarbonation.tutorial.progress`):**
+la apertura en frío se disparó sola sin ningún modal bloqueante; activar "Conservación de Bienes
+Naturales" avanzó el paso correctamente (verificado por el anillo de resaltado moviéndose y el
+cambio de texto del globo); simular un año avanzó el siguiente paso y actualizó las rutas de
+victoria en tiempo real; la bifurcación final mostró "Mostrame"/"Explorar" y, al elegir "Mostrame",
+el progreso persistido en `localStorage` mostró `coldOpen` completado y `board` en curso; el menú de
+capítulos (botón "Ayuda/Tutorial" del header) mostró los 9 capítulos con el bloqueo de nivel
+correcto ("Instrumentos" y "Presiones sectoriales" deshabilitados con "Se habilita en el Nivel 2").
+Cero errores de consola de la aplicación en todo el recorrido.
+
+**No verificado en este ciclo:** el debriefing completo (`DebriefingModal`) no se probó en vivo —
+requiere completar un nivel entero (30 años simulados), impráctico dentro de esta sesión; se
+verificó por tipado y lectura de código en su lugar. El modo taller (impresión) tampoco se probó
+visualmente. Los capítulos 2 a 8 no se recorrieron paso a paso en el navegador (solo `coldOpen` y el
+arranque de `board`) — su lógica es la misma del motor ya verificado, pero cada uno individualmente
+no se cronometró ni se revisó visualmente.
+
+**Origen.** `mejora-general/files/18_tutoriales_v3.md`.

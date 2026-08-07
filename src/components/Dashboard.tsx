@@ -12,6 +12,8 @@ import EventsNewsPanel from './levelSpecific/EventsNewsPanel';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getLandUseName } from '../legacyContent/gameData';
 import { ANCHORS, useAnchor, type AnchorId } from './decarbonito/anchors';
+import PredictionStrip from './tutorial/PredictionStrip';
+import type { PredictionResult, PredictionSelections } from './tutorial/predictions';
 
 interface DashboardProps {
   gameState: GameState;
@@ -25,6 +27,9 @@ interface DashboardProps {
   handleInstrumentEffortChange: (policyId: Policy, instrumentId: string, effort: number) => void;
   handleAdditionalTaxPressureChange: (newPressure: number) => void;
   instrumentImpactHints: InstrumentImpactHints;
+  predictionSelections: PredictionSelections;
+  onPredictionChange: (next: PredictionSelections) => void;
+  lastPredictionResults: PredictionResult[] | null;
 }
 
 const IndicatorCard: React.FC<{ title: string; value: string | number; color?: string; unit?: string; tooltip?: string; isWinCondition?: boolean; winLabel?: string; anchorId?: AnchorId }> = ({ title, value, color = 'text-custom-accent', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId }) => {
@@ -253,6 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   gameState, historicalData, togglePolicy, runSimulationRound, gameOver,
   levelConfig, requestLoan, togglePact, handleInstrumentEffortChange,
   handleAdditionalTaxPressureChange, instrumentImpactHints,
+  predictionSelections, onPredictionChange, lastPredictionResults,
 }) => {
   const { language } = useLanguageContext();
   const { indicators, policies, year, currentLevel, stellaSpecificState } = gameState;
@@ -400,7 +406,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         />
       )}
 
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex flex-col items-center">
+        <PredictionStrip
+          selections={predictionSelections}
+          onChange={onPredictionChange}
+          lastResults={lastPredictionResults}
+          disabled={gameState.isSimulating}
+        />
         <button
           ref={simulateRef}
           onClick={runSimulationRound}

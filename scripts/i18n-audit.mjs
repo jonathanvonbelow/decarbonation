@@ -45,7 +45,6 @@ const CAPA_B_C_PENDING = [
 // Migrated so far (phase 3, this pass): Toast, Header, GameLogPanel, PolicyToggle.
 const IGNORED_COMPONENTS = [
   'src/components/PolicyInstrumentsPanel.tsx',
-  'src/components/PlayerReportGuideModal.tsx',
   'src/components/levelSpecific/RegionalStatusDashboard.tsx',
   'src/components/levelSpecific/InnovationGlobalDashboard.tsx',
   'src/components/levelSpecific/EventsNewsPanel.tsx',
@@ -53,10 +52,8 @@ const IGNORED_COMPONENTS = [
   'src/components/Dashboard.tsx',
   'src/components/common/CoverScreen.tsx',
   'src/components/player/PlayerManual.tsx',
-  'src/components/game/ClosingSynthesisModal.tsx',
   'src/components/game/GameSummaryPanel.tsx',
   'src/components/common/LevelIntroModal.tsx',
-  'src/components/common/TutorialModal.tsx',
   'src/components/common/LevelUpBanner.tsx',
   'src/components/surveys/SurveyPre.tsx',
   'src/components/surveys/SurveyPost.tsx',

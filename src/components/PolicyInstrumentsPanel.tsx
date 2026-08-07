@@ -4,6 +4,7 @@ import { Policy, PolicyState, PolicyInstrument } from '../types';
 import Tooltip from './common/Tooltip';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getPolicyName, getInstrumentName } from '../legacyContent/gameData';
+import { ANCHORS, useAnchor } from './decarbonito/anchors';
 
 interface PolicyInstrumentsPanelProps {
   activePolicies: PolicyState[];
@@ -38,13 +39,14 @@ const InstrumentControl: React.FC<{
   const { language } = useLanguageContext();
   const t = T[language];
   const displayName = getInstrumentName(instrument.id, language) || instrument.name;
+  const sliderRef = useAnchor<HTMLDivElement>(ANCHORS.instrumentSlider(instrument.id), displayName);
 
   const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onEffortChange(policyId, instrument.id, parseInt(event.target.value, 10));
   };
 
   return (
-    <div className="p-3 bg-gray-700 rounded-md shadow">
+    <div ref={sliderRef} className="p-3 bg-gray-700 rounded-md shadow">
       <div className="flex justify-between items-center mb-1">
         <Tooltip text={instrument.description} position="top">
           <h5 className="text-sm font-medium text-gray-200">{displayName}</h5>
@@ -68,11 +70,12 @@ const PolicyInstrumentsPanel: React.FC<PolicyInstrumentsPanelProps> = ({
 }) => {
   const { language } = useLanguageContext();
   const t = T[language];
+  const panelRef = useAnchor<HTMLDivElement>(ANCHORS.instrumentPanel, t.title(currentLevel));
 
   if (currentLevel < 2 || activePolicies.length === 0) return null;
 
   return (
-    <div className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
+    <div ref={panelRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
       <h3 className="text-xl font-semibold mb-4 text-custom-accent">{t.title(currentLevel)}</h3>
       <p className="text-sm text-gray-400 mb-4">{t.subtitle}</p>
       <div className="space-y-6">

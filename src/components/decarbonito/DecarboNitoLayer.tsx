@@ -132,7 +132,7 @@ export const DecarboNitoLayer: React.FC<DecarboNitoLayerProps> = (chatProps) => 
   return (
     <div className="fixed inset-0 z-[70]" style={{ pointerEvents: 'none' }}>
       {/* Highlight ring over the anchor DecarboNito is currently pointing at */}
-      {dn.highlight && <HighlightRing anchorId={dn.highlight} />}
+      {dn.highlight && <HighlightRing anchorId={dn.highlight} spotlight={dn.spotlightActive} />}
 
       {/* Notification stack */}
       <div style={{ ...notifStyle, pointerEvents: 'auto' }} className="flex flex-col gap-2 w-[min(320px,calc(100vw-32px))]">
@@ -290,7 +290,7 @@ const NotificationCard: React.FC<{ message: DnMessage; stackIndex: number; onDis
   );
 };
 
-const HighlightRing: React.FC<{ anchorId: string }> = ({ anchorId }) => {
+const HighlightRing: React.FC<{ anchorId: string; spotlight?: boolean }> = ({ anchorId, spotlight }) => {
   const [rect, setRect] = useState(() => getAnchorRect(anchorId));
   useEffect(() => {
     const recompute = () => setRect(getAnchorRect(anchorId));
@@ -306,6 +306,11 @@ const HighlightRing: React.FC<{ anchorId: string }> = ({ anchorId }) => {
       style={{
         position: 'fixed', left: rect.left - 4, top: rect.top - 4, width: rect.width + 8, height: rect.height + 8,
         borderRadius: 10, border: '2px solid var(--color-chlorophyll)', pointerEvents: 'none',
+        // Spotlight (18_tutoriales_v3.md §4.2/§5.3): dims everything outside the ring via an
+        // oversized box-shadow, exactly as the source spec describes — only inside guided
+        // tutorial chapters. Ordinary "help" pointing (dn.focusOn without spotlight) never dims
+        // the board, so the player can keep reading it while DecarboNito points at something.
+        boxShadow: spotlight ? '0 0 0 9999px rgba(8,14,12,.55)' : undefined,
       }}
       animate={{ opacity: [1, 0.45, 1] }}
       transition={{ duration: 1.6, repeat: Infinity }}

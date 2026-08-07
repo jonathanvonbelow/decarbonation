@@ -13,6 +13,14 @@ const SLIDES_ES = [
       <div>
         <p className="mb-4">¡Bienvenido al Manual del Jugador! Esta guía te ayudará a ir más allá de las decisiones individuales para convertirte en un verdadero estratega de la sostenibilidad. El objetivo es pensar en cómo tus políticas se combinan para crear un futuro próspero y sostenible.</p>
         <p className="mb-4">No se trata solo de activar políticas, sino de tejer una red de decisiones coherentes que se refuercen mutuamente a lo largo del tiempo.</p>
+        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
+          <h4 className="font-semibold text-lg text-teal-300 mb-2">🤖 DecarboNito, tu asesor flotante</h4>
+          <p className="text-sm">DecarboNito ya no vive en un panel fijo: es un personaje que flota sobre el tablero. Hacé clic en él (o presioná la tecla C) para conversar. Puede responder preguntas, señalarte cualquier control del tablero, y — si se lo pedís explícitamente — operar la interfaz por vos (activar políticas, asignar esfuerzo, simular), siempre pidiendo tu confirmación antes de cambiar algo.</p>
+        </div>
+        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
+          <h4 className="font-semibold text-lg text-teal-300 mb-2">🏁 No hay una sola forma de ganar</h4>
+          <p className="text-sm">Cada nivel se puede superar por varias rutas distintas (por ejemplo: una vía productiva, una ecológica, una de innovación tecnológica), cada una con su propio perfil de exigencias. El panel "Rutas de victoria" del tablero muestra tu progreso en cada una en tiempo real — no hace falta cumplir un único checklist fijo.</p>
+        </div>
         <div className="mt-6 p-4 bg-gray-700 rounded-lg">
           <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
           <p className="text-sm">Piensa en planes de 5 a 10 años. ¿Cuál es tu visión para la nación? ¿Quieres un paraíso ecológico, una potencia económica verde, o un modelo de equidad social? Tu visión guiará tus decisiones.</p>
@@ -153,6 +161,14 @@ const SLIDES_EN = [
       <div>
         <p className="mb-4">Welcome to the Player Manual! This guide will help you go beyond individual decisions and become a true sustainability strategist. The goal is to think about how your policies combine to create a prosperous and sustainable future.</p>
         <p className="mb-4">It's not just about activating policies, but about weaving a coherent web of decisions that reinforce each other over time.</p>
+        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
+          <h4 className="font-semibold text-lg text-teal-300 mb-2">🤖 DecarboNito, your floating advisor</h4>
+          <p className="text-sm">DecarboNito no longer lives in a fixed panel: it's a character that floats over the board. Click it (or press the C key) to talk. It can answer questions, point at any control on the board, and — if you explicitly ask it to — operate the interface for you (activate policies, assign effort, simulate), always asking for your confirmation before changing anything.</p>
+        </div>
+        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
+          <h4 className="font-semibold text-lg text-teal-300 mb-2">🏁 There's no single way to win</h4>
+          <p className="text-sm">Each level can be cleared through several different routes (for example: a productive path, an ecological one, a technological-innovation one), each with its own profile of demands. The board's "Win routes" panel shows your progress on each in real time — there's no single fixed checklist to satisfy.</p>
+        </div>
         <div className="mt-6 p-4 bg-gray-700 rounded-lg">
           <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
           <p className="text-sm">Think in 5-to-10-year plans. What is your vision for the nation? Do you want an ecological paradise, a green economic powerhouse, or a model of social equity? Your vision will guide your decisions.</p>

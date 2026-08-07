@@ -4,6 +4,7 @@ import Tooltip from '../common/Tooltip';
 import { CONTROL_PARAMS } from '../../constants';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 import { getPactName, INNOVATION_DATA_NAMES } from '../../legacyContent/gameData';
+import { ANCHORS, useAnchor } from '../decarbonito/anchors';
 
 interface InnovationGlobalDashboardProps {
   levelConfig: LevelConfig;
@@ -78,6 +79,9 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
   const inn = INNOVATION_DATA_NAMES[language];
   const { indicators, year, pacts, additionalTaxPressurePercentage, currentLevel } = gameState;
   const [loanAmount, setLoanAmount] = useState(100000);
+  const pactListRef = useAnchor<HTMLDivElement>(ANCHORS.pactList, t.pacts(0));
+  const loanRef = useAnchor<HTMLDivElement>(ANCHORS.loanControl, t.loanAmount);
+  const taxRef = useAnchor<HTMLDivElement>(ANCHORS.taxSlider, t.fiscalPressure(additionalTaxPressurePercentage));
 
   const dynamicCarbonCaptureReadiness = () => {
     if (indicators.economicSecurity > 70 && indicators.generalScore > 750) return inn.high;
@@ -124,7 +128,7 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
           </div>
         </div>
 
-        <div>
+        <div ref={pactListRef}>
           <h4 className="text-lg font-medium text-purple-200 mb-2">{t.pacts(activePactsCount)}</h4>
           {availablePacts.length > 0 ? (
             <div className="space-y-2">
@@ -167,7 +171,7 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
           <h4 className="text-lg font-medium text-purple-200 mb-3">{t.fiscalTools}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <Tooltip text={t.loanTip((gameState.stellaSpecificState.PBI_Real * 0.1).toFixed(0), CONTROL_PARAMS.Ano_Activacion_Prestamo)}>
-              <div className="cursor-help">
+              <div ref={loanRef} className="cursor-help">
                 <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-300 mb-1">{t.loanAmount}</label>
                 <div className="flex items-center space-x-2">
                   <input
@@ -193,7 +197,7 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
               </div>
             </Tooltip>
 
-            <div>
+            <div ref={taxRef}>
               <Tooltip text={t.fiscalTip} position="top">
                 <label htmlFor="fiscalPressure" className="block text-sm font-medium text-gray-300 mb-1 cursor-help">
                   {t.fiscalPressure(additionalTaxPressurePercentage)}

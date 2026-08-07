@@ -32,9 +32,7 @@ import Header from './components/Header';
 import { askGemini, generateNewsHeadlines } from './services/geminiService';
 import { getSuggestedQuestions } from './services/suggestionService';
 import LevelUpBanner from './components/common/LevelUpBanner';
-import TutorialModal from './components/common/TutorialModal';
 import CoverScreen from './components/common/CoverScreen';
-import ClosingSynthesisModal from './components/game/ClosingSynthesisModal';
 import LevelIntroModal from './components/common/LevelIntroModal';
 import FacilitatorManual from './components/facilitator/FacilitatorManual';
 import PlayerManual from './components/player/PlayerManual';
@@ -49,6 +47,10 @@ import DecarboNitoLayer from './components/decarbonito/DecarboNitoLayer';
 import { agentTurn } from './services/decarbonitoAgent';
 import type { GameHandlers, ActionContext } from './game/uiActionRegistry';
 import type { Content } from '@google/genai';
+import TutorialRunner, { tutorialApiRef } from './components/tutorial/TutorialRunner';
+import DebriefingModal from './components/tutorial/DebriefingModal';
+import { evaluatePredictions, type PredictedIndicatorKey, type PredictionResult, type PredictionSelections } from './components/tutorial/predictions';
+import { logPrediction } from './services/predictionTelemetry';
 
 
 type LevelNumber = 1 | 2 | 3;
@@ -453,17 +455,17 @@ export const App = () => {
   // model needs the raw functionCall/functionResponse parts, not the human-readable bubble text.
   const agentHistoryRef = useRef<Content[]>([]);
   
-  const [tutorialSeen, setTutorialSeen] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('decarbonationTutorialSeen_v1') === 'true';
-    } catch (e) {
-      console.error("Could not access localStorage to check for tutorial:", e);
-      return false;
-    }
-  });
-  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
   const [showClosingSynthesisModal, setShowClosingSynthesisModal] = useState<boolean>(false);
   const [showLevelIntroModalForLevel, setShowLevelIntroModalForLevel] = useState<number | null>(null);
+  // Fase 9 (18_tutoriales_v3.md §5): predicciones del jugador para la ronda que está por
+  // simularse, y el resultado de la última ronda ya simulada (para las marcas ✓/✗ de
+  // PredictionStrip). El historial completo de la sesión se acumula en un ref porque solo lo
+  // necesita el debriefing al cierre, no un re-render en cada predicción.
+  const [predictionSelections, setPredictionSelections] = useState<PredictionSelections>({});
+  const [lastPredictionResults, setLastPredictionResults] = useState<PredictionResult[] | null>(null);
+  const allPredictionResultsRef = useRef<PredictionResult[]>([]);
+  const predictionStreakRef = useRef<Partial<Record<PredictedIndicatorKey, number>>>({});
+  const lastPolicyChangeYearRef = useRef<number>(INITIAL_YEAR);
   const [showFacilitatorManual, setShowFacilitatorManual] = useState(false);
   const [showPlayerManual, setShowPlayerManual] = useState(false);
   const [showEquationsManual, setShowEquationsManual] = useState(false);
@@ -548,32 +550,11 @@ export const App = () => {
     setChatMessages(prev => [...prev, { sender, text, timestamp: Date.now(), emphasisType }]);
   }, []);
   
+  // Fase 9 (18_tutoriales_v3.md §3): no more welcome-modal gate here — TutorialRunner decides on
+  // its own (via its localStorage progress, decarbonation.tutorial.progress) whether to launch the
+  // cold open, and does so without blocking this effect or the board. This effect now only owns
+  // the pre-survey/session-start bookkeeping, unrelated to onboarding.
   useEffect(() => {
-    let mainTutorialAlreadySeen = false;
-    try {
-        mainTutorialAlreadySeen = localStorage.getItem('decarbonationTutorialSeen_v1') === 'true';
-    } catch(e) {
-        console.error("Could not read localStorage for tutorial status:", e);
-    }
-
-    let l1IntroAlreadySeenThisSession = false;
-    try {
-        l1IntroAlreadySeenThisSession = sessionStorage.getItem('decarbonationL1IntroSeen_v1') === 'true';
-    } catch(e) {
-        console.error("Could not read sessionStorage for intro status:", e);
-    }
-
-    if (!mainTutorialAlreadySeen && !gameState.gameOverReason && !showTutorialModal && !showLevelIntroModalForLevel) {
-        setShowTutorialModal(true);
-    } else if (mainTutorialAlreadySeen && !l1IntroAlreadySeenThisSession && gameState.currentLevel === 1 && !gameState.gameOverReason && !showTutorialModal && !showLevelIntroModalForLevel) {
-        setShowLevelIntroModalForLevel(1);
-        try {
-            sessionStorage.setItem('decarbonationL1IntroSeen_v1', 'true');
-        } catch(e) {
-            console.error("Could not write to sessionStorage for intro status:", e);
-        }
-    }
-
     // Only show pre-survey and start a new session when there is no active game over
     // (avoids spurious session creation when gameOverReason changes trigger this effect)
     if (!gameState.gameOverReason) {
@@ -583,29 +564,12 @@ export const App = () => {
       startSession(gameState.currentLevel, INITIAL_YEAR);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.currentLevel, gameState.gameOverReason, showTutorialModal, showLevelIntroModalForLevel, authStage]);
+  }, [gameState.currentLevel, gameState.gameOverReason, authStage]);
 
-
-  const handleCloseTutorial = () => {
-    setShowTutorialModal(false);
-    if (!tutorialSeen) { 
-        setShowLevelIntroModalForLevel(1);
-        try {
-            sessionStorage.setItem('decarbonationL1IntroSeen_v1', 'true');
-        } catch (e) {
-            console.error("Could not write to sessionStorage for L1 intro:", e);
-        }
-    }
-    setTutorialSeen(true);
-    try {
-      localStorage.setItem('decarbonationTutorialSeen_v1', 'true');
-    } catch (e) {
-      console.error("Could not write to localStorage for tutorial:", e);
-    }
-  };
-
+  // Ayuda/Tutorial en el header ahora abre el menú de capítulos (TutorialRunner.tsx) en vez del
+  // modal de 9 pantallas eliminado.
   const handleShowTutorial = () => {
-    setShowTutorialModal(true);
+    tutorialApiRef.current?.openMenu();
   };
 
 
@@ -935,6 +899,7 @@ export const App = () => {
 
 
   const togglePolicy = useCallback((policyId: Policy) => {
+    lastPolicyChangeYearRef.current = gameStateRef.current.year; // fila 6 de los consejos JIT (§6)
     setGameState(prev => {
       const currentYear = prev.year;
       // Deep clone (not `{ ...prev.policies }`): a shallow copy still shares the nested
@@ -1194,6 +1159,7 @@ export const App = () => {
         }
     }
     
+    const beforeIndicators = { ...gameStateRef.current.indicators };
     setGameState(prev => ({ ...prev, isSimulating: true }));
     // "Simular Próximo Año" is this codebase's unit of a player-initiated simulation action —
     // the closest analogue to the source file's "cada simulateYear" for resetting the
@@ -1281,12 +1247,64 @@ export const App = () => {
     if (concludedLevelInfoForUpdate) {
         tempGameState.lastConcludedLevelInfo = concludedLevelInfoForUpdate;
     }
-    
+
+    // Fase 9 (18_tutoriales_v3.md §5): evalúa las predicciones hechas antes de esta ronda contra
+    // lo que realmente pasó. Solo tiene sentido si la ronda avanzó al menos un año (no si terminó
+    // el nivel antes del primer stepYear real).
+    if (tempGameState.year > gameStateRef.current.year) {
+      const results = evaluatePredictions(predictionSelections, beforeIndicators, tempGameState.indicators);
+      results.forEach((r) => {
+        logPrediction(r, tempGameState.year, tempGameState.currentLevel, sessionIdRef.current);
+        const streakKey = r.indicator;
+        if (r.correct) {
+          predictionStreakRef.current[streakKey] = 0;
+        } else {
+          predictionStreakRef.current[streakKey] = (predictionStreakRef.current[streakKey] ?? 0) + 1;
+          const indicatorLabel = t(`cond.${r.indicator === 'co2EqEmissionsPerCapita' ? 'emissions' : r.indicator}` as any);
+          dnApiRef.current?.say(t('prediction.wrong', {
+            predicted: t(`prediction.${r.predicted}` as any), indicator: indicatorLabel,
+            actual: t(`prediction.${r.actual}` as any), delta: r.delta.toFixed(1),
+          }), { priority: 1, tone: 'caution' });
+          // Fila 8 de la tabla de consejos justo a tiempo (§6): 3 fallos seguidos en el mismo indicador.
+          if (predictionStreakRef.current[streakKey] === 3) {
+            dnApiRef.current?.notify(t('tips.predictionStreak', { indicator: indicatorLabel }), { priority: 1, tone: 'normal' });
+          }
+        }
+      });
+      allPredictionResultsRef.current = [...allPredictionResultsRef.current, ...results];
+      setLastPredictionResults(results.length > 0 ? results : null);
+    }
+    setPredictionSelections({});
+
+    // Consejos justo a tiempo (18_tutoriales_v3.md §6) — un subconjunto de las 8 filas de la
+    // tabla, elegido por lo barato que es evaluarlo con el estado ya disponible acá. El resto
+    // (5 políticas activas + intento de una sexta, presión >70 dos años seguidos) queda
+    // documentado como pendiente en docs/DESIGN_DECISIONS_LOG.md — el primero ya tiene su propio
+    // aviso vía addToast/logEvent en togglePolicy, y el segundo necesitaría rastrear el estado de
+    // presiones año a año, no solo el actual.
+    if (tempGameState.currentLevel >= 2) {
+      (Object.values(tempGameState.policies) as PolicyState[])
+        .filter((p) => p.isActive && p.instruments && Object.keys(p.instruments).length > 0 && (p.totalInstrumentEffortApplied || 0) === 0)
+        .forEach((p) => dnApiRef.current?.notify(t('tips.effortZero', { name: p.name }), { priority: 1, tone: 'caution' }));
+    }
+    if (tempGameState.stellaSpecificState.Reservas_del_Tesoro < 0) {
+      dnApiRef.current?.notify(t('tips.treasuryNegative'), { priority: 1, tone: 'caution' });
+    }
+    if (tempGameState.year - lastPolicyChangeYearRef.current >= 3) {
+      dnApiRef.current?.notify(t('tips.noChangeIn3Years'), { priority: 0 });
+    }
+    const targetYearForTip = tempGameState.activeLevelConfig?.targetYear ?? (INITIAL_YEAR + YEARS_PER_LEVEL * tempGameState.currentLevel);
+    if (!concludedLevelInfoForUpdate && targetYearForTip - tempGameState.year <= 2) {
+      const routeOutcome = evaluateLevel(tempGameState, { ...tempGameState, indicators: tempGameState.levelBaseline });
+      const bestProgress = Math.max(0, ...routeOutcome.routes.map((r) => r.progress));
+      if (bestProgress < 0.6) dnApiRef.current?.notify(t('tips.routeFarFromDone'), { priority: 1, tone: 'caution' });
+    }
+
     // Final state update
     setGameState({ ...tempGameState, isSimulating: false });
     updateHistoricalData(tempGameState);
 
-  }, [logEvent, addToast, addMessageToChat, updateHistoricalData, t]);
+  }, [logEvent, addToast, addMessageToChat, updateHistoricalData, t, predictionSelections]);
 
   // [gameHandlersRef sync] — see the ref's declaration near the top of this component. Every
   // handler the agent's registry needs is stable by this point in the render.
@@ -1407,6 +1425,9 @@ export const App = () => {
           handleInstrumentEffortChange={handleInstrumentEffortChange}
           handleAdditionalTaxPressureChange={handleAdditionalTaxPressureChange}
           instrumentImpactHints={INSTRUMENT_IMPACT_HINTS}
+          predictionSelections={predictionSelections}
+          onPredictionChange={setPredictionSelections}
+          lastPredictionResults={lastPredictionResults}
         />
         <WinRoutesPanel gameState={gameState} />
       </main>
@@ -1420,6 +1441,7 @@ export const App = () => {
         currentLevelName={gameState.activeLevelConfig?.name || ''}
         suggestedQuestions={currentSuggestedQuestions}
       />
+      <TutorialRunner gameState={gameState} sessionId={sessionIdRef.current} />
 
       {levelEndInfo && (
         <LevelUpBanner
@@ -1427,8 +1449,6 @@ export const App = () => {
           onClose={handleCloseLevelEndModal}
         />
       )}
-
-      {showTutorialModal && <TutorialModal onClose={handleCloseTutorial} />}
 
       {showAboutCover && (
         <CoverScreen
@@ -1443,10 +1463,13 @@ export const App = () => {
       )}
 
       {showClosingSynthesisModal && (
-        <ClosingSynthesisModal
+        <DebriefingModal
           gameState={gameState}
           historicalData={historicalData}
+          predictionResults={allPredictionResultsRef.current}
+          sessionId={sessionIdRef.current}
           onClose={handleClosingSynthesisDismissed}
+          onRestart={() => setCurrentLevelManually(gameState.currentLevel)}
         />
       )}
 

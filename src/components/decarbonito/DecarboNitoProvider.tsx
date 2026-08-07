@@ -72,7 +72,9 @@ export interface DnApi {
   notify(text: string, opts?: DnMessageOpts): string;
   play(state: DnState, emotion?: DnEmotion): void;
   moveTo(placement: DnPlacement): Promise<void>;
-  focusOn(anchorId: AnchorId, opts?: { text?: string; holdMs?: number }): Promise<void>;
+  /** `spotlight` (18_tutoriales_v3.md §4.1) dims everything except the anchor — only ever passed
+   * `true` from inside a guided tutorial chapter; ordinary "help" pointing never dims the board. */
+  focusOn(anchorId: AnchorId, opts?: { text?: string; holdMs?: number; spotlight?: boolean }): Promise<void>;
   release(): void;
   openConversation(seed?: string): void;
   closeConversation(): void;
@@ -96,6 +98,8 @@ interface DnContextValue extends DnApi {
   conversationOpen: boolean;
   conversationSeed: string | null;
   highlight: AnchorId | null;
+  /** True when the current highlight should dim the rest of the screen (tutorial mode only). */
+  spotlightActive: boolean;
   notifyMode: DnNotifyMode;
   hidden: boolean;
   onStateComplete: (finished: DnState) => void;
@@ -185,6 +189,7 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationSeed, setConversationSeed] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<AnchorId | null>(null);
+  const [spotlightActive, setSpotlightActive] = useState(false);
   const [notifyMode, setNotifyModeState] = useState<DnNotifyMode>(loadNotifyMode);
   const [hidden, setHiddenState] = useState<boolean>(loadHidden);
   const modeLockedByUrl = useMemo(() => urlForcedMode() !== null, []);
@@ -361,7 +366,7 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   }, []);
 
-  const focusOn = useCallback(async (anchorId: AnchorId, opts?: { text?: string; holdMs?: number }) => {
+  const focusOn = useCallback(async (anchorId: AnchorId, opts?: { text?: string; holdMs?: number; spotlight?: boolean }) => {
     const rect = getAnchorRect(anchorId);
     if (!rect) {
       // The anchor isn't mounted (wrong level, collapsed panel, etc.) — degrade gracefully
@@ -370,6 +375,7 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
     setHighlight(anchorId);
+    setSpotlightActive(!!opts?.spotlight);
     await moveTo({ kind: 'anchor', anchorId });
     setState('point');
     if (opts?.text) showBubble({
@@ -380,6 +386,7 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const release = useCallback(() => {
     setHighlight(null);
+    setSpotlightActive(false);
     const lastCorner: DnCorner = placementRef.current.kind === 'dock' ? placementRef.current.corner : 'br';
     void moveTo({ kind: 'dock', corner: lastCorner });
   }, [moveTo]);
@@ -475,12 +482,12 @@ export const DecarboNitoProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const value = useMemo<DnContextValue>(() => ({
     state, emotion, placement, current, notifications, conversationOpen, conversationSeed,
-    highlight, notifyMode, hidden, mode, setMode, modeLockedByUrl,
+    highlight, spotlightActive, notifyMode, hidden, mode, setMode, modeLockedByUrl,
     say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss,
     setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete, confirm,
   }), [
     state, emotion, placement, current, notifications, conversationOpen, conversationSeed,
-    highlight, notifyMode, hidden, mode, setMode, modeLockedByUrl,
+    highlight, spotlightActive, notifyMode, hidden, mode, setMode, modeLockedByUrl,
     say, notify, play, moveTo, focusOn, release, openConversation, closeConversation, dismiss,
     setBusy, resetProactiveBudget, setNotifyMode, setHidden, setCorner, onStateComplete, confirm,
   ]);

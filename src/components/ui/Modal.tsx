@@ -11,9 +11,10 @@ interface ModalProps {
 const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Single modal primitive meant to unify the six ad-hoc modals currently in the app (TutorialModal,
- * LevelIntroModal, ClosingSynthesisModal, FacilitatorManual, PlayerManual, EquationsManual) — not
- * done in this phase (that consolidation is phase 9/10's job). Handles what all six should share:
+ * Single modal primitive meant to unify the ad-hoc modals in the app (LevelIntroModal,
+ * DebriefingModal, FacilitatorManual, PlayerManual, EquationsManual — TutorialModal and
+ * ClosingSynthesisModal, listed here at phase 4, were replaced/removed in phase 9) — not done in
+ * this phase either (that consolidation is phase 10's job). Handles what they should all share:
  * focus trap, Esc to close, aria-modal, focus restoration on close, and background scroll lock.
  */
 export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, className = '' }) => {
