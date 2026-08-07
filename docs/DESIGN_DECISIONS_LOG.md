@@ -957,3 +957,95 @@ materiales reales descargables, `/play.html?demo=1` con las cuatro restricciones
 simultáneamente y sin errores de consola.
 
 **Origen.** `mejora-general/files/20_landing_shareables.md`.
+
+## 2026-08-07 — Fase 12 (cierre de i18n, Capas B/C): un bug real en la traducción de nombres de política encontrado y corregido, y menos trabajo pendiente de lo que la lista sugería
+
+**Punto de partida.** `scripts/i18n-audit.mjs` listaba 9 archivos en `CAPA_B_C_PENDING`. Antes de
+escribir código se auditó cada uno de verdad (temporalmente sacándolo de la lista de ignorados y
+corriendo el script) en vez de asumir que "pendiente" significaba "sin traducir": tres de los
+nueve (`geminiService.ts`, `decarbonitoAgent.ts`, `suggestionService.ts`) resultaron estar **ya
+completamente bilingües** desde fases anteriores (8 y 9) — cada string que el jugador puede ver
+tiene su rama `language === 'en' ? ... : ...` o su `Record<Language, string>`; lo que el heurístico
+del audit marca ahí es solo la mitad en español de un par que ya funciona. Se documentó esa
+verificación en el propio script en vez de re-traducir algo que no lo necesitaba.
+
+**Bug real encontrado: `POLICY_NAMES` nunca tradujo nada.** Al escribir un test para la traducción
+de `sim/index.ts`'s log de activación de política, el nombre traducido no aparecía. Investigado:
+`src/legacyContent/gameData.ts`'s `POLICY_NAMES` estaba indexado por el *identificador de
+TypeScript* del enum `Policy` (`'Agroecological'`, `'NaturalConservation'`, ...), pero `Policy` es
+un enum de string cuyos *valores* son oraciones completas en español
+(`Policy.Agroecological === "Políticas Agroecológicas (P-AS)"`, `src/types.ts`) — y todo call site
+pasa `policy.id`, que contiene ese *valor*, nunca el identificador. `getPolicyName(policy.id, lang)`
+entonces fallaba el lookup siempre y devolvía `policy.id` sin cambios (el mismo texto en español en
+ambos idiomas) -- silenciosamente, desde que sea que se escribió este archivo. Esto significa que
+**los nombres de política nunca se tradujeron en ningún lugar de la app**: tooltips del Dashboard,
+`PolicyToggle`, el contexto que recibe Gemini, el texto de la síntesis de cierre local, y ahora
+también las líneas de log nuevas de esta fase -- todos silenciosamente en español pese al selector
+de idioma. Corregido re-indexando `POLICY_NAMES` con propiedades computadas `[Policy.X]`, el mismo
+patrón que ya usa `INITIAL_POLICIES` en `constants.ts` -- inmune a que el valor del enum vuelva a
+cambiar. `LandUseType` se auditó por el mismo patrón y está bien (sus valores son códigos cortos
+como `"BNNP"`, no prosa, y coinciden con las claves de `LAND_USE_NAMES`). Verificado en vivo
+(Chrome MCP, `/play.html`, `localStorage` en `en`): las diez políticas del panel ahora se leen
+"Agro-ecological Policies", "Natural Assets Conservation", etc. -- antes de este fix se habrían
+visto en español pese al toggle de idioma.
+
+**`equations/descriptions.ts` traducido de verdad (el único de los 9 que realmente lo necesitaba).**
+~90 descripciones de parámetros/ecuaciones, de `Record<string, string>` (solo español) a
+`Record<string, Record<Language, string>>`. `EquationsManual.tsx` ya leía `language` para su propio
+texto de interfaz pero pasaba esa misma clave a un diccionario plano en español -- corregido con un
+helper `d(key)` que resuelve el idioma activo, reemplazando las 19 llamadas directas a
+`DESCRIPTIONS.XXX`/`DESCRIPTIONS[key]`.
+
+**`src/sim/{economy,events,index,policies}.ts`: logs y advertencias ahora bilingües.** `stepYear`
+gana un cuarto parámetro `language: Language = 'es'` (default preserva compatibilidad con los 8
+call sites existentes en tests/scripts que no lo pasan), enhebrado hacia `rollEvent`,
+`applyRandomEventEffects`, `updateEconomy` y `checkEfficiencyWarning`. Cubre: el log de activación
+de política (visible en `GameLogDrawer`, que renderiza `gameLog` crudo), el log de préstamo
+procesado, los tres logs/advertencia de eventos aleatorios (incluida la etiqueta de nombre/
+descripción del evento, ahora leída via `getEventName`/`getEventDescription` en vez del campo
+Spanish-only del objeto `RandomEvent`), y la advertencia de eficiencia de política por debajo del
+40% (llega al jugador directo como mensaje de chat). `EVENT_DESCRIPTIONS` es contenido nuevo en
+`legacyContent/gameData.ts` -- las 8 descripciones de eventos nunca habían tenido versión en
+inglés en ningún lado (solo `EVENT_NAMES`, los títulos, existían); traducidas del español real de
+`constants.ts`'s `ALL_RANDOM_EVENTS`. `App.tsx`'s propio `stepYear(...)` call site pasa
+`getActiveLanguage()`.
+
+**`src/sim/index.ts`'s `gameOverReason`: dejado en español a propósito, documentado, no un
+descuido.** Grep-verificado: nunca se renderiza como texto en ningún componente (solo
+`!!gameOverReason` para un booleano, comparado con `.includes('victoria')`/
+`=== 'Partida abandonada...'` en `App.tsx` y `geminiService.ts`, y enviado a Gemini como contexto).
+El propio §5 del archivo 12 dice que el contexto que recibe el modelo puede quedar en español.
+Traducir estos 4 strings habría significado además actualizar cada comparación en dos archivos por
+un valor que nada muestra -- no se juzgó que valiera el riesgo. Comentario explicativo agregado
+en el propio `sim/index.ts` justo antes de donde se asignan.
+
+**`types.ts`: cerrado sin cambio de código.** Los valores del enum `Policy`/`LandUseType` en
+español son exactamente el patrón "contenido de dominio indexado por ID" que el §4.1 del archivo
+12 describe -- no hay que traducirlos en el lugar, hay que indexar por ellos (que es justo lo que
+`POLICY_NAMES`/`LAND_USE_NAMES` ya hacen, ahora correctamente). Movido de `CAPA_B_C_PENDING` a
+`IGNORED` en el script de auditoría, con el razonamiento documentado ahí mismo.
+
+**Tests nuevos.** `tests/sim/i18n.spec.ts` (6 tests): `stepYear` con/sin `language`, traducción del
+nombre de política dentro del log (no solo la oración), `updateEconomy` y
+`checkEfficiencyWarning` en ambos idiomas. Dos de los seis fallaron en el primer intento --
+exactamente por el bug de `POLICY_NAMES` de arriba, encontrado *por* el test, no antes. Quedó como
+regresión cubierta.
+
+**Auditoría, resultado final.** `scripts/i18n-audit.mjs` reescrito: `CAPA_B_C_PENDING` renombrado a
+`CAPA_B_C_VERIFIED_BILINGUAL` (8 archivos, ya no "pendientes" sino verificados/traducidos en esta
+fase, con el razonamiento de cada uno documentado en el propio script) y `types.ts` movido a
+`IGNORED`. La lista de 19 componentes Capa A (`IGNORED_COMPONENTS`) queda sin tocar -- ese es el
+backlog de interfaz, fuera del alcance nominal de "Capas B/C" que pedía esta fase.
+
+**No hecho, documentado:** la migración completa de Capa A (los 19 componentes de
+`IGNORED_COMPONENTS`) sigue pendiente -- nunca fue el alcance de esta fase. Los mensajes de log que
+`App.tsx` empuja directamente a `gameLog` (selección de política antes de simular, inicio de
+partida) siguen en español -- son Capa A (el propio `App.tsx`), no Capa B/C; verificado en vivo que
+siguen en español aun con el fix de esta fase aplicado, es la brecha esperada, no una regresión.
+
+**Verificación.** `npx tsc --noEmit` limpio. `npx vitest run` 93/93 (6 tests nuevos). `npm run
+build` limpio. `npm run i18n:audit` en verde. En navegador (Chrome MCP, `/play.html`,
+`localStorage.decarbonationLanguage_v1 = 'en'`): las diez políticas del panel muestran nombres en
+inglés correctos -- confirma el fix de `POLICY_NAMES` en vivo, no solo por test.
+
+**Origen.** `mejora-general/files/12_i18n_completo.md` §4 (Capa B), §5 (Capa C).

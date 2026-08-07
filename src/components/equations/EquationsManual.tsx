@@ -5,8 +5,8 @@ import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const EQ_UI = {
-  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo', thDecay: 'Decaimiento (Años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)' },
-  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost', thDecay: 'Decay (Years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)' },
+  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo', thDecay: 'Decaimiento (Años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
+  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost', thDecay: 'Decay (Years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)', noDescription: 'No description.' },
 } as const;
 
 // Helper components for styling
@@ -108,6 +108,10 @@ interface EquationsManualProps {
 const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState }) => {
   const { language } = useLanguageContext();
   const ui = EQ_UI[language];
+  // Phase 12 (12_i18n_completo.md Capa B): DESCRIPTIONS is now bilingual
+  // (Record<string, Record<Language, string>>) -- this resolves a lookup for the active
+  // language, replacing every previous direct DESCRIPTIONS.XXX / DESCRIPTIONS[key] access.
+  const d = (key: string): string => DESCRIPTIONS[key]?.[language] ?? '';
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
@@ -186,7 +190,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
 
         <div className="overflow-y-auto flex-grow scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 pr-4">
             
-            <SectionTitle tooltipText={DESCRIPTIONS.TITLE_CONTROL_PARAMS}>Parámetros de Control Global</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_CONTROL_PARAMS')}>Parámetros de Control Global</SectionTitle>
             <input
                 type="text"
                 placeholder={ui.filter}
@@ -198,15 +202,15 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_KEY}>{ui.thParam}</Th>
-                            <Th tooltipText={DESCRIPTIONS.PARAM_TABLE_HEADER_VALUE}>{ui.thValue}</Th>
+                            <Th tooltipText={d('PARAM_TABLE_HEADER_KEY')}>{ui.thParam}</Th>
+                            <Th tooltipText={d('PARAM_TABLE_HEADER_VALUE')}>{ui.thValue}</Th>
                         </tr>
                     </thead>
                     <tbody>
                         {controlParamsData.map((item, index) => (
                             <tr key={index} className="border-t border-gray-700 hover:bg-gray-800/50">
                                 <td className="p-2">
-                                    <Tooltip position="top-right" text={DESCRIPTIONS[item.key] || 'Sin descripción.'}>
+                                    <Tooltip position="top-right" text={d(item.key) || ui.noDescription}>
                                         <Param>{item.key}</Param>
                                     </Tooltip>
                                 </td>
@@ -217,16 +221,16 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
 
-            <SectionTitle tooltipText={DESCRIPTIONS.TITLE_POLICIES}>Definiciones de Políticas</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_POLICIES')}>Definiciones de Políticas</SectionTitle>
             <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 text-xs">
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_NAME}>{ui.thPolicy}</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_COST}>{ui.thCost}</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_DECAY}>{ui.thDecay}</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFICIENCY_LIVE}>{ui.thEfficiency}</Th>
-                            <Th tooltipText={DESCRIPTIONS.POLICY_TABLE_HEADER_EFFORT_LIVE}>{ui.thEffort}</Th>
+                            <Th tooltipText={d('POLICY_TABLE_HEADER_NAME')}>{ui.thPolicy}</Th>
+                            <Th tooltipText={d('POLICY_TABLE_HEADER_COST')}>{ui.thCost}</Th>
+                            <Th tooltipText={d('POLICY_TABLE_HEADER_DECAY')}>{ui.thDecay}</Th>
+                            <Th tooltipText={d('POLICY_TABLE_HEADER_EFFICIENCY_LIVE')}>{ui.thEfficiency}</Th>
+                            <Th tooltipText={d('POLICY_TABLE_HEADER_EFFORT_LIVE')}>{ui.thEffort}</Th>
                         </tr>
                     </thead>
                     <tbody>
@@ -247,15 +251,15 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
             
-            <SectionTitle tooltipText={DESCRIPTIONS.TITLE_LAND_USE}>Definiciones de Uso de Suelo</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_LAND_USE')}>Definiciones de Uso de Suelo</SectionTitle>
              <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 text-xs">
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
                         <tr>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_NAME}>{ui.thLandUse}</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_EMISSION}>{ui.thEmission}</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_SEQUESTRATION}>{ui.thSequestration}</Th>
-                            <Th tooltipText={DESCRIPTIONS.LAND_USE_TABLE_HEADER_AREA_LIVE}>{ui.thArea}</Th>
+                            <Th tooltipText={d('LAND_USE_TABLE_HEADER_NAME')}>{ui.thLandUse}</Th>
+                            <Th tooltipText={d('LAND_USE_TABLE_HEADER_EMISSION')}>{ui.thEmission}</Th>
+                            <Th tooltipText={d('LAND_USE_TABLE_HEADER_SEQUESTRATION')}>{ui.thSequestration}</Th>
+                            <Th tooltipText={d('LAND_USE_TABLE_HEADER_AREA_LIVE')}>{ui.thArea}</Th>
                         </tr>
                     </thead>
                     <tbody>
@@ -275,38 +279,38 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
 
-            <SectionTitle tooltipText={DESCRIPTIONS.TITLE_EQUATIONS}>Ecuaciones Fundamentales</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_EQUATIONS')}>Ecuaciones Fundamentales</SectionTitle>
             
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_POLICY_EFFICIENCY}>Eficiencia de Política</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLICY_EFFICIENCY')}>Eficiencia de Política</SubSectionTitle>
             <p className="text-sm mb-2">La efectividad de una política no es estática; disminuye con el tiempo a medida que el sistema se adapta o surgen nuevas barreras. Esta 'entropía' se modela con un decaimiento exponencial.</p>
             <Formula>Eficiencia = <Param>EficienciaInicial</Param> * e^(-<Param>TiempoActivacion</Param> / <Param>DuracionEfecto</Param>) * <Param>FactorPresionGeneral</Param></Formula>
             <p className="text-sm">Si Nivel &ge; 2, la eficiencia anterior se multiplica por el factor (<Code>EsfuerzoTotalInstrumentos / 100</Code>), permitiendo al jugador 'reinvertir' en una política para mantener su relevancia.</p>
             
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_CARBON_BALANCE}>Balance de Carbono</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_CARBON_BALANCE')}>Balance de Carbono</SubSectionTitle>
             <p className="text-sm mb-2">Esta es la contabilidad climática de la nación. El objetivo final es hacer que el secuestro supere a las emisiones.</p>
             <Formula>BalanceNetoAnual = (Σ (<Param>AreaUso</Param> * <Param>TasaSecuestro</Param>)) - (Σ (<Param>AreaUso</Param> * <Param>TasaEmision</Param>))</Formula>
             <p className="text-sm">El resultado se ajusta por sinergias (ej. <Code>Conservación</Code> + <Code>Carbono Neutralidad</Code>) y antagonismos (<Code>Subsidios Energéticos</Code> vs <Code>Carbono Neutralidad</Code>) y efectos directos de instrumentos de política (Nivel 2+).</p>
 
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_INDICATORS}>Cálculo de Indicadores (Ej. Biodiversidad)</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_INDICATORS')}>Cálculo de Indicadores (Ej. Biodiversidad)</SubSectionTitle>
              <p className="text-sm mb-2">Los indicadores socio-ambientales son el resultado de la compleja interacción entre las decisiones políticas y el estado del territorio.</p>
             <Formula>ΔBiodiversidad = (Σ(<Param>Efic. Política</Param> * <Param>Peso</Param>)) * <Param>Factor_P</Param> + (Σ(<Param>% AreaUso</Param> * <Param>Peso</Param>)) * <Param>Factor_U</Param></Formula>
             <p className="text-sm">El cambio anual en cada indicador (Biodiversidad, Seg. Alimentaria, etc.) es una suma ponderada del impacto de las políticas activas (positivas o negativas) y de la distribución actual del uso del suelo. Algunos indicadores también se afectan entre sí.</p>
             
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_POLITICAL_PRESSURE}>Presión Política (Nivel 2+)</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLITICAL_PRESSURE')}>Presión Política (Nivel 2+)</SubSectionTitle>
             <p className="text-sm mb-2">Simula el comportamiento de grupos de interés. La presión no cambia linealmente; crece o decrece lentamente al principio, se acelera, y luego se satura cerca de los extremos, imitando fenómenos sociales reales.</p>
             <Formula>Impulso = (Σ <Param>Efectos de Políticas</Param>) + (Σ <Param>Efectos de Indicadores</Param>)
 FuerzaNormalización = (<Param>PuntoEquilibrio</Param> - <Param>PresiónActual</Param>) * <Param>TasaNormalización</Param>
 ΔPresión = (<Param>Impulso</Param> + <Param>FuerzaNormalización</Param>) * f(<Param>PresiónActual</Param>)</Formula>
             <p className="text-sm">La función <Code>f()</Code> modera el cambio, haciéndolo más lento cerca de los extremos 0 y 100. Esto evita cambios abruptos y crea una dinámica de 'inercia' social.</p>
 
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_ECONOMY}>Economía</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_ECONOMY')}>Economía</SubSectionTitle>
             <p className="text-sm mb-2">Modela la salud financiera de la nación, que es crucial para poder financiar políticas y mantener la estabilidad.</p>
             <Formula>ΔPBI = <Param>PBI_Actual</Param> * (<Param>TasaBase</Param> + Σ(<Param>Efectos Políticas</Param>))
 ΔReservas = <Param>Ingresos</Param> - <Param>Egresos</Param></Formula>
             <p className="text-sm"><Code>Ingresos</Code> = Impuestos sobre PBI (con tasa base + tasa adicional en N3) + Préstamos solicitados.</p>
             <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (basado en su <Code>costFactor</Code> y PBI) + Costos Anuales de Pactos + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
 
-            <SubSectionTitle tooltipText={DESCRIPTIONS.EQUATION_TITLE_STABILITY_CONFLICT}>Estabilidad y Conflicto</SubSectionTitle>
+            <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
             <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>
             <Formula>ΔConflictoSocial = Σ(<Param>Factores de Descontento</Param>) - <Param>TasaDisipación</Param>
 ΔColapsoPolítico = Σ(<Param>Factores de Inestabilidad</Param>) - <Param>Tasa</Param></Formula>

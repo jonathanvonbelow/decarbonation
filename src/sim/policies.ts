@@ -5,6 +5,8 @@
  * (mejora-general/files/16_auditoria_ecuaciones.md). No formula changed.
  */
 import type { Policy, PolicyState, NumericStellaKeys, StellaStocks } from '../types';
+import type { Language } from '../hooks/useLanguage';
+import { getPolicyName } from '../legacyContent/gameData';
 
 /**
  * Effective efficiency of a policy this year: its base (decayed) efficiency, scaled down by
@@ -68,7 +70,7 @@ export function computeTotalPolicyCost(policies: Record<Policy, PolicyState>, pb
  * Mutates `previousEfficiencyForNotification` so the warning fires once per crossing, matching
  * the original behavior. Returns the warning message, or null if nothing crossed the threshold.
  */
-export function checkEfficiencyWarning(policies: Record<Policy, PolicyState>): string | null {
+export function checkEfficiencyWarning(policies: Record<Policy, PolicyState>, language: Language = 'es'): string | null {
   const policyWithEfficiencyWarning = (Object.values(policies) as PolicyState[]).find((p) => {
     if (!p.isActive || p.currentEfficiency === undefined || p.previousEfficiencyForNotification === undefined) return false;
     const threshold = 0.4;
@@ -77,7 +79,13 @@ export function checkEfficiencyWarning(policies: Record<Policy, PolicyState>): s
 
   if (policyWithEfficiencyWarning && policyWithEfficiencyWarning.currentEfficiency !== undefined) {
     const efficiencyPercentage = (policyWithEfficiencyWarning.currentEfficiency * 100).toFixed(0);
-    const warningMessage = `¡Atención! La eficiencia de la política "${policyWithEfficiencyWarning.name}" ha caído por debajo del 40% (actualmente ${efficiencyPercentage}%). Su impacto ahora es significativamente reducido. Considera reevaluar tu estrategia o, si estás en Nivel 2+, modifica el esfuerzo relativo entre sus instrumentos.`;
+    // Reaches the player directly as a chat notification (App.tsx routes 'policy_efficiency_warning'
+    // messages straight to the chat) -- was raw Spanish regardless of locale before this phase,
+    // and read `.name` (PolicyState's own Spanish-only field) instead of the bilingual lookup.
+    const policyName = getPolicyName(policyWithEfficiencyWarning.id, language);
+    const warningMessage = language === 'en'
+      ? `Warning! The efficiency of policy "${policyName}" has dropped below 40% (currently ${efficiencyPercentage}%). Its impact is now significantly reduced. Consider reevaluating your strategy, or if you're in Level 2+, adjust the relative effort across its instruments.`
+      : `¡Atención! La eficiencia de la política "${policyName}" ha caído por debajo del 40% (actualmente ${efficiencyPercentage}%). Su impacto ahora es significativamente reducido. Considera reevaluar tu estrategia o, si estás en Nivel 2+, modifica el esfuerzo relativo entre sus instrumentos.`;
     policyWithEfficiencyWarning.previousEfficiencyForNotification = policyWithEfficiencyWarning.currentEfficiency;
     return warningMessage;
   }

@@ -1362,7 +1362,11 @@ export const App = () => {
         // passed through as-is to keep the same unpredictability players always had (a seeded
         // RNG is available in src/sim/rng.ts for tests and the future balance harness, see
         // mejora-general/files/16_auditoria_ecuaciones.md).
-        const stepResult = stepYear(tempGameState, Math.random, CP);
+        // Fase 12 (12_i18n_completo.md Capa B/C): stepYear's narrative log/warning strings are
+        // now locale-aware -- threading the active language through here is what actually makes
+        // that translation reach the player (GameLogDrawer renders gameLog raw; the efficiency
+        // warning goes straight to the chat).
+        const stepResult = stepYear(tempGameState, Math.random, CP, getActiveLanguage());
         tempGameState = stepResult.next;
         stepResult.logs.forEach(msg => logEvent(msg));
         stepResult.chatMessages.forEach(msg => {

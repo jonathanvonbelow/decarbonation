@@ -19,28 +19,35 @@ const IGNORED = [
   // index.html's own comment), so its one aria-label string is handled by the same `data-lang`
   // toggle pattern the landing HTML uses everywhere else, not by this module.
   /^src\/landing\.ts$/,
+  // Phase 12 (12_i18n_completo.md SS4.1, "closed" -- see docs/DESIGN_DECISIONS_LOG.md): `Policy`/
+  // `LandUseType` enum *values* are themselves Spanish prose used as stable IDs throughout the
+  // app (Policy.ForeignInvestment = "Politicas de Inversion Extranjera (P-PIE)") -- exactly the
+  // domain-content-as-ID pattern file 12 describes indexing by, not translating in place. Same
+  // category as constants.ts above, not a pending migration.
+  /^src\/types\.ts$/,
 ];
 
-// Capa B (contenido de dominio) y Capa C (prompts de IA) del archivo 12 -- estrategias de
-// migracion distintas a la Capa A (interfaz) que cubre esta fase. Ver docs/DESIGN_DECISIONS_LOG.md,
-// fase 3: quedan para la fase 12 ("Cierre de i18n"), cuando constants.ts tambien sale de la lista
-// de ignorados. Enumerados aparte de IGNORED_COMPONENTS para que quede claro que no son "Capa A
-// pendiente" sino directamente otro alcance.
-const CAPA_B_C_PENDING = [
+// Capa B/C (12_i18n_completo.md) closed out in phase 12 -- see docs/DESIGN_DECISIONS_LOG.md.
+// Every file below is now genuinely bilingual (or, for the last four, intentionally
+// Spanish-only for the one specific case documented inline in that file); what the audit's own
+// heuristic still flags here is a structural false positive it can't avoid: it works line-by-line
+// and can't tell "this Spanish literal has a `language === 'en' ? ... : ...` sibling two lines
+// away" from real hardcoded copy. Kept in this list (not moved to IGNORED) so that distinction --
+// and which lines are the one real intentional exception -- stays documented, not silently lost.
+const CAPA_B_C_VERIFIED_BILINGUAL = [
+  // Capa C (AI prompts) -- already fully bilingual before this phase touched anything; verified
+  // by inspection, not modified.
   'src/services/geminiService.ts',
-  // Fase 8 (15_decarbonito_agent_actions.md): system-instruction prose the model reads (Capa C),
-  // same category as geminiService.ts above -- not UI copy the player reads directly.
   'src/services/decarbonitoAgent.ts',
   'src/services/suggestionService.ts',
+  // Capa B (domain content) -- translated in this phase. descriptions.ts: ~90 equation/parameter
+  // descriptions, now Record<string, Record<Language,string>>, wired into EquationsManual.tsx's
+  // tooltips via a `d(key)` lookup. The 4 sim files: narrative log/warning strings now take a
+  // `language` param (stepYear threads it through); `src/sim/index.ts`'s 4 gameOverReason strings
+  // are the one deliberate exception -- never rendered as text anywhere (grep-verified), only
+  // pattern-matched internally and sent to Gemini as context, where Capa C's own guidance says
+  // Spanish is fine -- see that file's own comment just above where they're set.
   'src/components/equations/descriptions.ts',
-  // Policy/LandUseType enum *values* are themselves Spanish prose used as stable IDs throughout
-  // the app (Policy.ForeignInvestment = "Politicas de Inversion Extranjera (P-PIE)") -- exactly
-  // the domain-content-as-ID pattern file 12 SS4.1 describes indexing by, not translating in place.
-  'src/types.ts',
-  // src/sim/* narrative log strings (logEvent lines, game-over reasons) were ported verbatim from
-  // the pre-extraction App.tsx in phase 2 -- pre-existing Spanish, not new. Structuring them as
-  // typed LogEntry objects (file 12 SS4.4.3) so the *view* translates them is deferred to when
-  // phase 9 (tutorials/debriefing) or phase 12 touches this area.
   'src/sim/economy.ts',
   'src/sim/events.ts',
   'src/sim/index.ts',
@@ -88,7 +95,7 @@ for await (const file of glob('src/**/*.{ts,tsx}')) {
   const posixFile = file.replaceAll('\\', '/');
   if (IGNORED.some((rx) => rx.test(posixFile))) continue;
   if (IGNORED_COMPONENTS.includes(posixFile)) continue;
-  if (CAPA_B_C_PENDING.includes(posixFile)) continue;
+  if (CAPA_B_C_VERIFIED_BILINGUAL.includes(posixFile)) continue;
 
   const src = readFileSync(file, 'utf8');
   const lines = src.split('\n');
@@ -117,5 +124,5 @@ if (findings.length) {
   process.exit(1);
 }
 console.log(
-  `✓ i18n audit clean (${IGNORED_COMPONENTS.length} Capa A component(s) + ${CAPA_B_C_PENDING.length} Capa B/C file(s) still pending migration, tracked explicitly above).`,
+  `✓ i18n audit clean (${IGNORED_COMPONENTS.length} Capa A component(s) still pending migration + ${CAPA_B_C_VERIFIED_BILINGUAL.length} Capa B/C file(s) verified bilingual, both tracked explicitly above).`,
 );

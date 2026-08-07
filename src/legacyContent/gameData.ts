@@ -1,17 +1,30 @@
 import { Language } from '../hooks/useLanguage';
+import { Policy } from '../types';
 
 // ─── Policies ────────────────────────────────────────────────────────────────
+// REAL BUG FOUND AND FIXED in phase 12 (12_i18n_completo.md, Capa B/C): this dict used to be
+// keyed by the `Policy` enum's *TypeScript identifier* ('Agroecological', 'NaturalConservation',
+// ...), but `Policy` is a string enum whose *values* are full Spanish sentences
+// (`Policy.Agroecological === "Políticas Agroecológicas (P-AS)"`, see src/types.ts) — and every
+// call site passes `policy.id`, which holds that enum *value*, never the identifier. So
+// `getPolicyName(policy.id, lang)` always missed the lookup and silently fell back to returning
+// `policy.id` unchanged (still Spanish) in BOTH languages -- meaning policy names have never
+// actually translated anywhere in the app (Dashboard tooltips, PolicyToggle, the Gemini context/
+// closing-synthesis text, and this phase's own new sim/*.ts log lines), since at least whichever
+// earlier phase introduced this file. Re-keyed with `[Policy.X]` computed properties -- the same
+// pattern constants.ts's own INITIAL_POLICIES already uses -- so the key is guaranteed to match
+// the real enum value, immune to it changing again.
 export const POLICY_NAMES: Record<string, Record<Language, string>> = {
-  'Agroecological':                   { es: 'Políticas Agroecológicas',           en: 'Agro-ecological Policies' },
-  'NaturalConservation':              { es: 'Conservación de Bienes Naturales',    en: 'Natural Assets Conservation' },
-  'SustainableLivestock':             { es: 'Ganadería Sostenible',                en: 'Sustainable Livestock' },
-  'SustainableWaterManagement':       { es: 'Gestión Sostenible del Agua',         en: 'Sustainable Water Management' },
-  'CarbonNeutrality':                 { es: 'Neutralidad de Carbono',              en: 'Carbon Neutrality' },
-  'IntensiveAgriculture':             { es: 'Agricultura Intensiva',               en: 'Intensive Agriculture' },
-  'AgriculturalExports':              { es: 'Exportaciones Agrícolas',             en: 'Agricultural Exports' },
-  'ForeignInvestment':                { es: 'Inversión Extranjera',                en: 'Foreign Investment' },
-  'FlexibleEnvironmentalRegulations': { es: 'Normativas Ambientales Flexibles',    en: 'Flexible Environmental Regulations' },
-  'EnergySubsidies':                  { es: 'Subsidios Energéticos',               en: 'Energy Subsidies' },
+  [Policy.Agroecological]:                   { es: 'Políticas Agroecológicas',           en: 'Agro-ecological Policies' },
+  [Policy.NaturalConservation]:              { es: 'Conservación de Bienes Naturales',    en: 'Natural Assets Conservation' },
+  [Policy.SustainableLivestock]:             { es: 'Ganadería Sostenible',                en: 'Sustainable Livestock' },
+  [Policy.SustainableWaterManagement]:       { es: 'Gestión Sostenible del Agua',         en: 'Sustainable Water Management' },
+  [Policy.CarbonNeutrality]:                 { es: 'Neutralidad de Carbono',              en: 'Carbon Neutrality' },
+  [Policy.IntensiveAgriculture]:             { es: 'Agricultura Intensiva',               en: 'Intensive Agriculture' },
+  [Policy.AgriculturalExports]:              { es: 'Exportaciones Agrícolas',             en: 'Agricultural Exports' },
+  [Policy.ForeignInvestment]:                { es: 'Inversión Extranjera',                en: 'Foreign Investment' },
+  [Policy.FlexibleEnvironmentalRegulations]: { es: 'Normativas Ambientales Flexibles',    en: 'Flexible Environmental Regulations' },
+  [Policy.EnergySubsidies]:                  { es: 'Subsidios Energéticos',               en: 'Energy Subsidies' },
 };
 
 // ─── Instruments ─────────────────────────────────────────────────────────────
@@ -97,6 +110,46 @@ export const EVENT_NAMES: Record<string, Record<Language, string>> = {
   'climate_justice_movement':    { es: 'Movimiento por la Justicia Climática',     en: 'Climate Justice Movement' },
 };
 
+// Phase 12 (12_i18n_completo.md §4.3 / DESIGN_DECISIONS_LOG.md): descriptions were never
+// localized anywhere in the codebase before this -- only names had a bilingual lookup
+// (EVENT_NAMES above). Text translated from the Spanish originals in constants.ts's
+// ALL_RANDOM_EVENTS (source of truth for `es`; `description` there is left as-is, read via
+// getEventDescription instead of directly, same pattern as name/getEventName).
+export const EVENT_DESCRIPTIONS: Record<string, Record<Language, string>> = {
+  'drought_severe': {
+    es: 'Una sequía prolongada y severa afecta las cosechas y agota las reservas de agua, generando descontento social y estrés en el sector agrícola.',
+    en: 'A prolonged, severe drought damages crops and depletes water reserves, generating social discontent and stress in the agricultural sector.',
+  },
+  'supply_chain_crisis': {
+    es: 'Disrupciones globales en la logística y el transporte impactan la disponibilidad de insumos y productos, afectando la seguridad alimentaria y económica.',
+    en: 'Global disruptions in logistics and transport affect the availability of inputs and goods, impacting food and economic security.',
+  },
+  'international_scrutiny': {
+    es: 'Organismos internacionales y ONGs critican duramente el desempeño ambiental de la nación, amenazando con afectar la inversión y la reputación.',
+    en: 'International bodies and NGOs sharply criticize the nation\'s environmental performance, threatening to affect investment and reputation.',
+  },
+  'global_recession': {
+    es: 'Una recesión a escala mundial contrae la demanda de exportaciones y la inversión extranjera, impactando severamente el PBI y la estabilidad económica.',
+    en: 'A worldwide recession contracts export demand and foreign investment, severely impacting GDP and economic stability.',
+  },
+  'fossil_fuel_shock': {
+    es: 'Una crisis energética global dispara los precios de los combustibles fósiles, afectando los costos de producción y el poder adquisitivo de la población.',
+    en: 'A global energy crisis sends fossil fuel prices soaring, affecting production costs and the population\'s purchasing power.',
+  },
+  'bumper_harvest': {
+    es: 'Condiciones climáticas ideales y la adopción de buenas prácticas agrícolas resultan en una cosecha récord, impulsando la seguridad alimentaria y la economía.',
+    en: 'Ideal weather conditions and the adoption of good agricultural practices result in a record harvest, boosting food security and the economy.',
+  },
+  'green_tech_investment_boom': {
+    es: 'Una ola de inversión extranjera y local en tecnologías verdes acelera la transición energética y crea empleos de alta calidad, mejorando la seguridad económica.',
+    en: 'A wave of foreign and local investment in green technologies accelerates the energy transition and creates high-quality jobs, improving economic security.',
+  },
+  'climate_justice_movement': {
+    es: 'Un nuevo y vigoroso movimiento social emerge, demandando acciones más contundentes contra el cambio climático y por una transición justa.',
+    en: 'A vigorous new social movement emerges, demanding stronger action against climate change and a just transition.',
+  },
+};
+
 // ─── International pacts ─────────────────────────────────────────────────────
 export const PACT_NAMES: Record<string, Record<Language, string>> = {
   'globalCarbonAccord':       { es: 'Acuerdo Global de Carbono',                   en: 'Global Carbon Accord' },
@@ -178,6 +231,9 @@ export function getLandUseName(key: string, lang: Language): string {
 }
 export function getEventName(id: string, lang: Language): string {
   return EVENT_NAMES[id]?.[lang] ?? id;
+}
+export function getEventDescription(id: string, lang: Language, fallback: string): string {
+  return EVENT_DESCRIPTIONS[id]?.[lang] ?? fallback;
 }
 export function getPactName(id: string, lang: Language): string {
   return PACT_NAMES[id]?.[lang] ?? id;

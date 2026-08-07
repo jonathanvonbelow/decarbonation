@@ -9,6 +9,18 @@
 import { YEARS_PER_LEVEL } from '../constants';
 import type { GameState, Indicators, LandUse, LandUseType, NumericIndicatorKeys, NumericStellaKeys, RandomEvent, RandomEventEffect, StellaStocks } from '../types';
 import type { Rng } from './rng';
+import type { Language } from '../hooks/useLanguage';
+import { getEventName, getEventDescription, getLandUseName } from '../legacyContent/gameData';
+
+// Phase 12 (12_i18n_completo.md, Capa B/C): `event.name`/`event.description` on the RandomEvent
+// objects themselves (constants.ts's ALL_RANDOM_EVENTS) are Spanish-only source content, same
+// "domain content indexed by ID" pattern as policies/land uses -- read through
+// getEventName/getEventDescription (legacyContent/gameData.ts) instead of raw, so the narrative
+// log and the level-3 event banner say the right thing in the player's chosen language.
+const eventLabel = (event: RandomEvent, language: Language): { name: string; description: string } => ({
+  name: getEventName(event.id, language),
+  description: getEventDescription(event.id, language, event.description),
+});
 
 export interface EventRollResult {
   event: RandomEvent | null;
@@ -29,6 +41,7 @@ export function applyRandomEventEffects(
   stellaState: StellaStocks,
   landUses: Record<LandUseType, LandUse>,
   logs: string[],
+  language: Language = 'es',
 ): void {
   effects.forEach((eff) => {
     if (eff.landUseChange) {
@@ -36,7 +49,12 @@ export function applyRandomEventEffects(
       if (landUses[target]) {
         const originalArea = landUses[target].area;
         landUses[target].area = Math.max(0, originalArea + changeAbsolute_kHa);
-        logs.push(`Efecto de evento: Área de '${landUses[target].name}' cambió en ${changeAbsolute_kHa.toFixed(1)} kHa.`);
+        const landUseName = getLandUseName(target, language);
+        logs.push(
+          language === 'en'
+            ? `Event effect: '${landUseName}' area changed by ${changeAbsolute_kHa.toFixed(1)} kHa.`
+            : `Efecto de evento: Área de '${landUseName}' cambió en ${changeAbsolute_kHa.toFixed(1)} kHa.`
+        );
       }
     } else if (eff.indicator) {
       let currentValue: number | boolean;
@@ -54,9 +72,11 @@ export function applyRandomEventEffects(
       }
 
       if (typeof currentValue !== 'number') {
-        const warningMsg = `Se intentó aplicar un efecto numérico a la propiedad no numérica '${eff.indicator}'. Efecto omitido.`;
+        const warningMsg = language === 'en'
+          ? `Attempted to apply a numeric effect to non-numeric property '${eff.indicator}'. Effect skipped.`
+          : `Se intentó aplicar un efecto numérico a la propiedad no numérica '${eff.indicator}'. Efecto omitido.`;
         console.warn(warningMsg);
-        logs.push(`Advertencia del sistema: ${warningMsg}`);
+        logs.push(language === 'en' ? `System warning: ${warningMsg}` : `Advertencia del sistema: ${warningMsg}`);
         return;
       }
 
@@ -107,6 +127,7 @@ export function rollEvent(
   allEvents: RandomEvent[],
   yearsElapsedInCurrentLevel: number,
   rng: Rng,
+  language: Language = 'es',
 ): EventRollResult {
   const logs: string[] = [];
   let chatMessage: string | null = null;
@@ -117,9 +138,10 @@ export function rollEvent(
       if (event.minLevel && currentLevel < event.minLevel) continue;
       const triggerRoll = rng();
       if (triggerRoll < event.triggerChance(workingState)) {
-        logs.push(`EVENTO (Año ${workingState.year}): ${event.name} - ${event.description}`);
+        const { name, description } = eventLabel(event, language);
+        logs.push(language === 'en' ? `EVENT (Year ${workingState.year}): ${name} - ${description}` : `EVENTO (Año ${workingState.year}): ${name} - ${description}`);
         const effects = event.effects(workingState);
-        applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs);
+        applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language);
         return { event, logs, chatMessage };
       }
     }
@@ -145,7 +167,11 @@ export function rollEvent(
 
   const totalWeight = eligibleEvents.reduce((sum, event) => sum + event.triggerChance(workingState), 0);
   if (totalWeight <= 0) {
-    logs.push('Nivel 3: Intento de evento dinámico fallido. Ningún evento elegible tenía >0 peso de activación.');
+    logs.push(
+      language === 'en'
+        ? 'Level 3: Dynamic event attempt failed. No eligible event had >0 trigger weight.'
+        : 'Nivel 3: Intento de evento dinámico fallido. Ningún evento elegible tenía >0 peso de activación.'
+    );
     return { event: null, logs, chatMessage };
   }
 
@@ -163,10 +189,15 @@ export function rollEvent(
     chosenEvent = eligibleEvents.find((e) => e.triggerChance(workingState) > 0) || eligibleEvents[0];
   }
 
-  logs.push(`EVENTO (N3-Dinámico, Año ${workingState.year}): ${chosenEvent.name} - ${chosenEvent.description}`);
-  chatMessage = `¡Evento Inesperado! ${chosenEvent.name}: ${chosenEvent.description}`;
+  const { name: chosenName, description: chosenDescription } = eventLabel(chosenEvent, language);
+  logs.push(
+    language === 'en'
+      ? `EVENT (L3-Dynamic, Year ${workingState.year}): ${chosenName} - ${chosenDescription}`
+      : `EVENTO (N3-Dinámico, Año ${workingState.year}): ${chosenName} - ${chosenDescription}`
+  );
+  chatMessage = language === 'en' ? `Unexpected Event! ${chosenName}: ${chosenDescription}` : `¡Evento Inesperado! ${chosenName}: ${chosenDescription}`;
   const effects = chosenEvent.effects(workingState);
-  applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs);
+  applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language);
 
   return { event: chosenEvent, logs, chatMessage };
 }

@@ -12,6 +12,7 @@ import type { ControlParams, Pact, StellaStocks } from '../types';
 import { getPolicyEfficiency } from './policies';
 import { Policy } from '../types';
 import type { PolicyState } from '../types';
+import type { Language } from '../hooks/useLanguage';
 
 export function computeTotalPactCost(pacts: Record<string, Pact>): number {
   let totalPactCost = 0;
@@ -36,6 +37,7 @@ export function updateEconomy(
   totalPactCost: number,
   loanRequestedThisRound: number,
   CP: ControlParams,
+  language: Language = 'es',
 ): EconomyResult {
   const pbiGrowthRate =
     CP.Tasa_Base_Crecimiento_PBI +
@@ -58,7 +60,9 @@ export function updateEconomy(
   if (loanRequestedThisRound > 0) {
     reservas += loanRequestedThisRound;
     deuda += loanRequestedThisRound;
-    loanProcessedLog = `Préstamo de ${loanRequestedThisRound.toFixed(0)} procesado. Deuda y Reservas actualizadas.`;
+    loanProcessedLog = language === 'en'
+      ? `Loan of ${loanRequestedThisRound.toFixed(0)} processed. Debt and Reserves updated.`
+      : `Préstamo de ${loanRequestedThisRound.toFixed(0)} procesado. Deuda y Reservas actualizadas.`;
   }
   deuda = Math.max(0, deuda - debtPrincipalPayment);
 

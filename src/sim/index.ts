@@ -38,6 +38,8 @@ import type { Rng } from './rng';
 import { rollEvent } from './events';
 import { computeScore } from './score';
 import { buildTrace, type SimTrace } from './trace';
+import type { Language } from '../hooks/useLanguage';
+import { getPolicyName } from '../legacyContent/gameData';
 
 export { makeRng, type Rng } from './rng';
 export type { SimTrace } from './trace';
@@ -78,7 +80,7 @@ export interface StepYearResult {
  * which the Facilitator panel can override live. Hardcoding the import would silently break that
  * override the moment `runSimulationRound` switched to calling this function.
  */
-export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS): StepYearResult {
+export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): StepYearResult {
   const next: GameState = JSON.parse(JSON.stringify(state));
   Object.keys(next.pacts).forEach((pactId) => {
     if (INITIAL_PACTS[pactId] && typeof INITIAL_PACTS[pactId].effects === 'function') {
@@ -104,7 +106,12 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   (Object.values(next.policies) as PolicyState[]).forEach((p) => {
     if (p.isActive && p.activationYear === undefined) {
       p.activationYear = currentYear;
-      logs.push(`Política '${p.name}' activada y confirmada para el año ${currentYear}.`);
+      const policyName = getPolicyName(p.id, language);
+      logs.push(
+        language === 'en'
+          ? `Policy '${policyName}' activated and confirmed for year ${currentYear}.`
+          : `Política '${policyName}' activada y confirmada para el año ${currentYear}.`
+      );
     }
   });
 
@@ -112,7 +119,7 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   //    decay/costs/land use/financial/indicator math, exactly like the original.
   const yearsElapsedInCurrentLevel = next.yearsSimulatedInCurrentLevel - 1;
   next.currentEvent = null;
-  const rolled = rollEvent(next, ALL_RANDOM_EVENTS, yearsElapsedInCurrentLevel, rng);
+  const rolled = rollEvent(next, ALL_RANDOM_EVENTS, yearsElapsedInCurrentLevel, rng, language);
   logs.push(...rolled.logs);
   if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
   if (rolled.event) next.currentEvent = rolled.event;
@@ -150,7 +157,7 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   // 7. Financial calculations (GDP growth, tax, interest, debt, reserves, pending loan).
   const econ = updateEconomy(
     next.stellaSpecificState, next.policies, currentLevel, additionalTaxPressurePercentage,
-    totalPolicyCost, totalPactCost, next.loanRequestedThisRound, CP,
+    totalPolicyCost, totalPactCost, next.loanRequestedThisRound, CP, language,
   );
   next.stellaSpecificState = { ...next.stellaSpecificState, ...econ.stella };
   if (econ.loanProcessedLog) {
@@ -197,6 +204,15 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);
 
   // 13. Game-over conditions.
+  // `gameOverReason` is deliberately left Spanish-only, unlike the log/warning strings just
+  // above (phase 12, 12_i18n_completo.md Capa B/C): grep-confirmed it is never rendered as text
+  // anywhere in the UI (only read as a boolean via `!!gameOverReason` for the "game over" badge,
+  // pattern-matched internally with `.includes('victoria')`/`=== 'Partida abandonada...'` in
+  // App.tsx and geminiService.ts, and sent to Gemini as AI context) — Capa C's own guidance
+  // (§5) is that context sent to the model can stay Spanish, the model understands it fine.
+  // Converting these four strings into locale-aware keys would mean also updating every
+  // comparison site across two files for a value nothing ever displays; judged not worth the
+  // risk. See docs/DESIGN_DECISIONS_LOG.md, phase 12 entry.
   if (next.indicators.politicalStability <= 5) {
     next.gameOverReason = 'Colapso Político: La nación ha caído en un estado de ingobernabilidad total.';
   } else if (next.indicators.biodiversity <= 5) {
@@ -209,7 +225,7 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
 
   // 14. Policy-efficiency-crossed-40%-threshold warning (side effect only: no state besides the
   //     policy's own notification bookkeeping, handled inside checkEfficiencyWarning).
-  const warning = checkEfficiencyWarning(next.policies);
+  const warning = checkEfficiencyWarning(next.policies, language);
   if (warning) {
     chatMessages.push({ text: warning, emphasisType: 'policy_efficiency_warning' });
     logs.push(warning);
