@@ -5,11 +5,14 @@
  * 12×12 isometric map. This module is the only bridge between the two, and it is one-directional
  * except for a single, explicit player action:
  *
- *   model → map   `syncTerritory` quantises the areas into parcels of `KHA_PER_PARCEL` and changes the
- *                 fewest parcels needed. A changing parcel is taken from the frontier of the use that
- *                 grows (deforestation visibly advances from the crops; reserves grow from their
- *                 edges). A hysteresis band keeps parcels from flickering when an area sits near a
- *                 rounding boundary. Parcels the player declared protected never move.
+ *   model → map   `syncTerritory` moves parcels along the transfers the model actually made that
+ *                 month (`stepMonth`'s `flows`): one parcel per `KHA_PER_PARCEL` of accumulated flow,
+ *                 taken from the frontier of the use that grows (deforestation visibly advances from
+ *                 the crops; reserves grow from their edges). Every change drawn is a transition the
+ *                 model makes. The map lags each flow by less than a parcel (measured ≤ 2.45 parcels
+ *                 for any use); a net-area safety net with a hysteresis band covers the rest without
+ *                 flickering. Indicators always read the exact areas, never parcel counts. Parcels the
+ *                 player declared protected never move.
  *   map → model   `declareProtectedArea` is the only way the player changes land use directly: one
  *                 native-forest parcel becomes protected, moving its kHa from BNNP to BNP in the model
  *                 and paying a one-time cost from the treasury. Everything downstream of land use —
@@ -47,6 +50,18 @@ export interface Territory {
   kHaPerParcel: number;
   seed: number;
   parcels: Parcel[];
+  /**
+   * kHa each model flow has moved that the map has not drawn yet, keyed `from>to`. A parcel moves
+   * along a flow once its accumulator reaches one parcel.
+   */
+  pending: Record<string, number>;
+}
+
+/** A land transfer the model made (see `stepMonth`'s `flows`). */
+export interface LandFlow {
+  from: ProductiveKind;
+  to: ProductiveKind;
+  kHa: number;
 }
 
 export interface ParcelChange {
@@ -185,7 +200,7 @@ export function createTerritory(landUses: Record<LandUseType, LandUse>, seed = 1
   const size = TERRITORY_SIZE;
   const parcels: Parcel[] = [];
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) parcels.push({ x, y, kind: 'fallow' });
-  const t: Territory = { size, kHaPerParcel: KHA_PER_PARCEL, seed, parcels };
+  const t: Territory = { size, kHaPerParcel: KHA_PER_PARCEL, seed, parcels, pending: {} };
 
   // Town: the 3×3 south-east corner minus its inner corner.
   const town: [number, number, ContextKind][] = [
@@ -242,6 +257,21 @@ function distanceTo(t: Territory, p: Parcel, kind: ParcelKind): number {
   return best;
 }
 
+/**
+ * Where each use can grow from, following the model's own flows (landUse.ts: BNNP→BNP, BNNP→CC,
+ * BNNP→CA, CA→BNNP, CC→CA; drought events remove CC and CA area → fallow). Pairing deficits with
+ * these sources keeps the map from showing transitions the model never makes — without it, a
+ * month where conservation protects forest (BNNP→BNP) while farmers convert (CC→CA) could be drawn
+ * as "a crop became a reserve".
+ */
+const SOURCES: Partial<Record<ProductiveKind, ProductiveKind[]>> = {
+  [LandUseType.ProtectedNativeForest]: [LandUseType.UnprotectedNativeForest],
+  [LandUseType.ConventionalCrops]: [LandUseType.UnprotectedNativeForest],
+  [LandUseType.AgroecologicalCrops]: [LandUseType.ConventionalCrops, LandUseType.UnprotectedNativeForest],
+  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops],
+  fallow: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops],
+};
+
 /** Picks which parcel of `from` becomes `to`: frontier first, never a declared reserve if avoidable. */
 function pickParcel(t: Territory, from: ProductiveKind, to: ProductiveKind): Parcel | null {
   let best: Parcel | null = null;
@@ -259,35 +289,77 @@ function pickParcel(t: Territory, from: ProductiveKind, to: ProductiveKind): Par
 }
 
 /**
- * Brings the map in line with the model's areas, changing the fewest parcels needed. Returns a
- * new territory (the input is not mutated) and the list of parcels that changed, in order.
+ * Brings the map in line with the model. Returns a new territory (the input is not mutated) and
+ * the parcels that changed, in order.
+ *
+ *  1. Flows first: each of this month's `flows` adds to its accumulator; every full parcel of
+ *     accumulated flow moves one parcel along that same transition. This is what makes the map show
+ *     the transitions the model actually made (conservation protecting forest, farmers converting
+ *     to agroecology, deforestation), not just a net balance that many different stories fit.
+ *  2. Safety net: if any use is still more than the hysteresis band away from its area once the
+ *     flows still accumulating are discounted (rounding, the ≥ 0 clamp, or a caller that passes no
+ *     flows), the fewest parcels are moved to close it, preferring the model's own transitions.
  */
 export function syncTerritory(
   territory: Territory,
   landUses: Record<LandUseType, LandUse>,
+  flows: LandFlow[] = [],
 ): { territory: Territory; changes: ParcelChange[] } {
-  const t: Territory = { ...territory, parcels: territory.parcels.map((p) => ({ ...p })) };
+  const t: Territory = { ...territory, parcels: territory.parcels.map((p) => ({ ...p })), pending: { ...territory.pending } };
   const counts = countKinds(t);
   const target = parcelTargets(landUses, productiveCount(t), t.kHaPerParcel);
   const changes: ParcelChange[] = [];
-
-  const error = (k: ProductiveKind) => target[k] - counts[k];
-  for (let guard = 0; guard < t.parcels.length * 2; guard++) {
-    let deficit: ProductiveKind = PRODUCTIVE_KINDS[0];
-    let surplus: ProductiveKind | null = null;
-    for (const k of PRODUCTIVE_KINDS) {
-      if (error(k) > error(deficit)) deficit = k;
-      if (counts[k] > 0 && (surplus === null || error(k) < error(surplus))) surplus = k;
-    }
-    if (surplus === null || deficit === surplus) break;
-    if (error(deficit) - error(surplus) <= HYSTERESIS) break;
-    const parcel = pickParcel(t, surplus, deficit);
-    if (!parcel) break;
-    changes.push({ x: parcel.x, y: parcel.y, from: parcel.kind, to: deficit });
-    parcel.kind = deficit;
+  const move = (from: ProductiveKind, to: ProductiveKind): boolean => {
+    const parcel = pickParcel(t, from, to);
+    if (!parcel) return false;
+    changes.push({ x: parcel.x, y: parcel.y, from: parcel.kind, to });
+    parcel.kind = to;
     parcel.declared = false;
-    counts[surplus]--;
-    counts[deficit]++;
+    counts[from]--;
+    counts[to]++;
+    return true;
+  };
+
+  flows.forEach((f) => {
+    if (f.kHa <= 0) return;
+    const key = `${f.from}>${f.to}`;
+    t.pending[key] = (t.pending[key] ?? 0) + f.kHa;
+  });
+  Object.keys(t.pending).forEach((key) => {
+    const [from, to] = key.split('>') as [ProductiveKind, ProductiveKind];
+    while (t.pending[key] >= t.kHaPerParcel && counts[from] > 0) {
+      if (!move(from, to)) break;
+      t.pending[key] -= t.kHaPerParcel;
+    }
+    // A flow out of a use that has no parcels left cannot be drawn; don't let it pile up.
+    if (counts[from] === 0) t.pending[key] = Math.min(t.pending[key], t.kHaPerParcel);
+  });
+
+  // Error not explained by flows still accumulating: a use whose inflow is 3 kHa short of a parcel
+  // is *expected* to be 0.6 parcel below its area, and must not be "corrected" by some other route.
+  const inFlight = (k: ProductiveKind) => Object.entries(t.pending).reduce((sum, [key, kHa]) => {
+    const [from, to] = key.split('>');
+    return sum + (to === k ? kHa : 0) - (from === k ? kHa : 0);
+  }, 0) / t.kHaPerParcel;
+  const error = (k: ProductiveKind) => target[k] - counts[k] - inFlight(k);
+  for (let guard = 0; guard < t.parcels.length * 2; guard++) {
+    // Every (deficit, surplus) pair far enough apart to justify moving a parcel. Model flows win
+    // over any other pairing; among flows, the most constrained deficit (fewest sources) goes
+    // first so it is not starved by a use that had alternatives; then the widest gap.
+    let best: { deficit: ProductiveKind; surplus: ProductiveKind; score: number } | null = null;
+    for (const deficit of PRODUCTIVE_KINDS) {
+      for (const surplus of PRODUCTIVE_KINDS) {
+        if (deficit === surplus || counts[surplus] === 0) continue;
+        const gap = error(deficit) - error(surplus);
+        if (gap <= HYSTERESIS) continue;
+        const sources = SOURCES[deficit] ?? [];
+        const score = (sources.includes(surplus) ? 0 : 100) + sources.length - gap * 0.01;
+        if (!best || score < best.score) best = { deficit, surplus, score };
+      }
+    }
+    if (!best) break;
+    const { deficit, surplus } = best;
+    if (!move(surplus, deficit)) break;
   }
   return { territory: t, changes };
 }

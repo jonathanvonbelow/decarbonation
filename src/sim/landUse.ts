@@ -19,17 +19,27 @@ export const DEFAULT_LAND_USE_CHANGE_FACTORS: LandUseChangeFactors = {
   tasa_BNNP_a_BNP: 1, tasa_BNNP_a_CC: 1, tasa_BNNP_a_CA: 1, tasa_CA_a_BNNP: 1, tasa_CC_a_CA: 1,
 };
 
+/** The five annual transfers of the transition matrix, in kHa (before the ≥ 0 clamp). */
+export interface LandUseFlows {
+  BNNP_to_BNP: number;
+  BNNP_to_CC: number;
+  BNNP_to_CA: number;
+  CA_to_BNNP: number;
+  CC_to_CA: number;
+}
+
 /**
- * Applies one year of land-use transitions. Returns a brand-new `Record<LandUseType, LandUse>`
- * (never mutates the input), with every area clamped to >= 0.
+ * Computes the annual transfers without applying them. `updateLandUse` applies exactly these; the
+ * Territorio map (src/sim/territory.ts) reads them to draw each transition the model actually
+ * makes, instead of guessing from net area changes.
  */
-export function updateLandUse(
+export function computeLandUseFlows(
   landUses: Record<LandUseType, LandUse>,
   policies: Record<Policy, PolicyState>,
   currentLevel: number,
   changeFactors: LandUseChangeFactors,
   CP: ControlParams,
-): Record<LandUseType, LandUse> {
+): LandUseFlows {
   const effCR = getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel);
   const effAS = getPolicyEfficiency(policies[Policy.Agroecological], currentLevel);
   const effPAI = getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel);
@@ -45,6 +55,31 @@ export function updateLandUse(
   const cambio_CA_a_BNNP = landUses[LandUseType.AgroecologicalCrops].area * tasa_CA_a_BNNP_final;
   const tasa_CC_a_CA_final = (CP.Tasa_de_CC_a_CA_Base + effAS * 0.03) * (1 - effPAI * 0.5) * changeFactors.tasa_CC_a_CA;
   const cambio_CC_a_CA = landUses[LandUseType.ConventionalCrops].area * tasa_CC_a_CA_final;
+
+  return {
+    BNNP_to_BNP: cambio_BNNP_a_BNP,
+    BNNP_to_CC: cambio_BNNP_a_CC,
+    BNNP_to_CA: cambio_BNNP_a_CA,
+    CA_to_BNNP: cambio_CA_a_BNNP,
+    CC_to_CA: cambio_CC_a_CA,
+  };
+}
+
+/**
+ * Applies one year of land-use transitions. Returns a brand-new `Record<LandUseType, LandUse>`
+ * (never mutates the input), with every area clamped to >= 0.
+ */
+export function updateLandUse(
+  landUses: Record<LandUseType, LandUse>,
+  policies: Record<Policy, PolicyState>,
+  currentLevel: number,
+  changeFactors: LandUseChangeFactors,
+  CP: ControlParams,
+): Record<LandUseType, LandUse> {
+  const {
+    BNNP_to_BNP: cambio_BNNP_a_BNP, BNNP_to_CC: cambio_BNNP_a_CC, BNNP_to_CA: cambio_BNNP_a_CA,
+    CA_to_BNNP: cambio_CA_a_BNNP, CC_to_CA: cambio_CC_a_CA,
+  } = computeLandUseFlows(landUses, policies, currentLevel, changeFactors, CP);
 
   const newLandUses = JSON.parse(JSON.stringify(landUses)) as Record<LandUseType, LandUse>;
   newLandUses[LandUseType.ProtectedNativeForest].area += cambio_BNNP_a_BNP;

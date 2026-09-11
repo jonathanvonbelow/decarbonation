@@ -52,6 +52,11 @@ const CAPA_B_C_VERIFIED_BILINGUAL = [
   'src/sim/events.ts',
   'src/sim/index.ts',
   'src/sim/policies.ts',
+  // v4 (21_fusion_ecosim.md): gameOver.ts holds the same 4 deliberately Spanish-only
+  // gameOverReason strings, moved out of index.ts unchanged; monthly.ts's log lines follow the
+  // same `language === 'en' ? ... : ...` pattern as the 4 sim files above.
+  'src/sim/gameOver.ts',
+  'src/sim/monthly.ts',
 ];
 
 // Components still using their own local `T = { es: {...}, en: {...} }` dictionary instead of

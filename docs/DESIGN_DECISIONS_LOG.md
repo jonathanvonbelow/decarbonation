@@ -1263,3 +1263,54 @@ reservas pese más, es una decisión sobre pesos del modelo, no algo a resolver 
 `npm run sim` idéntico al del juego de 3 niveles antes de v4.
 
 **Abierto.** Otros usos públicos además del área protegida: pendiente de definición del equipo.
+
+## 2026-09-11 — v4 / F3: vista previa jugable en `/territorio` (mapa, HUD, sesión mensual)
+
+**Qué se hizo.** Entry nuevo `territorio.html` → `src/territorio/` (ruta limpia `/territorio` en
+`vercel.json`), separado del juego de 3 niveles, que no cambia. Contenido:
+`session.ts` (reglas puras de la partida: reloj mensual, desbloqueos, acciones portadas de `App.tsx`
+sin cambios de reglas), `news.ts` (noticias derivadas del modelo), `IsoMap.tsx` (mapa de EcoSIM
+portado), `hud.tsx`/`panels.tsx`/`screens.tsx` (HUD flotante de EcoSIM sobre los tokens v3;
+reutiliza `WinRoutesPanel`, `EffortSlider` y `Button` del juego principal), textos propios en
+`src/i18n/territorio/` (es/en, tipados, fuera del bundle del juego principal). Assets de EcoSIM
+convertidos a WebP en `public/assets/ecosim/` (1,8 MB → 406 KB, solo los 12 tiles que usa el mapa).
+
+**Hallazgos y correcciones durante la verificación en navegador.**
+- *El mapa mostraba transiciones que el modelo no hace.* Con solo las áreas netas, "conservación
+  BNNP→BNP + reconversión CC→CA" es indistinguible de "BNNP→CA + CC→BNP": medido en 100 partidas,
+  el 23 % de los cambios dibujados eran inválidos (p. ej. un cultivo convertido en reserva). Se
+  extrajo `computeLandUseFlows` de `updateLandUse` (mismas fórmulas, mismo orden; `npm run sim`
+  idéntico), `stepMonth` devuelve los flujos del mes y el territorio mueve parcelas por cada flujo
+  acumulado. La red de seguridad por neto descuenta lo que está "en camino" en los acumuladores;
+  un primer intento sin ese descuento duplicó los cambios y empeoró la fidelidad. Resultado medido:
+  100 % de transiciones válidas; el mapa va hasta 2,45 parcelas detrás del área de algún uso (cota
+  del test: 3), por eso la leyenda muestra las hectáreas exactas del modelo, no el conteo de parcelas.
+- *CO₂ y puntaje iniciales inconsistentes.* `createInitialState` toma CO₂ = 6,5 y puntaje 0 de
+  `INITIAL_INDICATORS`, pero los usos del suelo del Nivel 2 dan ~17,4 t/hab: el primer paso mostraba
+  un salto que el jugador no causó. La vista previa los recalcula con las funciones del modelo antes
+  del primer mes y toma la línea de base de las rutas después. **El juego de 3 niveles tiene el mismo
+  salto en su primer año** (no se tocó; pendiente de decisión del equipo).
+- *Selección desplazada una parcela.* Los sprites están elevados ~28 px sobre su rombo de suelo
+  (medido sobre el arte); selección, contornos y capas usan ahora la cara visible de la parcela.
+- *Retratos con fondo magenta* (croma opaco en los PNG originales de EcoSIM): recorte de croma al
+  convertir.
+- *Reloj atado a `requestAnimationFrame`*, que se detiene en pestañas ocultas. Pasó a un temporizador
+  de tiempo real, y la partida se pausa sola al salir de la pestaña (en un aula nadie debería volver
+  y encontrar años pasados).
+- Una noticia atribuía a "la política de conservación" el paso BNNP→BNP, que tiene tasa base aun sin
+  esa política: se reescribió sin afirmar la causa.
+
+**Honestidad de los datos en pantalla.** Capas "ver sobre el mapa" = coeficientes del propio modelo
+por uso del suelo (tasas de emisión/secuestro, pesos de `INDICATOR_IMPACT_WEIGHTS`), normalizados.
+La ficha de parcela muestra lo mismo en flechas. Ningún número del HUD sale de otro lado que no sea
+el `GameState`.
+
+**Verificación.** 125/125 tests (sesión: 10 nuevos en `tests/territorio/`; territorio: fidelidad de
+flujos y cota medida), `tsc` limpio, `i18n:audit` limpio, `npm run build` con el entry nuevo.
+En navegador (Chrome, escritorio 1536 px): portada, partida, activar políticas, reloj ×4, noticias,
+declarar un área protegida (reservas 1.000 → 900, BNP 20 → 25 kHa), capa de carbono, panel de rutas,
+cambio a inglés. **No verificado:** ancho de celular (la ventana del navegador de prueba no se pudo
+redimensionar) y el final de una partida completa en pantalla (cubierto por test).
+
+**Pendiente.** Rutas del Nivel 2 calibradas contra el CO₂ inicial de 6,5; con el valor real (17,4)
+arrancan en 50 % y la condición de emisiones es exigente (F7). Mobile sin panel de actores.

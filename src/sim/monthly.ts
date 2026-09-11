@@ -39,13 +39,14 @@ import {
   calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
   calculatePoliticalCollapseChange, calculateSocialConflictChange,
 } from './indicators';
-import { DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from './landUse';
+import { computeLandUseFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from './landUse';
 import { checkEfficiencyWarning, computeTotalPolicyCost, updatePolicyEfficiency } from './policies';
 import { updatePressures } from './pressures';
 import type { Rng } from './rng';
 import { computeScore } from './score';
 import { buildTrace, type SimTrace } from './trace';
 import type { StepYearChatMessage } from './index';
+import type { LandFlow } from './territory';
 
 export const MONTHS_PER_YEAR = 12;
 const DT = 1 / MONTHS_PER_YEAR;
@@ -72,6 +73,11 @@ export interface StepMonthResult {
   event: RandomEvent | null;
   /** Area change per land use this month, after − before, in kHa. */
   landUseDelta: Record<LandUseType, number>;
+  /**
+   * This month's land transfers, one per edge of the transition matrix (1/12 of the annual flow),
+   * plus area removed by an event (to 'fallow'). The Territorio map moves parcels along these.
+   */
+  flows: LandFlow[];
   trace: SimTrace;
   logs: string[];
   chatMessages: StepYearChatMessage[];
@@ -161,10 +167,17 @@ export function stepMonth(
 
   // 2. Random event roll (monthly chance), applied before the rest, as in stepYear.
   next.currentEvent = null;
+  const areasBeforeEvent = areasOf(next);
   const rolled = rollMonthlyEvent(next, options.events ?? ALL_RANDOM_EVENTS, rng, month, language);
   logs.push(...rolled.logs);
   if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
   if (rolled.event) next.currentEvent = rolled.event;
+  const flows: LandFlow[] = [];
+  const areasAfterEvent = areasOf(next);
+  (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
+    const lost = areasBeforeEvent[k] - areasAfterEvent[k];
+    if (lost > 0) flows.push({ from: k, to: 'fallow', kHa: lost });
+  });
 
   // 3. Policy "years active" counters (+1/12) and efficiency decay.
   updatePolicyEfficiency(next.policies, stella, DT);
@@ -204,6 +217,14 @@ export function stepMonth(
   });
 
   // 6. Land-use transitions: 1/12 of the annual transfer.
+  const annual = computeLandUseFlows(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
+  flows.push(
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ProtectedNativeForest, kHa: annual.BNNP_to_BNP * DT },
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ConventionalCrops, kHa: annual.BNNP_to_CC * DT },
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.AgroecologicalCrops, kHa: annual.BNNP_to_CA * DT },
+    { from: LandUseType.AgroecologicalCrops, to: LandUseType.UnprotectedNativeForest, kHa: annual.CA_to_BNNP * DT },
+    { from: LandUseType.ConventionalCrops, to: LandUseType.AgroecologicalCrops, kHa: annual.CC_to_CA * DT },
+  );
   const annualLandUses = updateLandUse(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
   (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
     next.landUses[k].area = Math.max(0, toward(next.landUses[k].area, annualLandUses[k].area));
@@ -304,6 +325,7 @@ export function stepMonth(
     yearRolled,
     event: rolled.event,
     landUseDelta,
+    flows,
     trace: buildTrace(currentYear, before, next.indicators),
     logs,
     chatMessages,
