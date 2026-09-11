@@ -1159,3 +1159,32 @@ cinco recursos linkeando "Ver"/"Abrir" en vez de "Descargar", y las páginas
 diseño esperado y cero errores de consola.
 
 **Origen.** Reporte directo del usuario tras el deploy de la fase 11 (segunda ronda).
+
+## 2026-09-11 — v4 / F0 (fusión con EcoSIM): especificación, rama y CLAUDE.md corregido
+
+**Pedido del usuario.** Fusionar DecarboNation con el prototipo EcoSIM (`combinacion/EcoSIM`, mejor
+arte e interfaz) en un solo nivel, previa entrega de un plan completo. Decisiones tomadas por el
+usuario sobre ese plan: (1) base Nivel 2 con desbloqueo progresivo, pero con **paso mensual** como
+EcoSIM; (2) el juego de 3 niveles sigue siendo el principal y la fusión va en una sección aparte
+como "lo próximo en desarrollo"; (3) el jugador solo puede declarar áreas protegidas u otros usos
+públicos, siempre que su efecto entre en todas las ecuaciones que usan ese dato; (4) commit por fase.
+Todo quedó en `mejora-general/files/21_fusion_ecosim.md`.
+
+**Por qué el motor de DecarboNation y no el de EcoSIM.** El de EcoSIM es mensual pero ad hoc, sin
+tests, y reporta agua y energía que nada calcula con sustento. Las dos revisiones PDF que vienen con
+EcoSIM piden explícitamente un núcleo causal verificable y reproducible con la IA fuera del cálculo:
+eso ya es `src/sim/`. EcoSIM aporta mapa, arte y HUD.
+
+**Por qué el paso mensual no cambia el modelo.** Todas las ecuaciones de estado son de primer orden,
+`x(t+1) = x(t) + f(x(t))`; el paso mensual es `x + f(x)/12` (Euler con Δt = 1/12). Conserva los
+equilibrios del modelo anual, el área total y los límites 0-100; cambia la forma de la trayectoria,
+no el destino. Se implementa en un módulo aparte (`src/sim/monthly.ts`) y `stepYear` no cambia.
+
+**`CLAUDE.md` estaba desactualizado en un punto que confundía.** Decía que el componente raíz era
+`App.tsx` en la raíz y que `src/App.tsx` era un duplicado obsoleto: es al revés desde la
+consolidación del commit `5f415c7` (no existe `App.tsx` en la raíz). Reescrito: entradas del build
+multipágina, motor puro, comandos de test (incluido cómo correr un solo test), `GEMINI_MODEL`,
+convenciones de fases y de este log.
+
+**Abierto.** Qué "otros usos públicos" además del área protegida, y con qué parámetros (§5 de la
+especificación): no se habilitan hasta tener tasas y pesos para todas las ecuaciones.
