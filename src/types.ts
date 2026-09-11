@@ -452,6 +452,10 @@ export interface ControlParams {
   PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
   PPSocial_Increase_Factor_Per_Tax_Point: number; // e.g., 0.4 points of Social Pressure increase per 1% additional tax
   CO2_EMISSIONS_SCALING_FACTOR: number;
+
+  // Territorio preview only (mejora-general/files/21_fusion_ecosim.md §5): one-time cost, paid from
+  // Reservas_del_Tesoro, of declaring unprotected native forest (BNNP) as protected (BNP), per kHa.
+  Costo_Declaracion_Area_Protegida_por_kHa: number;
 }
 
 export type InstrumentImpactHint = {

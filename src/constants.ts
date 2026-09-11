@@ -488,6 +488,10 @@ export const CONTROL_PARAMS: ControlParams = {
   PBIGrowth_Reduction_Factor_Per_Tax_Point: 0.0002,
   PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
   CO2_EMISSIONS_SCALING_FACTOR: 40000,
+
+  // Territorio preview (21_fusion_ecosim.md §5). Starting value, to calibrate with the harness:
+  // one 5 kHa parcel = 100, i.e. about a month of level-2 tax income.
+  Costo_Declaracion_Area_Protegida_por_kHa: 20,
 };
 
 

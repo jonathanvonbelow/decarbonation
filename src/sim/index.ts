@@ -55,6 +55,7 @@ export * from './events';
 export * from './winRoutes';
 export * from './gameOver';
 export * from './monthly';
+export * from './territory';
 
 export interface StepYearChatMessage {
   text: string;

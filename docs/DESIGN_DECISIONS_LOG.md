@@ -1229,3 +1229,37 @@ el mismo modelo; corregirlo cambiaría el balance del juego de 3 niveles y es de
 **Otro.** `tsconfig.json` no tenía `include`, así que `tsc --noEmit` (y por lo tanto `npm run
 build`) empezó a compilar `combinacion/EcoSIM` y a fallar. Se agregó `exclude` con
 `combinacion`, `node_modules` y `dist`.
+
+## 2026-09-11 — v4 / F2: territorio (`src/sim/territory.ts`) y área protegida declarada por el jugador
+
+**Qué se hizo.** Módulo puro que une el mapa de 12×12 con las seis áreas del modelo:
+`createTerritory` (río, 4 humedales, pueblo de 8 parcelas, y 120 parcelas productivas de 5 kHa =
+los 600 kHa del Nivel 2, dispuestas del pueblo hacia afuera: cultivos convencionales,
+agroecológicos, pasturas, plantaciones, bosque nativo, reserva), `syncTerritory` (modelo → mapa) y
+`declareProtectedArea` (la única acción directa del jugador, decisión 3 del equipo).
+
+**Modelo → mapa.** Cuantización por mayor resto al inicio; después, cambios mínimos con una banda
+de histéresis de 1,2 parcelas para que una parcela no parpadee cuando un área está cerca de un borde
+de redondeo (el error queda acotado a ≤ 6 kHa por uso, verificado a 30 años con eventos). La parcela
+que cambia se toma de la frontera del uso que crece: la deforestación avanza desde los cultivos y
+las reservas crecen desde sus bordes. El área que el modelo deja de contabilizar por el evento de
+sequía (ítem L-1 de la auditoría) se muestra como parcelas en barbecho en vez de ocultarse.
+
+**Mapa → modelo.** Declarar reserva una parcela de bosque nativo no protegido mueve 5 kHa de BNNP a
+BNP y cobra un costo único de las Reservas del Tesoro (`Costo_Declaracion_Area_Protegida_por_kHa`,
+parámetro nuevo en `CONTROL_PARAMS`, 20/kHa = 100 por parcela ≈ un mes de recaudación del Nivel 2;
+a calibrar en F7). No aparece en el panel del facilitador del juego principal, que lista sus
+parámetros explícitamente. Ninguna ecuación cambió: carbono, biodiversidad, seguridad alimentaria y
+económica, el flujo de deforestación BNNP→CC y la condición de % de bosque nativo leen las áreas, así
+que la acción llega a todas. Un test lo verifica de punta a punta: con 6 parcelas protegidas, a 10
+años hay menos cultivo convencional (menos bosque expuesto a la deforestación) y más biodiversidad.
+
+**Honestidad sobre la magnitud.** En el modelo, el efecto directo de BNP sobre la biodiversidad es
+chico (peso 0,50 vs 0,20 de BNNP, ponderado por la fracción de área y por 0,8·1,5). Lo que más
+cambia la protección es cortar la deforestación de esas parcelas. Si el equipo quiere que declarar
+reservas pese más, es una decisión sobre pesos del modelo, no algo a resolver en la interfaz.
+
+**Verificación.** 114/114 tests (11 nuevos en `tests/sim/territory.spec.ts`), `tsc` limpio,
+`npm run sim` idéntico al del juego de 3 niveles antes de v4.
+
+**Abierto.** Otros usos públicos además del área protegida: pendiente de definición del equipo.
