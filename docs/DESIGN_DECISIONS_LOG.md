@@ -1188,3 +1188,44 @@ convenciones de fases y de este log.
 
 **Abierto.** Qué "otros usos públicos" además del área protegida, y con qué parámetros (§5 de la
 especificación): no se habilitan hasta tener tasas y pesos para todas las ecuaciones.
+
+## 2026-09-11 — v4 / F1: motor mensual (`src/sim/monthly.ts`)
+
+**Qué se hizo.** `stepMonth(state, month, rng, CP, lang, options)` reproduce `stepYear` paso por
+paso con Δt = 1/12: cada stock avanza 1/12 de lo que la ecuación anual lo movería desde el estado
+actual (`x + (F(x) − x)/12`). Ninguna fórmula, peso ni umbral cambia. Tres cambios mínimos en
+módulos compartidos, todos con valor por defecto que conserva el comportamiento anterior:
+`updatePolicyEfficiency(..., dt = 1)`; `fiscalTermsActive = currentLevel === 3` en
+`calculateEconomicSecurityChange`/`calculateSocialConflictChange`; y la evaluación de fin de
+partida extraída tal cual a `src/sim/gameOver.ts` (`evaluateGameOver`), que usan los dos motores.
+
+**Verificación de que el juego de 3 niveles no cambió.** `npm run sim` antes y después de los
+cambios: salida idéntica (diff vacío). Los 93 tests previos siguen pasando.
+
+**Mensual vs anual, medido.** Cuatro estrategias (nada; verde; productiva; mixta), Nivel 2, sin
+eventos, 30 años: los indicadores centrales difieren < 1 punto, CO₂ < 0,2 t/hab, puntaje ≤ 11/1000.
+Donde más se separan es en las presiones (hasta ~6 puntos, p. ej. presión social mixta 92,6 anual vs
+86,8 mensual): el paso anual rebota contra los límites 0/100 y el mensual los suaviza. Es la
+diferencia esperable entre un paso grueso y uno fino, no un desvío del modelo. Tests nuevos en
+`tests/sim/monthly.spec.ts` (10): pureza, calendario, determinismo, conservación de área a 30 años,
+límites y finitud con eventos, coincidencia con `stepYear` a 30 años (tolerancias medidas),
+probabilidad mensual de eventos, efecto completo del evento en su mes, préstamo acreditado una vez,
+términos fiscales solo si se activan.
+
+**Eventos.** Cada evento conserva su frecuencia anual calibrada (`1 − (1 − p)^(1/12)` por mes). La
+suma de probabilidades del Nivel 2 ronda 0,2 por año, así que el "más situaciones y noticias"
+pedido no puede salir de estos eventos sin inflar shocks que el modelo calibró como raros: tiene que
+salir de noticias derivadas del estado y de situaciones nuevas (F5).
+
+**Hallazgo en el juego principal (no corregido, pendiente de decisión).** En `stepYear` los pactos
+aplican sus efectos en el paso 5, pero `politicalStability` se recalcula en el paso 8 desde
+`Colapso_politico` y `co2EqEmissionsPerCapita` en el paso 9 desde `computeCarbonBalance`. Resultado:
+el −5 % de CO₂ y el +3 de estabilidad del Acuerdo Global de Carbono, el −10 % de CO₂ de la
+Iniciativa de Transferencia Tecnológica y el −5 % de CO₂ del evento "Boom de tecnología verde" nunca
+llegan al jugador (el efecto sobre biodiversidad y seguridad económica sí, porque esas se calculan
+a partir del valor vigente). El motor mensual reproduce el mismo comportamiento para seguir siendo
+el mismo modelo; corregirlo cambiaría el balance del juego de 3 niveles y es decisión del equipo.
+
+**Otro.** `tsconfig.json` no tenía `include`, así que `tsc --noEmit` (y por lo tanto `npm run
+build`) empezó a compilar `combinacion/EcoSIM` y a fallar. Se agregó `exclude` con
+`combinacion`, `node_modules` y `dist`.

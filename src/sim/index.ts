@@ -38,6 +38,7 @@ import type { Rng } from './rng';
 import { rollEvent } from './events';
 import { computeScore } from './score';
 import { buildTrace, type SimTrace } from './trace';
+import { evaluateGameOver } from './gameOver';
 import type { Language } from '../hooks/useLanguage';
 import { getPolicyName } from '../legacyContent/gameData';
 
@@ -52,6 +53,8 @@ export * from './economy';
 export * from './score';
 export * from './events';
 export * from './winRoutes';
+export * from './gameOver';
+export * from './monthly';
 
 export interface StepYearChatMessage {
   text: string;
@@ -213,15 +216,8 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   // Converting these four strings into locale-aware keys would mean also updating every
   // comparison site across two files for a value nothing ever displays; judged not worth the
   // risk. See docs/DESIGN_DECISIONS_LOG.md, phase 12 entry.
-  if (next.indicators.politicalStability <= 5) {
-    next.gameOverReason = 'Colapso Político: La nación ha caído en un estado de ingobernabilidad total.';
-  } else if (next.indicators.biodiversity <= 5) {
-    next.gameOverReason = 'Colapso Ecológico: La pérdida de biodiversidad ha provocado una catástrofe irreversible.';
-  } else if (currentLevel >= 2 && next.indicators.foodSecurity <= 10) {
-    next.gameOverReason = 'Hambruna: La incapacidad de alimentar a la población ha generado una crisis humanitaria.';
-  } else if (next.stellaSpecificState.Reservas_del_Tesoro < -(next.stellaSpecificState.PBI_Real * 0.2) && next.stellaSpecificState.Deuda > next.stellaSpecificState.PBI_Real * 1.5) {
-    next.gameOverReason = 'Bancarrota Nacional: La deuda insostenible y la falta de reservas han llevado a la quiebra.';
-  }
+  const gameOverReason = evaluateGameOver(next);
+  if (gameOverReason) next.gameOverReason = gameOverReason;
 
   // 14. Policy-efficiency-crossed-40%-threshold warning (side effect only: no state besides the
   //     policy's own notification bookkeeping, handled inside checkEfficiencyWarning).

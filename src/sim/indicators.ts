@@ -108,6 +108,11 @@ export function calculateFoodSecurityChange(
   return indicators.foodSecurity + actualChange;
 }
 
+/**
+ * `fiscalTermsActive` switches on the additional-tax-pressure term. It defaults to the original
+ * rule (level 3 only), so the 3-level game is unchanged; the single-level Territorio preview
+ * passes it explicitly once its fiscal mechanics unlock (mejora-general/files/21_fusion_ecosim.md §6).
+ */
 export function calculateEconomicSecurityChange(
   policies: Record<Policy, PolicyState>,
   landUses: Record<LandUseType, LandUse>,
@@ -115,6 +120,7 @@ export function calculateEconomicSecurityChange(
   currentLevel: number,
   additionalTaxPressurePercentage: number,
   CP: ControlParams,
+  fiscalTermsActive: boolean = currentLevel === 3,
 ): number {
   let policyImpact = 0;
   const esWeights = INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.POLICIES;
@@ -143,7 +149,7 @@ export function calculateEconomicSecurityChange(
   }
 
   let fiscalPressureImpact = 0;
-  if (currentLevel === 3 && additionalTaxPressurePercentage > 0) {
+  if (fiscalTermsActive && additionalTaxPressurePercentage > 0) {
     fiscalPressureImpact = additionalTaxPressurePercentage * CP.EcoSec_Reduction_Factor_Per_Tax_Point;
   }
 
@@ -168,6 +174,7 @@ export function calculateSocialConflictChange(
   currentLevel: number,
   additionalTaxPressurePercentage: number,
   CP: ControlParams,
+  fiscalTermsActive: boolean = currentLevel === 3,
 ): number {
   let incrementoConflicto = 0;
   const conflictFactors = INDICATOR_IMPACT_WEIGHTS.SOCIAL_WELLBEING.CONFLICT_INCREMENT_FACTORS;
@@ -210,7 +217,7 @@ export function calculateSocialConflictChange(
     incrementoConflicto += (landUses[LandUseType.ForestPlantations].area / currentTotalLandArea) * conflictFactors.LAND_USE_PF_IMPACT * 100;
   }
 
-  if (currentLevel === 3 && additionalTaxPressurePercentage > 0) {
+  if (fiscalTermsActive && additionalTaxPressurePercentage > 0) {
     incrementoConflicto += additionalTaxPressurePercentage * CP.SocialConflict_Increase_Factor_Per_Tax_Point;
   }
 
