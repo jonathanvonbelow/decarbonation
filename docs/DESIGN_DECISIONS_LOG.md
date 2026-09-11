@@ -1314,3 +1314,17 @@ redimensionar) y el final de una partida completa en pantalla (cubierto por test
 
 **Pendiente.** Rutas del Nivel 2 calibradas contra el CO₂ inicial de 6,5; con el valor real (17,4)
 arrancan en 50 % y la condición de emisiones es exigente (F7). Mobile sin panel de actores.
+
+## 2026-09-11 — v4 / F3b: sección "Lo próximo" en la landing
+
+Decisión 2 del equipo: el juego de 3 niveles sigue siendo el principal, con su paquete docente y
+todo lo que ya está en el sitio; la fusión figura aparte como lo próximo en desarrollo. Se agregó
+una sola sección en `index.html` (`#proximo`), debajo de "¿Sos docente?" y antes de las preguntas
+frecuentes, para que nunca compita con el CTA principal: arte de EcoSIM, rótulo "En desarrollo ·
+vista previa", aclaración de que no reemplaza al juego ni al paquete docente, y link a `/territorio`.
+Bilingüe con el mismo patrón `data-lang` de la landing. Nada más del sitio cambió.
+
+Medición: evento propio `preview_click` (no `play_click`, para no inflar el embudo del juego). La
+tabla `funnel_events` no está versionada en `supabase/`, así que no se pudo confirmar si restringe
+nombres de evento; el envío es de mejor esfuerzo y falla en silencio si la rechaza. La página de la
+vista previa lleva `noindex` hasta que gradúe y no está en `sitemap.xml`.
