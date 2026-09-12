@@ -21,7 +21,8 @@ import type { Session } from './session';
 
 export type NewsTone = 'good' | 'bad' | 'neutral';
 export type NewsKind =
-  | 'event' | 'land' | 'actor' | 'finance' | 'alert' | 'milestone' | 'summary' | 'unlock' | 'policy' | 'player';
+  | 'event' | 'land' | 'actor' | 'finance' | 'alert' | 'milestone' | 'summary' | 'unlock' | 'policy' | 'player'
+  | 'situation';
 
 export interface NewsItem {
   id: string;

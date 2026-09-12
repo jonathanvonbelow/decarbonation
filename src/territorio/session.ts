@@ -17,7 +17,8 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, evaluateLevel, makeRng, publicUseTarget, stepMonth, syncTerritory,
+  createInitialState, createTerritory, declarePublicUse, evaluateGameOver, evaluateLevel, makeRng, publicUseTarget,
+  stepMonth, syncTerritory,
   type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -25,6 +26,9 @@ import { Policy } from '../types';
 import type { Language } from '../hooks/useLanguage';
 import { INSTRUMENTS_UNLOCK_YEAR, TERRITORIO_LEVEL, TOTAL_MONTHS } from './calendar';
 import { buildMonthNews, unlockNews, type NewsItem } from './news';
+import {
+  applyWear, defaultOption, resolveSituation, rollSituation, SITUATION_BY_ID, type OpenSituation,
+} from './situations';
 
 export * from './calendar';
 /** Keeps the note/news feed bounded; the map and history carry the long view. */
@@ -60,8 +64,19 @@ export interface Session {
   news: NewsItem[];
   /** Indicators at the start of the current calendar year (for the yearly summary). */
   yearStart: Indicators;
-  /** Random event waiting for the player to read it; the clock does not advance meanwhile. */
-  pendingEvent: RandomEvent | null;
+  /**
+   * Situations sitting on the desk. They never stop the clock: while they are open they wear the
+   * government down every month, and they resolve themselves badly when their deadline passes
+   * (21_fusion_ecosim.md §7, decisión 1 del equipo).
+   */
+  open: OpenSituation[];
+  /** Pressure points the inbox has cost so far, for the closing screen. */
+  wearTotal: number;
+  /** Situations the player actually decided, and ones that expired unattended. */
+  resolvedCount: number;
+  expiredCount: number;
+  /** The model's own random event that fired this month, if any. Shown as a note, never as a modal. */
+  lastEvent: RandomEvent | null;
   outcome: Outcome | null;
   /** Parcels the player declared protected, total. */
   declaredCount: number;
@@ -134,7 +149,11 @@ export function createSession(seed: number): Session {
     history: [sample(game, 0)],
     news: [],
     yearStart: { ...game.indicators },
-    pendingEvent: null,
+    open: [],
+    wearTotal: 0,
+    resolvedCount: 0,
+    expiredCount: 0,
+    lastEvent: null,
     outcome: null,
     declaredCount: 0,
   };
@@ -147,23 +166,67 @@ function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
   return [...items.reverse(), ...news].slice(0, MAX_NEWS);
 }
 
-/** Advances one month. No-op while an event card is pending or once the game is over. */
+/** Advances one month. Only the end of the game stops it: situations never pause the clock. */
 export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): Session {
-  if (s.outcome || s.pendingEvent) return s;
+  if (s.outcome) return s;
   const before = unlocks(s, CP);
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, { fiscalTermsActive: before.finance });
   const { territory, changes } = syncTerritory(s.territory, r.next.landUses, r.flows);
   const monthIndex = s.monthIndex + 1;
 
+  let game = r.next;
+  const situationNews: NewsItem[] = [];
+  const stamp = { monthIndex, year: s.game.year, month: s.month };
+
+  // 1. Everything still on the desk wears the government down this month.
+  const wear = applyWear(s.open, game.stellaSpecificState, game.indicators, monthIndex);
+  const wornTotal = Object.values(wear).reduce((sum, n) => sum + n, 0);
+  let open = s.open.map((item) => ({ ...item, worn: item.worn + (wear[item.id] ?? 0) }));
+
+  // 2. Anything past its deadline resolves itself the way nobody chose.
+  let expiredCount = s.expiredCount;
+  const stillOpen: OpenSituation[] = [];
+  open.forEach((item) => {
+    if (monthIndex < item.expiresAt) {
+      stillOpen.push(item);
+      return;
+    }
+    const def = SITUATION_BY_ID[item.defId];
+    if (def) {
+      const fallback = defaultOption(def);
+      const applied = resolveSituation(game, item.defId, fallback.id, CP, language);
+      if (applied.ok) game = applied.state;
+      situationNews.push({
+        ...stamp, id: `${item.id}-expired`, kind: 'situation', tone: 'bad',
+        key: 'situation.expired', values: { situation: item.defId, option: fallback.id },
+      });
+      expiredCount += 1;
+    }
+  });
+  open = stillOpen;
+
+  // 3. A new one may arrive.
+  const arrival = rollSituation(game, open.map((o) => o.defId), monthIndex, makeRng(s.seed + 7919, monthIndex), undefined);
+  if (arrival) {
+    open = [...open, arrival.open];
+    situationNews.push({
+      ...stamp, id: `${arrival.open.id}-new`, kind: 'situation', tone: arrival.def.tone,
+      key: 'situation.arrived', values: { situation: arrival.def.id },
+    });
+  }
+
   const next: Session = {
     ...s,
-    game: r.next,
+    game,
     month: r.month,
     monthIndex,
     territory,
     lastChanges: { tick: s.lastChanges.tick + 1, list: changes },
-    history: [...s.history, sample(r.next, monthIndex)],
-    pendingEvent: r.event,
+    history: [...s.history, sample(game, monthIndex)],
+    open,
+    wearTotal: s.wearTotal + wornTotal,
+    expiredCount,
+    lastEvent: r.event,
   };
 
   const items = buildMonthNews({
@@ -178,23 +241,48 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     yearRolled: r.yearRolled,
     yearStart: s.yearStart,
   });
-  if (r.yearRolled) next.yearStart = { ...r.next.indicators };
+  if (r.yearRolled) next.yearStart = { ...game.indicators };
   items.push(...unlockNews(s, next, CP));
+  items.push(...situationNews);
   next.news = pushNews(s.news, items);
 
-  if (r.next.gameOverReason) {
-    next.outcome = { kind: 'collapse', reason: r.next.gameOverReason, routes: evaluateRoutes(r.next) };
-    next.pendingEvent = null;
+  const gameOver = evaluateGameOver(game);
+  if (gameOver) {
+    next.game = { ...game, gameOverReason: gameOver };
+    next.outcome = { kind: 'collapse', reason: gameOver, routes: evaluateRoutes(next.game) };
   } else if (monthIndex >= TOTAL_MONTHS) {
-    const routes = evaluateRoutes(r.next);
+    const routes = evaluateRoutes(game);
     next.outcome = { kind: routes.won ? 'won' : 'lost', routes };
-    next.pendingEvent = null;
   }
   return next;
 }
 
-export function dismissEvent(s: Session): Session {
-  return s.pendingEvent ? { ...s, pendingEvent: null } : s;
+/** Player decides one of the open situations. */
+export function decideSituation(s: Session, openId: string, optionId: string, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): ActionResult {
+  if (s.outcome) return { session: s, error: 'game-over' };
+  const item = s.open.find((o) => o.id === openId);
+  const def = item ? SITUATION_BY_ID[item.defId] : undefined;
+  if (!item || !def) return { session: s };
+  const option = def.options.find((o) => o.id === optionId);
+  if (!option) return { session: s };
+  const applied = resolveSituation(s.game, item.defId, optionId, CP, language);
+  if (!applied.ok) return { session: s, error: 'insufficient-funds', detail: { cost: option.cost ?? 0 } };
+
+  const news: NewsItem = {
+    id: `${item.id}-done`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,
+    kind: 'situation', tone: 'good', key: 'situation.resolved',
+    values: { situation: def.id, option: optionId },
+  };
+  return {
+    session: {
+      ...s,
+      game: applied.state,
+      open: s.open.filter((o) => o.id !== openId),
+      resolvedCount: s.resolvedCount + 1,
+      news: pushNews(s.news, [news]),
+    },
+    detail: { cost: applied.cost },
+  };
 }
 
 /* ── Player actions ────────────────────────────────────────────────────────────────────────── */

@@ -11,10 +11,11 @@ import { LandUseType } from '../types';
 import { fill, useCopy, type Copy } from './copy';
 import { HEAT_MODES, type HeatMode } from './heat';
 import type { NewsItem } from './news';
+import { SITUATION_BY_ID } from './situations';
 import { TOTAL_MONTHS, type MonthSample, type Session } from './session';
 
 export type Speed = 0 | 1 | 4;
-export type PanelId = 'policies' | 'finance' | 'routes' | 'news';
+export type PanelId = 'situations' | 'policies' | 'finance' | 'routes' | 'news';
 
 const LAND_USE_ORDER: ParcelKind[] = [
   LandUseType.ProtectedNativeForest, LandUseType.UnprotectedNativeForest, LandUseType.ForestPlantations,
@@ -38,7 +39,7 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
 }) {
   const { c, fmt, locale, setLocale, monthName } = useCopy();
   const m = session.game.indicators;
-  const running = speed > 0 && !session.pendingEvent && !session.outcome;
+  const running = speed > 0 && !session.outcome;
   const btn = 'h-10 min-w-10 px-2 text-[13px] transition-colors';
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-2 p-3">
@@ -220,9 +221,11 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
 
 /* ── Dock ──────────────────────────────────────────────────────────────────────────────────── */
 
-const DOCK_ICONS: Record<PanelId, string> = { policies: '⚖', finance: '◎', routes: '⇢', news: '☰' };
+const DOCK_ICONS: Record<PanelId, string> = { situations: '✉', policies: '⚖', finance: '◎', routes: '⇢', news: '☰' };
 
-export function Dock({ panel, onPanel, unread }: { panel: PanelId | null; onPanel: (p: PanelId) => void; unread: number }) {
+export function Dock({ panel, onPanel, unread, open }: {
+  panel: PanelId | null; onPanel: (p: PanelId) => void; unread: number; open: number;
+}) {
   const { c } = useCopy();
   return (
     <nav className="pointer-events-auto flex gap-1 md:flex-col" aria-label="panels">
@@ -238,6 +241,9 @@ export function Dock({ panel, onPanel, unread }: { panel: PanelId | null; onPane
           <span className="hidden sm:inline">{c.panels[id]}</span>
           {id === 'news' && unread > 0 && (
             <span className="tnum absolute -right-1 -top-1 rounded-full bg-ochre px-1.5 text-[10px] leading-4 text-basalt-950">{unread}</span>
+          )}
+          {id === 'situations' && open > 0 && (
+            <span className="tnum absolute -right-1 -top-1 rounded-full bg-ember px-1.5 text-[10px] leading-4 text-basalt-950">{open}</span>
           )}
         </button>
       ))}
@@ -304,6 +310,14 @@ export function useNewsText() {
       return { title: fill(c.news['land.generic'], { n: v.n, from: kinds[String(v.from)] ?? v.from, to: kinds[String(v.to)] ?? v.to }) };
     }
     if (item.key === 'unlock.pact') return { title: fill(c.news['unlock.pact'], { pact: getPactName(String(v.pactId), locale) }) };
+    if (item.key.startsWith('situation.')) {
+      const def = SITUATION_BY_ID[String(v.situation)];
+      if (!def) return { title: item.key };
+      const copy = locale === 'en' ? def.en : def.es;
+      const option = def.options.find((o) => o.id === String(v.option));
+      const optionText = option ? (locale === 'en' ? option.en : option.es) : '';
+      return { title: fill((c.news as Record<string, string>)[item.key], { title: copy.title, option: optionText }) };
+    }
     if (item.key === 'declared') return { title: fill(c.news.declared, { cost: fmt.big(Number(v.cost)) }) };
     const template = (c.news as Record<string, string>)[item.key];
     return { title: template ? fill(template, v) : item.key };

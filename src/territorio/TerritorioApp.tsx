@@ -16,10 +16,11 @@ import type { HeatMode } from './heat';
 import { Actors, Dock, IndicatorStrip, LeftRail, NewsTicker, ProgressRail, TopBar, type PanelId, type Speed } from './hud';
 import { IsoMap } from './IsoMap';
 import type { NewsItem } from './news';
-import { EventCard, FinancePanel, NewsPanel, ParcelCard, PoliciesPanel, RoutesPanel, SideSheet } from './panels';
+import { FinancePanel, NewsPanel, ParcelCard, PoliciesPanel, RoutesPanel, SideSheet } from './panels';
+import { SituationsPanel } from './SituationsPanel';
 import { BriefingScreen, EndScreen, TitleScreen } from './screens';
 import {
-  advanceMonth, createSession, declareUse, dismissEvent, maxLoan, requestLoan, setInstrumentEffort, setTaxPressure,
+  advanceMonth, createSession, declareUse, decideSituation, maxLoan, requestLoan, setInstrumentEffort, setTaxPressure,
   togglePact, togglePolicy, type ActionResult, type Session,
 } from './session';
 
@@ -61,7 +62,7 @@ export function TerritorioApp() {
       last = now;
       const s = sessionRef.current;
       const sp = speedRef.current;
-      if (sp > 0 && !s.pendingEvent && !s.outcome) {
+      if (sp > 0 && !s.outcome) {
         acc += dt;
         if (acc >= SECONDS_PER_MONTH[sp]) {
           acc = 0;
@@ -158,12 +159,15 @@ export function TerritorioApp() {
   if (screen === 'briefing') return <BriefingScreen onBegin={startGame} onBack={() => setScreen('title')} />;
 
   const unread = Math.min(9, session.news.filter((n) => n.monthIndex >= newsSeenAt).length);
-  const eventDate = session.pendingEvent
-    ? session.news.find((n) => n.kind === 'event' && n.eventId === session.pendingEvent!.id) ?? { year: session.game.year, month: session.month }
-    : null;
 
   const sheet = panel && (
     <SideSheet panel={panel} onClose={() => setPanel(null)}>
+      {panel === 'situations' && (
+        <SituationsPanel
+          session={session}
+          onDecide={(openId, optionId) => run((s) => decideSituation(s, openId, optionId, CONTROL_PARAMS, locale))}
+        />
+      )}
       {panel === 'policies' && (
         <PoliciesPanel
           session={session}
@@ -213,7 +217,12 @@ export function TerritorioApp() {
 
       {/* Right column: dock and the open panel. */}
       <div className="pointer-events-none absolute bottom-[8rem] left-3 right-3 top-[7.5rem] z-30 flex flex-col items-end gap-2 md:left-auto md:top-[5.5rem] md:flex-row-reverse md:items-start">
-        <Dock panel={panel} onPanel={(p) => setPanel((cur) => (cur === p ? null : p))} unread={panel === 'news' ? 0 : unread} />
+        <Dock
+          panel={panel}
+          onPanel={(p) => setPanel((cur) => (cur === p ? null : p))}
+          unread={panel === 'news' ? 0 : unread}
+          open={session.open.length}
+        />
         {sheet}
       </div>
 
@@ -254,15 +263,6 @@ export function TerritorioApp() {
       </div>
 
       <ProgressRail monthIndex={session.monthIndex} />
-
-      {session.pendingEvent && eventDate && (
-        <EventCard
-          event={session.pendingEvent}
-          year={eventDate.year}
-          month={eventDate.month}
-          onContinue={() => setSession((prev) => dismissEvent(prev))}
-        />
-      )}
 
       {session.outcome && <EndScreen session={session} onAgain={startGame} onTitle={() => setScreen('title')} />}
     </div>

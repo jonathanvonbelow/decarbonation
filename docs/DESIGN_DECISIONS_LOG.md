@@ -1391,3 +1391,43 @@ indicador mide. Proteger bosque no lo aplica.
 **Verificación.** `npm run sim` idéntico (el juego de 3 niveles no tiene área de estos usos).
 132/132 tests, con tres nuevos: cada uso llega al modelo con su costo y su presión, el humedal
 exige agua al lado, la restauración madura a bosque nativo y el parque baja las emisiones.
+
+## 2026-09-11 — v4 / F6: 100 situaciones que no pausan el juego y desgastan si no se resuelven
+
+**Pedido (decisión 1):** "ampliá a al menos 100 eventos distintos, pero que el juego no se pause
+cuando te llegan las notificaciones, sino que se te vayan acumulando como notas, el tiempo continúa
+corriendo, cuestiones no resueltas acumulan desgaste".
+
+**Qué es una situación.** Llega sola mientras corre el reloj, se queda en la bandeja, y **cada mes
+que sigue abierta suma presión o conflicto** (su `wear`, que se duplica al llegar el plazo). Si
+vence sin respuesta se resuelve con su última opción, la que nadie eligió. Todo lo que hace está
+escrito en variables del modelo (`RandomEventEffect`: los mismos indicadores, stocks Stella y
+cambios de uso del suelo que usan los eventos del juego principal), así que ninguna situación puede
+mover un número que el modelo no tenga.
+
+**Catálogo: 100 situaciones** en cuatro archivos (`src/territorio/situations/`), bilingües, con 2 o
+3 opciones cada una: clima y ecología (25), producción, alimentos y tecnología (25), sociedad y
+política (25), economía e internacional (25). Cada una con actor (retrato de EcoSIM), tono, plazo,
+peso, desgaste mensual y condición de aparición cuando corresponde (la tala ilegal necesita bosque
+sin proteger; la protesta por precios, seguridad alimentaria baja).
+
+**Se eliminó la tarjeta modal de eventos.** Los eventos del propio modelo tampoco pausan: pasan a la
+bandeja de noticias como nota.
+
+**Calibración, medida sobre partidas completas** (3 semillas × 3 estilos de juego: ignorar todo,
+resolver lo más barato, resolver la primera opción):
+- Frecuencia: con la primera versión llegaban ~200 por partida — una decisión cada tres segundos de
+  reloj. Bajó a `BASE_ARRIVAL = 0,16`: ahora entre 60 y 110 por partida, una cada cinco meses, con
+  uno o dos papeles sobre el escritorio a la vez (tope de 6).
+- Magnitud: los efectos están escritos a escala de "evento dramático"; aplicados 60 veces clavaban
+  todas las presiones en 0 o en 100. Se aplica `SITUATION_EFFECT_SCALE = 0,5` a los efectos sobre
+  variables que saturan (presiones, conflicto, indicadores 0-100); el dinero y el uso del suelo no
+  se escalan, porque están escritos en las unidades del modelo.
+- Resultado: ignorar todo ya no colapsa el estado en el año 10 (antes sí), pero se pierde la
+  partida; resolver siempre lo más barato también se pierde (la opción barata suele ser "no hacer
+  nada"); resolver con criterio gana con puntaje ~650 y presiones que siguen vivas.
+
+**Verificación.** 136/136 tests (cinco nuevos: el reloj no se detiene, el desgaste se acumula, lo
+vencido se resuelve solo, decidir cobra y saca el papel del escritorio, el catálogo tiene ≥100
+situaciones distintas con opción de salida). `npm run sim` idéntico: nada de esto toca el juego de
+3 niveles.

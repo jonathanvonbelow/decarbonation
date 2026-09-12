@@ -5,15 +5,16 @@ import { describe, expect, it } from 'vitest';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../src/constants';
 import { getPolicyEfficiency, productiveCount } from '../../src/sim';
 import { LandUseType, Policy } from '../../src/types';
+import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS } from '../../src/territorio/situations';
 import {
-  advanceMonth, createSession, dismissEvent, protectParcel, requestLoan, setInstrumentEffort, setTaxPressure,
+  advanceMonth, createSession, decideSituation, protectParcel, requestLoan, setInstrumentEffort, setTaxPressure,
   togglePact, togglePolicy, unlocks, INSTRUMENTS_UNLOCK_YEAR, START_YEAR, TOTAL_MONTHS, type Session,
 } from '../../src/territorio/session';
 
 function advance(s: Session, months: number): Session {
   let out = s;
   for (let i = 0; i < months; i++) {
-    out = dismissEvent(advanceMonth(out));
+    out = advanceMonth(out);
     if (out.outcome) break;
   }
   return out;
@@ -102,10 +103,47 @@ describe('Territorio session', () => {
     expect(protectParcel(s, crop.x, crop.y).error).toBe('not-convertible');
   });
 
-  it('an unread event pauses the clock until dismissed', () => {
-    const s = { ...createSession(1), pendingEvent: { id: 'x' } as never };
-    expect(advanceMonth(s)).toBe(s);
-    expect(dismissEvent(s).pendingEvent).toBeNull();
+  it('situations never stop the clock, and wear the government down while open', () => {
+    let s = advance(createSession(21), 36);
+    expect(s.monthIndex).toBe(36); // the clock ran through every arrival
+    expect(s.open.length + s.resolvedCount + s.expiredCount).toBeGreaterThan(0);
+    if (s.open.length > 0) {
+      expect(s.wearTotal).toBeGreaterThan(0);
+      const before = s.game.stellaSpecificState.Conflicto_social + s.game.stellaSpecificState.PP_AGRICOLA
+        + s.game.stellaSpecificState.PP_AMBIENTALISTA + s.game.stellaSpecificState.PP_SOCIAL;
+      const after = advance(s, 1);
+      const pressureAfter = after.game.stellaSpecificState.Conflicto_social + after.game.stellaSpecificState.PP_AGRICOLA
+        + after.game.stellaSpecificState.PP_AMBIENTALISTA + after.game.stellaSpecificState.PP_SOCIAL;
+      expect(pressureAfter).not.toBe(before);
+    }
+  });
+
+  it('an unattended situation resolves itself with the option nobody chose', () => {
+    let s = advance(createSession(7), 60);
+    expect(s.expiredCount).toBeGreaterThan(0);
+    expect(s.news.some((n) => n.key === 'situation.expired')).toBe(true);
+  });
+
+  it('deciding a situation applies its effects, pays its cost and takes it off the desk', () => {
+    let s = advance(createSession(3), 24);
+    const item = s.open[0];
+    if (!item) return;
+    const def = SITUATION_BY_ID[item.defId];
+    const affordable = def.options.find((o) => (o.cost ?? 0) <= s.game.stellaSpecificState.Reservas_del_Tesoro)!;
+    const before = s.game.stellaSpecificState.Reservas_del_Tesoro;
+    const r = decideSituation(s, item.id, affordable.id);
+    expect(r.error).toBeUndefined();
+    expect(r.session.open.find((o) => o.id === item.id)).toBeUndefined();
+    expect(r.session.resolvedCount).toBe(s.resolvedCount + 1);
+    // The option's own effects can move the treasury too (a fine collected, a subsidy paid), so
+    // the cost is a floor on what it took, not the whole story.
+    expect(r.session.game.stellaSpecificState.Reservas_del_Tesoro).toBeLessThanOrEqual(before - (affordable.cost ?? 0));
+    expect(r.session.news[0].key).toBe('situation.resolved');
+  });
+
+  it('never has more than the inbox cap open at once', () => {
+    const s = advance(createSession(99), 120);
+    expect(s.open.length).toBeLessThanOrEqual(MAX_OPEN_SITUATIONS);
   });
 
   it('announces each unlock once', () => {
@@ -121,5 +159,16 @@ describe('Territorio session', () => {
     expect(s.outcome).not.toBeNull();
     if (s.outcome!.kind !== 'collapse') expect(s.monthIndex).toBe(TOTAL_MONTHS);
     expect(advanceMonth(s)).toBe(s);
+  });
+
+  it('ships at least 100 distinct situations, each with a fallback option', () => {
+    expect(SITUATIONS.length).toBeGreaterThanOrEqual(100);
+    expect(new Set(SITUATIONS.map((d) => d.id)).size).toBe(SITUATIONS.length);
+    SITUATIONS.forEach((d) => {
+      expect(d.options.length).toBeGreaterThanOrEqual(2);
+      expect(d.deadline).toBeGreaterThan(0);
+      // Every option but the "do nothing" fallback has to actually do something.
+      d.options.slice(0, -1).forEach((o) => expect(o.effects.length + (o.cost ? 1 : 0)).toBeGreaterThan(0));
+    });
   });
 });
