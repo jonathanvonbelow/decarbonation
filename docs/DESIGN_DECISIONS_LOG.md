@@ -1328,3 +1328,35 @@ Medición: evento propio `preview_click` (no `play_click`, para no inflar el emb
 tabla `funnel_events` no está versionada en `supabase/`, así que no se pudo confirmar si restringe
 nombres de evento; el envío es de mejor esfuerzo y falla en silencio si la rechaza. La página de la
 vista previa lleva `noindex` hasta que gradúe y no está en `sitemap.xml`.
+
+## 2026-09-11 — v4 / F4: efectos de pactos y eventos que nunca llegaban, y CO₂ inicial (ambos juegos)
+
+**Pedido del usuario (decisiones 1 y 3):** corregir el efecto de pactos y eventos, y corregir el CO₂
+inicial. Las dos correcciones tocan el motor compartido, así que valen para el juego de 3 niveles.
+
+**El problema.** `stepYear` aplica pactos y eventos temprano (pasos 2 y 5), pero cuatro indicadores
+se derivan después en el mismo año: CO₂/cápita del balance de carbono (paso 9), bienestar social y
+estabilidad política de sus stocks (paso 8), y PBI/deuda/reservas/presiones sincronizados de Stella
+(paso 11). Todo lo escrito antes se pisaba. En la práctica: el −5 % de CO₂ y el +3 de estabilidad del
+Acuerdo Global de Carbono, el −10 % de la Iniciativa de Transferencia Tecnológica y el −5 % del
+evento "Boom de tecnología verde" nunca se aplicaban.
+
+**La corrección (`src/sim/deferred.ts`)** conserva el sentido de cada efecto:
+- *Pactos*: su función `effects` es pura, así que se vuelve a evaluar cuando los valores del año ya
+  existen y de esa segunda llamada se toman solo los indicadores derivados. "5 % menos que lo que
+  produjo este año" es exactamente lo que el pacto dice.
+- *Eventos*: un `changePercentage` se recuerda como factor y un `changeAbsolute` como delta, y se
+  vuelve a aplicar sobre el valor recalculado. Sin reevaluar, sin contar dos veces.
+En el motor mensual el efecto de un pacto avanza 1/12 como cualquier otro flujo (es una tasa por año
+de membresía) y el de un evento entra completo (es un shock).
+
+**CO₂ y puntaje iniciales.** `createInitialState` los calcula ahora con `computeCarbonBalance` y
+`computeScore` a partir de los usos del suelo y políticas del nivel, en vez de tomar los valores
+fijos de `INITIAL_INDICATORS` (6,5 t/hab y puntaje 0). Ningún nivel arranca en 6,5: el Nivel 1 da
+~9,4 y el Nivel 2 ~17,4, así que el primer año simulado mostraba un salto que el jugador no causó.
+
+**Efecto medido en el juego de 3 niveles.** `npm run sim`: de las 15 filas cambió una (Nivel 2,
+estrategia equilibrada: seguridad alimentaria 32,3 → 34,0 y puntaje 337 → 342). La causa es
+trazable: con el CO₂ inicial real, el evento "Escrutinio Ambiental Internacional" (se dispara con
+CO₂ > 12) cambia de momento y corre la secuencia de eventos. Ningún resultado de victoria/derrota
+cambió. 129/129 tests, 4 nuevos en `tests/sim/deferred.spec.ts`.

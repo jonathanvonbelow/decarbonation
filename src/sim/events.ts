@@ -9,6 +9,7 @@
 import { YEARS_PER_LEVEL } from '../constants';
 import type { GameState, Indicators, LandUse, LandUseType, NumericIndicatorKeys, NumericStellaKeys, RandomEvent, RandomEventEffect, StellaStocks } from '../types';
 import type { Rng } from './rng';
+import { isDerivedIndicator, type DeferredAdjustment } from './deferred';
 import type { Language } from '../hooks/useLanguage';
 import { getEventName, getEventDescription, getLandUseName } from '../legacyContent/gameData';
 
@@ -42,6 +43,12 @@ export function applyRandomEventEffects(
   landUses: Record<LandUseType, LandUse>,
   logs: string[],
   language: Language = 'es',
+  /**
+   * Collects effects on indicators the year recomputes later (see src/sim/deferred.ts). Without
+   * this, an event's CO2 or political-stability effect is overwritten before the player sees it.
+   * Callers that pass nothing keep the old behaviour of applying them in place.
+   */
+  deferred?: DeferredAdjustment[],
 ): void {
   effects.forEach((eff) => {
     if (eff.landUseChange) {
@@ -77,6 +84,13 @@ export function applyRandomEventEffects(
           : `Se intentó aplicar un efecto numérico a la propiedad no numérica '${eff.indicator}'. Efecto omitido.`;
         console.warn(warningMsg);
         logs.push(language === 'en' ? `System warning: ${warningMsg}` : `Advertencia del sistema: ${warningMsg}`);
+        return;
+      }
+
+      if (deferred && targetObject === indicators && isDerivedIndicator(targetKey as string)) {
+        // Remembered in the form the event used, re-applied once the value exists (deferred.ts).
+        if (eff.changePercentage !== undefined) deferred.push({ indicator: targetKey as never, factor: 1 + eff.changePercentage });
+        else if (eff.changeAbsolute !== undefined) deferred.push({ indicator: targetKey as never, delta: eff.changeAbsolute });
         return;
       }
 
@@ -128,6 +142,7 @@ export function rollEvent(
   yearsElapsedInCurrentLevel: number,
   rng: Rng,
   language: Language = 'es',
+  deferred?: DeferredAdjustment[],
 ): EventRollResult {
   const logs: string[] = [];
   let chatMessage: string | null = null;
@@ -141,7 +156,7 @@ export function rollEvent(
         const { name, description } = eventLabel(event, language);
         logs.push(language === 'en' ? `EVENT (Year ${workingState.year}): ${name} - ${description}` : `EVENTO (Año ${workingState.year}): ${name} - ${description}`);
         const effects = event.effects(workingState);
-        applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language);
+        applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
         return { event, logs, chatMessage };
       }
     }
@@ -197,7 +212,7 @@ export function rollEvent(
   );
   chatMessage = language === 'en' ? `Unexpected Event! ${chosenName}: ${chosenDescription}` : `¡Evento Inesperado! ${chosenName}: ${chosenDescription}`;
   const effects = chosenEvent.effects(workingState);
-  applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language);
+  applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
 
   return { event: chosenEvent, logs, chatMessage };
 }

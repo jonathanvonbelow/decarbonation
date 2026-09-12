@@ -35,6 +35,7 @@ import { computeCarbonBalance } from './carbon';
 import { computeTotalPactCost, updateEconomy } from './economy';
 import { applyRandomEventEffects } from './events';
 import { evaluateGameOver } from './gameOver';
+import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, type DeferredAdjustment } from './deferred';
 import {
   calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
   calculatePoliticalCollapseChange, calculateSocialConflictChange,
@@ -99,6 +100,7 @@ export function rollMonthlyEvent(
   rng: Rng,
   month: number,
   language: Language = 'es',
+  deferred?: DeferredAdjustment[],
 ): { event: RandomEvent | null; logs: string[]; chatMessage: string | null } {
   const logs: string[] = [];
   for (const event of events) {
@@ -110,7 +112,7 @@ export function rollMonthlyEvent(
     logs.push(language === 'en' ? `EVENT (${stamp}): ${name} - ${description}` : `EVENTO (${stamp}): ${name} - ${description}`);
     applyRandomEventEffects(
       event.effects(workingState), workingState.indicators, workingState.stellaSpecificState,
-      workingState.landUses, logs, language,
+      workingState.landUses, logs, language, deferred,
     );
     return { event, logs, chatMessage: `${name}: ${description}` };
   }
@@ -168,7 +170,8 @@ export function stepMonth(
   // 2. Random event roll (monthly chance), applied before the rest, as in stepYear.
   next.currentEvent = null;
   const areasBeforeEvent = areasOf(next);
-  const rolled = rollMonthlyEvent(next, options.events ?? ALL_RANDOM_EVENTS, rng, month, language);
+  const deferred: DeferredAdjustment[] = [];
+  const rolled = rollMonthlyEvent(next, options.events ?? ALL_RANDOM_EVENTS, rng, month, language, deferred);
   logs.push(...rolled.logs);
   if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
   if (rolled.event) next.currentEvent = rolled.event;
@@ -194,7 +197,8 @@ export function stepMonth(
     if (effects.indicators) {
       (Object.keys(effects.indicators) as (keyof Indicators)[]).forEach((k) => {
         const target = effects.indicators![k];
-        if (typeof target === 'number') next.indicators[k] = toward(next.indicators[k], target);
+        // Derived indicators are applied after the recomputation, below (src/sim/deferred.ts).
+        if (typeof target === 'number' && !isDerivedIndicator(k as string)) next.indicators[k] = toward(next.indicators[k], target);
       });
     }
     if (effects.stellaStocks) {
@@ -290,6 +294,16 @@ export function stepMonth(
       next.indicators[key] = clamp100(next.indicators[key]);
     }
   });
+
+  // 11.5 Pact and event effects on the indicators recomputed this month (src/sim/deferred.ts).
+  // A pact's effect is a rate per year of membership, so it moves 1/12 of the way like every other
+  // flow; an event's is a one-off shock and lands whole.
+  const beforePacts: Indicators = { ...next.indicators };
+  applyPactEffectsOnDerived(next.pacts, next.indicators, stella);
+  (Object.keys(next.indicators) as (keyof Indicators)[]).forEach((k) => {
+    if (isDerivedIndicator(k as string)) next.indicators[k] = toward(beforePacts[k], next.indicators[k]);
+  });
+  applyDeferredAdjustments(next.indicators, deferred);
 
   // 12. Score.
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);

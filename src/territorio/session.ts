@@ -17,7 +17,7 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  computeCarbonBalance, computeScore, createInitialState, createTerritory, declareProtectedArea, evaluateLevel, makeRng, stepMonth, syncTerritory,
+  createInitialState, createTerritory, declareProtectedArea, evaluateLevel, makeRng, stepMonth, syncTerritory,
   type LevelOutcome, type ParcelChange, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -97,25 +97,14 @@ function sample(game: GameState, t: number): MonthSample {
 }
 
 /**
- * Fresh level-2 GameState with the UI-only fields the model's GameState also carries.
- *
- * CO2 per capita and the score are recomputed from the level's own land uses before the first
- * month. `createInitialState` takes them from INITIAL_INDICATORS (6.5 t/cap, score 0), which are not
- * what level 2's land uses produce (~17 t/cap): the first simulated step would show a jump the
- * player did not cause. The 3-level game has the same jump in its first year (logged, not changed
- * there). The win-route baseline is taken after this correction, so route progress starts at 0.
+ * Fresh level-2 GameState with the UI-only fields the model's GameState also carries. CO2 and the
+ * score at year zero come from `createInitialState`, which computes them from the level's own land
+ * uses (fixed in v4 for both games — see docs/DESIGN_DECISIONS_LOG.md).
  */
 export function newGameState(CP: ControlParams = CONTROL_PARAMS): GameState {
-  const { gameStatePatch } = createInitialState(TERRITORIO_LEVEL);
-  const indicators = { ...gameStatePatch.indicators };
-  indicators.co2EqEmissionsPerCapita = computeCarbonBalance(
-    gameStatePatch.landUses, gameStatePatch.policies, TERRITORIO_LEVEL, gameStatePatch.stellaSpecificState.Poblacion_Total, CP,
-  );
-  indicators.generalScore = computeScore(indicators, TERRITORIO_LEVEL, CP);
+  const { gameStatePatch } = createInitialState(TERRITORIO_LEVEL, CP);
   return {
     ...gameStatePatch,
-    indicators,
-    levelBaseline: { ...indicators },
     activeLevelConfig: LEVEL_CONFIGS.find((lc) => lc.levelNumber === TERRITORIO_LEVEL),
     finances: {
       pbi: gameStatePatch.indicators.pbi,
