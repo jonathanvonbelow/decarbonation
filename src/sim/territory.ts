@@ -79,9 +79,12 @@ export const isProductive = (kind: ParcelKind): kind is ProductiveKind => !CONTE
 
 /** Near-town → wilderness order used for the initial layout. */
 const LAYOUT_ORDER: LandUseType[] = [
+  LandUseType.EnergyPark,
   LandUseType.ConventionalCrops,
   LandUseType.AgroecologicalCrops,
   LandUseType.GrasslandsPastures,
+  LandUseType.PublicWetland,
+  LandUseType.RestorationForest,
   LandUseType.ForestPlantations,
   LandUseType.UnprotectedNativeForest,
   LandUseType.ProtectedNativeForest,
@@ -268,8 +271,13 @@ const SOURCES: Partial<Record<ProductiveKind, ProductiveKind[]>> = {
   [LandUseType.ProtectedNativeForest]: [LandUseType.UnprotectedNativeForest],
   [LandUseType.ConventionalCrops]: [LandUseType.UnprotectedNativeForest],
   [LandUseType.AgroecologicalCrops]: [LandUseType.ConventionalCrops, LandUseType.UnprotectedNativeForest],
-  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops],
+  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops, LandUseType.RestorationForest],
   fallow: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops],
+  // Public uses only ever grow because the player declared them (declarePublicUse below), but the
+  // safety net still needs to know where their area came from.
+  [LandUseType.PublicWetland]: [LandUseType.ConventionalCrops, LandUseType.GrasslandsPastures, 'fallow'],
+  [LandUseType.RestorationForest]: [LandUseType.ConventionalCrops, LandUseType.GrasslandsPastures, 'fallow'],
+  [LandUseType.EnergyPark]: [LandUseType.GrasslandsPastures, LandUseType.ConventionalCrops, 'fallow'],
 };
 
 /** Picks which parcel of `from` becomes `to`: frontier first, never a declared reserve if avoidable. */
@@ -366,63 +374,141 @@ export function syncTerritory(
 
 /* ── Map → model: public uses ──────────────────────────────────────────────────────────────── */
 
-export type PublicUseError = 'out-of-bounds' | 'not-native-forest' | 'no-forest-area' | 'insufficient-funds';
+/**
+ * The public uses a player can declare (21_fusion_ecosim.md §5, decisión 4 del equipo). They are the
+ * only direct change to land use in the game: everything else comes out of the model's dynamics.
+ * Each one moves a parcel's worth of area into a land use the model already prices — rates and
+ * weights live in constants.ts — and pays a one-time cost from the treasury.
+ */
+export type PublicUse = 'protected' | 'restoration' | 'wetland' | 'energy';
+
+export const PUBLIC_USES: PublicUse[] = ['protected', 'restoration', 'wetland', 'energy'];
+
+interface PublicUseRule {
+  /** Land use the parcel becomes. */
+  target: LandUseType;
+  /** Parcel kinds that can be declared into it. */
+  from: ProductiveKind[];
+  cost: (CP: ControlParams) => number;
+  /** Wetlands can only be declared next to the river or an existing wetland. */
+  requiresWater?: boolean;
+}
+
+const RULES: Record<PublicUse, PublicUseRule> = {
+  protected: {
+    target: LandUseType.ProtectedNativeForest,
+    from: [LandUseType.UnprotectedNativeForest],
+    cost: (CP) => CP.Costo_Declaracion_Area_Protegida_por_kHa,
+  },
+  restoration: {
+    target: LandUseType.RestorationForest,
+    from: [LandUseType.ConventionalCrops, LandUseType.GrasslandsPastures, 'fallow'],
+    cost: (CP) => CP.Costo_Restauracion_Publica_por_kHa,
+  },
+  wetland: {
+    target: LandUseType.PublicWetland,
+    from: [LandUseType.ConventionalCrops, LandUseType.GrasslandsPastures, 'fallow'],
+    cost: (CP) => CP.Costo_Humedal_Publico_por_kHa,
+    requiresWater: true,
+  },
+  energy: {
+    target: LandUseType.EnergyPark,
+    from: [LandUseType.GrasslandsPastures, LandUseType.ConventionalCrops, 'fallow'],
+    cost: (CP) => CP.Costo_Parque_Energetico_por_kHa,
+  },
+};
+
+/** Uses that take land out of production, and therefore push agricultural pressure up. */
+const PRODUCTIVE_SOURCES = new Set<ParcelKind>([
+  LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops, LandUseType.GrasslandsPastures,
+]);
+
+export type PublicUseError =
+  | 'out-of-bounds' | 'not-convertible' | 'no-area' | 'insufficient-funds' | 'needs-water';
 
 export type PublicUseResult =
-  | { ok: true; state: GameState; territory: Territory; cost: number }
+  | { ok: true; state: GameState; territory: Territory; cost: number; use: PublicUse }
   | { ok: false; reason: PublicUseError };
 
-/** Cost of declaring one parcel protected, under the given control parameters. */
-export function protectedAreaCost(CP: ControlParams, kHaPerParcel = KHA_PER_PARCEL): number {
-  return CP.Costo_Declaracion_Area_Protegida_por_kHa * kHaPerParcel;
+/** One-time cost of declaring one parcel of `use`, under the given control parameters. */
+export function publicUseCost(use: PublicUse, CP: ControlParams, kHaPerParcel = KHA_PER_PARCEL): number {
+  return RULES[use].cost(CP) * kHaPerParcel;
+}
+
+/** Land use a parcel becomes under `use`. */
+export const publicUseTarget = (use: PublicUse): LandUseType => RULES[use].target;
+
+/** Whether the parcel at (x, y) could be declared as `use` right now, ignoring the treasury. */
+export function canDeclare(territory: Territory, x: number, y: number, use: PublicUse): boolean {
+  const parcel = parcelAt(territory, x, y);
+  if (!parcel) return false;
+  const rule = RULES[use];
+  if (!rule.from.includes(parcel.kind as ProductiveKind)) return false;
+  if (rule.requiresWater && !neighbors8(territory, parcel).some((n) => n.kind === 'water' || n.kind === 'wetland')) return false;
+  return true;
 }
 
 /**
- * Declares the unprotected native-forest parcel at (x, y) a protected area: moves one parcel of
- * area from BNNP to BNP in the model and pays the one-time cost from Reservas_del_Tesoro. Pure:
- * returns new state and territory, or the reason it is not possible.
+ * Declares the parcel at (x, y) as a public use: moves one parcel of area in the model, pays the
+ * cost from Reservas_del_Tesoro, and — when the land was productive — adds the agricultural-pressure
+ * impulse that taking farmland out of production causes. Pure: returns new state and territory, or
+ * the reason it is not possible.
  */
-export function declareProtectedArea(
+export function declarePublicUse(
   state: GameState,
   territory: Territory,
   x: number,
   y: number,
+  use: PublicUse,
   CP: ControlParams,
 ): PublicUseResult {
   const parcel = parcelAt(territory, x, y);
   if (!parcel) return { ok: false, reason: 'out-of-bounds' };
-  if (parcel.kind !== LandUseType.UnprotectedNativeForest) return { ok: false, reason: 'not-native-forest' };
+  const rule = RULES[use];
+  if (!rule.from.includes(parcel.kind as ProductiveKind)) return { ok: false, reason: 'not-convertible' };
+  if (rule.requiresWater && !neighbors8(territory, parcel).some((n) => n.kind === 'water' || n.kind === 'wetland')) {
+    return { ok: false, reason: 'needs-water' };
+  }
+
   const kHa = territory.kHaPerParcel;
-  if (state.landUses[LandUseType.UnprotectedNativeForest].area < kHa) return { ok: false, reason: 'no-forest-area' };
-  const cost = protectedAreaCost(CP, kHa);
+  const source = parcel.kind as ProductiveKind;
+  const takesArea = source !== 'fallow';
+  if (takesArea && state.landUses[source as LandUseType].area < kHa) return { ok: false, reason: 'no-area' };
+
+  const cost = publicUseCost(use, CP, kHa);
   if (state.stellaSpecificState.Reservas_del_Tesoro < cost) return { ok: false, reason: 'insufficient-funds' };
+
+  const landUses = { ...state.landUses };
+  if (takesArea) {
+    landUses[source as LandUseType] = {
+      ...landUses[source as LandUseType],
+      area: landUses[source as LandUseType].area - kHa,
+    };
+  }
+  landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa };
+
+  const reserves = state.stellaSpecificState.Reservas_del_Tesoro - cost;
+  const pressure = PRODUCTIVE_SOURCES.has(parcel.kind)
+    ? Math.min(100, state.stellaSpecificState.PP_AGRICOLA + CP.Impulso_PP_Agricola_por_kHa_Convertida * kHa)
+    : state.stellaSpecificState.PP_AGRICOLA;
 
   const next: GameState = {
     ...state,
-    landUses: {
-      ...state.landUses,
-      [LandUseType.UnprotectedNativeForest]: {
-        ...state.landUses[LandUseType.UnprotectedNativeForest],
-        area: state.landUses[LandUseType.UnprotectedNativeForest].area - kHa,
-      },
-      [LandUseType.ProtectedNativeForest]: {
-        ...state.landUses[LandUseType.ProtectedNativeForest],
-        area: state.landUses[LandUseType.ProtectedNativeForest].area + kHa,
-      },
-    },
-    stellaSpecificState: {
-      ...state.stellaSpecificState,
-      Reservas_del_Tesoro: state.stellaSpecificState.Reservas_del_Tesoro - cost,
-    },
-    indicators: {
-      ...state.indicators,
-      treasuryReserves: state.stellaSpecificState.Reservas_del_Tesoro - cost,
-    },
+    landUses,
+    stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves, PP_AGRICOLA: pressure },
+    indicators: { ...state.indicators, treasuryReserves: reserves, ppAgricola: pressure },
   };
   const nextTerritory: Territory = {
     ...territory,
-    parcels: territory.parcels.map((p) =>
-      p.x === x && p.y === y ? { ...p, kind: LandUseType.ProtectedNativeForest, declared: true } : p),
+    parcels: territory.parcels.map((p) => (p.x === x && p.y === y ? { ...p, kind: rule.target, declared: true } : p)),
   };
-  return { ok: true, state: next, territory: nextTerritory, cost };
+  return { ok: true, state: next, territory: nextTerritory, cost, use };
 }
+
+/** Back-compat alias: declaring a protected area is just one of the public uses. */
+export const declareProtectedArea = (
+  state: GameState, territory: Territory, x: number, y: number, CP: ControlParams,
+): PublicUseResult => declarePublicUse(state, territory, x, y, 'protected', CP);
+
+export const protectedAreaCost = (CP: ControlParams, kHaPerParcel = KHA_PER_PARCEL): number =>
+  publicUseCost('protected', CP, kHaPerParcel);

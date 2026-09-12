@@ -25,6 +25,15 @@ export function computeCarbonBalance(
     totalSequestration += lu.area * lu.sequestrationRate;
   });
 
+  // Public energy parks displace fossil generation in proportion to how much of the territory they
+  // occupy (21_fusion_ecosim.md §5). The land itself is already counted above through its own
+  // emission/sequestration rates; this is the grid effect, which no land-use rate can express.
+  const totalArea = (Object.values(landUses) as LandUse[]).reduce((sum, lu) => sum + lu.area, 0);
+  if (totalArea > 0) {
+    const energyShare = landUses[LandUseType.EnergyPark].area / totalArea;
+    totalEmissions *= 1 - CP.Factor_Desplazamiento_Emisiones_Parque_Energetico * energyShare;
+  }
+
   const effCN = getPolicyEfficiency(policies[Policy.CarbonNeutrality], currentLevel);
   const effPSE = getPolicyEfficiency(policies[Policy.EnergySubsidies], currentLevel);
   const effPAI_emissions = getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel);

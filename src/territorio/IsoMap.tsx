@@ -11,7 +11,7 @@
  * Render loop reads everything through refs so React re-renders never restart the canvas.
  */
 import { useEffect, useRef } from 'react';
-import type { ParcelChange, ParcelKind, Territory } from '../sim';
+import { canDeclare, type ParcelChange, type ParcelKind, type PublicUse, type Territory } from '../sim';
 import { LandUseType, type LandUse } from '../types';
 import { heatValue, type HeatMode } from './heat';
 
@@ -34,6 +34,9 @@ const TILE_FOR_KIND: Record<ParcelKind, string> = {
   [LandUseType.ConventionalCrops]: 'intensive',
   [LandUseType.ForestPlantations]: 'reforest',
   [LandUseType.GrasslandsPastures]: 'pasture',
+  [LandUseType.PublicWetland]: 'wetland',
+  [LandUseType.RestorationForest]: 'reforest',
+  [LandUseType.EnergyPark]: 'solar',
   fallow: 'grass',
   water: 'water',
   wetland: 'wetland',
@@ -48,9 +51,15 @@ const FALLBACK: Record<string, string> = {
   market: '#7a5a48', industry: '#5a4a48',
 };
 
+/** Land uses that exist only because the player declared them: drawn with a public-use outline. */
+const PUBLIC_USE_KINDS = new Set<ParcelKind>([
+  LandUseType.ProtectedNativeForest, LandUseType.PublicWetland, LandUseType.RestorationForest, LandUseType.EnergyPark,
+]);
+
 const CHLOROPHYLL = '111,208,140';
 const EMBER = '232,97,60';
 const OCHRE = '224,164,88';
+const HYDRO = '95,179,201';
 const BONE = '233,231,223';
 
 /** Screen space the HUD covers, per viewport width (matches TerritorioApp's layout). */
@@ -78,7 +87,8 @@ function spriteName(kind: ParcelKind, x: number, y: number): string {
 
 function changeTone(c: { from: ParcelKind; to: ParcelKind }): string {
   const LU = LandUseType;
-  if (c.to === LU.ProtectedNativeForest) return CHLOROPHYLL;
+  if (PUBLIC_USE_KINDS.has(c.to) && c.to !== LU.EnergyPark) return CHLOROPHYLL;
+  if (c.to === LU.EnergyPark) return HYDRO;
   if (c.from === LU.ConventionalCrops && c.to === LU.AgroecologicalCrops) return CHLOROPHYLL;
   if (c.from === LU.AgroecologicalCrops && c.to === LU.UnprotectedNativeForest) return CHLOROPHYLL;
   if (c.to === LU.ConventionalCrops || c.to === 'fallow') return EMBER;
@@ -117,7 +127,7 @@ export interface IsoMapProps {
   territory: Territory;
   landUses: Record<LandUseType, LandUse>;
   heat: HeatMode;
-  tool: 'protect' | null;
+  tool: PublicUse | null;
   selected: { x: number; y: number } | null;
   changes: { tick: number; list: ParcelChange[] };
   onParcel: (x: number, y: number) => void;
@@ -244,7 +254,7 @@ export function IsoMap({ territory, landUses, heat, tool, selected, changes, onP
               ctx.fill();
             }
 
-            if (p.kind === LandUseType.ProtectedNativeForest) {
+            if (PUBLIC_USE_KINDS.has(p.kind)) {
               ctx.save();
               ctx.setLineDash([6, 4]);
               ctx.lineWidth = 1.6;
@@ -263,7 +273,7 @@ export function IsoMap({ territory, landUses, heat, tool, selected, changes, onP
               }
             }
 
-            if (toolNow === 'protect' && p.kind === LandUseType.UnprotectedNativeForest) {
+            if (toolNow && canDeclare(t, x, y, toolNow)) {
               ctx.lineWidth = 1.4;
               ctx.strokeStyle = `rgba(${CHLOROPHYLL},${0.35 + 0.45 * pulse})`;
               diamond(ctx, sx, sy, 2);
@@ -288,10 +298,9 @@ export function IsoMap({ territory, landUses, heat, tool, selected, changes, onP
 
         const hover = cam.current.hover;
         if (hover) {
-          const hp = t.parcels[hover.y * size + hover.x];
           const { sx, sy } = iso(hover.x, hover.y);
-          if (toolNow === 'protect') {
-            const ok = hp.kind === LandUseType.UnprotectedNativeForest;
+          if (toolNow) {
+            const ok = canDeclare(t, hover.x, hover.y, toolNow);
             diamond(ctx, sx, sy);
             ctx.fillStyle = ok ? `rgba(${CHLOROPHYLL},0.3)` : `rgba(${EMBER},0.18)`;
             ctx.fill();

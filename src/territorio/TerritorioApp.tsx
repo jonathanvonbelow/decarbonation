@@ -9,7 +9,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CONTROL_PARAMS } from '../constants';
-import { protectedAreaCost } from '../sim';
+import { publicUseCost, type PublicUse } from '../sim';
 import type { Policy } from '../types';
 import { fill, useCopy } from './copy';
 import type { HeatMode } from './heat';
@@ -19,7 +19,7 @@ import type { NewsItem } from './news';
 import { EventCard, FinancePanel, NewsPanel, ParcelCard, PoliciesPanel, RoutesPanel, SideSheet } from './panels';
 import { BriefingScreen, EndScreen, TitleScreen } from './screens';
 import {
-  advanceMonth, createSession, dismissEvent, maxLoan, protectParcel, requestLoan, setInstrumentEffort, setTaxPressure,
+  advanceMonth, createSession, declareUse, dismissEvent, maxLoan, requestLoan, setInstrumentEffort, setTaxPressure,
   togglePact, togglePolicy, type ActionResult, type Session,
 } from './session';
 
@@ -34,7 +34,7 @@ export function TerritorioApp() {
   const [speed, setSpeed] = useState<Speed>(0);
   const [panel, setPanel] = useState<PanelId | null>(null);
   const [heat, setHeat] = useState<HeatMode>('none');
-  const [tool, setTool] = useState<'protect' | null>(null);
+  const [tool, setTool] = useState<PublicUse | null>(null);
   const [selected, setSelected] = useState<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; tone: 'good' | 'bad' } | null>(null);
   const [ticker, setTicker] = useState<NewsItem | null>(null);
@@ -128,8 +128,8 @@ export function TerritorioApp() {
   }, []);
 
   const onParcel = useCallback((x: number, y: number) => {
-    if (tool === 'protect') {
-      run((s) => protectParcel(s, x, y), (r) => fill(c.news.declared, { cost: fmt.big(Number(r.detail?.cost ?? 0)) }));
+    if (tool) {
+      run((s) => declareUse(s, x, y, tool), (r) => fill(c.news.declared, { use: c.uses[tool].name, cost: fmt.big(Number(r.detail?.cost ?? 0)) }));
       return;
     }
     setSelected((cur) => (cur && cur.x === x && cur.y === y ? null : { x, y }));
@@ -217,10 +217,10 @@ export function TerritorioApp() {
         {sheet}
       </div>
 
-      {tool === 'protect' && (
+      {tool && (
         <div className="pointer-events-none absolute left-1/2 top-[7.5rem] z-30 -translate-x-1/2 md:top-[5.5rem]">
           <div className="pointer-events-auto panel flex items-center gap-3 px-3 py-2 text-[13px]">
-            <span>{fill(c.tools.protectHint, { cost: fmt.big(protectedAreaCost(CONTROL_PARAMS)) })}</span>
+            <span>{fill(c.tools.declareHint, { use: c.uses[tool].name, where: c.uses[tool].where, cost: fmt.big(publicUseCost(tool, CONTROL_PARAMS)) })}</span>
             <button type="button" className="text-ash hover:text-bone" onClick={() => setTool(null)}>{c.tools.cancel}</button>
           </div>
         </div>
@@ -232,7 +232,7 @@ export function TerritorioApp() {
             session={session}
             at={selected}
             onClose={() => setSelected(null)}
-            onProtect={() => run((s) => protectParcel(s, selected.x, selected.y), (r) => fill(c.news.declared, { cost: fmt.big(Number(r.detail?.cost ?? 0)) }))}
+            onDeclare={(use) => run((s) => declareUse(s, selected.x, selected.y, use), (r) => fill(c.news.declared, { use: c.uses[use].name, cost: fmt.big(Number(r.detail?.cost ?? 0)) }))}
           />
         </div>
       )}

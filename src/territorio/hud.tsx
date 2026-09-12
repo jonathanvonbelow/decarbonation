@@ -5,7 +5,7 @@
 import React from 'react';
 import { CONTROL_PARAMS } from '../constants';
 import { getEventDescription, getEventName, getIndicatorName, getPactName } from '../legacyContent/gameData';
-import { productiveCount, protectedAreaCost, type ParcelKind } from '../sim';
+import { canDeclare, productiveCount, publicUseCost, PUBLIC_USES, type ParcelKind, type PublicUse } from '../sim';
 import { Sparkline } from '../components/ui/Sparkline';
 import { LandUseType } from '../types';
 import { fill, useCopy, type Copy } from './copy';
@@ -129,29 +129,52 @@ export function IndicatorStrip({ session }: { session: Session }) {
 
 /* ── Left rail: tool, overlays, legend ─────────────────────────────────────────────────────── */
 
+export const USE_ICON: Record<PublicUse, string> = {
+  protected: '⛨',
+  restoration: '🌱',
+  wetland: '💧',
+  energy: '⚡',
+};
+
 export function LeftRail({ session, tool, onTool, heat, onHeat }: {
-  session: Session; tool: 'protect' | null; onTool: (t: 'protect' | null) => void; heat: HeatMode; onHeat: (h: HeatMode) => void;
+  session: Session; tool: PublicUse | null; onTool: (t: PublicUse | null) => void; heat: HeatMode; onHeat: (h: HeatMode) => void;
 }) {
   const { c, fmt } = useCopy();
   const counts = new Map<string, number>();
   session.territory.parcels.forEach((p) => counts.set(p.kind, (counts.get(p.kind) ?? 0) + 1));
-  const cost = protectedAreaCost(CONTROL_PARAMS);
   const modelArea = (Object.values(session.game.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0);
   const fallowKHa = Math.max(0, productiveCount(session.territory) * session.territory.kHaPerParcel - modelArea);
   return (
     <div className="pointer-events-auto flex w-full flex-col gap-2 md:w-60">
-      <button
-        type="button"
-        onClick={() => onTool(tool === 'protect' ? null : 'protect')}
-        aria-pressed={tool === 'protect'}
-        className={`panel flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${tool === 'protect' ? '!border-chlorophyll bg-basalt-800' : 'hover:bg-basalt-800'}`}
-      >
-        <span className="grid size-9 place-items-center rounded-md bg-basalt-700 text-chlorophyll" aria-hidden>⛨</span>
-        <span className="min-w-0">
-          <span className="block text-[14px] text-bone">{c.tools.protect}</span>
-          <span className="block text-[12px] text-ash tnum">{fmt.big(cost)}</span>
-        </span>
-      </button>
+      {/* Public uses: the only direct change the player makes to the map (21_fusion_ecosim.md §5). */}
+      <div className="panel p-2">
+        <p className="label-eyebrow mb-1 px-1 !text-[11px]">{c.tools.title}</p>
+        <div className="grid grid-cols-2 gap-1 md:grid-cols-1">
+          {PUBLIC_USES.map((use) => {
+            const useCost = publicUseCost(use, CONTROL_PARAMS);
+            const affordable = session.game.stellaSpecificState.Reservas_del_Tesoro >= useCost;
+            const anywhere = session.territory.parcels.some((p) => canDeclare(session.territory, p.x, p.y, use));
+            return (
+              <button
+                key={use}
+                type="button"
+                onClick={() => onTool(tool === use ? null : use)}
+                aria-pressed={tool === use}
+                title={c.uses[use].hint}
+                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
+                  tool === use ? 'bg-basalt-600 text-bone' : 'text-ash hover:bg-basalt-800 hover:text-bone'
+                } ${affordable && anywhere ? '' : 'opacity-50'}`}
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded bg-basalt-700 text-[13px]" aria-hidden>{USE_ICON[use]}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px]">{c.uses[use].name}</span>
+                  <span className="tnum block text-[11px] text-ash-dim">{fmt.big(useCost)}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="panel p-2">
         <p className="label-eyebrow mb-1 px-1 !text-[11px]">{c.heat.title}</p>

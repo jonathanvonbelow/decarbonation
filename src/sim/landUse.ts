@@ -26,6 +26,8 @@ export interface LandUseFlows {
   BNNP_to_CA: number;
   CA_to_BNNP: number;
   CC_to_CA: number;
+  /** Restoration maturing into unprotected native forest. Zero unless RES area exists (public use). */
+  RES_to_BNNP: number;
 }
 
 /**
@@ -56,12 +58,17 @@ export function computeLandUseFlows(
   const tasa_CC_a_CA_final = (CP.Tasa_de_CC_a_CA_Base + effAS * 0.03) * (1 - effPAI * 0.5) * changeFactors.tasa_CC_a_CA;
   const cambio_CC_a_CA = landUses[LandUseType.ConventionalCrops].area * tasa_CC_a_CA_final;
 
+  // Restoration matures into native forest (21_fusion_ecosim.md §5). No level of the 3-level game
+  // ever holds RES area, so this term is exactly zero there.
+  const cambio_RES_a_BNNP = landUses[LandUseType.RestorationForest].area * CP.Tasa_de_RES_a_BNNP_Base;
+
   return {
     BNNP_to_BNP: cambio_BNNP_a_BNP,
     BNNP_to_CC: cambio_BNNP_a_CC,
     BNNP_to_CA: cambio_BNNP_a_CA,
     CA_to_BNNP: cambio_CA_a_BNNP,
     CC_to_CA: cambio_CC_a_CA,
+    RES_to_BNNP: cambio_RES_a_BNNP,
   };
 }
 
@@ -78,14 +85,15 @@ export function updateLandUse(
 ): Record<LandUseType, LandUse> {
   const {
     BNNP_to_BNP: cambio_BNNP_a_BNP, BNNP_to_CC: cambio_BNNP_a_CC, BNNP_to_CA: cambio_BNNP_a_CA,
-    CA_to_BNNP: cambio_CA_a_BNNP, CC_to_CA: cambio_CC_a_CA,
+    CA_to_BNNP: cambio_CA_a_BNNP, CC_to_CA: cambio_CC_a_CA, RES_to_BNNP: cambio_RES_a_BNNP,
   } = computeLandUseFlows(landUses, policies, currentLevel, changeFactors, CP);
 
   const newLandUses = JSON.parse(JSON.stringify(landUses)) as Record<LandUseType, LandUse>;
   newLandUses[LandUseType.ProtectedNativeForest].area += cambio_BNNP_a_BNP;
   newLandUses[LandUseType.ConventionalCrops].area += cambio_BNNP_a_CC - cambio_CC_a_CA;
   newLandUses[LandUseType.AgroecologicalCrops].area += cambio_BNNP_a_CA + cambio_CC_a_CA - cambio_CA_a_BNNP;
-  newLandUses[LandUseType.UnprotectedNativeForest].area -= cambio_BNNP_a_BNP + cambio_BNNP_a_CC + cambio_BNNP_a_CA - cambio_CA_a_BNNP;
+  newLandUses[LandUseType.UnprotectedNativeForest].area -= cambio_BNNP_a_BNP + cambio_BNNP_a_CC + cambio_BNNP_a_CA - cambio_CA_a_BNNP - cambio_RES_a_BNNP;
+  newLandUses[LandUseType.RestorationForest].area -= cambio_RES_a_BNNP;
   (Object.keys(newLandUses) as LandUseType[]).forEach((key) => {
     newLandUses[key].area = Math.max(0, newLandUses[key].area);
   });

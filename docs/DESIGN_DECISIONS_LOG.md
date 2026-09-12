@@ -1360,3 +1360,34 @@ estrategia equilibrada: seguridad alimentaria 32,3 → 34,0 y puntaje 337 → 34
 trazable: con el CO₂ inicial real, el evento "Escrutinio Ambiental Internacional" (se dispara con
 CO₂ > 12) cambia de momento y corre la secuencia de eventos. Ningún resultado de victoria/derrota
 cambió. 129/129 tests, 4 nuevos en `tests/sim/deferred.spec.ts`.
+
+## 2026-09-11 — v4 / F5: tres usos públicos nuevos, con tasas por criterio experto
+
+**Pedido (decisión 4):** "agregá los usos que consideres, y creá todas las tasas en base a criterio
+experto que tengas y lo que ya está definido". La versión de Grok
+(`combinacion/vAlRAn1GjcMwOEjO-grok-workspace`) ya separaba urbano, agua y energía/CDR como usos
+del suelo; de ahí salieron los tres que faltaban.
+
+**Usos nuevos** (`LandUseType.PublicWetland`, `RestorationForest`, `EnergyPark`), todos en 0 kHa en
+los tres niveles del juego principal, donde nada los crea. Tasas ancladas en las que el modelo ya
+tenía (bosque nativo 0,75/5,0; cultivo convencional 8,0/0,9):
+
+| Uso | Emisión | Secuestro | Criterio |
+|---|---|---|---|
+| Humedal protegido (HUM) | 1,2 | 6,0 | Emite metano por descomposición anaeróbica, pero acumula carbono orgánico en suelo más rápido que cualquier otro uso. Sumidero neto mayor que el bosque nativo. |
+| Restauración (RES) | 0,6 | 3,4 | Rebrote joven: secuestra menos que el bosque maduro y madura hacia bosque nativo (4 %/año, ~25 años). |
+| Parque energético (ENR) | 0,2 | 0,3 | El suelo es casi neutro; su efecto real es desplazar generación fósil, que el balance de carbono aplica aparte en proporción al área (60 % si ocupara todo el territorio). |
+
+Pesos: biodiversidad HUM 0,55 (supera al bosque protegido: filtrado, refugio, conectividad), RES
+0,30, ENR −0,05. Seguridad alimentaria −0,15/−0,15/−0,10 (sacan tierra de producción). Seguridad
+económica −0,02/−0,04/+0,12 (el parque aporta energía y empleo).
+
+**Reglas de declaración.** Área protegida sobre bosque nativo; restauración y parque sobre cultivo
+convencional, pastura o tierra sin producir; **el humedal solo junto al río o a otro humedal** — una
+regla hidrológica que usa el mapa, no un número. Convertir tierra productiva suma un impulso a la
+presión agrícola (0,4 puntos por parcela): sacar tierra de producción es exactamente lo que ese
+indicador mide. Proteger bosque no lo aplica.
+
+**Verificación.** `npm run sim` idéntico (el juego de 3 niveles no tiene área de estos usos).
+132/132 tests, con tres nuevos: cada uso llega al modelo con su costo y su presión, el humedal
+exige agua al lado, la restauración madura a bosque nativo y el parque baja las emisiones.

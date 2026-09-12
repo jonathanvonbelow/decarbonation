@@ -188,6 +188,24 @@ export const INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
     emissionRate: 5.0, sequestrationRate: 0.24,
     document: "Extensiones de terreno cubiertas principalmente por pastos y otras herbáceas, utilizadas para la cría y alimentación de ganado. Su manejo (intensivo vs. extensivo, tipo de pastura) influye significativamente en su balance de carbono."
   },
+  // ── Usos públicos (vista previa Territorio, 21_fusion_ecosim.md §5) ─────────────────────────
+  // Arrancan en 0 kHa: solo existen si el jugador los declara. Tasas por criterio experto,
+  // ancladas en las que ya tenia el modelo (bosque nativo 0,75/5,0; cultivo convencional 8,0/0,9).
+  [LandUseType.PublicWetland]: {
+    name: "Humedal Protegido", area: 0, stellaName: "Humedal_Protegido_(HUM)",
+    emissionRate: 1.2, sequestrationRate: 6.0,
+    document: "Humedales protegidos o restaurados por decision publica. Emiten metano por descomposicion anaerobica (de ahi una tasa de emision mayor que la del bosque), pero acumulan carbono organico en suelo a un ritmo superior al de cualquier otro uso del modelo, y son el uso con mayor valor de habitat, filtrado de nutrientes y regulacion hidrica. Balance neto: sumidero mas fuerte que el bosque nativo."
+  },
+  [LandUseType.RestorationForest]: {
+    name: "Restauracion de Bosque Nativo", area: 0, stellaName: "Restauracion_(RES)",
+    emissionRate: 0.6, sequestrationRate: 3.4,
+    document: "Tierra agricola o degradada comprada o cedida al Estado y puesta en restauracion activa. El rebrote joven secuestra menos que el bosque maduro y con los anios madura hacia bosque nativo no protegido (tasa de maduracion en CONTROL_PARAMS)."
+  },
+  [LandUseType.EnergyPark]: {
+    name: "Parque Energetico Publico", area: 0, stellaName: "Parque_Energetico_(ENR)",
+    emissionRate: 0.2, sequestrationRate: 0.3,
+    document: "Solar, eolica y almacenamiento en tierra publica. El suelo en si es casi neutro en carbono (mantenimiento contra cobertura vegetal bajo los paneles); su efecto real es desplazar generacion fosil, que el balance de carbono aplica aparte en proporcion al area."
+  },
 };
 export const TOTAL_LAND_AREA = Object.values(INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -199,6 +217,9 @@ export const LEVEL_2_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.ConventionalCrops]: { ...INITIAL_LAND_USES[LandUseType.ConventionalCrops], area: 150 },
   [LandUseType.ForestPlantations]: { ...INITIAL_LAND_USES[LandUseType.ForestPlantations], area: 120 },
   [LandUseType.GrasslandsPastures]: { ...INITIAL_LAND_USES[LandUseType.GrasslandsPastures], area: 160 },
+  [LandUseType.PublicWetland]: { ...INITIAL_LAND_USES[LandUseType.PublicWetland] },
+  [LandUseType.RestorationForest]: { ...INITIAL_LAND_USES[LandUseType.RestorationForest] },
+  [LandUseType.EnergyPark]: { ...INITIAL_LAND_USES[LandUseType.EnergyPark] },
 };
 export const LEVEL_2_TOTAL_LAND_AREA = Object.values(LEVEL_2_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -210,6 +231,9 @@ export const LEVEL_3_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.ConventionalCrops]: { ...INITIAL_LAND_USES[LandUseType.ConventionalCrops], area: 100 },
   [LandUseType.ForestPlantations]: { ...INITIAL_LAND_USES[LandUseType.ForestPlantations], area: 150 },
   [LandUseType.GrasslandsPastures]: { ...INITIAL_LAND_USES[LandUseType.GrasslandsPastures], area: 150 },
+  [LandUseType.PublicWetland]: { ...INITIAL_LAND_USES[LandUseType.PublicWetland] },
+  [LandUseType.RestorationForest]: { ...INITIAL_LAND_USES[LandUseType.RestorationForest] },
+  [LandUseType.EnergyPark]: { ...INITIAL_LAND_USES[LandUseType.EnergyPark] },
 };
 export const LEVEL_3_TOTAL_LAND_AREA = Object.values(LEVEL_3_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -489,9 +513,22 @@ export const CONTROL_PARAMS: ControlParams = {
   PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
   CO2_EMISSIONS_SCALING_FACTOR: 40000,
 
-  // Territorio preview (21_fusion_ecosim.md §5). Starting value, to calibrate with the harness:
-  // one 5 kHa parcel = 100, i.e. about a month of level-2 tax income.
+  // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Una parcela son 5 kHa, así que
+  // proteger sale 100 (un mes de recaudación del Nivel 2) y el parque energético 400. El orden
+  // refleja lo que cuesta cada cosa: declarar protección sobre bosque que ya no produce es barato;
+  // comprar tierra productiva para restaurar o para un parque, no.
   Costo_Declaracion_Area_Protegida_por_kHa: 20,
+  Costo_Restauracion_Publica_por_kHa: 60,
+  Costo_Humedal_Publico_por_kHa: 45,
+  Costo_Parque_Energetico_por_kHa: 80,
+  // Sacar tierra productiva de producción tensiona al gremio agrícola: 0,08 por kHa = 0,4 puntos
+  // de presión por parcela convertida. Proteger bosque no aplica este impulso.
+  Impulso_PP_Agricola_por_kHa_Convertida: 0.08,
+  // Si todo el territorio fuera parque energético desplazaría el 60 % de las emisiones totales; el
+  // efecto entra en proporción al área (10 % del territorio => -6 %).
+  Factor_Desplazamiento_Emisiones_Parque_Energetico: 0.6,
+  // La restauración madura hacia bosque nativo: 4 % del área por año, ~25 años para convertirse.
+  Tasa_de_RES_a_BNNP_Base: 0.04,
 };
 
 
@@ -892,6 +929,12 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.ConventionalCrops]: -0.30,
       [LandUseType.ForestPlantations]: -0.05,
       [LandUseType.GrasslandsPastures]: -0.10,
+      // Usos públicos: el humedal es el hábitat de mayor valor del modelo (supera al bosque
+      // protegido por filtrado, refugio y conectividad); la restauración vale menos que el bosque
+      // maduro pero más que cualquier cultivo; el parque energético ocupa hábitat sin reponerlo.
+      [LandUseType.PublicWetland]: 0.55,
+      [LandUseType.RestorationForest]: 0.30,
+      [LandUseType.EnergyPark]: -0.05,
     }
   },
   FOOD_SECURITY: {
@@ -915,6 +958,11 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.ConventionalCrops]: 0.4,
       [LandUseType.ForestPlantations]: -0.05,
       [LandUseType.GrasslandsPastures]: 0.1,
+      // Sacan tierra de producción; el humedal algo menos, por pesca, polinización y control de
+      // inundaciones sobre los cultivos vecinos.
+      [LandUseType.PublicWetland]: -0.15,
+      [LandUseType.RestorationForest]: -0.15,
+      [LandUseType.EnergyPark]: -0.10,
     },
     BIODIVERSITY_IMPACT_ON_FOOD_SECURITY: 0.005, // e.g., 0.5% FS change per 10 points of biodiversity
     ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY: 0.008, // e.g., 0.8% FS change per 10 points of econ security
@@ -939,6 +987,11 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.ConventionalCrops]: 0.1,
       [LandUseType.ForestPlantations]: 0.08,
       [LandUseType.GrasslandsPastures]: 0.05,
+      // Costo de oportunidad del suelo, salvo el parque energético: energía pública más barata y
+      // empleo de operación y mantenimiento.
+      [LandUseType.PublicWetland]: -0.02,
+      [LandUseType.RestorationForest]: -0.04,
+      [LandUseType.EnergyPark]: 0.12,
     },
     BIODIVERSITY_IMPACT_ON_ECONOMIC_SECURITY: 0.002, // e.g. Eco-tourism, genetic resources
     VOLATILITY_FACTOR: -0.01, // e.g. if food security is very low, econ security takes a hit

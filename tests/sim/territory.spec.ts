@@ -4,8 +4,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
-  createTerritory, declareProtectedArea, isProductive, makeRng, parcelAt, parcelCounts, parcelTargets,
-  productiveCount, protectedAreaCost, stepMonth, syncTerritory, KHA_PER_PARCEL, TERRITORY_SIZE,
+  canDeclare, createTerritory, declareProtectedArea, declarePublicUse, isProductive, makeRng, parcelAt, parcelCounts,
+  parcelTargets, productiveCount, protectedAreaCost, publicUseCost, stepMonth, syncTerritory, KHA_PER_PARCEL, TERRITORY_SIZE,
   type ParcelChange, type PublicUseResult, type Territory,
 } from '../../src/sim';
 import { CONTROL_PARAMS } from '../../src/constants';
@@ -77,7 +77,7 @@ describe('territory layout', () => {
 describe('parcel quantisation', () => {
   it('largest-remainder counts sum to the map and stay within one parcel of each area', () => {
     fc.assert(
-      fc.property(fc.array(fc.float({ min: 0, max: 200, noNaN: true }), { minLength: 6, maxLength: 6 }), (areas) => {
+      fc.property(fc.array(fc.float({ min: 0, max: 200, noNaN: true }), { minLength: 9, maxLength: 9 }), (areas) => {
         const landUses = freshState(2).landUses;
         (Object.values(LU) as LandUseType[]).forEach((k, i) => { landUses[k] = { ...landUses[k], area: areas[i] }; });
         const counts = parcelCounts(landUses, 120);
@@ -178,11 +178,11 @@ describe('declareProtectedArea (map → model)', () => {
     expect(parcelAt(t, p.x, p.y)!.kind).toBe(LU.UnprotectedNativeForest);
   });
 
-  it('refuses parcels that are not unprotected native forest, and when the treasury cannot pay', () => {
+  it('refuses parcels that do not take the use, and when the treasury cannot pay', () => {
     const state = freshState(2);
     const t = createTerritory(state.landUses, 2);
     const crop = t.parcels.find((p) => p.kind === LU.ConventionalCrops)!;
-    expect(declareProtectedArea(state, t, crop.x, crop.y, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'not-native-forest' });
+    expect(declareProtectedArea(state, t, crop.x, crop.y, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'not-convertible' });
     expect(declareProtectedArea(state, t, -1, 0, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'out-of-bounds' });
     const broke = { ...state, stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: 10 } };
     const p = findForest(t);
@@ -214,5 +214,51 @@ describe('declareProtectedArea (map → model)', () => {
     expect(withReserves.landUses[LU.ConventionalCrops].area).toBeLessThan(without.landUses[LU.ConventionalCrops].area);
     // BNP weighs more than BNNP in the biodiversity equation.
     expect(withReserves.indicators.biodiversity).toBeGreaterThan(without.indicators.biodiversity);
+  });
+  it('every public use lands in the model with its own rates and cost', () => {
+    const state = freshState(2);
+    const t = createTerritory(state.landUses, 12);
+    const crop = t.parcels.find((p) => p.kind === LU.ConventionalCrops)!;
+    const restored = expectOk(declarePublicUse(state, t, crop.x, crop.y, 'restoration', CONTROL_PARAMS));
+    expect(restored.state.landUses[LU.RestorationForest].area).toBe(KHA_PER_PARCEL);
+    expect(restored.state.landUses[LU.ConventionalCrops].area).toBe(state.landUses[LU.ConventionalCrops].area - KHA_PER_PARCEL);
+    // Taking productive land out of production pushes agricultural pressure up.
+    expect(restored.state.stellaSpecificState.PP_AGRICOLA).toBeGreaterThan(state.stellaSpecificState.PP_AGRICOLA);
+
+    const energy = expectOk(declarePublicUse(state, t, crop.x, crop.y, 'energy', CONTROL_PARAMS));
+    expect(energy.cost).toBe(publicUseCost('energy', CONTROL_PARAMS));
+    expect(energy.state.landUses[LU.EnergyPark].area).toBe(KHA_PER_PARCEL);
+  });
+
+  it('a wetland can only be declared next to water', () => {
+    const state = freshState(2);
+    const t = createTerritory(state.landUses, 12);
+    const isNextToWater = (p: { x: number; y: number }) => canDeclare(t, p.x, p.y, 'wetland');
+    const dry = t.parcels.find((p) => p.kind === LU.ConventionalCrops && !isNextToWater(p))!;
+    const wet = t.parcels.find((p) => p.kind === LU.ConventionalCrops && isNextToWater(p));
+    expect(declarePublicUse(state, t, dry.x, dry.y, 'wetland', CONTROL_PARAMS)).toEqual({ ok: false, reason: 'needs-water' });
+    if (wet) expect(expectOk(declarePublicUse(state, t, wet.x, wet.y, 'wetland', CONTROL_PARAMS)).state.landUses[LU.PublicWetland].area).toBe(KHA_PER_PARCEL);
+  });
+
+  it('restoration matures into native forest, and an energy park displaces emissions', () => {
+    const state = freshState(2);
+    const t = createTerritory(state.landUses, 12);
+    let restored = state;
+    t.parcels.filter((p) => p.kind === LU.ConventionalCrops).slice(0, 8).forEach((p) => {
+      const r = declarePublicUse(restored, t, p.x, p.y, 'restoration', CONTROL_PARAMS);
+      if (r.ok) restored = (r as Extract<typeof r, { ok: true }>).state;
+    });
+    const after = runMonthsWithMap(restored, createTerritory(restored.landUses, 12), 120).state;
+    expect(after.landUses[LU.RestorationForest].area).toBeLessThan(restored.landUses[LU.RestorationForest].area);
+    expect(after.landUses[LU.UnprotectedNativeForest].area).toBeGreaterThan(0);
+
+    let parks = state;
+    t.parcels.filter((p) => p.kind === LU.GrasslandsPastures).slice(0, 8).forEach((p) => {
+      const r = declarePublicUse(parks, t, p.x, p.y, 'energy', CONTROL_PARAMS);
+      if (r.ok) parks = (r as Extract<typeof r, { ok: true }>).state;
+    });
+    const withParks = stepMonth(parks, 0, noEventRng).next;
+    const withoutParks = stepMonth(state, 0, noEventRng).next;
+    expect(withParks.indicators.co2EqEmissionsPerCapita).toBeLessThan(withoutParks.indicators.co2EqEmissionsPerCapita);
   });
 });

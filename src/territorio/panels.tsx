@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, POLICY_UI_ORDER } from '../constants';
 import { getInstrumentName, getPactName, getPolicyName } from '../legacyContent/gameData';
-import { parcelAt, protectedAreaCost, isProductive } from '../sim';
+import { canDeclare, parcelAt, publicUseCost, PUBLIC_USES, isProductive, type PublicUse } from '../sim';
 import { WinRoutesPanel } from '../components/game/WinRoutesPanel';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
@@ -235,8 +235,8 @@ function Effect({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function ParcelCard({ session, at, onProtect, onClose }: {
-  session: Session; at: { x: number; y: number }; onProtect: () => void; onClose: () => void;
+export function ParcelCard({ session, at, onDeclare, onClose }: {
+  session: Session; at: { x: number; y: number }; onDeclare: (use: PublicUse) => void; onClose: () => void;
 }) {
   const { c, fmt } = useCopy();
   const parcel = parcelAt(session.territory, at.x, at.y);
@@ -245,7 +245,7 @@ export function ParcelCard({ session, at, onProtect, onClose }: {
   const lu = LAND_USES.includes(kind as LandUseType) ? (kind as LandUseType) : null;
   const hint = (c.kindHints as Record<string, string>)[kind] ?? c.kindHints.context;
   const carbon = lu ? rawCoefficient('carbon', lu, session.game.landUses) : 0;
-  const cost = protectedAreaCost(CONTROL_PARAMS);
+  const available = PUBLIC_USES.filter((use) => canDeclare(session.territory, at.x, at.y, use));
   return (
     <div className="pointer-events-auto panel w-full p-3 md:w-72" role="dialog" aria-label={c.kinds[kind as keyof Copy['kinds']]}>
       <div className="flex items-start justify-between gap-2">
@@ -272,10 +272,16 @@ export function ParcelCard({ session, at, onProtect, onClose }: {
           </div>
         </div>
       )}
-      {kind === LandUseType.UnprotectedNativeForest && (
-        <Button size="sm" variant="primary" className="mt-3 w-full" onClick={onProtect}>
-          {fill(c.parcel.protect, { cost: fmt.big(cost) })}
-        </Button>
+      {available.length > 0 && (
+        <div className="mt-3 space-y-1">
+          <p className="label-eyebrow !text-[10px]">{c.parcel.declareTitle}</p>
+          {available.map((use) => (
+            <Button key={use} size="sm" variant="secondary" className="w-full justify-between" onClick={() => onDeclare(use)}>
+              <span>{c.uses[use].name}</span>
+              <span className="tnum text-[12px] text-ash">{fmt.big(publicUseCost(use, CONTROL_PARAMS))}</span>
+            </Button>
+          ))}
+        </div>
       )}
     </div>
   );

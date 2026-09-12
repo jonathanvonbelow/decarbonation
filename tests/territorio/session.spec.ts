@@ -99,7 +99,7 @@ describe('Territorio session', () => {
     expect(r.session.game.stellaSpecificState.Reservas_del_Tesoro).toBeLessThan(s.game.stellaSpecificState.Reservas_del_Tesoro);
     expect(r.session.news[0].key).toBe('declared');
     const crop = s.territory.parcels.find((p) => p.kind === LandUseType.ConventionalCrops)!;
-    expect(protectParcel(s, crop.x, crop.y).error).toBe('not-native-forest');
+    expect(protectParcel(s, crop.x, crop.y).error).toBe('not-convertible');
   });
 
   it('an unread event pauses the clock until dismissed', () => {

@@ -17,11 +17,11 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declareProtectedArea, evaluateLevel, makeRng, stepMonth, syncTerritory,
-  type LevelOutcome, type ParcelChange, type PublicUseError, type Territory,
+  createInitialState, createTerritory, declarePublicUse, evaluateLevel, makeRng, publicUseTarget, stepMonth, syncTerritory,
+  type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
-import { LandUseType, Policy } from '../types';
+import { Policy } from '../types';
 import type { Language } from '../hooks/useLanguage';
 import { INSTRUMENTS_UNLOCK_YEAR, TERRITORIO_LEVEL, TOTAL_MONTHS } from './calendar';
 import { buildMonthNews, unlockNews, type NewsItem } from './news';
@@ -298,15 +298,18 @@ export function requestLoan(s: Session, amount: number, CP: ControlParams = CONT
   return { session: { ...s, game: { ...s.game, loanRequestedThisRound: s.game.loanRequestedThisRound + granted } }, detail: { amount: Math.round(granted) } };
 }
 
-/** The player's only direct land-use action: declare a native-forest parcel protected. */
-export function protectParcel(s: Session, x: number, y: number, CP: ControlParams = CONTROL_PARAMS): ActionResult {
+/**
+ * The player's only direct land-use action: declare a parcel as a public use (protected area,
+ * restoration, wetland or energy park). Everything else on the map comes from the model.
+ */
+export function declareUse(s: Session, x: number, y: number, use: PublicUse, CP: ControlParams = CONTROL_PARAMS): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
-  const r = declareProtectedArea(s.game, s.territory, x, y, CP);
+  const r = declarePublicUse(s.game, s.territory, x, y, use, CP);
   if (!r.ok) return { session: s, error: (r as { reason: PublicUseError }).reason };
   const ok = r as Extract<typeof r, { ok: true }>;
   const item: NewsItem = {
     id: `p-${s.monthIndex}-${x}-${y}`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,
-    kind: 'player', tone: 'good', key: 'declared', values: { cost: Math.round(ok.cost) },
+    kind: 'player', tone: 'good', key: 'declared', values: { cost: Math.round(ok.cost), use },
   };
   return {
     session: {
@@ -317,9 +320,13 @@ export function protectParcel(s: Session, x: number, y: number, CP: ControlParam
       news: pushNews(s.news, [item]),
       lastChanges: {
         tick: s.lastChanges.tick + 1,
-        list: [{ x, y, from: LandUseType.UnprotectedNativeForest, to: LandUseType.ProtectedNativeForest }],
+        list: [{ x, y, from: s.territory.parcels[y * s.territory.size + x].kind, to: publicUseTarget(use) }],
       },
     },
     detail: { cost: Math.round(ok.cost) },
   };
 }
+
+/** Back-compat wrapper used by the tests written before the other public uses existed. */
+export const protectParcel = (s: Session, x: number, y: number, CP: ControlParams = CONTROL_PARAMS): ActionResult =>
+  declareUse(s, x, y, 'protected', CP);
