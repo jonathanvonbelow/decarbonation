@@ -161,6 +161,22 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
     close: 'Close panel',
   },
   policies: {
+    cost: 'Cost {pct} of GDP',
+    years: '{n} years active',
+    tradeoff: 'Trade-off',
+    filters: { all: 'All', green: 'Green', extractive: 'Extractive', active: 'Active' },
+    tradeoffs: {
+      'Políticas Agroecológicas (P-AS)': 'Raises biodiversity and soil; yields take time to arrive.',
+      'Políticas de Conservación de los Bienes Naturales (P-CR)': 'Stops clearing; competes with farmland and strains the farm sector.',
+      'Políticas de Ganadería Sostenible (P-GS)': 'Less methane per kilo; costs treasury and adoption.',
+      'Políticas de Gestión Sostenible del Recurso Hídrico (P-AGUA)': 'Pays off in drought; an investment invisible in year one.',
+      'Políticas de Carbono Neutralidad (P-C)': 'The strongest emissions cut; high political cost and regressive without compensation.',
+      'Políticas Agrícolas Intensivas (P-PAI)': 'Food and GDP now; biodiversity and N2O later.',
+      'Políticas de Exportaciones Agrícolas (P-PEA)': 'Treasury and foreign currency; less food at home.',
+      'Políticas de Inversión Extranjera (P-PIE)': 'Fast capital; social tension and equity.',
+      'Políticas de Normativas Ambientales Flexibles (P-FRA)': 'Short-term economy; environmental pressure and forest loss.',
+      'Políticas de Subsidios Energéticos (P-SE)': 'Immediate social relief; emissions spike and the treasury drains.',
+    },
     subtitle: 'Up to {max} active at a time. Each stays in force for at least {years} years.',
     activate: 'Activate',
     deactivate: 'Deactivate',
@@ -189,6 +205,8 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
   },
   routes: {
     title: 'Win routes in 2054',
+    trajectory: 'Trajectory',
+    month: 'Month',
   },
   actors: {
     title: 'Stakeholders',

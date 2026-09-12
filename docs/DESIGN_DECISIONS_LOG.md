@@ -1431,3 +1431,46 @@ resolver lo más barato, resolver la primera opción):
 vencido se resuelve solo, decidir cobra y saca el papel del escritorio, el catálogo tiene ≥100
 situaciones distintas con opción de salida). `npm run sim` idéntico: nada de esto toca el juego de
 3 niveles.
+
+## 2026-09-11 — v4 / F7: interfaz de la versión de Grok, y rutas de victoria propias, calibradas
+
+**De dónde sale.** El usuario pidió revisar `combinacion/vAlRAn1GjcMwOEjO-grok-workspace` (la fusión
+que hizo Grok) e incorporar sus mejoras. Esa versión mantiene el motor de EcoSIM —no verificable,
+con presiones calculadas ad hoc sobre métricas de EcoSIM— pero **organiza el contenido mucho mejor**,
+y eso es lo que se tomó:
+
+- **Panel de políticas por familias**: filtros (todas / verdes / extractivas / activas), ícono por
+  familia, costo como % del PBI, barra de eficiencia con años activa, candado con el año en que se
+  libera, **línea de trade-off explícita** (10 nuevas, es/en) y los instrumentos con su descripción.
+- **Panel de rutas con lectura por condición**: cada condición con su objetivo y el valor actual,
+  en verde o en ocre según se cumpla. Antes se reusaba `WinRoutesPanel` del juego principal, que
+  muestra progreso pero no los números.
+- **Barras de proporción de uso del suelo** y **gráfico de trayectoria** (recharts, ya era
+  dependencia) en el mismo panel, más las tres presiones.
+
+**Rutas propias, calibradas (`src/territorio/routes.ts`).** No se tocó `LEVEL_ROUTES`: esas son del
+juego de 3 niveles. La vista previa tiene pisos y rutas propias, calibradas con
+`npm run sim:territorio` (nuevo harness: cinco estrategias jugadas hasta 2054 con políticas, usos
+públicos, pactos y situaciones). Resultado de la calibración final:
+
+| estrategia | gana | ruta |
+|---|---|---|
+| no hacer nada | 0/3 | — (cae el piso de bienestar social) |
+| conservación | 3/3 | conservación |
+| producción | 2/3 | producción |
+| innovación | 2/3 | innovación |
+| todo a la vez | 0/3 | — (termina con el tesoro en rojo) |
+
+Cada ruta pide algo que las otras no consiguen sin querer: conservación, 12 % del territorio bajo uso
+público de conservación; producción, llegar a 2054 con caja (≥ 1.000); innovación, parque energético
+público y esfuerzo en instrumentos tecnológicos.
+
+**Hallazgo de la calibración.** Los pisos sobre presiones sectoriales se sacaron: en este modelo una
+economía hundida lleva la presión agrícola a 100 por sí sola (impulso 0,3 por punto de seguridad
+económica bajo 50 contra 10 % de disipación), así que el piso castigaba dos veces la misma falla y
+volvía imposibles las rutas de conservación e innovación aun gobernando bien. La estabilidad política
+ya contiene las presiones, vía colapso político.
+
+**Verificación.** 140/140 tests (4 nuevos de rutas), `tsc` limpio, `i18n:audit` limpio, `build`
+limpio, `npm run sim` idéntico. Probado en navegador: bandeja de situaciones con el reloj corriendo,
+paneles de políticas y rutas, usos públicos con su costo.

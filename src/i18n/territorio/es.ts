@@ -162,6 +162,22 @@ export const TERRITORIO_ES = {
     close: 'Cerrar panel',
   },
   policies: {
+    cost: 'Costo {pct} del PBI',
+    years: '{n} años activa',
+    tradeoff: 'Trade-off',
+    filters: { all: 'Todas', green: 'Verdes', extractive: 'Extractivas', active: 'Activas' },
+    tradeoffs: {
+      'Políticas Agroecológicas (P-AS)': 'Sube biodiversidad y suelo; el rendimiento tarda en llegar.',
+      'Políticas de Conservación de los Bienes Naturales (P-CR)': 'Frena el desmonte; compite con la tierra agrícola y tensiona al campo.',
+      'Políticas de Ganadería Sostenible (P-GS)': 'Menos metano por kilo; cuesta tesorería y adopción.',
+      'Políticas de Gestión Sostenible del Recurso Hídrico (P-AGUA)': 'Paga en sequía; inversión que no se ve el primer año.',
+      'Políticas de Carbono Neutralidad (P-C)': 'La que más baja emisiones; alto costo político y regresiva sin compensación.',
+      'Políticas Agrícolas Intensivas (P-PAI)': 'Alimento y PBI ya; biodiversidad y N2O después.',
+      'Políticas de Exportaciones Agrícolas (P-PEA)': 'Tesorería y divisas; menos comida en el mercado interno.',
+      'Políticas de Inversión Extranjera (P-PIE)': 'Capital rápido; tensión social y equidad.',
+      'Políticas de Normativas Ambientales Flexibles (P-FRA)': 'Economía de corto plazo; presión ambientalista y pérdida de bosque.',
+      'Políticas de Subsidios Energéticos (P-SE)': 'Alivio social inmediato; dispara emisiones y vacía el tesoro.',
+    },
     subtitle: 'Hasta {max} activas a la vez. Cada una queda vigente al menos {years} años.',
     activate: 'Activar',
     deactivate: 'Desactivar',
@@ -190,6 +206,8 @@ export const TERRITORIO_ES = {
   },
   routes: {
     title: 'Rutas de victoria en 2054',
+    trajectory: 'Trayectoria',
+    month: 'Mes',
   },
   actors: {
     title: 'Actores',

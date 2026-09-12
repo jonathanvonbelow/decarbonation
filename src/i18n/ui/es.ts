@@ -54,6 +54,7 @@ export const UI_ES = {
       pressureEnv: 'Presión ambientalista máxima',
       pressureSocial: 'Presión social máxima',
       politicalCollapse: 'Colapso político máximo',
+      socialWellbeing: 'Bienestar social mínimo',
       debtRatio: 'Ratio deuda/PBI máximo',
     },
     conservation: {
@@ -93,6 +94,9 @@ export const UI_ES = {
     pbi: 'PBI real',
     debtRatio: 'Ratio deuda/PBI',
     pactsActive: 'Pactos internacionales activos',
+    treasury: 'Reservas del tesoro',
+    publicNature: 'Territorio bajo uso público de conservación',
+    energyPark: 'Territorio con parque energético público',
   },
   dn: {
     avatarLabel: 'DecarboNito — clic para conversar',

@@ -3,16 +3,18 @@
  */
 import React, { useState } from 'react';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, POLICY_UI_ORDER } from '../constants';
-import { getInstrumentName, getPactName, getPolicyName } from '../legacyContent/gameData';
+import { Line, LineChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
+import { getIndicatorName, getInstrumentName, getPactName, getPolicyName } from '../legacyContent/gameData';
+import { useT, type TranslationKey } from '../i18n';
+import { evaluateTerritorio } from './routes';
 import { canDeclare, parcelAt, publicUseCost, PUBLIC_USES, isProductive, type PublicUse } from '../sim';
-import { WinRoutesPanel } from '../components/game/WinRoutesPanel';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
-import type { Pact, Policy, PolicyInstrument, PolicyState, RandomEvent } from '../types';
-import { LandUseType } from '../types';
+import type { Pact, PolicyInstrument, PolicyState, RandomEvent } from '../types';
+import { LandUseType, Policy } from '../types';
 import { fill, useCopy, type Copy } from './copy';
 import { rawCoefficient } from './heat';
-import { TONE_DOT, useNewsText, type PanelId } from './hud';
+import { SWATCH, TONE_DOT, useNewsText, type PanelId } from './hud';
 import { INSTRUMENTS_UNLOCK_YEAR, maxLoan, unlocks, type Session } from './session';
 
 /* ── Sheet shell ───────────────────────────────────────────────────────────────────────────── */
@@ -35,6 +37,40 @@ export function SideSheet({ panel, onClose, children }: { panel: PanelId; onClos
 
 /* ── Policies ──────────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Policy families, in the shape the Grok fusion proposed (combinacion/vAlRAn1GjcMwOEjO-grok-workspace):
+ * green and extractive families side by side, filterable, each card carrying its cost, its decay,
+ * the trade-off it forces and the instruments underneath. What it shows is this model's data:
+ * efficiency and effort come from PolicyState, names and descriptions from legacyContent/gameData.
+ */
+export const POLICY_STANCE: Record<string, 'green' | 'extractive'> = {
+  [Policy.Agroecological]: 'green',
+  [Policy.NaturalConservation]: 'green',
+  [Policy.SustainableLivestock]: 'green',
+  [Policy.SustainableWaterManagement]: 'green',
+  [Policy.CarbonNeutrality]: 'green',
+  [Policy.IntensiveAgriculture]: 'extractive',
+  [Policy.AgriculturalExports]: 'extractive',
+  [Policy.ForeignInvestment]: 'extractive',
+  [Policy.FlexibleEnvironmentalRegulations]: 'extractive',
+  [Policy.EnergySubsidies]: 'extractive',
+};
+
+const POLICY_ICON: Record<string, string> = {
+  [Policy.Agroecological]: '🌿',
+  [Policy.NaturalConservation]: '🌳',
+  [Policy.SustainableLivestock]: '🐄',
+  [Policy.SustainableWaterManagement]: '💧',
+  [Policy.CarbonNeutrality]: '☁',
+  [Policy.IntensiveAgriculture]: '🚜',
+  [Policy.AgriculturalExports]: '🚢',
+  [Policy.ForeignInvestment]: '🌐',
+  [Policy.FlexibleEnvironmentalRegulations]: '📄',
+  [Policy.EnergySubsidies]: '⛽',
+};
+
+type PolicyFilter = 'all' | 'green' | 'extractive' | 'active';
+
 export function PoliciesPanel({ session, onToggle, onEffort }: {
   session: Session;
   onToggle: (id: Policy) => void;
@@ -42,63 +78,108 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
 }) {
   const { c, locale, fmt } = useCopy();
   const [open, setOpen] = useState<Policy | null>(null);
+  const [filter, setFilter] = useState<PolicyFilter>('all');
   const instrumentsOpen = unlocks(session).instruments;
   const activeCount = (Object.values(session.game.policies) as PolicyState[]).filter((p) => p.isActive).length;
+
+  const list = POLICY_UI_ORDER.filter((id) => {
+    if (filter === 'active') return session.game.policies[id].isActive;
+    if (filter === 'all') return true;
+    return POLICY_STANCE[id] === filter;
+  });
+
   return (
     <div className="space-y-2">
       <p className="px-1 text-[12px] text-ash">
         {fill(c.policies.subtitle, { max: MAX_ACTIVE_POLICIES, years: POLICY_LOCK_IN_DURATION })}
         <span className="tnum ml-2 text-bone">{activeCount}/{MAX_ACTIVE_POLICIES}</span>
       </p>
-      {POLICY_UI_ORDER.map((id) => {
+      <div className="flex flex-wrap gap-1 px-1">
+        {(['all', 'green', 'extractive', 'active'] as PolicyFilter[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setFilter(id)}
+            aria-pressed={filter === id}
+            className={`h-7 rounded px-2 text-[12px] ${filter === id ? 'bg-basalt-600 text-bone' : 'bg-basalt-800 text-ash hover:text-bone'}`}
+          >
+            {c.policies.filters[id]}
+          </button>
+        ))}
+      </div>
+
+      {list.map((id) => {
         const p = session.game.policies[id];
+        const stance = POLICY_STANCE[id];
         const lockedUntil = p.isActive && p.activationYear !== undefined ? p.activationYear + POLICY_LOCK_IN_DURATION : null;
         const locked = lockedUntil !== null && session.game.year < lockedUntil;
         const instruments = p.instruments ? (Object.values(p.instruments) as PolicyInstrument[]) : [];
-        const used = instruments.reduce((s, i) => s + i.effortPercentage, 0);
+        const used = instruments.reduce((sum, i) => sum + i.effortPercentage, 0);
+        const yearsActive = p.isActive && p.activationYear !== undefined ? session.game.year - p.activationYear : 0;
+        const expanded = open === id;
         return (
           <div key={id} className={`rounded-md border p-3 ${p.isActive ? 'border-chlorophyll/50 bg-basalt-800' : 'border-basalt-700'}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[14px] text-bone">{getPolicyName(id, locale)}</p>
-                {p.isActive && (
-                  <p className="tnum text-[11px] text-ash">
-                    {fill(c.policies.efficiency, { pct: fmt.pct((p.currentEfficiency ?? 0) * 100, 0) })}
-                    {locked && <span className="ml-2">· {fill(c.policies.lockedUntil, { year: lockedUntil! })}</span>}
-                  </p>
-                )}
-              </div>
-              <Button
-                size="sm"
-                variant={p.isActive ? 'ghost' : 'primary'}
-                onClick={() => onToggle(id)}
-                disabled={p.isActive && locked}
-              >
-                {p.isActive ? c.policies.deactivate : c.policies.activate}
+            <div className="flex items-start gap-2">
+              <button type="button" className="flex min-w-0 flex-1 items-start gap-2 text-left" onClick={() => setOpen(expanded ? null : id)} aria-expanded={expanded}>
+                <span className={`grid size-8 shrink-0 place-items-center rounded ${stance === 'green' ? 'bg-chlorophyll/15' : 'bg-ochre/15'}`} aria-hidden>
+                  {POLICY_ICON[id]}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[14px] leading-tight text-bone">{getPolicyName(id, locale)}</span>
+                  <span className="tnum block text-[11px] text-ash-dim">
+                    {fill(c.policies.cost, { pct: fmt.pct(p.costFactor * 100, 1) })}
+                    {p.isActive && ` · ${fill(c.policies.efficiency, { pct: fmt.pct((p.currentEfficiency ?? 0) * 100, 0) })}`}
+                    {p.isActive && yearsActive > 0 && ` · ${fill(c.policies.years, { n: yearsActive })}`}
+                  </span>
+                </span>
+              </button>
+              <Button size="sm" variant={p.isActive ? 'ghost' : 'primary'} onClick={() => onToggle(id)} disabled={p.isActive && locked}>
+                {p.isActive ? (locked ? `🔒 ${lockedUntil}` : c.policies.deactivate) : c.policies.activate}
               </Button>
             </div>
-            {p.isActive && instruments.length > 0 && (
-              <div className="mt-2">
-                <button type="button" className="text-[12px] text-hydro hover:underline" onClick={() => setOpen(open === id ? null : id)} aria-expanded={open === id}>
-                  {c.policies.effortTitle} {open === id ? '▴' : '▾'}
-                </button>
-                {open === id && (
+
+            {p.isActive && (
+              <span className="mt-2 block h-1 overflow-hidden rounded-full bg-basalt-700">
+                <span className="block h-full rounded-full bg-chlorophyll" style={{ width: `${Math.max(0, Math.min(100, (p.currentEfficiency ?? 0) * 100))}%` }} />
+              </span>
+            )}
+
+            {expanded && (
+              <div className="mt-2 space-y-2">
+                <p className="text-[12px] leading-relaxed text-ash">{p.description}</p>
+                <p className="text-[11px] leading-relaxed text-ochre">
+                  <span className="text-ash-dim">{c.policies.tradeoff}: </span>
+                  {c.policies.tradeoffs[id as keyof Copy['policies']['tradeoffs']]}
+                </p>
+                {p.isActive && instruments.length > 0 && (
                   instrumentsOpen ? (
-                    <div className="mt-2 space-y-3">
+                    <div className="space-y-3 pt-1">
+                      <p className="label-eyebrow !text-[10px]">{c.policies.effortTitle}</p>
                       {instruments.map((inst) => (
-                        <EffortSlider
-                          key={inst.id}
-                          id={`eff-${inst.id}`}
-                          label={getInstrumentName(inst.id, locale)}
-                          value={inst.effortPercentage}
-                          remaining={100 - used}
-                          onChange={(v) => onEffort(id, inst.id, v)}
-                        />
+                        <div key={inst.id}>
+                          <EffortSlider
+                            id={`eff-${inst.id}`}
+                            label={getInstrumentName(inst.id, locale)}
+                            value={inst.effortPercentage}
+                            remaining={100 - used}
+                            onChange={(v) => onEffort(id, inst.id, v)}
+                          />
+                          <p className="text-[11px] leading-snug text-ash-dim">{inst.description}</p>
+                        </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-2 text-[12px] text-ash">{fill(c.policies.instrumentsLocked, { year: INSTRUMENTS_UNLOCK_YEAR })}</p>
+                    <p className="text-[12px] text-ash">{fill(c.policies.instrumentsLocked, { year: INSTRUMENTS_UNLOCK_YEAR })}</p>
                   )
+                )}
+                {!p.isActive && instruments.length > 0 && (
+                  <ul className="space-y-0.5">
+                    {instruments.map((inst) => (
+                      <li key={inst.id} className="text-[11px] leading-snug text-ash-dim">
+                        <span className="text-ash">{getInstrumentName(inst.id, locale)}</span> — {inst.description}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             )}
@@ -188,15 +269,122 @@ export function FinancePanel({ session, onPact, onTax, onLoan }: {
 
 /* ── Routes & news ─────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * How the game is going: each route's own conditions with target and current value, the land-use
+ * shares the map is drawing, the three pressures, and the trajectory so far. The per-condition
+ * read comes from the Grok fusion's routes pane; the numbers are this model's `evaluateLevel`.
+ */
 export function RoutesPanel({ session }: { session: Session }) {
-  const { c } = useCopy();
+  const { c, locale, fmt } = useCopy();
+  const { t: tMain } = useT();
+  const t = (key: string) => tMain(key as TranslationKey);
+  const outcome = evaluateTerritorio(session.game, { ...session.game, indicators: session.game.levelBaseline });
+  const routes = [...outcome.routes].sort((a, b) => b.progress - a.progress);
+  const total = (Object.values(session.game.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
+  const i = session.game.indicators;
+  const history = session.history.filter((_, idx) => idx % 3 === 0);
+
   return (
-    <div>
-      <p className="mb-2 px-1 text-[12px] text-ash">{c.routes.title}</p>
-      <WinRoutesPanel gameState={session.game} />
+    <div className="space-y-4">
+      <p className="px-1 text-[12px] text-ash">{c.routes.title}</p>
+
+      {!outcome.floorsMet && (
+        <p className="rounded border border-ember/40 px-2 py-1 text-[12px] text-ember">
+          {t('routes.floorsBroken')}: {outcome.failedFloors.map((f) => t(f.labelKey)).join(', ')}
+        </p>
+      )}
+
+      {routes.map((rp) => (
+        <section key={rp.route.id} className={`rounded-md border p-3 ${rp.met ? 'border-chlorophyll/50' : 'border-basalt-700'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-[14px] text-bone">{t(rp.route.nameKey)}</h3>
+            <span className={`tnum text-[12px] ${rp.met ? 'text-chlorophyll' : 'text-ash'}`}>{fmt.pct(rp.progress * 100, 0)}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-ash-dim">{t(rp.route.taglineKey)}</p>
+          <span className="mt-2 block h-1 overflow-hidden rounded-full bg-basalt-700">
+            <span className={`block h-full rounded-full ${rp.met ? 'bg-chlorophyll' : 'bg-hydro'}`} style={{ width: `${rp.progress * 100}%` }} />
+          </span>
+          <ul className="mt-2 space-y-0.5">
+            {rp.conditions.map((cond) => (
+              <li key={cond.condition.labelKey} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className={cond.met ? 'text-chlorophyll' : 'text-ash'}>
+                  {t(cond.condition.labelKey)} {cond.condition.dir === 'min' ? '≥' : '≤'}{' '}
+                  {fmt.num(cond.condition.target, Number.isInteger(cond.condition.target) ? 0 : 1)}
+                </span>
+                <span className={`tnum ${cond.met ? 'text-bone' : 'text-ochre'}`}>{fmt.num(cond.value, 1)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <section>
+        <h3 className="label-eyebrow mb-1 !text-[11px]">{c.legend.title}</h3>
+        <ul className="space-y-1">
+          {(Object.values(LandUseType) as LandUseType[])
+            .filter((lu) => session.game.landUses[lu].area > 0)
+            .sort((a, b) => session.game.landUses[b].area - session.game.landUses[a].area)
+            .map((lu) => {
+              const share = (session.game.landUses[lu].area / total) * 100;
+              return (
+                <li key={lu} className="flex items-center gap-2">
+                  <span className="w-24 shrink-0 truncate text-[11px] text-ash">{c.kinds[lu as keyof Copy['kinds']]}</span>
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-basalt-700">
+                    <span className="block h-full rounded-full" style={{ width: `${share}%`, background: SWATCH[lu] ?? 'var(--color-ash)' }} />
+                  </span>
+                  <span className="tnum w-10 shrink-0 text-right text-[11px] text-bone">{fmt.pct(share, 0)}</span>
+                </li>
+              );
+            })}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="label-eyebrow mb-1 !text-[11px]">{c.actors.title}</h3>
+        <dl className="grid grid-cols-3 gap-1">
+          {[[c.actors.farmers, i.ppAgricola], [c.actors.environmentalists, i.ppAmbientalista], [c.actors.citizens, i.ppSocial]].map(([label, value]) => (
+            <div key={label as string} className="rounded bg-basalt-800 px-2 py-1.5">
+              <dt className="truncate text-[10px] text-ash-dim">{label}</dt>
+              <dd className={`tnum text-[13px] ${(value as number) > 70 ? 'text-ember' : 'text-bone'}`}>{fmt.num(value as number, 0)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {history.length > 3 && (
+        <section>
+          <h3 className="label-eyebrow mb-1 !text-[11px]">{c.routes.trajectory}</h3>
+          <div className="h-32 rounded-md bg-basalt-800 p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <XAxis dataKey="t" hide />
+                <YAxis hide domain={[0, 100]} />
+                <RTooltip
+                  contentStyle={{ background: 'var(--color-basalt-900)', border: '1px solid var(--color-basalt-600)', borderRadius: 6, fontSize: 12 }}
+                  labelFormatter={(v) => `${c.routes.month} ${v}`}
+                  formatter={(value: number, key: string) => [fmt.num(value, 1), getIndicatorName(CHART_KEYS[key] ?? key, locale)]}
+                />
+                <Line type="monotone" dataKey="biodiversity" stroke="var(--color-chlorophyll)" dot={false} strokeWidth={1.5} />
+                <Line type="monotone" dataKey="foodSecurity" stroke="var(--color-ochre)" dot={false} strokeWidth={1.5} />
+                <Line type="monotone" dataKey="economicSecurity" stroke="var(--color-hydro)" dot={false} strokeWidth={1.5} />
+                <Line type="monotone" dataKey="socialWellbeing" stroke="var(--color-bloom)" dot={false} strokeWidth={1.5} />
+                <Line type="monotone" dataKey="politicalStability" stroke="var(--color-indigo-ink)" dot={false} strokeWidth={1.5} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
+
+const CHART_KEYS: Record<string, string> = {
+  biodiversity: 'biodiversity',
+  foodSecurity: 'foodSecurity',
+  economicSecurity: 'economicSecurity',
+  socialWellbeing: 'socialWellbeing',
+  politicalStability: 'politicalStability',
+};
 
 export function NewsPanel({ session }: { session: Session }) {
   const { c, monthName } = useCopy();

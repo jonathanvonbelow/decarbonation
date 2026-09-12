@@ -17,7 +17,7 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, evaluateGameOver, evaluateLevel, makeRng, publicUseTarget,
+  createInitialState, createTerritory, declarePublicUse, evaluateGameOver, makeRng, publicUseTarget,
   stepMonth, syncTerritory,
   type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
@@ -25,6 +25,7 @@ import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyStat
 import { Policy } from '../types';
 import type { Language } from '../hooks/useLanguage';
 import { INSTRUMENTS_UNLOCK_YEAR, TERRITORIO_LEVEL, TOTAL_MONTHS } from './calendar';
+import { evaluateTerritorio } from './routes';
 import { buildMonthNews, unlockNews, type NewsItem } from './news';
 import {
   applyWear, defaultOption, resolveSituation, rollSituation, SITUATION_BY_ID, type OpenSituation,
@@ -159,7 +160,7 @@ export function createSession(seed: number): Session {
   };
 }
 
-const evaluateRoutes = (game: GameState): LevelOutcome => evaluateLevel(game, { ...game, indicators: game.levelBaseline });
+const evaluateRoutes = (game: GameState): LevelOutcome => evaluateTerritorio(game, { ...game, indicators: game.levelBaseline });
 
 function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
   if (items.length === 0) return news;

@@ -25,6 +25,11 @@ const IGNORED = [
   // domain-content-as-ID pattern file 12 describes indexing by, not translating in place. Same
   // category as constants.ts above, not a pending migration.
   /^src\/types\.ts$/,
+  // v4 (21_fusion_ecosim.md §7): the situation catalogues carry `es` and `en` copy side by side in
+  // the same object, per situation and per option -- the same "domain content indexed by ID" shape
+  // as legacyContent/gameData.ts above, not hardcoded UI copy. The line-by-line heuristic cannot
+  // see the English sibling two lines below, so it would flag all 100 of them.
+  /^src\/territorio\/situations\//,
 ];
 
 // Capa B/C (12_i18n_completo.md) closed out in phase 12 -- see docs/DESIGN_DECISIONS_LOG.md.
