@@ -40,12 +40,18 @@ export function getPolicyEfficiency(policy: PolicyState | undefined, currentLeve
 export function updatePolicyEfficiency(
   policies: Record<Policy, PolicyState>,
   stellaState: StellaStocks,
+  /**
+   * Fraction of a year being simulated: 1 for `stepYear` (default, unchanged behavior), 1/12 for
+   * the monthly step of the Territorio preview (src/sim/monthly.ts) — the "years active" counter
+   * then grows by 1/12 per month and the same exponential curve is read at that fractional age.
+   */
+  dt = 1,
 ): void {
   (Object.values(policies) as PolicyState[]).forEach((p) => {
     if (!p.stellaName) return;
     const tiempoActivacionKey = `Tiempo_Activacion_${p.stellaName}` as NumericStellaKeys;
     if (p.isActive && tiempoActivacionKey in stellaState) {
-      (stellaState as any)[tiempoActivacionKey] = ((stellaState as any)[tiempoActivacionKey] || 0) + 1;
+      (stellaState as any)[tiempoActivacionKey] = ((stellaState as any)[tiempoActivacionKey] || 0) + dt;
     }
 
     if (p.isActive && p.efficiencyDecayDuration && p.efficiencyDecayDuration > 0 && p.initialEfficiency) {

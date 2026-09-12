@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sim": "tsx scripts/simulate.ts",
+    "sim:territorio": "tsx scripts/simulate-territorio.ts",
     "i18n:audit": "node scripts/i18n-audit.mjs"
   },
   "dependencies": {

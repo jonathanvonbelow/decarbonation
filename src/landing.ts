@@ -58,6 +58,12 @@ function initFunnelTracking(): void {
       logFunnelEvent('play_click', { origin });
     });
   });
+
+  // v4 preview link (21_fusion_ecosim.md): its own event, so interest in what comes next is
+  // measurable without inflating the main game's `play_click` funnel.
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio"]').forEach((link) => {
+    link.addEventListener('click', () => logFunnelEvent('preview_click', { preview: 'territorio' }));
+  });
 }
 
 initLocale();

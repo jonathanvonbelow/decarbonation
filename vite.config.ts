@@ -52,6 +52,9 @@ export default defineConfig(({ mode }) => {
             docentesEcuaciones: path.resolve(__dirname, 'docentes-ecuaciones.html'),
             docentesPlanClase: path.resolve(__dirname, 'docentes-plan-clase.html'),
             docentesDiapositivas: path.resolve(__dirname, 'docentes-diapositivas.html'),
+            // v4 preview (mejora-general/files/21_fusion_ecosim.md): single-level, monthly,
+            // map-based version, published apart from the main game as "what comes next".
+            territorio: path.resolve(__dirname, 'territorio.html'),
           },
         },
       },

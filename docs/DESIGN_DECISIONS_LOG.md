@@ -1159,3 +1159,318 @@ cinco recursos linkeando "Ver"/"Abrir" en vez de "Descargar", y las páginas
 diseño esperado y cero errores de consola.
 
 **Origen.** Reporte directo del usuario tras el deploy de la fase 11 (segunda ronda).
+
+## 2026-09-11 — v4 / F0 (fusión con EcoSIM): especificación, rama y CLAUDE.md corregido
+
+**Pedido del usuario.** Fusionar DecarboNation con el prototipo EcoSIM (`combinacion/EcoSIM`, mejor
+arte e interfaz) en un solo nivel, previa entrega de un plan completo. Decisiones tomadas por el
+usuario sobre ese plan: (1) base Nivel 2 con desbloqueo progresivo, pero con **paso mensual** como
+EcoSIM; (2) el juego de 3 niveles sigue siendo el principal y la fusión va en una sección aparte
+como "lo próximo en desarrollo"; (3) el jugador solo puede declarar áreas protegidas u otros usos
+públicos, siempre que su efecto entre en todas las ecuaciones que usan ese dato; (4) commit por fase.
+Todo quedó en `mejora-general/files/21_fusion_ecosim.md`.
+
+**Por qué el motor de DecarboNation y no el de EcoSIM.** El de EcoSIM es mensual pero ad hoc, sin
+tests, y reporta agua y energía que nada calcula con sustento. Las dos revisiones PDF que vienen con
+EcoSIM piden explícitamente un núcleo causal verificable y reproducible con la IA fuera del cálculo:
+eso ya es `src/sim/`. EcoSIM aporta mapa, arte y HUD.
+
+**Por qué el paso mensual no cambia el modelo.** Todas las ecuaciones de estado son de primer orden,
+`x(t+1) = x(t) + f(x(t))`; el paso mensual es `x + f(x)/12` (Euler con Δt = 1/12). Conserva los
+equilibrios del modelo anual, el área total y los límites 0-100; cambia la forma de la trayectoria,
+no el destino. Se implementa en un módulo aparte (`src/sim/monthly.ts`) y `stepYear` no cambia.
+
+**`CLAUDE.md` estaba desactualizado en un punto que confundía.** Decía que el componente raíz era
+`App.tsx` en la raíz y que `src/App.tsx` era un duplicado obsoleto: es al revés desde la
+consolidación del commit `5f415c7` (no existe `App.tsx` en la raíz). Reescrito: entradas del build
+multipágina, motor puro, comandos de test (incluido cómo correr un solo test), `GEMINI_MODEL`,
+convenciones de fases y de este log.
+
+**Abierto.** Qué "otros usos públicos" además del área protegida, y con qué parámetros (§5 de la
+especificación): no se habilitan hasta tener tasas y pesos para todas las ecuaciones.
+
+## 2026-09-11 — v4 / F1: motor mensual (`src/sim/monthly.ts`)
+
+**Qué se hizo.** `stepMonth(state, month, rng, CP, lang, options)` reproduce `stepYear` paso por
+paso con Δt = 1/12: cada stock avanza 1/12 de lo que la ecuación anual lo movería desde el estado
+actual (`x + (F(x) − x)/12`). Ninguna fórmula, peso ni umbral cambia. Tres cambios mínimos en
+módulos compartidos, todos con valor por defecto que conserva el comportamiento anterior:
+`updatePolicyEfficiency(..., dt = 1)`; `fiscalTermsActive = currentLevel === 3` en
+`calculateEconomicSecurityChange`/`calculateSocialConflictChange`; y la evaluación de fin de
+partida extraída tal cual a `src/sim/gameOver.ts` (`evaluateGameOver`), que usan los dos motores.
+
+**Verificación de que el juego de 3 niveles no cambió.** `npm run sim` antes y después de los
+cambios: salida idéntica (diff vacío). Los 93 tests previos siguen pasando.
+
+**Mensual vs anual, medido.** Cuatro estrategias (nada; verde; productiva; mixta), Nivel 2, sin
+eventos, 30 años: los indicadores centrales difieren < 1 punto, CO₂ < 0,2 t/hab, puntaje ≤ 11/1000.
+Donde más se separan es en las presiones (hasta ~6 puntos, p. ej. presión social mixta 92,6 anual vs
+86,8 mensual): el paso anual rebota contra los límites 0/100 y el mensual los suaviza. Es la
+diferencia esperable entre un paso grueso y uno fino, no un desvío del modelo. Tests nuevos en
+`tests/sim/monthly.spec.ts` (10): pureza, calendario, determinismo, conservación de área a 30 años,
+límites y finitud con eventos, coincidencia con `stepYear` a 30 años (tolerancias medidas),
+probabilidad mensual de eventos, efecto completo del evento en su mes, préstamo acreditado una vez,
+términos fiscales solo si se activan.
+
+**Eventos.** Cada evento conserva su frecuencia anual calibrada (`1 − (1 − p)^(1/12)` por mes). La
+suma de probabilidades del Nivel 2 ronda 0,2 por año, así que el "más situaciones y noticias"
+pedido no puede salir de estos eventos sin inflar shocks que el modelo calibró como raros: tiene que
+salir de noticias derivadas del estado y de situaciones nuevas (F5).
+
+**Hallazgo en el juego principal (no corregido, pendiente de decisión).** En `stepYear` los pactos
+aplican sus efectos en el paso 5, pero `politicalStability` se recalcula en el paso 8 desde
+`Colapso_politico` y `co2EqEmissionsPerCapita` en el paso 9 desde `computeCarbonBalance`. Resultado:
+el −5 % de CO₂ y el +3 de estabilidad del Acuerdo Global de Carbono, el −10 % de CO₂ de la
+Iniciativa de Transferencia Tecnológica y el −5 % de CO₂ del evento "Boom de tecnología verde" nunca
+llegan al jugador (el efecto sobre biodiversidad y seguridad económica sí, porque esas se calculan
+a partir del valor vigente). El motor mensual reproduce el mismo comportamiento para seguir siendo
+el mismo modelo; corregirlo cambiaría el balance del juego de 3 niveles y es decisión del equipo.
+
+**Otro.** `tsconfig.json` no tenía `include`, así que `tsc --noEmit` (y por lo tanto `npm run
+build`) empezó a compilar `combinacion/EcoSIM` y a fallar. Se agregó `exclude` con
+`combinacion`, `node_modules` y `dist`.
+
+## 2026-09-11 — v4 / F2: territorio (`src/sim/territory.ts`) y área protegida declarada por el jugador
+
+**Qué se hizo.** Módulo puro que une el mapa de 12×12 con las seis áreas del modelo:
+`createTerritory` (río, 4 humedales, pueblo de 8 parcelas, y 120 parcelas productivas de 5 kHa =
+los 600 kHa del Nivel 2, dispuestas del pueblo hacia afuera: cultivos convencionales,
+agroecológicos, pasturas, plantaciones, bosque nativo, reserva), `syncTerritory` (modelo → mapa) y
+`declareProtectedArea` (la única acción directa del jugador, decisión 3 del equipo).
+
+**Modelo → mapa.** Cuantización por mayor resto al inicio; después, cambios mínimos con una banda
+de histéresis de 1,2 parcelas para que una parcela no parpadee cuando un área está cerca de un borde
+de redondeo (el error queda acotado a ≤ 6 kHa por uso, verificado a 30 años con eventos). La parcela
+que cambia se toma de la frontera del uso que crece: la deforestación avanza desde los cultivos y
+las reservas crecen desde sus bordes. El área que el modelo deja de contabilizar por el evento de
+sequía (ítem L-1 de la auditoría) se muestra como parcelas en barbecho en vez de ocultarse.
+
+**Mapa → modelo.** Declarar reserva una parcela de bosque nativo no protegido mueve 5 kHa de BNNP a
+BNP y cobra un costo único de las Reservas del Tesoro (`Costo_Declaracion_Area_Protegida_por_kHa`,
+parámetro nuevo en `CONTROL_PARAMS`, 20/kHa = 100 por parcela ≈ un mes de recaudación del Nivel 2;
+a calibrar en F7). No aparece en el panel del facilitador del juego principal, que lista sus
+parámetros explícitamente. Ninguna ecuación cambió: carbono, biodiversidad, seguridad alimentaria y
+económica, el flujo de deforestación BNNP→CC y la condición de % de bosque nativo leen las áreas, así
+que la acción llega a todas. Un test lo verifica de punta a punta: con 6 parcelas protegidas, a 10
+años hay menos cultivo convencional (menos bosque expuesto a la deforestación) y más biodiversidad.
+
+**Honestidad sobre la magnitud.** En el modelo, el efecto directo de BNP sobre la biodiversidad es
+chico (peso 0,50 vs 0,20 de BNNP, ponderado por la fracción de área y por 0,8·1,5). Lo que más
+cambia la protección es cortar la deforestación de esas parcelas. Si el equipo quiere que declarar
+reservas pese más, es una decisión sobre pesos del modelo, no algo a resolver en la interfaz.
+
+**Verificación.** 114/114 tests (11 nuevos en `tests/sim/territory.spec.ts`), `tsc` limpio,
+`npm run sim` idéntico al del juego de 3 niveles antes de v4.
+
+**Abierto.** Otros usos públicos además del área protegida: pendiente de definición del equipo.
+
+## 2026-09-11 — v4 / F3: vista previa jugable en `/territorio` (mapa, HUD, sesión mensual)
+
+**Qué se hizo.** Entry nuevo `territorio.html` → `src/territorio/` (ruta limpia `/territorio` en
+`vercel.json`), separado del juego de 3 niveles, que no cambia. Contenido:
+`session.ts` (reglas puras de la partida: reloj mensual, desbloqueos, acciones portadas de `App.tsx`
+sin cambios de reglas), `news.ts` (noticias derivadas del modelo), `IsoMap.tsx` (mapa de EcoSIM
+portado), `hud.tsx`/`panels.tsx`/`screens.tsx` (HUD flotante de EcoSIM sobre los tokens v3;
+reutiliza `WinRoutesPanel`, `EffortSlider` y `Button` del juego principal), textos propios en
+`src/i18n/territorio/` (es/en, tipados, fuera del bundle del juego principal). Assets de EcoSIM
+convertidos a WebP en `public/assets/ecosim/` (1,8 MB → 406 KB, solo los 12 tiles que usa el mapa).
+
+**Hallazgos y correcciones durante la verificación en navegador.**
+- *El mapa mostraba transiciones que el modelo no hace.* Con solo las áreas netas, "conservación
+  BNNP→BNP + reconversión CC→CA" es indistinguible de "BNNP→CA + CC→BNP": medido en 100 partidas,
+  el 23 % de los cambios dibujados eran inválidos (p. ej. un cultivo convertido en reserva). Se
+  extrajo `computeLandUseFlows` de `updateLandUse` (mismas fórmulas, mismo orden; `npm run sim`
+  idéntico), `stepMonth` devuelve los flujos del mes y el territorio mueve parcelas por cada flujo
+  acumulado. La red de seguridad por neto descuenta lo que está "en camino" en los acumuladores;
+  un primer intento sin ese descuento duplicó los cambios y empeoró la fidelidad. Resultado medido:
+  100 % de transiciones válidas; el mapa va hasta 2,45 parcelas detrás del área de algún uso (cota
+  del test: 3), por eso la leyenda muestra las hectáreas exactas del modelo, no el conteo de parcelas.
+- *CO₂ y puntaje iniciales inconsistentes.* `createInitialState` toma CO₂ = 6,5 y puntaje 0 de
+  `INITIAL_INDICATORS`, pero los usos del suelo del Nivel 2 dan ~17,4 t/hab: el primer paso mostraba
+  un salto que el jugador no causó. La vista previa los recalcula con las funciones del modelo antes
+  del primer mes y toma la línea de base de las rutas después. **El juego de 3 niveles tiene el mismo
+  salto en su primer año** (no se tocó; pendiente de decisión del equipo).
+- *Selección desplazada una parcela.* Los sprites están elevados ~28 px sobre su rombo de suelo
+  (medido sobre el arte); selección, contornos y capas usan ahora la cara visible de la parcela.
+- *Retratos con fondo magenta* (croma opaco en los PNG originales de EcoSIM): recorte de croma al
+  convertir.
+- *Reloj atado a `requestAnimationFrame`*, que se detiene en pestañas ocultas. Pasó a un temporizador
+  de tiempo real, y la partida se pausa sola al salir de la pestaña (en un aula nadie debería volver
+  y encontrar años pasados).
+- Una noticia atribuía a "la política de conservación" el paso BNNP→BNP, que tiene tasa base aun sin
+  esa política: se reescribió sin afirmar la causa.
+
+**Honestidad de los datos en pantalla.** Capas "ver sobre el mapa" = coeficientes del propio modelo
+por uso del suelo (tasas de emisión/secuestro, pesos de `INDICATOR_IMPACT_WEIGHTS`), normalizados.
+La ficha de parcela muestra lo mismo en flechas. Ningún número del HUD sale de otro lado que no sea
+el `GameState`.
+
+**Verificación.** 125/125 tests (sesión: 10 nuevos en `tests/territorio/`; territorio: fidelidad de
+flujos y cota medida), `tsc` limpio, `i18n:audit` limpio, `npm run build` con el entry nuevo.
+En navegador (Chrome, escritorio 1536 px): portada, partida, activar políticas, reloj ×4, noticias,
+declarar un área protegida (reservas 1.000 → 900, BNP 20 → 25 kHa), capa de carbono, panel de rutas,
+cambio a inglés. **No verificado:** ancho de celular (la ventana del navegador de prueba no se pudo
+redimensionar) y el final de una partida completa en pantalla (cubierto por test).
+
+**Pendiente.** Rutas del Nivel 2 calibradas contra el CO₂ inicial de 6,5; con el valor real (17,4)
+arrancan en 50 % y la condición de emisiones es exigente (F7). Mobile sin panel de actores.
+
+## 2026-09-11 — v4 / F3b: sección "Lo próximo" en la landing
+
+Decisión 2 del equipo: el juego de 3 niveles sigue siendo el principal, con su paquete docente y
+todo lo que ya está en el sitio; la fusión figura aparte como lo próximo en desarrollo. Se agregó
+una sola sección en `index.html` (`#proximo`), debajo de "¿Sos docente?" y antes de las preguntas
+frecuentes, para que nunca compita con el CTA principal: arte de EcoSIM, rótulo "En desarrollo ·
+vista previa", aclaración de que no reemplaza al juego ni al paquete docente, y link a `/territorio`.
+Bilingüe con el mismo patrón `data-lang` de la landing. Nada más del sitio cambió.
+
+Medición: evento propio `preview_click` (no `play_click`, para no inflar el embudo del juego). La
+tabla `funnel_events` no está versionada en `supabase/`, así que no se pudo confirmar si restringe
+nombres de evento; el envío es de mejor esfuerzo y falla en silencio si la rechaza. La página de la
+vista previa lleva `noindex` hasta que gradúe y no está en `sitemap.xml`.
+
+## 2026-09-11 — v4 / F4: efectos de pactos y eventos que nunca llegaban, y CO₂ inicial (ambos juegos)
+
+**Pedido del usuario (decisiones 1 y 3):** corregir el efecto de pactos y eventos, y corregir el CO₂
+inicial. Las dos correcciones tocan el motor compartido, así que valen para el juego de 3 niveles.
+
+**El problema.** `stepYear` aplica pactos y eventos temprano (pasos 2 y 5), pero cuatro indicadores
+se derivan después en el mismo año: CO₂/cápita del balance de carbono (paso 9), bienestar social y
+estabilidad política de sus stocks (paso 8), y PBI/deuda/reservas/presiones sincronizados de Stella
+(paso 11). Todo lo escrito antes se pisaba. En la práctica: el −5 % de CO₂ y el +3 de estabilidad del
+Acuerdo Global de Carbono, el −10 % de la Iniciativa de Transferencia Tecnológica y el −5 % del
+evento "Boom de tecnología verde" nunca se aplicaban.
+
+**La corrección (`src/sim/deferred.ts`)** conserva el sentido de cada efecto:
+- *Pactos*: su función `effects` es pura, así que se vuelve a evaluar cuando los valores del año ya
+  existen y de esa segunda llamada se toman solo los indicadores derivados. "5 % menos que lo que
+  produjo este año" es exactamente lo que el pacto dice.
+- *Eventos*: un `changePercentage` se recuerda como factor y un `changeAbsolute` como delta, y se
+  vuelve a aplicar sobre el valor recalculado. Sin reevaluar, sin contar dos veces.
+En el motor mensual el efecto de un pacto avanza 1/12 como cualquier otro flujo (es una tasa por año
+de membresía) y el de un evento entra completo (es un shock).
+
+**CO₂ y puntaje iniciales.** `createInitialState` los calcula ahora con `computeCarbonBalance` y
+`computeScore` a partir de los usos del suelo y políticas del nivel, en vez de tomar los valores
+fijos de `INITIAL_INDICATORS` (6,5 t/hab y puntaje 0). Ningún nivel arranca en 6,5: el Nivel 1 da
+~9,4 y el Nivel 2 ~17,4, así que el primer año simulado mostraba un salto que el jugador no causó.
+
+**Efecto medido en el juego de 3 niveles.** `npm run sim`: de las 15 filas cambió una (Nivel 2,
+estrategia equilibrada: seguridad alimentaria 32,3 → 34,0 y puntaje 337 → 342). La causa es
+trazable: con el CO₂ inicial real, el evento "Escrutinio Ambiental Internacional" (se dispara con
+CO₂ > 12) cambia de momento y corre la secuencia de eventos. Ningún resultado de victoria/derrota
+cambió. 129/129 tests, 4 nuevos en `tests/sim/deferred.spec.ts`.
+
+## 2026-09-11 — v4 / F5: tres usos públicos nuevos, con tasas por criterio experto
+
+**Pedido (decisión 4):** "agregá los usos que consideres, y creá todas las tasas en base a criterio
+experto que tengas y lo que ya está definido". La versión de Grok
+(`combinacion/vAlRAn1GjcMwOEjO-grok-workspace`) ya separaba urbano, agua y energía/CDR como usos
+del suelo; de ahí salieron los tres que faltaban.
+
+**Usos nuevos** (`LandUseType.PublicWetland`, `RestorationForest`, `EnergyPark`), todos en 0 kHa en
+los tres niveles del juego principal, donde nada los crea. Tasas ancladas en las que el modelo ya
+tenía (bosque nativo 0,75/5,0; cultivo convencional 8,0/0,9):
+
+| Uso | Emisión | Secuestro | Criterio |
+|---|---|---|---|
+| Humedal protegido (HUM) | 1,2 | 6,0 | Emite metano por descomposición anaeróbica, pero acumula carbono orgánico en suelo más rápido que cualquier otro uso. Sumidero neto mayor que el bosque nativo. |
+| Restauración (RES) | 0,6 | 3,4 | Rebrote joven: secuestra menos que el bosque maduro y madura hacia bosque nativo (4 %/año, ~25 años). |
+| Parque energético (ENR) | 0,2 | 0,3 | El suelo es casi neutro; su efecto real es desplazar generación fósil, que el balance de carbono aplica aparte en proporción al área (60 % si ocupara todo el territorio). |
+
+Pesos: biodiversidad HUM 0,55 (supera al bosque protegido: filtrado, refugio, conectividad), RES
+0,30, ENR −0,05. Seguridad alimentaria −0,15/−0,15/−0,10 (sacan tierra de producción). Seguridad
+económica −0,02/−0,04/+0,12 (el parque aporta energía y empleo).
+
+**Reglas de declaración.** Área protegida sobre bosque nativo; restauración y parque sobre cultivo
+convencional, pastura o tierra sin producir; **el humedal solo junto al río o a otro humedal** — una
+regla hidrológica que usa el mapa, no un número. Convertir tierra productiva suma un impulso a la
+presión agrícola (0,4 puntos por parcela): sacar tierra de producción es exactamente lo que ese
+indicador mide. Proteger bosque no lo aplica.
+
+**Verificación.** `npm run sim` idéntico (el juego de 3 niveles no tiene área de estos usos).
+132/132 tests, con tres nuevos: cada uso llega al modelo con su costo y su presión, el humedal
+exige agua al lado, la restauración madura a bosque nativo y el parque baja las emisiones.
+
+## 2026-09-11 — v4 / F6: 100 situaciones que no pausan el juego y desgastan si no se resuelven
+
+**Pedido (decisión 1):** "ampliá a al menos 100 eventos distintos, pero que el juego no se pause
+cuando te llegan las notificaciones, sino que se te vayan acumulando como notas, el tiempo continúa
+corriendo, cuestiones no resueltas acumulan desgaste".
+
+**Qué es una situación.** Llega sola mientras corre el reloj, se queda en la bandeja, y **cada mes
+que sigue abierta suma presión o conflicto** (su `wear`, que se duplica al llegar el plazo). Si
+vence sin respuesta se resuelve con su última opción, la que nadie eligió. Todo lo que hace está
+escrito en variables del modelo (`RandomEventEffect`: los mismos indicadores, stocks Stella y
+cambios de uso del suelo que usan los eventos del juego principal), así que ninguna situación puede
+mover un número que el modelo no tenga.
+
+**Catálogo: 100 situaciones** en cuatro archivos (`src/territorio/situations/`), bilingües, con 2 o
+3 opciones cada una: clima y ecología (25), producción, alimentos y tecnología (25), sociedad y
+política (25), economía e internacional (25). Cada una con actor (retrato de EcoSIM), tono, plazo,
+peso, desgaste mensual y condición de aparición cuando corresponde (la tala ilegal necesita bosque
+sin proteger; la protesta por precios, seguridad alimentaria baja).
+
+**Se eliminó la tarjeta modal de eventos.** Los eventos del propio modelo tampoco pausan: pasan a la
+bandeja de noticias como nota.
+
+**Calibración, medida sobre partidas completas** (3 semillas × 3 estilos de juego: ignorar todo,
+resolver lo más barato, resolver la primera opción):
+- Frecuencia: con la primera versión llegaban ~200 por partida — una decisión cada tres segundos de
+  reloj. Bajó a `BASE_ARRIVAL = 0,16`: ahora entre 60 y 110 por partida, una cada cinco meses, con
+  uno o dos papeles sobre el escritorio a la vez (tope de 6).
+- Magnitud: los efectos están escritos a escala de "evento dramático"; aplicados 60 veces clavaban
+  todas las presiones en 0 o en 100. Se aplica `SITUATION_EFFECT_SCALE = 0,5` a los efectos sobre
+  variables que saturan (presiones, conflicto, indicadores 0-100); el dinero y el uso del suelo no
+  se escalan, porque están escritos en las unidades del modelo.
+- Resultado: ignorar todo ya no colapsa el estado en el año 10 (antes sí), pero se pierde la
+  partida; resolver siempre lo más barato también se pierde (la opción barata suele ser "no hacer
+  nada"); resolver con criterio gana con puntaje ~650 y presiones que siguen vivas.
+
+**Verificación.** 136/136 tests (cinco nuevos: el reloj no se detiene, el desgaste se acumula, lo
+vencido se resuelve solo, decidir cobra y saca el papel del escritorio, el catálogo tiene ≥100
+situaciones distintas con opción de salida). `npm run sim` idéntico: nada de esto toca el juego de
+3 niveles.
+
+## 2026-09-11 — v4 / F7: interfaz de la versión de Grok, y rutas de victoria propias, calibradas
+
+**De dónde sale.** El usuario pidió revisar `combinacion/vAlRAn1GjcMwOEjO-grok-workspace` (la fusión
+que hizo Grok) e incorporar sus mejoras. Esa versión mantiene el motor de EcoSIM —no verificable,
+con presiones calculadas ad hoc sobre métricas de EcoSIM— pero **organiza el contenido mucho mejor**,
+y eso es lo que se tomó:
+
+- **Panel de políticas por familias**: filtros (todas / verdes / extractivas / activas), ícono por
+  familia, costo como % del PBI, barra de eficiencia con años activa, candado con el año en que se
+  libera, **línea de trade-off explícita** (10 nuevas, es/en) y los instrumentos con su descripción.
+- **Panel de rutas con lectura por condición**: cada condición con su objetivo y el valor actual,
+  en verde o en ocre según se cumpla. Antes se reusaba `WinRoutesPanel` del juego principal, que
+  muestra progreso pero no los números.
+- **Barras de proporción de uso del suelo** y **gráfico de trayectoria** (recharts, ya era
+  dependencia) en el mismo panel, más las tres presiones.
+
+**Rutas propias, calibradas (`src/territorio/routes.ts`).** No se tocó `LEVEL_ROUTES`: esas son del
+juego de 3 niveles. La vista previa tiene pisos y rutas propias, calibradas con
+`npm run sim:territorio` (nuevo harness: cinco estrategias jugadas hasta 2054 con políticas, usos
+públicos, pactos y situaciones). Resultado de la calibración final:
+
+| estrategia | gana | ruta |
+|---|---|---|
+| no hacer nada | 0/3 | — (cae el piso de bienestar social) |
+| conservación | 3/3 | conservación |
+| producción | 2/3 | producción |
+| innovación | 2/3 | innovación |
+| todo a la vez | 0/3 | — (termina con el tesoro en rojo) |
+
+Cada ruta pide algo que las otras no consiguen sin querer: conservación, 12 % del territorio bajo uso
+público de conservación; producción, llegar a 2054 con caja (≥ 1.000); innovación, parque energético
+público y esfuerzo en instrumentos tecnológicos.
+
+**Hallazgo de la calibración.** Los pisos sobre presiones sectoriales se sacaron: en este modelo una
+economía hundida lleva la presión agrícola a 100 por sí sola (impulso 0,3 por punto de seguridad
+económica bajo 50 contra 10 % de disipación), así que el piso castigaba dos veces la misma falla y
+volvía imposibles las rutas de conservación e innovación aun gobernando bien. La estabilidad política
+ya contiene las presiones, vía colapso político.
+
+**Verificación.** 140/140 tests (4 nuevos de rutas), `tsc` limpio, `i18n:audit` limpio, `build`
+limpio, `npm run sim` idéntico. Probado en navegador: bandeja de situaciones con el reloj corriendo,
+paneles de políticas y rutas, usos públicos con su costo.

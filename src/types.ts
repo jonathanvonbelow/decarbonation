@@ -52,6 +52,12 @@ export enum LandUseType {
   ConventionalCrops = "CC",
   ForestPlantations = "PF",
   GrasslandsPastures = "PRG",
+  // Public uses a player can declare in the Territorio preview (21_fusion_ecosim.md §5). They start
+  // at 0 kHa in every level of the 3-level game, where nothing creates them, so every share-weighted
+  // term of the model reads exactly as before.
+  PublicWetland = "HUM",
+  RestorationForest = "RES",
+  EnergyPark = "ENR",
 }
 
 
@@ -452,6 +458,19 @@ export interface ControlParams {
   PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
   PPSocial_Increase_Factor_Per_Tax_Point: number; // e.g., 0.4 points of Social Pressure increase per 1% additional tax
   CO2_EMISSIONS_SCALING_FACTOR: number;
+
+  // Territorio preview (mejora-general/files/21_fusion_ecosim.md §5): one-time costs, paid from
+  // Reservas_del_Tesoro, of declaring each public use, per kHa.
+  Costo_Declaracion_Area_Protegida_por_kHa: number;
+  Costo_Restauracion_Publica_por_kHa: number;
+  Costo_Humedal_Publico_por_kHa: number;
+  Costo_Parque_Energetico_por_kHa: number;
+  /** Agricultural-pressure impulse per kHa of *productive* land taken into a public use. */
+  Impulso_PP_Agricola_por_kHa_Convertida: number;
+  /** Share of total emissions displaced if the whole territory were a public energy park. */
+  Factor_Desplazamiento_Emisiones_Parque_Energetico: number;
+  /** Annual share of restoration area that matures into unprotected native forest. */
+  Tasa_de_RES_a_BNNP_Base: number;
 }
 
 export type InstrumentImpactHint = {

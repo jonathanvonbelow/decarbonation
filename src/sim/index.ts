@@ -38,6 +38,8 @@ import type { Rng } from './rng';
 import { rollEvent } from './events';
 import { computeScore } from './score';
 import { buildTrace, type SimTrace } from './trace';
+import { evaluateGameOver } from './gameOver';
+import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, type DeferredAdjustment } from './deferred';
 import type { Language } from '../hooks/useLanguage';
 import { getPolicyName } from '../legacyContent/gameData';
 
@@ -52,6 +54,10 @@ export * from './economy';
 export * from './score';
 export * from './events';
 export * from './winRoutes';
+export * from './gameOver';
+export * from './deferred';
+export * from './monthly';
+export * from './territory';
 
 export interface StepYearChatMessage {
   text: string;
@@ -119,7 +125,10 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   //    decay/costs/land use/financial/indicator math, exactly like the original.
   const yearsElapsedInCurrentLevel = next.yearsSimulatedInCurrentLevel - 1;
   next.currentEvent = null;
-  const rolled = rollEvent(next, ALL_RANDOM_EVENTS, yearsElapsedInCurrentLevel, rng, language);
+  // Effects on indicators this year recomputes later are held back and applied at step 11.5 —
+  // before this they were written here and silently overwritten (see src/sim/deferred.ts).
+  const deferred: DeferredAdjustment[] = [];
+  const rolled = rollEvent(next, ALL_RANDOM_EVENTS, yearsElapsedInCurrentLevel, rng, language, deferred);
   logs.push(...rolled.logs);
   if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
   if (rolled.event) next.currentEvent = rolled.event;
@@ -138,7 +147,14 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   (Object.values(next.pacts) as Pact[]).forEach((pact) => {
     if (!pact.isActive) return;
     const effects = pact.effects(next.indicators, next.stellaSpecificState);
-    if (effects.indicators) next.indicators = { ...next.indicators, ...effects.indicators };
+    if (effects.indicators) {
+      // Derived indicators are handled at step 11.5, by re-evaluating the pact against the year's
+      // own values; applying them here would be overwritten (src/sim/deferred.ts).
+      const durable = Object.fromEntries(
+        Object.entries(effects.indicators).filter(([key]) => !isDerivedIndicator(key)),
+      );
+      next.indicators = { ...next.indicators, ...durable };
+    }
     if (effects.stellaStocks) next.stellaSpecificState = { ...next.stellaSpecificState, ...effects.stellaStocks };
     if (effects.landUseChangeFactors) {
       landUseChangeFactors = {
@@ -200,6 +216,10 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
     }
   });
 
+  // 11.5 Pact and event effects on the indicators this year recomputed (src/sim/deferred.ts).
+  applyPactEffectsOnDerived(next.pacts, next.indicators, next.stellaSpecificState);
+  applyDeferredAdjustments(next.indicators, deferred);
+
   // 12. Score.
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);
 
@@ -213,15 +233,8 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   // Converting these four strings into locale-aware keys would mean also updating every
   // comparison site across two files for a value nothing ever displays; judged not worth the
   // risk. See docs/DESIGN_DECISIONS_LOG.md, phase 12 entry.
-  if (next.indicators.politicalStability <= 5) {
-    next.gameOverReason = 'Colapso Político: La nación ha caído en un estado de ingobernabilidad total.';
-  } else if (next.indicators.biodiversity <= 5) {
-    next.gameOverReason = 'Colapso Ecológico: La pérdida de biodiversidad ha provocado una catástrofe irreversible.';
-  } else if (currentLevel >= 2 && next.indicators.foodSecurity <= 10) {
-    next.gameOverReason = 'Hambruna: La incapacidad de alimentar a la población ha generado una crisis humanitaria.';
-  } else if (next.stellaSpecificState.Reservas_del_Tesoro < -(next.stellaSpecificState.PBI_Real * 0.2) && next.stellaSpecificState.Deuda > next.stellaSpecificState.PBI_Real * 1.5) {
-    next.gameOverReason = 'Bancarrota Nacional: La deuda insostenible y la falta de reservas han llevado a la quiebra.';
-  }
+  const gameOverReason = evaluateGameOver(next);
+  if (gameOverReason) next.gameOverReason = gameOverReason;
 
   // 14. Policy-efficiency-crossed-40%-threshold warning (side effect only: no state besides the
   //     policy's own notification bookkeeping, handled inside checkEfficiencyWarning).
@@ -261,7 +274,7 @@ export interface LevelInitializationResult {
  * missing `effects` function. Preserved as-is per the "extract, freeze, then fix" order of
  * operations — flagged for the equations audit, not silently patched here.
  */
-export function createInitialState(levelNumber: number): LevelInitializationResult {
+export function createInitialState(levelNumber: number, CP: ControlParams = CONTROL_PARAMS): LevelInitializationResult {
   const newLevelConfig = LEVEL_CONFIGS.find((lc) => lc.levelNumber === levelNumber);
 
   let newStellaState = JSON.parse(JSON.stringify(INITIAL_STELLA_STOCKS)) as StellaStocks;
@@ -278,6 +291,7 @@ export function createInitialState(levelNumber: number): LevelInitializationResu
     indicatorOverrides = LEVEL_3_INITIAL_INDICATOR_OVERRIDES;
   }
 
+  const newPolicies = JSON.parse(JSON.stringify(INITIAL_POLICIES)) as Record<Policy, PolicyState>;
   const newIndicators: Indicators = { ...INITIAL_INDICATORS };
   if (indicatorOverrides) {
     if (indicatorOverrides.foodSecurity !== undefined) newIndicators.foodSecurity = indicatorOverrides.foodSecurity;
@@ -291,6 +305,16 @@ export function createInitialState(levelNumber: number): LevelInitializationResu
   newIndicators.pbi = newStellaState.PBI_Real || INITIAL_STELLA_STOCKS.PBI_Real;
   newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
   newIndicators.treasuryReserves = newStellaState.Reservas_del_Tesoro || INITIAL_STELLA_STOCKS.Reservas_del_Tesoro;
+
+  // CO2 per capita and the score at year zero, computed from the level's own land uses and
+  // policies instead of the fixed INITIAL_INDICATORS values (6.5 t/cap, score 0). Those were not
+  // what any level's land uses produce — level 1 starts at ~9.4 and level 2 at ~17.4 — so the
+  // first simulated year showed a jump the player had not caused. Reported by the user and fixed
+  // in v4 (docs/DESIGN_DECISIONS_LOG.md); the win-route baseline is taken from these values too.
+  newIndicators.co2EqEmissionsPerCapita = computeCarbonBalance(
+    newLandUses, newPolicies, levelNumber, newStellaState.Poblacion_Total, CP,
+  );
+  newIndicators.generalScore = computeScore(newIndicators, levelNumber, CP);
 
   const initialHistoricalDataPoint: HistoricalDataPoint = {
     year: INITIAL_YEAR,
@@ -313,7 +337,7 @@ export function createInitialState(levelNumber: number): LevelInitializationResu
     gameStatePatch: {
       year: INITIAL_YEAR,
       currentLevel: levelNumber,
-      policies: JSON.parse(JSON.stringify(INITIAL_POLICIES)),
+      policies: newPolicies,
       landUses: newLandUses,
       indicators: newIndicators,
       stellaSpecificState: newStellaState,
