@@ -95,6 +95,8 @@ export const UI_ES = {
     debtRatio: 'Ratio deuda/PBI',
     pactsActive: 'Pactos internacionales activos',
     treasury: 'Reservas del tesoro',
+    treasuryPct: 'Reservas del tesoro (% del PBI)',
+    productivePolicy: 'Una política productiva activa',
     publicNature: 'Territorio bajo uso público de conservación',
     energyPark: 'Territorio con parque energético público',
   },

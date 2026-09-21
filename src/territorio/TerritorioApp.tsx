@@ -8,9 +8,13 @@
  * same frame is never lost (session functions are pure, re-running them is safe).
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DecarboNitoProvider } from '../components/decarbonito/DecarboNitoProvider';
 import { CONTROL_PARAMS } from '../constants';
 import { publicUseCost, type PublicUse } from '../sim';
 import type { Policy } from '../types';
+import { Advisor } from './Advisor';
+import { ANCHOR } from './advisorRules';
+import { useAnchor } from '../components/decarbonito/anchors';
 import { fill, useCopy } from './copy';
 import type { HeatMode } from './heat';
 import { Actors, Dock, IndicatorStrip, LeftRail, NewsTicker, ProgressRail, TopBar, type PanelId, type Speed } from './hud';
@@ -28,7 +32,7 @@ type Screen = 'title' | 'briefing' | 'play';
 const SECONDS_PER_MONTH: Record<Exclude<Speed, 0>, number> = { 1: 1.6, 4: 0.4 };
 const newSeed = () => Math.floor(Math.random() * 1e9);
 
-export function TerritorioApp() {
+function TerritorioGame() {
   const { c, locale, fmt } = useCopy();
   const [screen, setScreen] = useState<Screen>('title');
   const [session, setSession] = useState<Session>(() => createSession(newSeed()));
@@ -41,6 +45,7 @@ export function TerritorioApp() {
   const [ticker, setTicker] = useState<NewsItem | null>(null);
   const [newsSeenAt, setNewsSeenAt] = useState(0);
 
+  const mapAnchor = useAnchor<HTMLDivElement>(ANCHOR.map);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const speedRef = useRef(speed);
@@ -189,7 +194,7 @@ export function TerritorioApp() {
   );
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-basalt-950 text-bone">
+    <div className="relative h-dvh w-full overflow-hidden bg-basalt-950 text-bone" ref={mapAnchor}>
       <IsoMap
         territory={session.territory}
         landUses={session.game.landUses}
@@ -197,6 +202,8 @@ export function TerritorioApp() {
         tool={tool}
         selected={selected}
         changes={session.lastChanges}
+        fx={session.fx}
+        regionNames={c.regions}
         onParcel={onParcel}
         label={c.brand.name}
       />
@@ -265,6 +272,20 @@ export function TerritorioApp() {
       <ProgressRail monthIndex={session.monthIndex} />
 
       {session.outcome && <EndScreen session={session} onAgain={startGame} onTitle={() => setScreen('title')} />}
+
+      <Advisor session={session} active={!session.outcome} />
     </div>
+  );
+}
+
+/**
+ * DecarboNito's provider wraps the whole preview so the overlay keeps its queue, its placement
+ * and the open conversation across the title/briefing/board screens.
+ */
+export function TerritorioApp() {
+  return (
+    <DecarboNitoProvider>
+      <TerritorioGame />
+    </DecarboNitoProvider>
   );
 }

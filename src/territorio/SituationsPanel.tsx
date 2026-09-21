@@ -7,16 +7,18 @@ import React from 'react';
 import { Button } from '../components/ui/Button';
 import { fill, useCopy } from './copy';
 import { SITUATION_BY_ID, type OpenSituation, type SituationActor, type SituationDef } from './situations';
+import { situationCost } from './situations';
+import { portraitUrl, type PortraitActor } from './sprites';
 import type { Session } from './session';
 
-const PORTRAIT: Record<SituationActor, string> = {
+const PORTRAIT: Record<SituationActor, PortraitActor> = {
   farmer: 'farmer',
   ngo: 'ngo',
   citizen: 'citizen',
   industry: 'industry',
-  science: 'ngo',
-  government: 'citizen',
-  international: 'industry',
+  science: 'scientist',
+  government: 'mayor',
+  international: 'investor',
 };
 
 const TONE_BORDER = {
@@ -30,11 +32,13 @@ function wearLabel(def: SituationDef): number {
   return conflict + ppAgricola + ppAmbientalista + ppSocial;
 }
 
-export function SituationCard({ item, def, monthIndex, reserves, onDecide }: {
+export function SituationCard({ item, def, monthIndex, reserves, game, onDecide }: {
   item: OpenSituation;
   def: SituationDef;
   monthIndex: number;
   reserves: number;
+  /** Prices scale with the economy (situations.ts `situationCost`). */
+  game: Session['game'];
   onDecide: (optionId: string) => void;
 }) {
   const { c, locale, fmt } = useCopy();
@@ -46,7 +50,7 @@ export function SituationCard({ item, def, monthIndex, reserves, onDecide }: {
   return (
     <article className={`rounded-md border bg-basalt-800 p-3 ${TONE_BORDER[def.tone]}`}>
       <div className="flex gap-3">
-        <img src={`/assets/ecosim/portraits/${PORTRAIT[def.actor]}.webp`} alt="" className="size-12 shrink-0 rounded-md object-cover" />
+        <img src={portraitUrl(PORTRAIT[def.actor], def.id)} alt="" className="size-12 shrink-0 rounded-md object-cover" />
         <div className="min-w-0 flex-1">
           <p className="label-eyebrow !text-[10px]">{c.situations.actors[def.actor]}</p>
           <h3 className="text-[14px] leading-tight text-bone">{copy.title}</h3>
@@ -66,7 +70,7 @@ export function SituationCard({ item, def, monthIndex, reserves, onDecide }: {
 
       <div className="mt-2 space-y-1">
         {def.options.map((option) => {
-          const cost = option.cost ?? 0;
+          const cost = situationCost(option.cost ?? 0, game);
           const canPay = cost <= reserves;
           return (
             <Button
@@ -116,6 +120,7 @@ export function SituationsPanel({ session, onDecide }: {
             def={def}
             monthIndex={session.monthIndex}
             reserves={reserves}
+            game={session.game}
             onDecide={(optionId) => onDecide(item.id, optionId)}
           />
         );

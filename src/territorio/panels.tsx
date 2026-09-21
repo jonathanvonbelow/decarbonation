@@ -7,7 +7,8 @@ import { Line, LineChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis
 import { getIndicatorName, getInstrumentName, getPactName, getPolicyName } from '../legacyContent/gameData';
 import { useT, type TranslationKey } from '../i18n';
 import { evaluateTerritorio } from './routes';
-import { canDeclare, parcelAt, publicUseCost, PUBLIC_USES, isProductive, type PublicUse } from '../sim';
+import { portraitUrl, type PortraitActor } from './sprites';
+import { canDeclare, lotFor, parcelAt, publicUseCost, PUBLIC_USES, isProductive, regionAt, type PublicUse } from '../sim';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
 import type { Pact, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -433,12 +434,20 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
   const lu = LAND_USES.includes(kind as LandUseType) ? (kind as LandUseType) : null;
   const hint = (c.kindHints as Record<string, string>)[kind] ?? c.kindHints.context;
   const carbon = lu ? rawCoefficient('carbon', lu, session.game.landUses) : 0;
-  const available = PUBLIC_USES.filter((use) => canDeclare(session.territory, at.x, at.y, use));
+  const region = regionAt(session.territory, at.x, at.y);
+  // What a declaration would actually take here: the lot, its area and its price.
+  const lots = PUBLIC_USES
+    .filter((use) => canDeclare(session.territory, at.x, at.y, use))
+    .map((use) => {
+      const cells = lotFor(session.territory, at.x, at.y, use).length;
+      return { use, km2: Math.round(cells * session.territory.kHaPerParcel * 10), cost: publicUseCost(use, CONTROL_PARAMS, cells * session.territory.kHaPerParcel) };
+    });
   return (
     <div className="pointer-events-auto panel w-full p-3 md:w-72" role="dialog" aria-label={c.kinds[kind as keyof Copy['kinds']]}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[15px] text-bone">{c.kinds[kind as keyof Copy['kinds']]}</p>
+          <p className="text-[11px] text-ash-dim">{region ? c.regions[region] : ''}{region ? ' · ' : ''}1 km²</p>
           {parcel.declared && <p className="text-[11px] text-chlorophyll">{c.parcel.declared}</p>}
         </div>
         <button type="button" onClick={onClose} className="grid size-7 place-items-center rounded text-ash hover:text-bone" aria-label={c.parcel.close}>✕</button>
@@ -460,13 +469,13 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
           </div>
         </div>
       )}
-      {available.length > 0 && (
+      {lots.length > 0 && (
         <div className="mt-3 space-y-1">
           <p className="label-eyebrow !text-[10px]">{c.parcel.declareTitle}</p>
-          {available.map((use) => (
+          {lots.map(({ use, km2, cost }) => (
             <Button key={use} size="sm" variant="secondary" className="w-full justify-between" onClick={() => onDeclare(use)}>
-              <span>{c.uses[use].name}</span>
-              <span className="tnum text-[12px] text-ash">{fmt.big(publicUseCost(use, CONTROL_PARAMS))}</span>
+              <span>{c.uses[use].name} <span className="tnum text-[11px] text-ash-dim">{km2} km²</span></span>
+              <span className="tnum text-[12px] text-ash">{fmt.big(cost)}</span>
             </Button>
           ))}
         </div>
@@ -477,12 +486,12 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
 
 /* ── Event card ────────────────────────────────────────────────────────────────────────────── */
 
-const PORTRAIT_FOR_CATEGORY: Record<RandomEvent['category'], string> = {
+const PORTRAIT_FOR_CATEGORY: Record<RandomEvent['category'], PortraitActor> = {
   environmental: 'farmer',
-  economic: 'industry',
+  economic: 'investor',
   social: 'citizen',
-  political: 'ngo',
-  technological: 'industry',
+  political: 'mayor',
+  technological: 'scientist',
 };
 
 export function EventCard({ event, year, month, onContinue }: { event: RandomEvent; year: number; month: number; onContinue: () => void }) {
@@ -494,7 +503,7 @@ export function EventCard({ event, year, month, onContinue }: { event: RandomEve
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-end justify-center bg-basalt-950/60 p-3 md:items-center" role="dialog" aria-modal="true" aria-labelledby="event-title">
       <div className="panel w-full max-w-lg p-5 animate-fade-in-scale-up" lang={locale}>
         <div className="flex gap-3">
-          <img src={`/assets/ecosim/portraits/${PORTRAIT_FOR_CATEGORY[event.category]}.webp`} alt="" className="size-16 rounded-md object-cover" />
+          <img src={portraitUrl(PORTRAIT_FOR_CATEGORY[event.category], event.id)} alt="" className="size-16 rounded-md object-cover" />
           <div className="min-w-0">
             <p className="label-eyebrow !text-[11px]">
               {fill(c.event.eyebrow, { date: `${monthName(month)} ${year}` })} · <span className={tone === 'good' ? 'text-chlorophyll' : tone === 'bad' ? 'text-ember' : 'text-ash'}>{c.event[tone]}</span>

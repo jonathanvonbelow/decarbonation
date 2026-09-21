@@ -1474,3 +1474,131 @@ ya contiene las presiones, vía colapso político.
 **Verificación.** 140/140 tests (4 nuevos de rutas), `tsc` limpio, `i18n:audit` limpio, `build`
 limpio, `npm run sim` idéntico. Probado en navegador: bandeja de situaciones con el reloj corriendo,
 paneles de políticas y rutas, usos públicos con su costo.
+
+## 2026-09-19 — v4 / F8: territorio irregular de 100 × 100 con el arte del encargo 22
+
+**De dónde sale.** El usuario pidió tomar todo el arte nuevo (entregado por Grok en
+`combinacion/DsAIKnEjEGDSsAPx-grok-workspace`, el encargo `22_arte_territorio_expansion.md`),
+fusionarlo con la dinámica ya construida, hacer el mapa lo más coherente posible y expandir el
+escenario a un territorio irregular de 100 × 100. Especificación de la fase:
+`mejora-general/files/23_territorio_100x100.md`.
+
+**Decisión de escala (desvío explícito del encargo 22).** El encargo pedía ×5 de superficie y
+avisaba que eso obliga a recalibrar costos y rutas. Se hizo al revés: **el territorio no crece en
+hectáreas, crece en resolución**. Las 600 kHa del nivel 2 se reparten ahora entre 6.000 parcelas
+(0,1 kHa = 1 km² cada una) en vez de 120. Ninguna ecuación, tasa, costo por kHa ni ruta cambia, y el
+juego de 3 niveles queda intacto. Para que una parcela siga siendo un dato exacto, el generador
+recorta el borde del territorio a pastizal o roca hasta que quedan **exactamente** 6.000 parcelas
+productivas: si sobrara superficie, sería tierra declarable que el modelo no contabiliza.
+
+**Declarar por lotes.** Con parcelas 50 veces más chicas, una declaración parcela a parcela habría
+costado 50 veces menos y pesado 50 veces menos. Una declaración toma ahora **un lote de 5 kHa (50
+parcelas)** armado por cercanía alrededor de la parcela elegida, sobre parcelas elegibles y conexas:
+misma superficie, mismo precio y mismo peso en el modelo que antes. El lote se limita a la superficie
+que el modelo realmente tiene de cada uso de origen (un lote nunca crea tierra), y se previsualiza
+bajo el puntero antes de pagar.
+
+**Geografía (`src/sim/geography.ts`, nuevo).** Silueta irregular por ruido fractal + componente conexa
+mayor; mar que muerde el sureste con línea de costa ondulada; cuatro regiones con frontera deformada
+(las de `INITIAL_REGIONAL_ZONES_DATA`); río del sur boscoso al puerto con afluente, lago y lagunas;
+humedales de ribera; afloramientos rocosos en el sur; playas; metrópolis con distrito industrial,
+pueblo agrícola, villa turística y puerto pesquero; caminos por Dijkstra entre los cuatro centros,
+con puentes sobre el río y material por región. Los usos del suelo se reparten por **afinidad
+regional** (bosque al sur, cultivo extensivo al norte, horticultura periurbana, pasturas en la costa)
+con un reparto tipo subasta —precio por uso ajustado hasta que los conteos son exactos— más un pase
+de suavizado que preserva los conteos: las manchas quedan coherentes, no ruido.
+
+**La ciudad y el mapa leen el modelo.** `developTerritory` densifica la vivienda con el PBI real,
+hace aparecer asentamientos informales cuando cae el bienestar social y limpia la industria pesada a
+medida que bajan las emisiones — siempre sobre lotes urbanos reservados, nunca sobre superficie
+productiva, y con histéresis para que nada parpadee. `src/territorio/fx.ts` estampa los decoradores
+del encargo (§5.5) desde las situaciones abiertas, el evento del mes y el estado del modelo: una
+situación ignorada *se ve* en el mapa mientras dura.
+
+**Rendimiento.** 10.000 parcelas no entran en un bucle por cuadro: por debajo de z = 0,5 el mapa
+muestra una imagen pre-renderizada del territorio, parcheada sólo donde cambió algo; por encima
+dibuja las parcelas visibles con sus animaciones. Medido con `?perf=1`: 0,7-1,2 ms por cuadro en
+vista general, 4,8 ms con 1.200 parcelas visibles. Un mes completo de simulación con el mapa cuesta
+3 ms de media (máx. 116 ms), y armar el territorio 160 ms. El cuello de botella real que apareció en
+la medición era una clave de caché que convertía el array de 10.000 parcelas a texto en cada cuadro.
+
+**Arreglos de dinámica que entraron con la fase** (de la revisión del motor; los tres primeros son
+correcciones, no cambios de diseño):
+- El préstamo se tope **por año calendario** (10 % del PBI). Antes el tope era por llamada: pedirlo
+  doce veces en un mes daba doce préstamos, y el mes siguiente otra vez.
+- El **lock-in de políticas cuenta meses**, no años calendario: una política activada en diciembre
+  quedaba libre a los ~49 meses en vez de 60.
+- `stepMonth` podía dejar `gameOverReason` puesto cuando las situaciones aplicadas después revertían
+  el colapso; ahora se limpia.
+- `stepMonth` no emitía el flujo restauración → bosque nativo, así que esa maduración nunca se
+  dibujaba en el mapa.
+- Las noticias de uso del suelo se acumulan por transición y se publican cada 20 km²: con parcelas de
+  1 km² habría un titular de desmonte todos los meses.
+
+**Arte.** 272 archivos importados a `public/assets/ecosim` (4,4 MB en WebP): 58 elementos × 4
+variantes, 12 piezas de camino, 30 decoradores, 48 retratos y 14 sheets de animación. Se les quitó el
+resto de croma magenta del generador (sólo en los tiles y sólo en el borde, para no comerse el
+violeta legítimo de retratos y andamios) y se limpiaron píxeles sueltos fuera del terrón. Quedaron
+fuera `railway` y `powerline` (el arte es más ancho que la parcela) y los tiles de borde `edge_*`
+(un tile de transición sobre una parcela productiva rompería "cada parcela es un dato").
+
+**Verificación.** `npx tsc --noEmit` limpio, 161/161 tests (los de territorio reescritos a la escala
+nueva, con cobertura de lotes, crecimiento urbano y "una declaración nunca crea tierra"),
+`npm run sim` idéntico, `npm run sim:territorio` con la calibración de F7 (conservación 3/3,
+producción 2/3, innovación 1/3, no hacer nada 0/3). Probado en navegador a 1440 × 860: vista general
+con las cuatro regiones rotuladas, zoom al detalle, capas de análisis, reloj a ×4 durante 100 meses.
+
+**Las tres decisiones de diseño que abrió la revisión del motor, resueltas con el usuario
+(2026-09-19).** Detalle de cada cambio y su efecto en `docs/audit-equations.md` §F8.
+
+1. **El tesoro no tenía sumidero** (sin hacer nada se terminaba con 60.000 y se ganaba la ruta de
+   producción). Las dos cosas a la vez: el área bajo uso público paga **mantenimiento anual**
+   (`Costo_Mantenimiento_Uso_Publico_por_kHa_Anual`, 0,8 por kHa, cobrado 1/12 por mes y encendido
+   sólo por Territorio), las situaciones **escalan con la economía** (√ del crecimiento del PBI,
+   techo 2,5×), y la ruta de producción pasa a pedir tesoro **relativo al PBI** (≥ 8 %) más una
+   familia productiva activa. Calibrar el mantenimiento costó dos vueltas: a 2,2 por kHa ahogaba la
+   conservación (0/3), y con costos de situaciones escalando linealmente la estrategia de
+   conservación se quedaba sin ninguna opción pagable (biodiversidad 60 → 46).
+2. **Derrota por incumplimiento sostenido**: bienestar social < 10, o seguridad alimentaria < 20,
+   durante 12 meses seguidos. Ignorar la bandeja ahora termina la partida entre 2032 y 2036, no en
+   2054. Un mes malo aislado sigue sin costar nada.
+3. **La restauración madura hacia bosque nativo protegido**: lo que el Estado compró y restauró no
+   vuelve a la cuenta desmontable. Cero efecto en el juego de 3 niveles, donde el área RES siempre
+   es 0.
+
+Calibración final (`npm run sim:territorio`, ahora **7** estrategias × 3 semillas): no hacer nada
+0/3 (cae antes de 2040), conservación 3/3, producción 2/3, innovación 2/3, "sólo resolver la
+bandeja" 0/3 (antes ganaba producción), "comprar todo" gana conservación + innovación, "todo a la
+vez" 0/3 (quiebra).
+
+**Orientación del arte: cuatro incoherencias, medidas sobre los píxeles** (pedido del usuario,
+2026-09-21). En vez de ajustar a ojo, se midió la cobertura alfa en el punto medio de cada arista
+del rombo y la dirección dominante de la textura de cada variante:
+
+- **Las piezas de camino no son consistentes entre materiales**: la llamada `ns` corre sobre el eje
+  x en tierra y asfalto, y sobre el eje y en el set costero; y las piezas `t` de tierra y asfalto en
+  realidad son curvas (sólo la costera es una T). El mapa ahora lee el eje de una tabla medida
+  (`ROAD_AXIS`) y arma cruces, T, curvas y finales recortando las piezas rectas a la mitad de la
+  parcela que tiene vecino, como ya hacía para las esquinas. El cruce de cuatro brazos sí usa la
+  pieza `x`, que es correcta en los tres materiales.
+- **El puente** tiene la calzada sobre el eje x y el río por debajo sobre el y: el espejado estaba
+  invertido.
+- **La costa** lleva el agua hacia −x y +y; la regla ahora compara las cuatro direcciones en vez de
+  mirar sólo dos.
+- **`reforest` v1 y v4 y `restoration` v1** tienen las hileras sobre la diagonal opuesta a sus
+  hermanas: se dibujan espejadas (son texturas planas, la luz no cambia de lectura). Además la
+  variante se elige por bloques de 3 × 3 parcelas, así cada uso se lee como campos y no como ruido.
+
+**El agua se dibuja, no se tesela.** El tile `water` es un cauce con barrancas: teselarlo sobre el
+mar empedraba el océano con un patrón repetido, y sobre un río que gira producía una cadena de
+charcos. Ahora el mar es una losa plana con degradado de profundidad (plana también bajo la orilla,
+que la dibuja la playa del lado de la tierra) y el río se compone como los caminos: agua continua,
+barranca sólo en los lados sin vecino de agua, y el arte por encima al 70 % para recuperar la
+textura. De paso: el meandro del generador oscilaba cada medio tile y el ráster lo convertía en una
+reja de canales —ahora la onda es larga (una curva cada ~16 parcelas)—, el ensanche de la
+desembocadura se sacó, los humedales de ribera pasaron de 191 a 77 parcelas en manchas, y las
+celdas "fuera del territorio" rodeadas de mar se rellenan con agua para que no queden huecos negros.
+
+**Deuda conocida.** Aun con mantenimiento y situaciones más caras, una partida sin políticas termina
+con decenas de miles en el tesoro: el ingreso público crece con el PBI y el gasto no. El tope por
+ruta lo neutraliza como vía de victoria, pero el dinero deja de ser escaso en la segunda mitad.

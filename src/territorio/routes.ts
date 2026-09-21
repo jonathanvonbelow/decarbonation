@@ -28,6 +28,16 @@ export const publicNaturePct = (s: GameState) =>
 
 const energyParkPct = (s: GameState) => (s.landUses[LandUseType.EnergyPark].area / totalArea(s)) * 100;
 
+/** Treasury as a share of real GDP: money kept relative to the size of the economy. */
+const treasuryPctOfGdp = (s: GameState) =>
+  (s.stellaSpecificState.Reservas_del_Tesoro / Math.max(1, s.stellaSpecificState.PBI_Real)) * 100;
+
+/** Any of the productive policy families actually switched on. */
+const productivePolicyActive = (s: GameState) => {
+  const families = [Policy.IntensiveAgriculture, Policy.AgriculturalExports, Policy.SustainableLivestock, Policy.Agroecological];
+  return families.some((id) => s.policies[id]?.isActive) ? 1 : 0;
+};
+
 /** Effort on the two carbon-neutrality instruments that actually move the CO2 formula. */
 const carbonTechEffort = (s: GameState) => {
   const instruments = s.policies[Policy.CarbonNeutrality]?.instruments;
@@ -56,7 +66,7 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
     id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
     descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
     conditions: [
-      { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 47, dir: 'min' },
+      { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 45.5, dir: 'min' },
       { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
       { labelKey: 'cond.publicNature', read: publicNaturePct, target: 12, dir: 'min' },
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6, dir: 'max' },
@@ -69,8 +79,12 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
     descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
     conditions: [
       { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 45, dir: 'min' },
-      { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 33, dir: 'min' },
-      { labelKey: 'cond.treasury', read: (s) => s.stellaSpecificState.Reservas_del_Tesoro, target: 1000, dir: 'min' },
+      { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
+      // Producing is a decision, not a leftover: some productive family has to be governing.
+      { labelKey: 'cond.productivePolicy', read: productivePolicyActive, target: 1, dir: 'min' },
+      // Relative to the economy, not a fixed 1.000: with a treasury that grows with GDP, a fixed
+      // target was met by doing nothing at all (decisión del usuario, 2026-09-19).
+      { labelKey: 'cond.treasuryPct', read: treasuryPctOfGdp, target: 8, dir: 'min' },
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 15, dir: 'max' },
     ],
   },
@@ -79,8 +93,8 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
     id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
     descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
     conditions: [
-      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.5, dir: 'max' },
-      { labelKey: 'cond.energyPark', read: energyParkPct, target: 2.5, dir: 'min' },
+      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.2, dir: 'max' },
+      { labelKey: 'cond.energyPark', read: energyParkPct, target: 1.6, dir: 'min' },
       { labelKey: 'cond.techEffort', read: carbonTechEffort, target: 25, dir: 'min' },
       { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 30, dir: 'min' },
     ],

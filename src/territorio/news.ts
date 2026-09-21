@@ -13,7 +13,7 @@
  * (policy-efficiency warnings).
  */
 import { CONTROL_PARAMS } from '../constants';
-import type { ParcelChange } from '../sim';
+import { isProductive, type ParcelChange } from '../sim';
 import type { ControlParams, GameState, Indicators, RandomEvent } from '../types';
 import { LandUseType } from '../types';
 import { INSTRUMENTS_UNLOCK_YEAR } from './calendar';
@@ -48,7 +48,8 @@ export interface MonthNewsContext {
   simulatedMonth: number;
   monthIndex: number;
   event: RandomEvent | null;
-  changes: ParcelChange[];
+  /** Land that changed use and is worth a headline, km² per `from>to` transition (see `tallyLand`). */
+  land: Record<string, number>;
   engineMessages: string[];
   yearRolled: boolean;
   yearStart: Indicators;
@@ -81,6 +82,32 @@ const CROSSINGS: [keyof Indicators, number, 'up' | 'down', string, NewsTone][] =
   ['socialWellbeing', 30, 'down', 'alert.social', 'bad'],
 ];
 
+/** Land news waits until a transition has moved this much land (km²): 20 km² = 2 kHa. */
+export const LAND_NEWS_KM2 = 20;
+
+/**
+ * One parcel is 1 km² (0.1 kHa) on the 100×100 map, so the model moves a few parcels every month.
+ * Headlines add them up per transition and report once a transition has moved `LAND_NEWS_KM2`
+ * (a drought's loss, which arrives at once, is reported the same month).
+ */
+export function tallyLand(tally: Record<string, number>, changes: ParcelChange[], kHaPerParcel: number): { tally: Record<string, number>; report: Record<string, number> } {
+  const next = { ...tally };
+  const km2 = kHaPerParcel * 10;
+  changes.forEach((c) => {
+    if (!isProductive(c.from) || !isProductive(c.to)) return;
+    const key = `${c.from}>${c.to}`;
+    next[key] = (next[key] ?? 0) + km2;
+  });
+  const report: Record<string, number> = {};
+  Object.keys(next).forEach((key) => {
+    if (next[key] >= LAND_NEWS_KM2) {
+      report[key] = Math.round(next[key]);
+      delete next[key];
+    }
+  });
+  return { tally: next, report };
+}
+
 const crossed = (before: number, after: number, threshold: number, dir: 'up' | 'down') =>
   dir === 'up' ? before < threshold && after >= threshold : before > threshold && after <= threshold;
 
@@ -100,9 +127,7 @@ export function buildMonthNews(ctx: MonthNewsContext): NewsItem[] {
   }
 
   // Land that changed use, grouped by transition.
-  const groups = new Map<string, number>();
-  ctx.changes.forEach((c) => groups.set(`${c.from}>${c.to}`, (groups.get(`${c.from}>${c.to}`) ?? 0) + 1));
-  groups.forEach((n, transition) => {
+  Object.entries(ctx.land).forEach(([transition, n]) => {
     const [from, to] = transition.split('>');
     if (to === 'fallow') add({ kind: 'land', tone: 'bad', key: 'land.fallow', values: { n } });
     else if (LAND_HEADLINES[transition]) add({ kind: 'land', ...LAND_HEADLINES[transition], values: { n } });

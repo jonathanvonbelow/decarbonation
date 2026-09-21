@@ -62,6 +62,12 @@ export interface MonthlyOptions {
   fiscalTermsActive?: boolean;
   /** Event pool. Default: the model's `ALL_RANDOM_EVENTS`. */
   events?: RandomEvent[];
+  /**
+   * Charges the yearly upkeep of the land under public use (protected forest, wetland, restoration,
+   * energy park) to the treasury, as 1/12 per month. Territorio only: off by default, so `stepMonth`
+   * stays the exact monthly discretisation of `stepYear` for everything the 3-level game runs.
+   */
+  publicUseUpkeep?: boolean;
 }
 
 export interface StepMonthResult {
@@ -79,6 +85,8 @@ export interface StepMonthResult {
    * plus area removed by an event (to 'fallow'). The Territorio map moves parcels along these.
    */
   flows: LandFlow[];
+  /** Upkeep charged this month for the land under public use (0 unless `publicUseUpkeep`). */
+  upkeep: number;
   trace: SimTrace;
   logs: string[];
   chatMessages: StepYearChatMessage[];
@@ -228,6 +236,7 @@ export function stepMonth(
     { from: LandUseType.UnprotectedNativeForest, to: LandUseType.AgroecologicalCrops, kHa: annual.BNNP_to_CA * DT },
     { from: LandUseType.AgroecologicalCrops, to: LandUseType.UnprotectedNativeForest, kHa: annual.CA_to_BNNP * DT },
     { from: LandUseType.ConventionalCrops, to: LandUseType.AgroecologicalCrops, kHa: annual.CC_to_CA * DT },
+    { from: LandUseType.RestorationForest, to: LandUseType.ProtectedNativeForest, kHa: annual.RES_to_BNP * DT },
   );
   const annualLandUses = updateLandUse(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
   (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
@@ -235,10 +244,20 @@ export function stepMonth(
   });
 
   // 7. Public finances: 1/12 of the annual flows. The loan is handled apart, credited in full.
+  let upkeep = 0;
   const econ = updateEconomy(stella, next.policies, currentLevel, tax, totalPolicyCost, totalPactCost, 0, CP, language);
   stella.PBI_Real = toward(stella.PBI_Real, econ.stella.PBI_Real);
   stella.Reservas_del_Tesoro = toward(stella.Reservas_del_Tesoro, econ.stella.Reservas_del_Tesoro);
   stella.Deuda = Math.max(0, toward(stella.Deuda, econ.stella.Deuda));
+  if (options.publicUseUpkeep) {
+    // What the state protects, it also maintains: park rangers, nurseries, works, operation.
+    const publicArea = next.landUses[LandUseType.ProtectedNativeForest].area
+      + next.landUses[LandUseType.PublicWetland].area
+      + next.landUses[LandUseType.RestorationForest].area
+      + next.landUses[LandUseType.EnergyPark].area;
+    upkeep = publicArea * CP.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual * DT;
+    stella.Reservas_del_Tesoro -= upkeep;
+  }
   if (next.loanRequestedThisRound > 0) {
     const loan = next.loanRequestedThisRound;
     stella.Reservas_del_Tesoro += loan;
@@ -340,6 +359,7 @@ export function stepMonth(
     event: rolled.event,
     landUseDelta,
     flows,
+    upkeep,
     trace: buildTrace(currentYear, before, next.indicators),
     logs,
     chatMessages,

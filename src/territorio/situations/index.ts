@@ -133,6 +133,19 @@ export interface ResolutionResult {
 }
 
 /**
+ * What an option costs *now*. The catalogue prices are written for the economy of 2024, and the
+ * treasury grows with the economy, so a fixed price stops being a decision after a few years. Costs
+ * follow the square root of real GDP growth (capped at 2.5×): they keep mattering without making a
+ * grown economy unable to act — measured with `npm run sim:territorio`, a linear scale starved the
+ * conservation strategy of every paid option.
+ */
+export function situationCost(base: number, state: GameState): number {
+  if (!base) return 0;
+  const pbi0 = state.levelBaseline?.pbi || state.indicators.pbi || 1;
+  return base * Math.min(2.5, Math.max(1, Math.sqrt(state.stellaSpecificState.PBI_Real / pbi0)));
+}
+
+/**
  * Applies one option of a situation: pays its cost from the treasury and runs its effects through
  * the same path the model's own random events use.
  */
@@ -147,7 +160,7 @@ export function resolveSituation(
   const option = def?.options.find((o) => o.id === optionId) ?? def?.options[def.options.length - 1];
   if (!def || !option) return { state, deferred: [], cost: 0, ok: false };
 
-  const cost = option.cost ?? 0;
+  const cost = situationCost(option.cost ?? 0, state);
   if (cost > state.stellaSpecificState.Reservas_del_Tesoro) return { state, deferred: [], cost, ok: false };
 
   const next: GameState = JSON.parse(JSON.stringify(state));

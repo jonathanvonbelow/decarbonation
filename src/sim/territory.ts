@@ -1,24 +1,30 @@
 /**
- * Territory map <-> land-use areas, for the Territorio preview (mejora-general/files/21_fusion_ecosim.md §4-5).
+ * Territory map <-> land-use areas, for the Territorio preview (mejora-general/files/21_fusion_ecosim.md §4-5,
+ * 22_arte_territorio_expansion.md).
  *
- * The model keeps land use as six areas in kHa (`GameState.landUses`); the preview shows it as a
- * 12×12 isometric map. This module is the only bridge between the two, and it is one-directional
- * except for a single, explicit player action:
+ * The model keeps land use as areas in kHa (`GameState.landUses`); the preview shows it on an
+ * irregular 100×100 isometric map whose fixed landscape comes from geography.ts. Exactly
+ * `PRODUCTIVE_PARCELS` cells are productive land, so one parcel is (model area / 6000) — 0.1 kHa,
+ * 1 km², for the level-2 region — and the equations keep reasoning in the same kHa as the 3-level
+ * game: nothing was rescaled to fit the bigger map. This module is the only bridge between the
+ * two, and it is one-directional except for a single, explicit player action:
  *
  *   model → map   `syncTerritory` moves parcels along the transfers the model actually made that
- *                 month (`stepMonth`'s `flows`): one parcel per `KHA_PER_PARCEL` of accumulated flow,
+ *                 month (`stepMonth`'s `flows`): one parcel per `kHaPerParcel` of accumulated flow,
  *                 taken from the frontier of the use that grows (deforestation visibly advances from
- *                 the crops; reserves grow from their edges). Every change drawn is a transition the
- *                 model makes. The map lags each flow by less than a parcel (measured ≤ 2.45 parcels
- *                 for any use); a net-area safety net with a hysteresis band covers the rest without
- *                 flickering. Indicators always read the exact areas, never parcel counts. Parcels the
- *                 player declared protected never move.
- *   map → model   `declareProtectedArea` is the only way the player changes land use directly: one
- *                 native-forest parcel becomes protected, moving its kHa from BNNP to BNP in the model
- *                 and paying a one-time cost from the treasury. Everything downstream of land use —
- *                 carbon balance, biodiversity, food and economic security, deforestation flows, the
- *                 native-forest win condition — reads those areas, so the action reaches every
- *                 equation that uses the datum without any of them changing.
+ *                 the crops; reserves grow from their edges). A net-area safety net with a
+ *                 hysteresis band covers rounding and area changes that arrive without a flow.
+ *                 Indicators always read the exact areas, never parcel counts. Parcels the player
+ *                 declared never move while any other parcel can.
+ *   map → model   `declarePublicUse` is the only way the player changes land use directly: a lot of
+ *                 `LOT_KHA` (50 parcels) around the parcel they pick becomes a public use, moving its
+ *                 area in the model and paying a one-time cost from the treasury. The lot is the
+ *                 same 5 kHa a declaration always moved, so its price and its weight in every
+ *                 equation are unchanged by the finer map.
+ *
+ * Towns are drawn from the model too (`developTerritory`): they densify with real GDP, informal
+ * settlements appear when social wellbeing collapses, and heavy industry reads cleaner as
+ * emissions fall. They grow into lots reserved for them, never into productive land.
  *
  * Area the model stops accounting for (a drought event removes crop area with no paired transfer —
  * docs/audit-equations.md item L-1) is shown honestly as `fallow` parcels rather than hidden.
@@ -27,13 +33,21 @@
  */
 import type { ControlParams, GameState, LandUse } from '../types';
 import { LandUseType } from '../types';
+import {
+  CONTEXT_KINDS, createGeography, distanceField, fbm, GRID_SIZE, hash01, PRODUCTIVE_PARCELS, REGIONS, regionWeights,
+  urbanKind, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial,
+} from './geography';
 
-export const TERRITORY_SIZE = 12;
-export const KHA_PER_PARCEL = 5;
-/** A parcel changes use only when its use is off by more than this (in parcels, summed both ways). */
+export { GRID_SIZE, hash01, PRODUCTIVE_PARCELS, REGIONS, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial };
+
+export const TERRITORY_SIZE = GRID_SIZE;
+/** Nominal parcel size for the level-2 region (600 kHa / 6000 parcels). */
+export const KHA_PER_PARCEL = 0.1;
+/** Area a public-use declaration moves: the 5 kHa one declaration always moved. */
+export const LOT_KHA = 5;
+/** A use changes parcels only when it is off by more than this (in parcels, summed both ways). */
 const HYSTERESIS = 1.2;
 
-export type ContextKind = 'water' | 'wetland' | 'urban' | 'market' | 'industry';
 export type ProductiveKind = LandUseType | 'fallow';
 export type ParcelKind = ProductiveKind | ContextKind;
 
@@ -41,8 +55,10 @@ export interface Parcel {
   x: number;
   y: number;
   kind: ParcelKind;
-  /** Declared protected by the player (only on ProtectedNativeForest parcels). Never moved by sync. */
+  /** Declared a public use by the player. Never moved by sync while any other parcel can move. */
   declared?: boolean;
+  /** Month index of the declaration (for the construction marker on the map). */
+  declaredAt?: number;
 }
 
 export interface Territory {
@@ -55,6 +71,8 @@ export interface Territory {
    * along a flow once its accumulator reaches one parcel.
    */
   pending: Record<string, number>;
+  /** Fixed landscape, shared (never copied) between successive territories of a game. */
+  geo: Geography;
 }
 
 /** A land transfer the model made (see `stepMonth`'s `flows`). */
@@ -73,45 +91,9 @@ export interface ParcelChange {
 
 const LAND_USES = Object.values(LandUseType) as LandUseType[];
 const PRODUCTIVE_KINDS: ProductiveKind[] = [...LAND_USES, 'fallow'];
-const CONTEXT_KINDS = new Set<ParcelKind>(['water', 'wetland', 'urban', 'market', 'industry']);
+const CONTEXT_SET = new Set<ParcelKind>(CONTEXT_KINDS);
 
-export const isProductive = (kind: ParcelKind): kind is ProductiveKind => !CONTEXT_KINDS.has(kind);
-
-/** Near-town → wilderness order used for the initial layout. */
-const LAYOUT_ORDER: LandUseType[] = [
-  LandUseType.EnergyPark,
-  LandUseType.ConventionalCrops,
-  LandUseType.AgroecologicalCrops,
-  LandUseType.GrasslandsPastures,
-  LandUseType.PublicWetland,
-  LandUseType.RestorationForest,
-  LandUseType.ForestPlantations,
-  LandUseType.UnprotectedNativeForest,
-  LandUseType.ProtectedNativeForest,
-];
-
-/* ── Deterministic helpers ─────────────────────────────────────────────────────────────────── */
-
-function hash01(x: number, y: number, seed: number): number {
-  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-
-/** Smooth value noise in [0,1): a 5×5 lattice of seeded values, bilinearly interpolated. */
-function valueNoise(x: number, y: number, size: number, seed: number): number {
-  const fx = (x / Math.max(1, size - 1)) * 4;
-  const fy = (y / Math.max(1, size - 1)) * 4;
-  const x0 = Math.floor(fx);
-  const y0 = Math.floor(fy);
-  const tx = fx - x0;
-  const ty = fy - y0;
-  const v = (i: number, j: number) => hash01(i, j, seed + 7919);
-  const a = v(x0, y0) * (1 - tx) + v(x0 + 1, y0) * tx;
-  const b = v(x0, y0 + 1) * (1 - tx) + v(x0 + 1, y0 + 1) * tx;
-  return a * (1 - ty) + b * ty;
-}
+export const isProductive = (kind: ParcelKind): kind is ProductiveKind => !CONTEXT_SET.has(kind);
 
 const idx = (t: { size: number }, x: number, y: number) => y * t.size + x;
 
@@ -120,13 +102,23 @@ export function parcelAt(t: Territory, x: number, y: number): Parcel | null {
   return t.parcels[idx(t, x, y)];
 }
 
-function neighbors8(t: Territory, p: Parcel): Parcel[] {
-  const out: Parcel[] = [];
+/** Region of a cell, or null outside the territory. */
+export function regionAt(t: Territory, x: number, y: number): RegionId | null {
+  if (x < 0 || y < 0 || x >= t.size || y >= t.size) return null;
+  const r = t.geo.region[idx(t, x, y)];
+  return r >= 0 ? REGIONS[r] : null;
+}
+
+function neighbors8(t: Territory, i: number): number[] {
+  const x = i % t.size;
+  const y = (i / t.size) | 0;
+  const out: number[] = [];
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
-      const n = parcelAt(t, p.x + dx, p.y + dy);
-      if (n) out.push(n);
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < t.size && ny < t.size) out.push(ny * t.size + nx);
     }
   }
   return out;
@@ -169,10 +161,10 @@ export function parcelCounts(
   const counts = {} as Record<ProductiveKind, number>;
   let assigned = 0;
   PRODUCTIVE_KINDS.forEach((k) => {
-    counts[k] = Math.floor(target[k]);
+    counts[k] = Math.floor(target[k] + 1e-9);
     assigned += counts[k];
   });
-  const byRemainder = [...PRODUCTIVE_KINDS].sort((a, b) => (target[b] - Math.floor(target[b])) - (target[a] - Math.floor(target[a])));
+  const byRemainder = [...PRODUCTIVE_KINDS].sort((a, b) => (target[b] - Math.floor(target[b] + 1e-9)) - (target[a] - Math.floor(target[a] + 1e-9)));
   for (let i = 0; assigned < productiveCount; i = (i + 1) % byRemainder.length) {
     counts[byRemainder[i]]++;
     assigned++;
@@ -188,90 +180,210 @@ function countKinds(t: Territory): Record<ProductiveKind, number> {
 }
 
 export function productiveCount(t: Territory): number {
-  return t.parcels.filter((p) => isProductive(p.kind)).length;
+  let n = 0;
+  t.parcels.forEach((p) => { if (isProductive(p.kind)) n++; });
+  return n;
 }
+
+const totalArea = (landUses: Record<LandUseType, LandUse>) => LAND_USES.reduce((sum, k) => sum + Math.max(0, landUses[k].area), 0);
 
 /* ── Layout ────────────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Builds the initial map for `landUses`: a river crossing the region, four wetlands on its banks,
- * a small town in the south-east corner, and the productive parcels laid out from the town outward
- * (conventional crops nearest, then agroecological, pastures, plantations, unprotected and finally
- * protected native forest), with smooth noise so the uses form patches rather than stripes.
+ * Where each use sits at the start, by region (rows follow REGIONS: norte, centro, sur, costa).
+ * It reads the level-2 regional profiles: extensive farming and livestock in the north, periurban
+ * horticulture around the metropolis, native forest and plantations in the south, pastures and
+ * mixed farming on the coast.
  */
-export function createTerritory(landUses: Record<LandUseType, LandUse>, seed = 1): Territory {
-  const size = TERRITORY_SIZE;
-  const parcels: Parcel[] = [];
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) parcels.push({ x, y, kind: 'fallow' });
-  const t: Territory = { size, kHaPerParcel: KHA_PER_PARCEL, seed, parcels, pending: {} };
+const REGION_AFFINITY: Record<LandUseType, [number, number, number, number]> = {
+  [LandUseType.ProtectedNativeForest]: [0.05, 0, 1, 0.45],
+  [LandUseType.UnprotectedNativeForest]: [0.2, 0.05, 1, 0.5],
+  [LandUseType.ForestPlantations]: [0.25, 0.2, 0.85, 0.75],
+  [LandUseType.ConventionalCrops]: [1, 0.75, 0.05, 0.4],
+  [LandUseType.AgroecologicalCrops]: [0.55, 0.9, 0.35, 0.65],
+  [LandUseType.GrasslandsPastures]: [0.85, 0.3, 0.3, 0.9],
+  [LandUseType.PublicWetland]: [0, 0, 0, 0],
+  [LandUseType.RestorationForest]: [0, 0, 0, 0],
+  [LandUseType.EnergyPark]: [0, 0, 0, 0],
+};
 
-  // Town: the 3×3 south-east corner minus its inner corner.
-  const town: [number, number, ContextKind][] = [
-    [10, 10, 'urban'], [11, 11, 'urban'], [10, 11, 'urban'], [11, 10, 'urban'],
-    [9, 10, 'market'], [9, 11, 'market'], [10, 9, 'industry'], [11, 9, 'industry'],
-  ];
-  town.forEach(([x, y, kind]) => { parcelAt(t, x, y)!.kind = kind; });
-
-  // River: one parcel per column, meandering north-west → south-east, clear of the town.
-  const river: Parcel[] = [];
-  for (let x = 0; x < size; x++) {
-    const y = Math.max(0, Math.min(size - 1, Math.round(2 + 0.45 * x + Math.sin(x / 1.8))));
-    const p = parcelAt(t, x, y)!;
-    p.kind = 'water';
-    river.push(p);
+function suitability(geo: Geography, i: number, k: LandUseType, seed: number): number {
+  const x = i % geo.size;
+  const y = (i / geo.size) | 0;
+  const w = regionWeights(x, y, geo.size, geo.seed);
+  const a = REGION_AFFINITY[k];
+  const town = Math.min(1, geo.townDistance[i] / 22);
+  const wet = geo.waterDistance[i] <= 3 ? 1 : 0;
+  let s = a[0] * w[0] + a[1] * w[1] + a[2] * w[2] + a[3] * w[3];
+  s += 0.55 * fbm(x, y, 7, seed + 300 + LAND_USES.indexOf(k) * 31);
+  switch (k) {
+    case LandUseType.ProtectedNativeForest: s += 1.1 * fbm(x, y, 16, seed + 400) + 0.35 * town + 0.3 * geo.interior[i]; break;
+    case LandUseType.UnprotectedNativeForest: s += 0.45 * town; break;
+    case LandUseType.ForestPlantations: s += 0.15 * town; break;
+    case LandUseType.ConventionalCrops: s += 0.25 * (1 - town); break;
+    case LandUseType.AgroecologicalCrops: s += 0.6 * (1 - town); break;
+    case LandUseType.GrasslandsPastures: s += 0.3 * wet; break;
+    default: s -= 10;
   }
+  return s;
+}
 
-  // Wetlands: four bank parcels (4-neighbours of the river), picked by seeded hash.
-  const bank = new Map<number, Parcel>();
-  river.forEach((r) => {
-    [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
-      const n = parcelAt(t, r.x + dx, r.y + dy);
-      if (n && n.kind === 'fallow') bank.set(idx(t, n.x, n.y), n);
+/**
+ * Assigns exactly `counts[k]` cells to each use, each cell to the use it suits best *relative to
+ * how contested that use is*: a price per use is raised while it is over-subscribed (a small
+ * auction), so uses form coherent regional patches instead of the leftovers of a greedy fill.
+ * An exact repair and a count-preserving smoothing pass finish it.
+ */
+function allocate(geo: Geography, cells: number[], counts: Record<ProductiveKind, number>, seed: number): Map<number, ProductiveKind> {
+  const uses = LAND_USES.filter((k) => counts[k] > 0);
+  const score = uses.map((k) => cells.map((i) => suitability(geo, i, k, seed)));
+  const price = uses.map(() => 0);
+  const pick = new Int32Array(cells.length);
+  const assign = () => {
+    for (let c = 0; c < cells.length; c++) {
+      let best = 0;
+      let bestV = -Infinity;
+      for (let u = 0; u < uses.length; u++) {
+        const v = score[u][c] - price[u];
+        if (v > bestV) {
+          bestV = v;
+          best = u;
+        }
+      }
+      pick[c] = best;
+    }
+  };
+  for (let iter = 0; iter < 160; iter++) {
+    assign();
+    const n = uses.map(() => 0);
+    for (let c = 0; c < cells.length; c++) n[pick[c]]++;
+    uses.forEach((k, u) => { price[u] += (0.25 / (1 + iter * 0.05)) * (n[u] - counts[k]) / Math.max(1, counts[k]); });
+  }
+  assign();
+  // Exact repair: move the least-committed cells of over-subscribed uses to where they fit next best.
+  const n = uses.map(() => 0);
+  for (let c = 0; c < cells.length; c++) n[pick[c]]++;
+  for (let guard = 0; guard < cells.length; guard++) {
+    const over = uses.findIndex((k, u) => n[u] > counts[k]);
+    if (over < 0) break;
+    let bestC = -1;
+    let bestU = -1;
+    let bestLoss = Infinity;
+    for (let c = 0; c < cells.length; c++) {
+      if (pick[c] !== over) continue;
+      for (let u = 0; u < uses.length; u++) {
+        if (n[u] >= counts[uses[u]]) continue;
+        const loss = (score[over][c] - price[over]) - (score[u][c] - price[u]);
+        if (loss < bestLoss) {
+          bestLoss = loss;
+          bestC = c;
+          bestU = u;
+        }
+      }
+    }
+    if (bestC < 0) break;
+    pick[bestC] = bestU;
+    n[over]--;
+    n[bestU]++;
+  }
+  const out = new Map<number, ProductiveKind>();
+  cells.forEach((i, c) => out.set(i, uses[pick[c]]));
+  // Any rounding shortfall (fallow at the start) goes to the cells nobody fit.
+  smooth(geo, out);
+  return out;
+}
+
+/** Count-preserving smoothing: swaps pairs of isolated parcels that each fit the other's patch. */
+function smooth(geo: Geography, kinds: Map<number, ProductiveKind>) {
+  const size = geo.size;
+  for (let pass = 0; pass < 3; pass++) {
+    const want = new Map<string, number[]>();
+    kinds.forEach((k, i) => {
+      const x = i % size;
+      const y = (i / size) | 0;
+      const around = new Map<ProductiveKind, number>();
+      let same = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const n = kinds.get((y + dy) * size + x + dx);
+          if (!n || x + dx < 0 || x + dx >= size) continue;
+          if (n === k) same++;
+          else around.set(n, (around.get(n) ?? 0) + 1);
+        }
+      }
+      if (same > 1) return;
+      let major: ProductiveKind | null = null;
+      let most = 0;
+      around.forEach((c, n) => { if (c > most) { most = c; major = n; } });
+      if (major && most >= 5) {
+        const key = `${k}>${major}`;
+        if (!want.has(key)) want.set(key, []);
+        want.get(key)!.push(i);
+      }
     });
-  });
-  [...bank.values()]
-    .sort((a, b) => hash01(a.x, a.y, seed) - hash01(b.x, b.y, seed))
-    .slice(0, 4)
-    .forEach((p) => { p.kind = 'wetland'; });
+    let swaps = 0;
+    want.forEach((list, key) => {
+      const [a, b] = key.split('>');
+      const back = want.get(`${b}>${a}`);
+      if (!back || a > b) return;
+      const m = Math.min(list.length, back.length);
+      for (let j = 0; j < m; j++) {
+        kinds.set(list[j], b as ProductiveKind);
+        kinds.set(back[j], a as ProductiveKind);
+        swaps++;
+      }
+    });
+    if (!swaps) break;
+  }
+}
 
-  // Productive parcels: rank by distance from the town plus smooth noise, fill in layout order.
-  const productive = parcels.filter((p) => p.kind === 'fallow');
-  const maxDist = Math.hypot(size - 1, size - 1);
-  const rank = (p: Parcel) => Math.hypot(size - 1 - p.x, size - 1 - p.y) / maxDist + 0.35 * valueNoise(p.x, p.y, size, seed);
-  productive.sort((a, b) => rank(a) - rank(b) || hash01(a.x, a.y, seed) - hash01(b.x, b.y, seed));
+/** Geographies are pure functions of the seed and a little costly to build: keep the last few. */
+const GEO_CACHE = new Map<string, Geography>();
+function geographyFor(seed: number, size: number): Geography {
+  const key = `${seed}:${size}`;
+  let geo = GEO_CACHE.get(key);
+  if (!geo) {
+    geo = createGeography(seed, size);
+    GEO_CACHE.set(key, geo);
+    if (GEO_CACHE.size > 6) GEO_CACHE.delete(GEO_CACHE.keys().next().value as string);
+  }
+  return geo;
+}
 
-  const counts = parcelCounts(landUses, productive.length, KHA_PER_PARCEL);
-  let i = 0;
-  LAYOUT_ORDER.forEach((kind) => {
-    for (let n = 0; n < counts[kind]; n++) productive[i++].kind = kind;
+/**
+ * Builds the initial map for `landUses` on the seed's geography: productive land divided among the
+ * uses by regional affinity (see REGION_AFFINITY), with smooth noise so they form patches. The
+ * parcel size is the model's total area over the productive parcels, so the map holds the model's
+ * area exactly.
+ */
+export function createTerritory(landUses: Record<LandUseType, LandUse>, seed = 1, size = GRID_SIZE): Territory {
+  const geo = geographyFor(seed, size);
+  const cells: number[] = [];
+  const parcels: Parcel[] = geo.base.map((k, i) => {
+    if (k === 'productive') cells.push(i);
+    return { x: i % size, y: (i / size) | 0, kind: k === 'productive' ? 'fallow' : k };
   });
-  // Whatever is left (only when the model already lost area) stays fallow, at the far end.
+  const area = totalArea(landUses);
+  const kHaPerParcel = area > 0 ? area / cells.length : KHA_PER_PARCEL;
+  const t: Territory = { size, kHaPerParcel, seed, parcels, pending: {}, geo };
+  const counts = parcelCounts(landUses, cells.length, kHaPerParcel);
+  allocate(geo, cells, counts, seed).forEach((k, i) => { parcels[i].kind = k; });
   return t;
 }
 
 /* ── Model → map ───────────────────────────────────────────────────────────────────────────── */
 
-/** Distance (Chebyshev) from `p` to the nearest parcel of `kind`, or `size` if there is none. */
-function distanceTo(t: Territory, p: Parcel, kind: ParcelKind): number {
-  let best = t.size;
-  t.parcels.forEach((q) => {
-    if (q.kind === kind) best = Math.min(best, Math.max(Math.abs(q.x - p.x), Math.abs(q.y - p.y)));
-  });
-  return best;
-}
-
 /**
  * Where each use can grow from, following the model's own flows (landUse.ts: BNNP→BNP, BNNP→CC,
- * BNNP→CA, CA→BNNP, CC→CA; drought events remove CC and CA area → fallow). Pairing deficits with
- * these sources keeps the map from showing transitions the model never makes — without it, a
- * month where conservation protects forest (BNNP→BNP) while farmers convert (CC→CA) could be drawn
- * as "a crop became a reserve".
+ * BNNP→CA, CA→BNNP, CC→CA, RES→BNP; drought events remove CC and CA area → fallow). Pairing
+ * deficits with these sources keeps the map from showing transitions the model never makes.
  */
 const SOURCES: Partial<Record<ProductiveKind, ProductiveKind[]>> = {
-  [LandUseType.ProtectedNativeForest]: [LandUseType.UnprotectedNativeForest],
+  [LandUseType.ProtectedNativeForest]: [LandUseType.UnprotectedNativeForest, LandUseType.RestorationForest],
   [LandUseType.ConventionalCrops]: [LandUseType.UnprotectedNativeForest],
   [LandUseType.AgroecologicalCrops]: [LandUseType.ConventionalCrops, LandUseType.UnprotectedNativeForest],
-  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops, LandUseType.RestorationForest],
+  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops],
   fallow: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops],
   // Public uses only ever grow because the player declared them (declarePublicUse below), but the
   // safety net still needs to know where their area came from.
@@ -280,20 +392,37 @@ const SOURCES: Partial<Record<ProductiveKind, ProductiveKind[]>> = {
   [LandUseType.EnergyPark]: [LandUseType.GrasslandsPastures, LandUseType.ConventionalCrops, 'fallow'],
 };
 
-/** Picks which parcel of `from` becomes `to`: frontier first, never a declared reserve if avoidable. */
-function pickParcel(t: Territory, from: ProductiveKind, to: ProductiveKind): Parcel | null {
-  let best: Parcel | null = null;
-  let bestScore = -Infinity;
-  for (const p of t.parcels) {
-    if (p.kind !== from) continue;
-    const touching = neighbors8(t, p).filter((n) => n.kind === to).length;
-    const score = (p.declared ? -1000 : 0) + touching * 10 - distanceTo(t, p, to) + hash01(p.x, p.y, t.seed);
-    if (score > bestScore) {
-      bestScore = score;
-      best = p;
-    }
+/** Parcels moved per frontier recomputation: small enough that a front advances ring by ring. */
+const FRONT_BATCH = 24;
+
+/**
+ * Turns `n` parcels of `from` into `to`, from the frontier: the `from` parcels closest to existing
+ * `to` land (8-neighbour BFS), most-touching first, never a declared parcel while another exists.
+ * Returns how many moved.
+ */
+function moveParcels(t: Territory, from: ProductiveKind, to: ProductiveKind, n: number, onMove: (i: number) => void): number {
+  let moved = 0;
+  while (moved < n) {
+    const hasTo = t.parcels.some((p) => p.kind === to);
+    // Without any `to` land yet, grow from the edges of `from` (where it meets other uses).
+    const dist = distanceField(t.size, hasTo
+      ? (i) => t.parcels[i].kind === to
+      : (i) => { const k = t.parcels[i].kind; return k !== from && k !== 'void' && k !== 'sea'; });
+    const candidates: { i: number; s: number }[] = [];
+    t.parcels.forEach((p, i) => {
+      if (p.kind !== from) return;
+      let s = dist[i] + 0.9 * hash01(p.x, p.y, t.seed + moved);
+      if (dist[i] <= 1.5) s -= 0.12 * neighbors8(t, i).filter((j) => t.parcels[j].kind === to).length;
+      if (p.declared) s += 1e6;
+      candidates.push({ i, s });
+    });
+    if (!candidates.length) break;
+    candidates.sort((a, b) => a.s - b.s);
+    const batch = Math.min(n - moved, FRONT_BATCH, candidates.length);
+    for (let b = 0; b < batch; b++) onMove(candidates[b].i);
+    moved += batch;
   }
-  return best;
+  return moved;
 }
 
 /**
@@ -317,16 +446,15 @@ export function syncTerritory(
   const counts = countKinds(t);
   const target = parcelTargets(landUses, productiveCount(t), t.kHaPerParcel);
   const changes: ParcelChange[] = [];
-  const move = (from: ProductiveKind, to: ProductiveKind): boolean => {
-    const parcel = pickParcel(t, from, to);
-    if (!parcel) return false;
+  const move = (from: ProductiveKind, to: ProductiveKind, n: number): number => moveParcels(t, from, to, n, (i) => {
+    const parcel = t.parcels[i];
     changes.push({ x: parcel.x, y: parcel.y, from: parcel.kind, to });
     parcel.kind = to;
     parcel.declared = false;
+    parcel.declaredAt = undefined;
     counts[from]--;
     counts[to]++;
-    return true;
-  };
+  });
 
   flows.forEach((f) => {
     if (f.kHa <= 0) return;
@@ -335,41 +463,77 @@ export function syncTerritory(
   });
   Object.keys(t.pending).forEach((key) => {
     const [from, to] = key.split('>') as [ProductiveKind, ProductiveKind];
-    while (t.pending[key] >= t.kHaPerParcel && counts[from] > 0) {
-      if (!move(from, to)) break;
-      t.pending[key] -= t.kHaPerParcel;
-    }
+    const whole = Math.min(Math.floor(t.pending[key] / t.kHaPerParcel + 1e-9), counts[from]);
+    if (whole > 0) t.pending[key] -= move(from, to, whole) * t.kHaPerParcel;
     // A flow out of a use that has no parcels left cannot be drawn; don't let it pile up.
     if (counts[from] === 0) t.pending[key] = Math.min(t.pending[key], t.kHaPerParcel);
   });
 
-  // Error not explained by flows still accumulating: a use whose inflow is 3 kHa short of a parcel
-  // is *expected* to be 0.6 parcel below its area, and must not be "corrected" by some other route.
+  // Error not explained by flows still accumulating: a use whose inflow is 0.3 parcel short is
+  // *expected* to be 0.3 parcel below its area, and must not be "corrected" by some other route.
   const inFlight = (k: ProductiveKind) => Object.entries(t.pending).reduce((sum, [key, kHa]) => {
     const [from, to] = key.split('>');
     return sum + (to === k ? kHa : 0) - (from === k ? kHa : 0);
   }, 0) / t.kHaPerParcel;
   const error = (k: ProductiveKind) => target[k] - counts[k] - inFlight(k);
-  for (let guard = 0; guard < t.parcels.length * 2; guard++) {
-    // Every (deficit, surplus) pair far enough apart to justify moving a parcel. Model flows win
+  for (let guard = 0; guard < 200; guard++) {
+    // Every (deficit, surplus) pair far enough apart to justify moving parcels. Model flows win
     // over any other pairing; among flows, the most constrained deficit (fewest sources) goes
     // first so it is not starved by a use that had alternatives; then the widest gap.
-    let best: { deficit: ProductiveKind; surplus: ProductiveKind; score: number } | null = null;
+    let best: { deficit: ProductiveKind; surplus: ProductiveKind; score: number; gap: number } | null = null;
     for (const deficit of PRODUCTIVE_KINDS) {
       for (const surplus of PRODUCTIVE_KINDS) {
         if (deficit === surplus || counts[surplus] === 0) continue;
         const gap = error(deficit) - error(surplus);
         if (gap <= HYSTERESIS) continue;
         const sources = SOURCES[deficit] ?? [];
-        const score = (sources.includes(surplus) ? 0 : 100) + sources.length - gap * 0.01;
-        if (!best || score < best.score) best = { deficit, surplus, score };
+        const score = (sources.includes(surplus) ? 0 : 100) + sources.length - gap * 0.0001;
+        if (!best || score < best.score) best = { deficit, surplus, score, gap };
       }
     }
     if (!best) break;
-    const { deficit, surplus } = best;
-    if (!move(surplus, deficit)) break;
+    // Each parcel moved closes the gap by 2; stop inside the band rather than overshoot it.
+    const n = Math.max(1, Math.min(counts[best.surplus], Math.floor((best.gap - HYSTERESIS) / 2) + 1));
+    if (!move(best.surplus, best.deficit, n)) break;
   }
   return { territory: t, changes };
+}
+
+/** Settlements follow the model's development (see geography.ts `urbanKind`), with hysteresis. */
+export function developTerritory(territory: Territory, dev: Development): { territory: Territory; changes: ParcelChange[] } {
+  const changes: ParcelChange[] = [];
+  let parcels: Parcel[] | null = null;
+  // A slot keeps its building while it is still what a slightly different development would show,
+  // so a value hovering on a threshold does not make buildings blink month after month.
+  const nudge = (d: number, s: number) => ({
+    growth: Math.max(0, dev.growth + d),
+    hardship: Math.min(1, Math.max(0, dev.hardship + s)),
+    dirty: Math.min(1, Math.max(0, dev.dirty + s)),
+  });
+  territory.geo.slots.forEach((slot) => {
+    const current = territory.parcels[slot.i].kind;
+    const next = urbanKind(slot, dev);
+    if (next === current) return;
+    if ([urbanKind(slot, nudge(0.03, 0.06)), urbanKind(slot, nudge(-0.03, -0.06))].includes(current as ContextKind)) return;
+    parcels = parcels ?? territory.parcels.slice();
+    const p = parcels[slot.i];
+    parcels[slot.i] = { ...p, kind: next };
+    changes.push({ x: p.x, y: p.y, from: current, to: next });
+  });
+  return { territory: parcels ? { ...territory, parcels } : territory, changes };
+}
+
+/** Development of the region, read from the model (see `Development`). */
+export function developmentOf(game: GameState): Development {
+  const base = game.levelBaseline;
+  const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+  const pbi0 = base?.pbi || game.indicators.pbi || 1;
+  const co20 = base?.co2EqEmissionsPerCapita || game.indicators.co2EqEmissionsPerCapita || 1;
+  return {
+    growth: Math.max(0, game.indicators.pbi / pbi0 - 1),
+    hardship: clamp01((45 - game.indicators.socialWellbeing) / 35),
+    dirty: clamp01((game.indicators.co2EqEmissionsPerCapita / co20 - 0.3) / 0.7),
+  };
 }
 
 /* ── Map → model: public uses ──────────────────────────────────────────────────────────────── */
@@ -377,7 +541,7 @@ export function syncTerritory(
 /**
  * The public uses a player can declare (21_fusion_ecosim.md §5, decisión 4 del equipo). They are the
  * only direct change to land use in the game: everything else comes out of the model's dynamics.
- * Each one moves a parcel's worth of area into a land use the model already prices — rates and
+ * Each one moves a lot's worth of area into a land use the model already prices — rates and
  * weights live in constants.ts — and pays a one-time cost from the treasury.
  */
 export type PublicUse = 'protected' | 'restoration' | 'wetland' | 'energy';
@@ -390,7 +554,7 @@ interface PublicUseRule {
   /** Parcel kinds that can be declared into it. */
   from: ProductiveKind[];
   cost: (CP: ControlParams) => number;
-  /** Wetlands can only be declared next to the river or an existing wetland. */
+  /** Wetlands can only be declared next to water (river, lake, a wetland — natural or declared). */
   requiresWater?: boolean;
 }
 
@@ -423,36 +587,83 @@ const PRODUCTIVE_SOURCES = new Set<ParcelKind>([
   LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops, LandUseType.GrasslandsPastures,
 ]);
 
+const WATER_KINDS = new Set<ParcelKind>(['water', 'lake', 'wetland', 'bridge', LandUseType.PublicWetland]);
+
 export type PublicUseError =
   | 'out-of-bounds' | 'not-convertible' | 'no-area' | 'insufficient-funds' | 'needs-water';
 
 export type PublicUseResult =
-  | { ok: true; state: GameState; territory: Territory; cost: number; use: PublicUse }
+  | { ok: true; state: GameState; territory: Territory; cost: number; use: PublicUse; cells: number[] }
   | { ok: false; reason: PublicUseError };
 
-/** One-time cost of declaring one parcel of `use`, under the given control parameters. */
-export function publicUseCost(use: PublicUse, CP: ControlParams, kHaPerParcel = KHA_PER_PARCEL): number {
-  return RULES[use].cost(CP) * kHaPerParcel;
+/** Parcels in one lot on this map (50 at 0.1 kHa per parcel). */
+export const lotParcels = (t: Pick<Territory, 'kHaPerParcel'>): number => Math.max(1, Math.round(LOT_KHA / t.kHaPerParcel));
+
+/** One-time cost of declaring a full lot of `use` (LOT_KHA), under the given control parameters. */
+export function publicUseCost(use: PublicUse, CP: ControlParams, kHa = LOT_KHA): number {
+  return RULES[use].cost(CP) * kHa;
 }
 
 /** Land use a parcel becomes under `use`. */
 export const publicUseTarget = (use: PublicUse): LandUseType => RULES[use].target;
 
-/** Whether the parcel at (x, y) could be declared as `use` right now, ignoring the treasury. */
+const eligible = (p: Parcel, rule: PublicUseRule) => rule.from.includes(p.kind as ProductiveKind) && !p.declared;
+
+function nearWater(t: Territory, i: number): boolean {
+  const x = i % t.size;
+  const y = (i / t.size) | 0;
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const p = parcelAt(t, x + dx, y + dy);
+      if (p && WATER_KINDS.has(p.kind)) return true;
+    }
+  }
+  return false;
+}
+
+/** Whether a lot of `use` can start at (x, y) right now, ignoring the treasury. */
 export function canDeclare(territory: Territory, x: number, y: number, use: PublicUse): boolean {
   const parcel = parcelAt(territory, x, y);
   if (!parcel) return false;
   const rule = RULES[use];
-  if (!rule.from.includes(parcel.kind as ProductiveKind)) return false;
-  if (rule.requiresWater && !neighbors8(territory, parcel).some((n) => n.kind === 'water' || n.kind === 'wetland')) return false;
-  return true;
+  if (!eligible(parcel, rule)) return false;
+  return !rule.requiresWater || nearWater(territory, idx(territory, x, y));
 }
 
 /**
- * Declares the parcel at (x, y) as a public use: moves one parcel of area in the model, pays the
- * cost from Reservas_del_Tesoro, and — when the land was productive — adds the agricultural-pressure
- * impulse that taking farmland out of production causes. Pure: returns new state and territory, or
- * the reason it is not possible.
+ * The lot a declaration at (x, y) would take: up to `lotParcels` eligible parcels connected to the
+ * one picked, nearest first, so lots are compact. Empty if the picked parcel is not eligible.
+ */
+export function lotFor(territory: Territory, x: number, y: number, use: PublicUse): number[] {
+  if (!canDeclare(territory, x, y, use)) return [];
+  const rule = RULES[use];
+  const want = lotParcels(territory);
+  const start = idx(territory, x, y);
+  const seen = new Set<number>([start]);
+  const found: number[] = [];
+  const queue = [start];
+  while (queue.length && found.length < want * 4) {
+    const i = queue.shift()!;
+    found.push(i);
+    neighbors8(territory, i).forEach((j) => {
+      if (seen.has(j)) return;
+      seen.add(j);
+      if (eligible(territory.parcels[j], rule)) queue.push(j);
+    });
+  }
+  const d2 = (i: number) => (i % territory.size - x) ** 2 + (((i / territory.size) | 0) - y) ** 2;
+  return found
+    .sort((a, b) => d2(a) - d2(b) || hash01(a, b, territory.seed) - 0.5)
+    .slice(0, want);
+}
+
+/**
+ * Declares the lot around (x, y) as a public use: moves its area in the model, pays the cost
+ * (per kHa actually moved) from Reservas_del_Tesoro, and — for the part that was farmland — adds
+ * the agricultural-pressure impulse that taking land out of production causes. Parcels whose area
+ * the model no longer holds are left out, and fallow can only be declared up to the area the map
+ * holds beyond the model's, so a declaration never creates land. Pure: returns new state and
+ * territory, or the reason it is not possible.
  */
 export function declarePublicUse(
   state: GameState,
@@ -461,35 +672,42 @@ export function declarePublicUse(
   y: number,
   use: PublicUse,
   CP: ControlParams,
+  now?: number,
 ): PublicUseResult {
   const parcel = parcelAt(territory, x, y);
   if (!parcel) return { ok: false, reason: 'out-of-bounds' };
   const rule = RULES[use];
-  if (!rule.from.includes(parcel.kind as ProductiveKind)) return { ok: false, reason: 'not-convertible' };
-  if (rule.requiresWater && !neighbors8(territory, parcel).some((n) => n.kind === 'water' || n.kind === 'wetland')) {
-    return { ok: false, reason: 'needs-water' };
-  }
+  if (!eligible(parcel, rule)) return { ok: false, reason: 'not-convertible' };
+  if (rule.requiresWater && !nearWater(territory, idx(territory, x, y))) return { ok: false, reason: 'needs-water' };
 
   const kHa = territory.kHaPerParcel;
-  const source = parcel.kind as ProductiveKind;
-  const takesArea = source !== 'fallow';
-  if (takesArea && state.landUses[source as LandUseType].area < kHa) return { ok: false, reason: 'no-area' };
+  const fallowArea = Math.max(0, productiveCount(territory) * kHa - totalArea(state.landUses));
+  const available: Record<string, number> = { fallow: fallowArea };
+  LAND_USES.forEach((k) => { available[k] = state.landUses[k].area; });
+  const cells = lotFor(territory, x, y, use).filter((i) => {
+    const k = territory.parcels[i].kind as string;
+    if (available[k] < kHa - 1e-9) return false;
+    available[k] -= kHa;
+    return true;
+  });
+  if (!cells.length) return { ok: false, reason: 'no-area' };
 
-  const cost = publicUseCost(use, CP, kHa);
+  const cost = RULES[use].cost(CP) * kHa * cells.length;
   if (state.stellaSpecificState.Reservas_del_Tesoro < cost) return { ok: false, reason: 'insufficient-funds' };
 
   const landUses = { ...state.landUses };
-  if (takesArea) {
-    landUses[source as LandUseType] = {
-      ...landUses[source as LandUseType],
-      area: landUses[source as LandUseType].area - kHa,
-    };
-  }
-  landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa };
+  let farmland = 0;
+  cells.forEach((i) => {
+    const source = territory.parcels[i].kind as ProductiveKind;
+    if (PRODUCTIVE_SOURCES.has(source)) farmland++;
+    if (source === 'fallow') return;
+    landUses[source] = { ...landUses[source], area: landUses[source].area - kHa };
+  });
+  landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa * cells.length };
 
   const reserves = state.stellaSpecificState.Reservas_del_Tesoro - cost;
-  const pressure = PRODUCTIVE_SOURCES.has(parcel.kind)
-    ? Math.min(100, state.stellaSpecificState.PP_AGRICOLA + CP.Impulso_PP_Agricola_por_kHa_Convertida * kHa)
+  const pressure = farmland > 0
+    ? Math.min(100, state.stellaSpecificState.PP_AGRICOLA + CP.Impulso_PP_Agricola_por_kHa_Convertida * kHa * farmland)
     : state.stellaSpecificState.PP_AGRICOLA;
 
   const next: GameState = {
@@ -498,11 +716,9 @@ export function declarePublicUse(
     stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves, PP_AGRICOLA: pressure },
     indicators: { ...state.indicators, treasuryReserves: reserves, ppAgricola: pressure },
   };
-  const nextTerritory: Territory = {
-    ...territory,
-    parcels: territory.parcels.map((p) => (p.x === x && p.y === y ? { ...p, kind: rule.target, declared: true } : p)),
-  };
-  return { ok: true, state: next, territory: nextTerritory, cost, use };
+  const parcels = territory.parcels.slice();
+  cells.forEach((i) => { parcels[i] = { ...parcels[i], kind: rule.target, declared: true, declaredAt: now }; });
+  return { ok: true, state: next, territory: { ...territory, parcels }, cost, use, cells };
 }
 
 /** Back-compat alias: declaring a protected area is just one of the public uses. */
@@ -510,5 +726,4 @@ export const declareProtectedArea = (
   state: GameState, territory: Territory, x: number, y: number, CP: ControlParams,
 ): PublicUseResult => declarePublicUse(state, territory, x, y, 'protected', CP);
 
-export const protectedAreaCost = (CP: ControlParams, kHaPerParcel = KHA_PER_PARCEL): number =>
-  publicUseCost('protected', CP, kHaPerParcel);
+export const protectedAreaCost = (CP: ControlParams, kHa = LOT_KHA): number => publicUseCost('protected', CP, kHa);

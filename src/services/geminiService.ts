@@ -201,6 +201,65 @@ export const askGemini = async (userInput: string, gameState: GameState, purpose
 };
 
 
+/**
+ * DecarboNito inside the Territorio preview (mejora-general/files/21_fusion_ecosim.md §8).
+ *
+ * A separate entry point from `askGemini` on purpose: that one builds its context from
+ * `LEVEL_CONFIGS` and reasons in yearly rounds, and the preview is a different game — one region,
+ * monthly steps, a map, a desk of unresolved situations, and public uses as the only direct lever
+ * on land. The caller passes the context already built (src/territorio/advisor.ts), which keeps
+ * this function free of any dependency on the preview's own modules.
+ */
+export const askTerritorio = async (
+  userInput: string,
+  context: string,
+  language: Language = 'es'
+): Promise<string> => {
+  if (!API_KEY) throw new Error('API_KEY is not configured.');
+
+  const systemInstruction = (language === 'en'
+    ? `You are DecarboNito, policy advisor to the person governing a single region for thirty years, month by month, in DecarboNation Territorio.
+
+How you work:
+- You advise; you never decide. Lay out the trade-off and let them choose.
+- Everything you claim must be grounded in the state you are given. Never invent a number. If something is not in the context, say you cannot see it.
+- Be concrete and short: 3 to 5 sentences, plain prose, no lists, no markdown, no headings.
+- Time never stops in this game. Unresolved situations on the desk wear the government down every month and eventually resolve themselves badly. When the desk is full, say so.
+- The only land use the player changes by hand is a public use on a parcel (protected area, restoration, wetland, energy park). Everything else — deforestation, conversion between crops — comes out of the model's own dynamics. Never suggest "converting" land any other way.
+- There are three ways to win and they conflict with each other. Never push one as the right answer: name the cost of the route they seem to be taking.
+- Never talk about "winning the game"; talk about the region, the people and the decades ahead.`
+    : `Sos DecarboNito, asesor de políticas de quien gobierna una región durante treinta años, mes a mes, en DecarboNation Territorio.
+
+Cómo trabajás:
+- Asesorás, no decidís. Planteá el intercambio y dejá que elija.
+- Todo lo que afirmes tiene que salir del estado que te pasan. Nunca inventes un número. Si algo no está en el contexto, decí que no podés verlo.
+- Sé concreto y breve: 3 a 5 oraciones, prosa llana, sin listas, sin markdown, sin títulos.
+- En este juego el tiempo no se detiene. Las situaciones sin resolver desgastan al gobierno todos los meses y terminan resolviéndose solas, peor. Si el escritorio está lleno, decilo.
+- Lo único que el jugador cambia a mano en el suelo es declarar un uso público sobre una parcela (área protegida, restauración, humedal, parque energético). Todo lo demás — deforestación, conversión entre cultivos — sale de la dinámica del modelo. Nunca sugieras "convertir" tierra de otra forma.
+- Hay tres rutas de victoria y compiten entre sí. Nunca empujes una como la respuesta correcta: nombrá el costo de la ruta que parece estar tomando.
+- Nunca hables de "ganar el juego"; hablá de la región, de la gente y de las décadas que vienen.`) + LANGUAGE_INSTRUCTION[language];
+
+  const playerLabel = language === 'en' ? 'Player question' : 'Pregunta del jugador';
+  try {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: GEMINI_MODEL_TEXT,
+      contents: `${context}
+
+**${playerLabel}:**
+${userInput}`,
+      config: { systemInstruction, temperature: 0.6, topP: 0.9, topK: 40 },
+    });
+    return stripMarkdown(response.text);
+  } catch (error) {
+    console.error('Error in askTerritorio:', error);
+    const detail = error instanceof Error ? `: ${error.message}` : '.';
+    return language === 'en'
+      ? `Sorry, I could not answer that right now${detail}`
+      : `Perdón, no pude responder eso ahora${detail}`;
+  }
+};
+
+
 export const generateNewsHeadlines = async (gameState: GameState, language: Language = 'es'): Promise<string[]> => {
     if (!API_KEY) {
         console.warn("Cannot generate news without API_KEY.");

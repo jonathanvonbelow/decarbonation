@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../src/constants';
-import { getPolicyEfficiency, productiveCount } from '../../src/sim';
+import { getPolicyEfficiency, PRODUCTIVE_PARCELS, productiveCount } from '../../src/sim';
 import { LandUseType, Policy } from '../../src/types';
 import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS } from '../../src/territorio/situations';
 import {
@@ -20,13 +20,32 @@ function advance(s: Session, months: number): Session {
   return out;
 }
 
+/**
+ * Advances while actually governing: every situation on the desk is settled with its first
+ * affordable option. Ignoring the inbox for years now ends the game (sustained-breach defeat), so
+ * tests about anything else have to keep the desk clear.
+ */
+function govern(s: Session, months: number): Session {
+  let out = s;
+  for (let i = 0; i < months; i++) {
+    out.open.forEach((item) => {
+      const def = SITUATION_BY_ID[item.defId];
+      const option = def?.options.find((o) => (o.cost ?? 0) <= out.game.stellaSpecificState.Reservas_del_Tesoro);
+      if (option) out = decideSituation(out, item.id, option.id).session;
+    });
+    out = advanceMonth(out);
+    if (out.outcome) break;
+  }
+  return out;
+}
+
 describe('Territorio session', () => {
   it('starts in January of the first year with the map matching the model', () => {
     const s = createSession(11);
     expect(s.game.year).toBe(START_YEAR);
     expect(s.month).toBe(0);
     expect(s.game.currentLevel).toBe(2);
-    expect(productiveCount(s.territory)).toBe(120);
+    expect(productiveCount(s.territory)).toBe(PRODUCTIVE_PARCELS);
     expect(s.outcome).toBeNull();
   });
 
@@ -81,13 +100,26 @@ describe('Territorio session', () => {
     expect(togglePact(s, 'biodiversityTreaty').error).toBe('not-unlocked');
     expect(setTaxPressure(s, 10).error).toBe('not-unlocked');
     expect(requestLoan(s, 500).error).toBe('not-unlocked');
-    s = advance(s, (CONTROL_PARAMS.Ano_Activacion_Prestamo - START_YEAR) * 12);
+    s = govern(s, (CONTROL_PARAMS.Ano_Activacion_Prestamo - START_YEAR) * 12);
     expect(s.outcome).toBeNull();
     expect(unlocks(s).finance).toBe(true);
     const taxed = setTaxPressure(s, 999).session;
     expect(taxed.game.additionalTaxPressurePercentage).toBe(CONTROL_PARAMS.Max_Additional_Tax_Rate_Percentage);
     const loan = requestLoan(s, 1e12);
     expect(loan.session.game.loanRequestedThisRound).toBeCloseTo(s.game.stellaSpecificState.PBI_Real * 0.1, 6);
+  });
+
+  it('caps borrowing at 10% of GDP per calendar year, however many times it is asked', () => {
+    let s = createSession(1);
+    s = govern(s, (CONTROL_PARAMS.Ano_Activacion_Prestamo - START_YEAR) * 12);
+    const cap = s.game.stellaSpecificState.PBI_Real * 0.1;
+    s = requestLoan(s, cap / 2).session;
+    s = requestLoan(s, cap).session;
+    expect(s.game.loanRequestedThisRound).toBeCloseTo(cap, 6);
+    expect(requestLoan(s, 100).error).toBe('loan-cap');
+    // A new calendar year opens the credit line again.
+    s = govern(s, 12);
+    expect(requestLoan(s, 100).error).toBeUndefined();
   });
 
   it('declaring a protected area moves area in the model, pays, and is logged', () => {
@@ -170,5 +202,23 @@ describe('Territorio session', () => {
       // Every option but the "do nothing" fallback has to actually do something.
       d.options.slice(0, -1).forEach((o) => expect(o.effects.length + (o.cost ? 1 : 0)).toBeGreaterThan(0));
     });
+  });
+});
+
+describe('sustained breaches (Territorio only)', () => {
+  it('ends the game when a floor stays broken for a whole year, not on a single bad month', () => {
+    // Ignoring the inbox for thirty years used to end in 2054 with the pressures pinned at 100 and
+    // social wellbeing at 0 for two decades: the government never fell.
+    let s = createSession(11);
+    s = advance(s, TOTAL_MONTHS);
+    expect(s.outcome?.kind).toBe('collapse');
+    expect(s.game.year).toBeLessThan(START_YEAR + 20);
+    // The month the streak started, the game was still running.
+    expect(s.monthIndex).toBeGreaterThan(12);
+  });
+
+  it('does not end the game for a government that keeps the desk clear', () => {
+    const s = govern(createSession(11), 12 * 12);
+    expect(s.outcome).toBeNull();
   });
 });

@@ -8,7 +8,14 @@ import { gameOverKind } from '../sim';
 import { Button } from '../components/ui/Button';
 import type { Indicators } from '../types';
 import { fill, useCopy } from './copy';
-import type { Session } from './session';
+import { SUSTAINED_REASONS, type Session } from './session';
+
+/** Which end-of-game copy a collapse gets: the model's four reasons, plus the two sustained ones. */
+function collapseKey(reason: string): keyof ReturnType<typeof useCopy>['c']['end']['reasons'] {
+  if (reason === SUSTAINED_REASONS.socialWellbeing) return 'sustainedSocial';
+  if (reason === SUSTAINED_REASONS.foodSecurity) return 'sustainedFood';
+  return gameOverKind(reason) ?? 'other';
+}
 
 function LangToggle() {
   const { c, locale, setLocale } = useCopy();
@@ -93,7 +100,7 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
       <div className="mx-auto max-w-3xl">
         <p className="label-eyebrow">{c.brand.name}</p>
         <h1 id="end-title" className="mt-2 font-[var(--font-display)] text-3xl text-bone md:text-5xl">{title}</h1>
-        {outcome.kind === 'collapse' && <p className="mt-3 text-[15px] text-ember">{c.end.reasons[gameOverKind(outcome.reason) ?? 'other']}</p>}
+        {outcome.kind === 'collapse' && <p className="mt-3 text-[15px] text-ember">{c.end.reasons[collapseKey(outcome.reason)]}</p>}
         {outcome.kind !== 'won' && (
           <p className="mt-3 text-[15px] text-ash">
             {routes.floorsMet ? fill(c.end.closest, { route: t(routes.closest.route.nameKey) }) : c.end.floorsBroken}

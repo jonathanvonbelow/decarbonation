@@ -2,12 +2,15 @@
  * Heads-up display of the Territorio preview: EcoSIM's floating-panel layout (top bar, side rail,
  * dock, indicator strip) rebuilt on DecarboNation's v3 tokens and fed by the model.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CONTROL_PARAMS } from '../constants';
 import { getEventDescription, getEventName, getIndicatorName, getPactName } from '../legacyContent/gameData';
 import { canDeclare, productiveCount, publicUseCost, PUBLIC_USES, type ParcelKind, type PublicUse } from '../sim';
+import { portraitUrl, type PortraitActor } from './sprites';
+import { useAnchor } from '../components/decarbonito/anchors';
 import { Sparkline } from '../components/ui/Sparkline';
 import { LandUseType } from '../types';
+import { ANCHOR } from './advisorRules';
 import { fill, useCopy, type Copy } from './copy';
 import { HEAT_MODES, type HeatMode } from './heat';
 import type { NewsItem } from './news';
@@ -38,6 +41,7 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
   session: Session; speed: Speed; onSpeed: (s: Speed) => void; onStep: () => void; onExit: () => void;
 }) {
   const { c, fmt, locale, setLocale, monthName } = useCopy();
+  const clockRef = useAnchor<HTMLDivElement>(ANCHOR.clock, 'reloj');
   const m = session.game.indicators;
   const running = speed > 0 && !session.outcome;
   const btn = 'h-10 min-w-10 px-2 text-[13px] transition-colors';
@@ -65,7 +69,7 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
           <p className="label-eyebrow !text-[10px]">{c.hud.score}</p>
           <p className="tnum text-[14px] text-bone">{fmt.big(m.generalScore)}</p>
         </div>
-        <div className="ml-1 flex overflow-hidden rounded-md border border-basalt-600" role="group">
+        <div ref={clockRef} className="ml-1 flex overflow-hidden rounded-md border border-basalt-600" role="group">
           <button type="button" className={`${btn} ${speed === 0 ? 'bg-basalt-600 text-bone' : 'text-ash hover:text-bone'}`} onClick={() => onSpeed(0)} aria-pressed={speed === 0} aria-label={c.hud.pause} title={c.hud.pause}>❚❚</button>
           <button type="button" className={`${btn} ${speed === 1 ? 'bg-basalt-600 text-bone' : 'text-ash hover:text-bone'}`} onClick={() => onSpeed(1)} aria-pressed={speed === 1} aria-label={c.hud.play} title={c.hud.play}>▶</button>
           <button type="button" className={`${btn} ${speed === 4 ? 'bg-basalt-600 text-bone' : 'text-ash hover:text-bone'}`} onClick={() => onSpeed(4)} aria-pressed={speed === 4} title={c.hud.fast}>{c.hud.fast}</button>
@@ -92,12 +96,13 @@ const INDICATORS: { key: IndicatorKey; name: string; color: string; lowerIsBette
 
 export function IndicatorStrip({ session }: { session: Session }) {
   const { locale, fmt, signed } = useCopy();
+  const stripRef = useAnchor<HTMLDivElement>(ANCHOR.indicators, 'indicadores');
   const h = session.history;
   const now = h[h.length - 1];
   const yearAgo = h[Math.max(0, h.length - 13)];
   const recent = h.slice(-36);
   return (
-    <div className="pointer-events-auto panel grid grid-cols-3 gap-1 p-2 md:grid-cols-6">
+    <div ref={stripRef} className="pointer-events-auto panel grid grid-cols-3 gap-1 p-2 md:grid-cols-6">
       {INDICATORS.map((ind) => {
         const value = now[ind.key];
         const delta = value - yearAgo[ind.key];
@@ -141,20 +146,30 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
   session: Session; tool: PublicUse | null; onTool: (t: PublicUse | null) => void; heat: HeatMode; onHeat: (h: HeatMode) => void;
 }) {
   const { c, fmt } = useCopy();
-  const counts = new Map<string, number>();
-  session.territory.parcels.forEach((p) => counts.set(p.kind, (counts.get(p.kind) ?? 0) + 1));
+  const toolsRef = useAnchor<HTMLDivElement>(ANCHOR.tools, 'usos publicos');
   const modelArea = (Object.values(session.game.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0);
   const fallowKHa = Math.max(0, productiveCount(session.territory) * session.territory.kHaPerParcel - modelArea);
+  // 10.000 parcels: walk the map once per month, not once per render.
+  const { fallowParcels, declarable } = useMemo(() => {
+    const t = session.territory;
+    const available = new Set<PublicUse>();
+    let fallowCount = 0;
+    t.parcels.forEach((p) => {
+      if (p.kind === 'fallow') fallowCount++;
+      PUBLIC_USES.forEach((use) => { if (!available.has(use) && canDeclare(t, p.x, p.y, use)) available.add(use); });
+    });
+    return { fallowParcels: fallowCount, declarable: available };
+  }, [session.territory]);
   return (
     <div className="pointer-events-auto flex w-full flex-col gap-2 md:w-60">
       {/* Public uses: the only direct change the player makes to the map (21_fusion_ecosim.md §5). */}
-      <div className="panel p-2">
+      <div ref={toolsRef} className="panel p-2">
         <p className="label-eyebrow mb-1 px-1 !text-[11px]">{c.tools.title}</p>
         <div className="grid grid-cols-2 gap-1 md:grid-cols-1">
           {PUBLIC_USES.map((use) => {
             const useCost = publicUseCost(use, CONTROL_PARAMS);
             const affordable = session.game.stellaSpecificState.Reservas_del_Tesoro >= useCost;
-            const anywhere = session.territory.parcels.some((p) => canDeclare(session.territory, p.x, p.y, use));
+            const anywhere = declarable.has(use);
             return (
               <button
                 key={use}
@@ -200,11 +215,11 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
         )}
       </div>
 
-      {/* Areas straight from the model (kHa); the map draws them in parcels of 5 kHa. */}
+      {/* Areas straight from the model (kHa); the map draws them in parcels of 0.1 kHa (1 km²). */}
       <div className="panel hidden p-2 md:block">
         <p className="label-eyebrow mb-1 flex justify-between px-1 !text-[11px]"><span>{c.legend.title}</span><span>kHa</span></p>
         <ul className="space-y-0.5">
-          {LAND_USE_ORDER.filter((k) => k !== 'fallow' || counts.get('fallow')).map((kind) => (
+          {LAND_USE_ORDER.filter((k) => k !== 'fallow' || fallowParcels > 0).map((kind) => (
             <li key={kind} className="flex items-center gap-2 px-1 text-[12px] text-ash">
               <span className="size-2.5 shrink-0 rounded-sm" style={{ background: SWATCH[kind] }} />
               <span className="flex-1 truncate">{c.kinds[kind as keyof Copy['kinds']]}</span>
@@ -223,6 +238,28 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
 
 const DOCK_ICONS: Record<PanelId, string> = { situations: '✉', policies: '⚖', finance: '◎', routes: '⇢', news: '☰' };
 
+/** One dock button. Its own component so each can register its anchor with a hook. */
+function DockButton({ id, active, onPanel, badge, badgeTone, label }: {
+  id: PanelId; active: boolean; onPanel: (p: PanelId) => void; badge: number; badgeTone: string; label: string;
+}) {
+  const ref = useAnchor<HTMLButtonElement>(`terr-dock-${id}`, label);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={() => onPanel(id)}
+      aria-pressed={active}
+      className={`panel relative flex h-10 min-w-10 items-center gap-2 px-3 text-[13px] ${active ? '!border-ash-dim bg-basalt-700 text-bone' : 'text-ash hover:text-bone'}`}
+    >
+      <span aria-hidden>{DOCK_ICONS[id]}</span>
+      <span className="hidden sm:inline">{label}</span>
+      {badge > 0 && (
+        <span className={`tnum absolute -right-1 -top-1 rounded-full px-1.5 text-[10px] leading-4 text-basalt-950 ${badgeTone}`}>{badge}</span>
+      )}
+    </button>
+  );
+}
+
 export function Dock({ panel, onPanel, unread, open }: {
   panel: PanelId | null; onPanel: (p: PanelId) => void; unread: number; open: number;
 }) {
@@ -230,22 +267,15 @@ export function Dock({ panel, onPanel, unread, open }: {
   return (
     <nav className="pointer-events-auto flex gap-1 md:flex-col" aria-label="panels">
       {(Object.keys(DOCK_ICONS) as PanelId[]).map((id) => (
-        <button
+        <DockButton
           key={id}
-          type="button"
-          onClick={() => onPanel(id)}
-          aria-pressed={panel === id}
-          className={`panel relative flex h-10 min-w-10 items-center gap-2 px-3 text-[13px] ${panel === id ? '!border-ash-dim bg-basalt-700 text-bone' : 'text-ash hover:text-bone'}`}
-        >
-          <span aria-hidden>{DOCK_ICONS[id]}</span>
-          <span className="hidden sm:inline">{c.panels[id]}</span>
-          {id === 'news' && unread > 0 && (
-            <span className="tnum absolute -right-1 -top-1 rounded-full bg-ochre px-1.5 text-[10px] leading-4 text-basalt-950">{unread}</span>
-          )}
-          {id === 'situations' && open > 0 && (
-            <span className="tnum absolute -right-1 -top-1 rounded-full bg-ember px-1.5 text-[10px] leading-4 text-basalt-950">{open}</span>
-          )}
-        </button>
+          id={id}
+          active={panel === id}
+          onPanel={onPanel}
+          label={c.panels[id]}
+          badge={id === 'news' ? unread : id === 'situations' ? open : 0}
+          badgeTone={id === 'news' ? 'bg-ochre' : 'bg-ember'}
+        />
       ))}
     </nav>
   );
@@ -256,7 +286,7 @@ export function Dock({ panel, onPanel, unread, open }: {
 export function Actors({ session }: { session: Session }) {
   const { c, fmt } = useCopy();
   const i = session.game.indicators;
-  const rows: { img: string; name: string; label: string; value: number; bad: boolean }[] = [
+  const rows: { img: PortraitActor; name: string; label: string; value: number; bad: boolean }[] = [
     { img: 'farmer', name: c.actors.farmers, label: c.actors.pressure, value: i.ppAgricola, bad: i.ppAgricola > 70 },
     { img: 'ngo', name: c.actors.environmentalists, label: c.actors.pressure, value: i.ppAmbientalista, bad: i.ppAmbientalista > 70 },
     { img: 'citizen', name: c.actors.citizens, label: c.actors.pressure, value: i.ppSocial, bad: i.ppSocial > 70 },
@@ -268,7 +298,7 @@ export function Actors({ session }: { session: Session }) {
       <ul className="grid grid-cols-2 gap-1 md:grid-cols-1">
         {rows.map((r) => (
           <li key={r.img} className="flex items-center gap-2 rounded px-1 py-0.5">
-            <img src={`/assets/ecosim/portraits/${r.img}.webp`} alt="" className={`size-9 rounded-md object-cover ${r.bad ? 'ring-2 ring-ember' : ''}`} />
+            <img src={portraitUrl(r.img, `${r.img}-rail`)} alt="" className={`size-9 rounded-md object-cover ${r.bad ? 'ring-2 ring-ember' : ''}`} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] text-bone">{r.name}</p>
               <p className="flex items-center gap-1.5 text-[11px] text-ash">

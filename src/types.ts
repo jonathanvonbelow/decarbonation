@@ -465,6 +465,7 @@ export interface ControlParams {
   Costo_Restauracion_Publica_por_kHa: number;
   Costo_Humedal_Publico_por_kHa: number;
   Costo_Parque_Energetico_por_kHa: number;
+  Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: number;
   /** Agricultural-pressure impulse per kHa of *productive* land taken into a public use. */
   Impulso_PP_Agricola_por_kHa_Convertida: number;
   /** Share of total emissions displaced if the whole territory were a public energy park. */

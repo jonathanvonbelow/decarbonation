@@ -98,6 +98,8 @@ export const UI_EN: UIShape = {
     debtRatio: 'Debt/GDP ratio',
     pactsActive: 'Active international pacts',
     treasury: 'Treasury reserves',
+    treasuryPct: 'Treasury reserves (% of GDP)',
+    productivePolicy: 'A productive policy in force',
     publicNature: 'Territory under public conservation use',
     energyPark: 'Territory with public energy park',
   },

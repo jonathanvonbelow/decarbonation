@@ -1,6 +1,6 @@
 /**
  * Balance harness for the Territorio preview (mejora-general/files/21_fusion_ecosim.md §10, F7).
- * Plays five strategies to 2054 — policies, public uses and situations included — and prints where
+ * Plays seven strategies to 2054 — policies, public uses and situations included — and prints where
  * each one lands against the preview's own win routes (src/territorio/routes.ts).
  *
  * The calibration rule: the strategy that pursues a route wins it, doing nothing loses, and no
@@ -50,6 +50,18 @@ const STRATEGIES: Strategy[] = [
       { policy: Policy.CarbonNeutrality, instrument: 'C_Investigacion_Desarrollo_Captura_Carbono' },
     ],
     joinPacts: true, settle: 'first',
+  },
+  {
+    // The two shapes the engine review found unguarded: governing nothing but the inbox, and
+    // buying the whole map. Neither should win a route on its own.
+    name: 'settle_only', policies: [], uses: [], settle: 'first',
+  },
+  {
+    name: 'buy_everything',
+    policies: [Policy.CarbonNeutrality],
+    uses: ['protected', 'wetland', 'restoration', 'energy', 'protected', 'wetland', 'restoration', 'energy',
+      'protected', 'wetland', 'restoration', 'energy', 'protected', 'restoration', 'energy', 'protected'],
+    settle: 'first',
   },
   {
     name: 'balanced',

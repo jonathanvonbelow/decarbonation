@@ -68,3 +68,28 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 - [ ] `reports/balance.md` (Monte Carlo, 8 estrategias) — pendiente, Fase 5.
 - [x] Un hallazgo real documentado (L-1: eventos rompen la conservación de área) con su etiqueta
       y sin corrección apresurada.
+
+## Cambios de modelo de la fase v4 / F8 (2026-09-19)
+
+Todos limitados a la vista previa Territorio: `stepYear` y el juego de 3 niveles quedan idénticos
+(`npm run sim` da los mismos números antes y después).
+
+| ID | Cambio | Dónde | Efecto sobre el juego de 3 niveles |
+|---|---|---|---|
+| F8-1 | La restauración pública madura hacia **bosque nativo protegido** (antes, no protegido). La tasa (`Tasa_de_RES_a_BNNP_Base`, 4 %/año) no cambia; cambia el destino del flujo. | `src/sim/landUse.ts` (`RES_to_BNP`), `src/sim/monthly.ts` | Ninguno: ningún nivel del juego de 3 niveles tiene área RES, así que el término vale exactamente 0 ahí. El área sigue conservándose (`tests/sim/invariants.spec.ts`). |
+| F8-2 | Nuevo parámetro `Costo_Mantenimiento_Uso_Publico_por_kHa_Anual` (0,8): el área bajo uso público (BNP + HUM + RES + ENR) paga mantenimiento anual, cobrado como 1/12 por mes. | `src/constants.ts`, `src/sim/monthly.ts` (opción `publicUseUpkeep`) | Ninguno: la opción está apagada por defecto y sólo la enciende `advanceMonth` de Territorio. `stepMonth` sigue siendo la discretización exacta de `stepYear` sin ella (`tests/sim/monthly.spec.ts`). |
+| F8-3 | El costo de las opciones de las situaciones escala con √(PBI_Real / PBI inicial), con techo 2,5×. | `src/territorio/situations/index.ts` (`situationCost`) | Ninguno: las situaciones son sólo de Territorio. Calibrado: con escala lineal la estrategia de conservación se quedaba sin ninguna opción pagable (bio 60 → 46 en `npm run sim:territorio`). |
+| F8-4 | Derrota por incumplimiento sostenido: bienestar social < 10 o seguridad alimentaria < 20 durante 12 meses seguidos. | `src/territorio/session.ts` (`BREACHES`) | Ninguno: `evaluateGameOver` no cambia; esto se suma sólo en la sesión de Territorio. |
+| F8-5 | Ruta de producción: el tesoro se mide como **% del PBI** (≥ 8) en vez de un valor fijo (1.000), sube seguridad económica a 36 y se exige una familia productiva activa. Conservación pide biodiversidad ≥ 45,5 (era 47); innovación, emisiones ≤ 6,2 (era 5,5) y parque energético ≥ 1,6 % (era 2,5). | `src/territorio/routes.ts` | Ninguno: `LEVEL_ROUTES` no se toca. |
+| F8-6 | El préstamo se topea por año calendario (10 % del PBI) y el lock-in de políticas cuenta meses. | `src/territorio/session.ts` | Ninguno: son reglas de la sesión mensual; en el juego anual una ronda ya es un año. |
+
+Calibración resultante (`npm run sim:territorio`, 7 estrategias × 3 semillas): no hacer nada pierde
+antes de 2040 por incumplimiento sostenido; conservación 3/3; producción 2/3; innovación 2/3;
+"sólo resolver la bandeja" 0/3 (antes ganaba producción); "comprar todo" gana conservación e
+innovación —es una estrategia deliberada de gasto público, no un agujero— y "todo a la vez" pierde
+por quiebra.
+
+**Tensión que queda abierta.** Aun con mantenimiento y situaciones más caras, una partida sin
+políticas termina con decenas de miles en el tesoro: el ingreso público crece con el PBI y el gasto
+no. El tope por ruta lo neutraliza como vía de victoria, pero el dinero sigue sin ser escaso en la
+segunda mitad de la partida.

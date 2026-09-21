@@ -17,8 +17,8 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, evaluateGameOver, makeRng, publicUseTarget,
-  stepMonth, syncTerritory,
+  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, evaluateGameOver, makeRng,
+  MONTHS_PER_YEAR, stepMonth, syncTerritory,
   type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -26,9 +26,10 @@ import { Policy } from '../types';
 import type { Language } from '../hooks/useLanguage';
 import { INSTRUMENTS_UNLOCK_YEAR, TERRITORIO_LEVEL, TOTAL_MONTHS } from './calendar';
 import { evaluateTerritorio } from './routes';
-import { buildMonthNews, unlockNews, type NewsItem } from './news';
+import { mapFx, type FxId } from './fx';
+import { buildMonthNews, tallyLand, unlockNews, type NewsItem } from './news';
 import {
-  applyWear, defaultOption, resolveSituation, rollSituation, SITUATION_BY_ID, type OpenSituation,
+  applyWear, defaultOption, resolveSituation, rollSituation, situationCost, SITUATION_BY_ID, type OpenSituation,
 } from './situations';
 
 export * from './calendar';
@@ -79,8 +80,18 @@ export interface Session {
   /** The model's own random event that fired this month, if any. Shown as a note, never as a modal. */
   lastEvent: RandomEvent | null;
   outcome: Outcome | null;
-  /** Parcels the player declared protected, total. */
+  /** Public-use lots the player declared, total. */
   declaredCount: number;
+  /** What is happening on each parcel this month (fx.ts), by parcel index. */
+  fx: Record<number, FxId>;
+  /** Month index each active policy was switched on, for the 5-year lock-in. */
+  policyActivatedAt: Partial<Record<Policy, number>>;
+  /** Loans taken this calendar year: the 10%-of-GDP cap is per year, as in the 3-level game. */
+  borrowed: { year: number; amount: number };
+  /** km² per land transition not yet reported in the news (news.ts `tallyLand`). */
+  landTally: Record<string, number>;
+  /** Consecutive months each sustained-breach condition has been failing (see `BREACHES`). */
+  breach: Record<string, number>;
 }
 
 export interface Unlocks {
@@ -140,12 +151,13 @@ export function newGameState(CP: ControlParams = CONTROL_PARAMS): GameState {
 
 export function createSession(seed: number): Session {
   const game = newGameState();
+  const territory = developTerritory(createTerritory(game.landUses, seed), developmentOf(game)).territory;
   return {
     seed,
     game,
     month: 0,
     monthIndex: 0,
-    territory: createTerritory(game.landUses, seed),
+    territory,
     lastChanges: { tick: 0, list: [] },
     history: [sample(game, 0)],
     news: [],
@@ -157,7 +169,43 @@ export function createSession(seed: number): Session {
     lastEvent: null,
     outcome: null,
     declaredCount: 0,
+    fx: mapFx({ territory, game, open: [], event: null, month: 0, monthIndex: 0 }),
+    policyActivatedAt: {},
+    borrowed: { year: game.year, amount: 0 },
+    landTally: {},
+    breach: {},
   };
+}
+
+/**
+ * A government that stops governing does not get to the end of the term. The 3-level game only
+ * checks its collapse conditions on the value of the moment (`evaluateGameOver`); here, where the
+ * clock runs monthly and situations are meant to be answered, a floor broken *for a whole year in
+ * a row* ends the game (decisión del usuario, 2026-09-19). One bad month still does not.
+ */
+export const BREACH_MONTHS = 12;
+/**
+ * Reasons are compared by identity, like the model's own `GAME_OVER_REASONS`, so the screens can
+ * show them in either language (they are never displayed as-is).
+ */
+export const SUSTAINED_REASONS = {
+  socialWellbeing: 'Bienestar social por debajo de 10 durante doce meses seguidos.',
+  foodSecurity: 'Seguridad alimentaria por debajo de 20 durante doce meses seguidos.',
+} as const;
+const BREACHES: { id: keyof typeof SUSTAINED_REASONS; failing: (g: GameState) => boolean }[] = [
+  { id: 'socialWellbeing', failing: (g) => g.indicators.socialWellbeing < 10 },
+  { id: 'foodSecurity', failing: (g) => g.indicators.foodSecurity < 20 },
+];
+
+/** Updates the streak counters and returns the reason to end the game, if one is now sustained. */
+function sustainedBreach(prev: Record<string, number>, game: GameState): { breach: Record<string, number>; reason: string | null } {
+  const breach: Record<string, number> = {};
+  let reason: string | null = null;
+  BREACHES.forEach((b) => {
+    breach[b.id] = b.failing(game) ? (prev[b.id] ?? 0) + 1 : 0;
+    if (breach[b.id] >= BREACH_MONTHS && !reason) reason = SUSTAINED_REASONS[b.id];
+  });
+  return { breach, reason };
 }
 
 const evaluateRoutes = (game: GameState): LevelOutcome => evaluateTerritorio(game, { ...game, indicators: game.levelBaseline });
@@ -171,8 +219,11 @@ function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
 export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): Session {
   if (s.outcome) return s;
   const before = unlocks(s, CP);
-  const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, { fiscalTermsActive: before.finance });
-  const { territory, changes } = syncTerritory(s.territory, r.next.landUses, r.flows);
+  const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
+    fiscalTermsActive: before.finance,
+    publicUseUpkeep: true,
+  });
+  const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
   const monthIndex = s.monthIndex + 1;
 
   let game = r.next;
@@ -216,6 +267,12 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     });
   }
 
+  // Decided or expired situations can move land too: the map follows the model's final areas.
+  const settled = game.landUses === r.next.landUses ? synced : syncTerritory(synced.territory, game.landUses);
+  const developed = developTerritory(settled.territory, developmentOf(game));
+  const territory = developed.territory;
+  const changes = [...synced.changes, ...(settled === synced ? [] : settled.changes), ...developed.changes];
+
   const next: Session = {
     ...s,
     game,
@@ -223,6 +280,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     monthIndex,
     territory,
     lastChanges: { tick: s.lastChanges.tick + 1, list: changes },
+    fx: mapFx({ territory, game, open, event: r.event, month: s.month, monthIndex }),
     history: [...s.history, sample(game, monthIndex)],
     open,
     wearTotal: s.wearTotal + wornTotal,
@@ -230,6 +288,8 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     lastEvent: r.event,
   };
 
+  const land = tallyLand(s.landTally, changes, territory.kHaPerParcel);
+  next.landTally = land.tally;
   const items = buildMonthNews({
     prev: s.game,
     next: r.next,
@@ -237,7 +297,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     simulatedMonth: s.month,
     monthIndex,
     event: r.event,
-    changes,
+    land: land.report,
     engineMessages: r.chatMessages.filter((m) => m.emphasisType === 'policy_efficiency_warning').map((m) => m.text),
     yearRolled: r.yearRolled,
     yearStart: s.yearStart,
@@ -247,7 +307,11 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   items.push(...situationNews);
   next.news = pushNews(s.news, items);
 
-  const gameOver = evaluateGameOver(game);
+  const sustained = sustainedBreach(s.breach, game);
+  next.breach = sustained.breach;
+  const gameOver = evaluateGameOver(game) ?? sustained.reason;
+  // stepMonth may have flagged a collapse that the situations applied after it undid.
+  if (!gameOver && game.gameOverReason) next.game = { ...game, gameOverReason: null };
   if (gameOver) {
     next.game = { ...game, gameOverReason: gameOver };
     next.outcome = { kind: 'collapse', reason: gameOver, routes: evaluateRoutes(next.game) };
@@ -267,7 +331,7 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
   const option = def.options.find((o) => o.id === optionId);
   if (!option) return { session: s };
   const applied = resolveSituation(s.game, item.defId, optionId, CP, language);
-  if (!applied.ok) return { session: s, error: 'insufficient-funds', detail: { cost: option.cost ?? 0 } };
+  if (!applied.ok) return { session: s, error: 'insufficient-funds', detail: { cost: Math.round(situationCost(option.cost ?? 0, s.game)) } };
 
   const news: NewsItem = {
     id: `${item.id}-done`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,
@@ -289,7 +353,7 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
 /* ── Player actions ────────────────────────────────────────────────────────────────────────── */
 
 export type ActionError =
-  | 'max-active' | 'locked' | 'not-unlocked' | 'insufficient-funds' | 'invalid-amount' | 'game-over'
+  | 'max-active' | 'locked' | 'not-unlocked' | 'insufficient-funds' | 'invalid-amount' | 'game-over' | 'loan-cap'
   | PublicUseError;
 
 export interface ActionResult {
@@ -305,11 +369,13 @@ export function togglePolicy(s: Session, policyId: Policy): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
   const policies = clonePolicies(s);
   const p = policies[policyId];
+  let activatedAt = s.policyActivatedAt;
   if (!p.isActive) {
     const active = (Object.values(policies) as PolicyState[]).filter((x) => x.isActive).length;
     if (active >= MAX_ACTIVE_POLICIES) return { session: s, error: 'max-active', detail: { max: MAX_ACTIVE_POLICIES } };
     p.isActive = true;
     p.currentEfficiency = p.initialEfficiency || 1;
+    activatedAt = { ...s.policyActivatedAt, [policyId]: s.monthIndex };
     p.previousEfficiencyForNotification = p.currentEfficiency;
     if (p.instruments) {
       const ids = Object.keys(p.instruments);
@@ -318,17 +384,23 @@ export function togglePolicy(s: Session, policyId: Policy): ActionResult {
       p.totalInstrumentEffortApplied = ids.length > 0 ? 100 : 0;
     }
   } else {
-    if (p.activationYear !== undefined && s.game.year < p.activationYear + POLICY_LOCK_IN_DURATION) {
-      return { session: s, error: 'locked', detail: { year: p.activationYear + POLICY_LOCK_IN_DURATION } };
+    // Lock-in counts months, not calendar years: a policy switched on in December used to be
+    // free to drop after barely four years.
+    const since = s.policyActivatedAt[policyId];
+    const lockedUntil = since !== undefined ? since + POLICY_LOCK_IN_DURATION * MONTHS_PER_YEAR : undefined;
+    if (lockedUntil !== undefined && s.monthIndex < lockedUntil) {
+      return { session: s, error: 'locked', detail: { year: s.game.year + Math.ceil((lockedUntil - s.monthIndex) / MONTHS_PER_YEAR) } };
     }
     p.isActive = false;
     p.activationYear = undefined;
+    activatedAt = { ...s.policyActivatedAt };
+    delete activatedAt[policyId];
     if (p.instruments) {
       (Object.values(p.instruments) as PolicyInstrument[]).forEach((inst) => { inst.effortPercentage = 0; });
       p.totalInstrumentEffortApplied = 0;
     }
   }
-  return { session: { ...s, game: { ...s.game, policies } } };
+  return { session: { ...s, game: { ...s.game, policies }, policyActivatedAt: activatedAt } };
 }
 
 /** Same capping rule as the 3-level game: an instrument can take at most what is left of 100%. */
@@ -376,15 +448,27 @@ export function setTaxPressure(s: Session, pct: number, CP: ControlParams = CONT
   return { session: { ...s, game: { ...s.game, additionalTaxPressurePercentage: value } } };
 }
 
-/** Maximum loan: 10% of real GDP, as in the 3-level game. */
-export const maxLoan = (s: Session): number => s.game.stellaSpecificState.PBI_Real * 0.1;
+/**
+ * Maximum loan: 10% of real GDP *per calendar year*, as in the 3-level game, where a round is a
+ * year. Without the yearly ceiling, monthly rounds would let a player borrow 120% of GDP a year,
+ * or any amount at all by asking twelve times in the same month.
+ */
+export const maxLoan = (s: Session): number =>
+  Math.max(0, s.game.stellaSpecificState.PBI_Real * 0.1 - (s.borrowed.year === s.game.year ? s.borrowed.amount : 0));
 
 export function requestLoan(s: Session, amount: number, CP: ControlParams = CONTROL_PARAMS): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
   if (!unlocks(s, CP).finance) return { session: s, error: 'not-unlocked', detail: { year: CP.Ano_Activacion_Prestamo } };
   if (!(amount > 0)) return { session: s, error: 'invalid-amount' };
   const granted = Math.min(amount, maxLoan(s));
-  return { session: { ...s, game: { ...s.game, loanRequestedThisRound: s.game.loanRequestedThisRound + granted } }, detail: { amount: Math.round(granted) } };
+  if (granted <= 0) return { session: s, error: 'loan-cap', detail: { year: s.game.year } };
+  const borrowed = s.borrowed.year === s.game.year
+    ? { year: s.game.year, amount: s.borrowed.amount + granted }
+    : { year: s.game.year, amount: granted };
+  return {
+    session: { ...s, borrowed, game: { ...s.game, loanRequestedThisRound: s.game.loanRequestedThisRound + granted } },
+    detail: { amount: Math.round(granted) },
+  };
 }
 
 /**
@@ -393,12 +477,13 @@ export function requestLoan(s: Session, amount: number, CP: ControlParams = CONT
  */
 export function declareUse(s: Session, x: number, y: number, use: PublicUse, CP: ControlParams = CONTROL_PARAMS): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
-  const r = declarePublicUse(s.game, s.territory, x, y, use, CP);
+  const r = declarePublicUse(s.game, s.territory, x, y, use, CP, s.monthIndex);
   if (!r.ok) return { session: s, error: (r as { reason: PublicUseError }).reason };
   const ok = r as Extract<typeof r, { ok: true }>;
   const item: NewsItem = {
     id: `p-${s.monthIndex}-${x}-${y}`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,
-    kind: 'player', tone: 'good', key: 'declared', values: { cost: Math.round(ok.cost), use },
+    kind: 'player', tone: 'good', key: 'declared',
+    values: { cost: Math.round(ok.cost), use, km2: Math.round(ok.cells.length * s.territory.kHaPerParcel * 10) },
   };
   return {
     session: {
@@ -409,10 +494,13 @@ export function declareUse(s: Session, x: number, y: number, use: PublicUse, CP:
       news: pushNews(s.news, [item]),
       lastChanges: {
         tick: s.lastChanges.tick + 1,
-        list: [{ x, y, from: s.territory.parcels[y * s.territory.size + x].kind, to: publicUseTarget(use) }],
+        list: ok.cells.map((i) => ({
+          x: i % s.territory.size, y: (i / s.territory.size) | 0,
+          from: s.territory.parcels[i].kind, to: ok.territory.parcels[i].kind,
+        })),
       },
     },
-    detail: { cost: Math.round(ok.cost) },
+    detail: { cost: Math.round(ok.cost), km2: Math.round(ok.cells.length * s.territory.kHaPerParcel * 10) },
   };
 }
 

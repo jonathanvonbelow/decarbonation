@@ -521,6 +521,9 @@ export const CONTROL_PARAMS: ControlParams = {
   Costo_Restauracion_Publica_por_kHa: 60,
   Costo_Humedal_Publico_por_kHa: 45,
   Costo_Parque_Energetico_por_kHa: 80,
+  // Vista previa Territorio: lo declarado se mantiene (guardaparques, vivero, obra, operación).
+  // Sólo lo lee stepMonth con `publicUseUpkeep`; el juego de 3 niveles nunca lo aplica.
+  Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: 0.8,
   // Sacar tierra productiva de producción tensiona al gremio agrícola: 0,08 por kHa = 0,4 puntos
   // de presión por parcela convertida. Proteger bosque no aplica este impulso.
   Impulso_PP_Agricola_por_kHa_Convertida: 0.08,
