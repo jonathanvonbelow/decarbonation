@@ -1,8 +1,9 @@
 /**
  * Landing page behavior (20_landing_shareables.md). The landing itself is static HTML+CSS (§2:
- * "no una ruta de la SPA") — this is the ONLY script it loads, and it never mounts React. Two
- * jobs: the es/en toggle, and the two funnel events this page alone can emit (`landing_view` on
- * load, `play_click` on any CTA that leads to /play).
+ * "no una ruta de la SPA") — this is the ONLY script it loads, and it never mounts React. Three
+ * jobs: the es/en toggle, the funnel events this page alone can emit (`landing_view` on load,
+ * `play_click` and `preview_click` on the CTAs), and the screenshot carousel, which is a plain
+ * scroll-snap strip that works without this script and only gains its buttons and dots here.
  */
 import { logFunnelEventLite as logFunnelEvent } from './services/funnelTelemetryLite';
 
@@ -54,17 +55,73 @@ function initFunnelTracking(): void {
 
   document.querySelectorAll<HTMLAnchorElement>('a[href^="/play"]').forEach((link) => {
     link.addEventListener('click', () => {
-      const origin = link.id === 'cta-play' ? 'hero' : link.id === 'cta-demo' ? 'demo' : 'audience_card';
+      // The 3-level game is no longer the hero CTA: it now starts from its own section.
+      const origin = link.id === 'cta-play' ? 'main_game_section' : link.id === 'cta-demo' ? 'demo' : 'audience_card';
       logFunnelEvent('play_click', { origin });
     });
   });
 
-  // v4 preview link (21_fusion_ecosim.md): its own event, so interest in what comes next is
-  // measurable without inflating the main game's `play_click` funnel.
+  // Territorio keeps its own event, so the two funnels stay separable now that the preview is
+  // what the page leads with (21_fusion_ecosim.md; reordenado 2026-09-21).
   document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio"]').forEach((link) => {
-    link.addEventListener('click', () => logFunnelEvent('preview_click', { preview: 'territorio' }));
+    link.addEventListener('click', () => {
+      logFunnelEvent('preview_click', { preview: 'territorio', origin: link.id === 'cta-territorio' ? 'hero' : 'other' });
+    });
+  });
+}
+
+/**
+ * Screenshot carousel. The markup is a scroll-snap strip: with no JS it still scrolls and snaps,
+ * so this only adds the previous/next buttons, the dots and arrow-key support.
+ */
+function initCarousel(): void {
+  const track = document.getElementById('shots');
+  const dotsBox = document.getElementById('shots-dots');
+  if (!track || !dotsBox) return;
+  const slides = Array.from(track.querySelectorAll<HTMLElement>('.carousel-slide'));
+  if (slides.length < 2) return;
+
+  const currentIndex = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+  const goTo = (i: number) => {
+    const clamped = (i + slides.length) % slides.length;
+    track.scrollTo({ left: clamped * track.clientWidth, behavior: 'smooth' });
+  };
+
+  const dots = slides.map((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'carousel-dot';
+    dot.setAttribute('aria-label', `${i + 1} / ${slides.length}`);
+    dot.addEventListener('click', () => goTo(i));
+    dotsBox.appendChild(dot);
+    return dot;
+  });
+
+  const paint = () => {
+    const current = currentIndex();
+    dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === current)));
+  };
+  paint();
+
+  let ticking = false;
+  track.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(() => {
+      paint();
+      ticking = false;
+    });
+  });
+  window.addEventListener('resize', paint);
+
+  document.getElementById('shots-prev')?.addEventListener('click', () => goTo(currentIndex() - 1));
+  document.getElementById('shots-next')?.addEventListener('click', () => goTo(currentIndex() + 1));
+  track.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); goTo(currentIndex() + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(currentIndex() - 1); }
   });
 }
 
 initLocale();
 initFunnelTracking();
+initCarousel();

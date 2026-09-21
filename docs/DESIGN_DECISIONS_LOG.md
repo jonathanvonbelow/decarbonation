@@ -1602,3 +1602,32 @@ celdas "fuera del territorio" rodeadas de mar se rellenan con agua para que no q
 **Deuda conocida.** Aun con mantenimiento y situaciones más caras, una partida sin políticas termina
 con decenas de miles en el tesoro: el ingreso público crece con el PBI y el gasto no. El tope por
 ruta lo neutraliza como vía de victoria, pero el dinero deja de ser escaso en la segunda mitad.
+
+## 2026-09-21 — Landing: Territorio pasa al frente, con carrusel de capturas reales
+
+**De dónde sale.** Pedido del usuario: invertir la prioridad de la página. Hasta acá la landing
+encabezaba con el juego de 3 niveles y dejaba Territorio al final, en una tarjeta de "lo próximo"
+(decisión de `21_fusion_ecosim.md` §2, cuando la vista previa todavía no era jugable de punta a
+punta). Con el territorio de 100 × 100 desplegado, el orden quedó al revés de lo que la página
+ofrece mejor.
+
+**Qué cambia.**
+
+- **Hero = Territorio**, con su cartel de "en desarrollo · vista previa jugable" y el aviso de que
+  no guarda la partida. CTA principal a `/territorio`; el enlace secundario baja al juego de 3
+  niveles en vez de ir a `/play`.
+- **Carrusel de siete capturas reales** debajo del hero: territorio completo, detalle del mapa,
+  ficha de parcela, capa de carbono, bandeja de situaciones, panel de políticas y rutas de
+  victoria. No son mockups: se tomaron con Playwright contra producción y se guardaron como WebP
+  de 1200 px (570 kB las siete). El markup es una tira con `scroll-snap`: sin JavaScript se
+  desplaza y encaja igual, y `src/landing.ts` sólo le agrega botones, puntos y flechas del teclado.
+- **El juego de 3 niveles baja a su propia sección** (`#juego-principal`), presentado por lo que lo
+  distingue —paso anual, tres niveles encadenados, panel de facilitación, guarda la partida— y
+  descrito como el entorno más exigente, de laboratorio de datos. La micro-animación que estaba en
+  el hero se mudó con él.
+- **Telemetría**: el CTA del juego principal reporta `origin: 'main_game_section'` en vez de
+  `'hero'`, y `preview_click` distingue el hero del resto. Los dos embudos siguen separados.
+- Título, descripción y Open Graph pasan a hablar de Territorio.
+
+**Verificación.** `tsc` limpio, build limpio, 163/163 tests, y revisado sobre el build servido:
+hero, carrusel (botones, puntos, teclado), sección del juego de 3 niveles y ancho de celular.

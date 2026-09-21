@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DecarboNation — Simulador de política climática AFOLU</title>
-    <meta name="description" content="Dirigí la política climática de un país. 15–40 minutos. Sin registro. Un simulador estratégico del sector AFOLU para aula, taller o autoexploración." />
+    <title>DecarboNation Territorio — Simulador de política climática AFOLU</title>
+    <meta name="description" content="Gobernás una región durante 30 años, mes a mes, sobre un territorio que cambia a la vista. Simulador del sector AFOLU para aula, taller o autoexploración. Sin registro." />
 
     <!-- Open Graph / Twitter Card (20_landing_shareables.md §6). og:image intencionalmente
          omitido: no existe ningún asset PNG 1200x630 en este repo y no hay herramienta de
@@ -13,8 +13,8 @@
          título+descripción sin imagen). Agregar /og-default.png antes de este deploy real y
          restaurar la etiqueta -- ver docs/DESIGN_DECISIONS_LOG.md, fase 11. -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="DecarboNation — Simulador de política climática AFOLU">
-    <meta property="og:description" content="Dirigí la política climática de un país. 15–40 minutos. Sin registro.">
+    <meta property="og:title" content="DecarboNation Territorio — Simulador de política climática AFOLU">
+    <meta property="og:description" content="Gobernás una región 30 años, mes a mes, sobre un mapa que cambia a la vista. Sin registro.">
     <meta property="og:url" content="https://decarbonation.vercel.app/">
     <meta name="twitter:card" content="summary">
 
@@ -69,60 +69,108 @@
     </header>
 
     <main>
-      <!-- ══════════════════════════ HERO ══════════════════════════ -->
-      <section class="container mx-auto px-4 pt-12 pb-10 sm:pt-16 sm:pb-14">
+      <!-- ══════════════════════════ HERO ══════════════════════════
+           Orden de prioridad (pedido del usuario, 2026-09-21): Territorio primero, con su aviso
+           de versión en desarrollo; el juego de 3 niveles queda debajo, presentado por lo que es
+           — el entorno más exigente, de laboratorio de datos. -->
+      <section class="container mx-auto px-4 pt-12 pb-8 sm:pt-16 sm:pb-10">
         <div class="max-w-3xl">
           <span class="label-eyebrow">Proyecto IKI · Fundación Bariloche · FCF-UNaM · CONICET</span>
-          <h1 class="mt-2 text-3xl sm:text-5xl font-bold font-[var(--font-display)] leading-tight">
-            <span data-lang="es">Dirigí la política climática de un país. Vas a poder explicar por qué chocan mitigación y economía.</span>
-            <span data-lang="en" hidden>Run a country's climate policy. You'll be able to explain why mitigation and the economy collide.</span>
+          <p class="mt-3 inline-block rounded border border-ochre/50 px-2 py-0.5 text-xs text-ochre">
+            <span data-lang="es">En desarrollo · vista previa jugable</span>
+            <span data-lang="en" hidden>In development · playable preview</span>
+          </p>
+          <h1 class="mt-3 text-3xl sm:text-5xl font-bold font-[var(--font-display)] leading-tight">
+            <span data-lang="es">Gobernás una región durante 30 años. El territorio cambia a la vista, mes a mes.</span>
+            <span data-lang="en" hidden>Govern a region for 30 years. The territory changes before your eyes, month by month.</span>
           </h1>
           <p class="mt-4 text-base sm:text-lg text-ash max-w-2xl">
-            <span data-lang="es">Un simulador estratégico del sector AFOLU: activás políticas, simulás años, y un asesor te avisa lo que se te está por escapar. 15–40 minutos, sin registro.</span>
-            <span data-lang="en" hidden>A strategic AFOLU-sector simulator: activate policies, simulate years, and an advisor flags what's about to slip past you. 15–40 minutes, no signup.</span>
+            <span data-lang="es">DecarboNation Territorio: el mismo modelo climático del sector AFOLU, ahora sobre un mapa de 10.000 parcelas donde ves avanzar la frontera agrícola, crecer las áreas protegidas y reaccionar a productores, ambientalistas y ciudadanía. Sin registro.</span>
+            <span data-lang="en" hidden>DecarboNation Territory: the same AFOLU climate model, now on a map of 10,000 parcels where you watch the farming frontier advance, protected areas grow, and farmers, environmentalists and citizens react. No signup.</span>
           </p>
           <div class="mt-7 flex flex-wrap items-center gap-4">
-            <a href="/play" id="cta-play" class="px-6 py-3 bg-chlorophyll text-basalt-950 font-semibold rounded-lg hover:brightness-110 transition-colors text-base sm:text-lg">
-              <span data-lang="es">Jugar ahora</span>
-              <span data-lang="en" hidden>Play now</span>
+            <a href="/territorio" id="cta-territorio" class="px-6 py-3 bg-chlorophyll text-basalt-950 font-semibold rounded-lg hover:brightness-110 transition-colors text-base sm:text-lg">
+              <span data-lang="es">Jugar Territorio</span>
+              <span data-lang="en" hidden>Play Territory</span>
             </a>
-            <a href="/play?demo=1" id="cta-demo" class="text-sm text-hydro hover:underline">
-              <span data-lang="es">Ver una demo guiada de 8 minutos →</span>
-              <span data-lang="en" hidden>See an 8-minute guided demo →</span>
+            <a href="#juego-principal" class="text-sm text-hydro hover:underline">
+              <span data-lang="es">Ver el juego de 3 niveles, más exigente ↓</span>
+              <span data-lang="en" hidden>See the harder 3-level game ↓</span>
             </a>
           </div>
+          <p class="mt-4 text-sm text-ash-dim" data-lang="es">Es una versión en desarrollo: puede cambiar y todavía no guarda la partida.</p>
+          <p class="mt-4 text-sm text-ash-dim" data-lang="en" hidden>This is a version in development: it may change and does not save your game yet.</p>
         </div>
       </section>
 
-      <!-- ══════════════════════════ DEMOSTRACIÓN ══════════════════════════
-           §3 pide un video/GIF de 20s en loop. No hay herramienta de grabación de pantalla ni
-           asset de video en este entorno -- se construyó en su lugar una micro-animación
-           CSS/SVG que representa la misma secuencia (activar política → simular → indicadores
-           cambian → informe), sin audio, coherente con el resto de la landing en costo (0 kB
-           de video) y consistente con el patrón ya usado en CoverScreen.tsx para su
-           ilustración. Documentado como sustituto, no como el asset real pedido. -->
+      <!-- ══════════════════════════ CARRUSEL ══════════════════════════
+           Capturas reales de la vista previa desplegada (no mockups), tomadas con Playwright
+           contra producción. Un solo script (src/landing.ts) las mueve; sin JS quedan igual,
+           una al lado de la otra, con scroll horizontal. -->
       <section class="container mx-auto px-4 pb-14">
-        <div class="panel p-4 sm:p-6 max-w-3xl mx-auto" role="img"
-             aria-label="Animación: activar una política, simular un año, los indicadores cambian y aparece un informe">
-          <div class="demo-strip">
-            <div class="demo-frame demo-frame-1">
-              <span class="label-eyebrow">Panel de Políticas</span>
-              <div class="demo-toggle"><div class="demo-toggle-dot"></div></div>
-              <span class="text-sm text-bone">Políticas Agroecológicas</span>
+        <div class="max-w-4xl mx-auto">
+          <div class="panel overflow-hidden p-0">
+            <div id="shots" class="carousel-track" tabindex="0" role="group"
+                 aria-roledescription="carrusel" aria-label="Capturas de DecarboNation Territorio">
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-territorio.webp" width="1200" height="706" alt="Mapa isométrico del territorio completo con sus cuatro regiones rotuladas, el río y la costa" />
+                <figcaption>
+                  <span data-lang="es">Una región entera: cuatro zonas, río, costa y ciudades. Cada parcela es 1 km² que el modelo contabiliza.</span>
+                  <span data-lang="en" hidden>A whole region: four zones, river, coast and cities. Each parcel is 1 km² the model accounts for.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-detalle.webp" width="1200" height="706" loading="lazy" alt="Vista cercana del mapa: cultivos, pasturas, bosque, caminos y el río" />
+                <figcaption>
+                  <span data-lang="es">De cerca, el uso del suelo es el que calcula el modelo: cultivos, pasturas, plantaciones, bosque nativo, caminos y agua.</span>
+                  <span data-lang="en" hidden>Up close, the land use is the one the model computes: crops, pasture, plantations, native forest, roads and water.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-parcela.webp" width="1200" height="706" loading="lazy" alt="Ficha de una parcela con su aporte al carbono, la biodiversidad, los alimentos y la economía" />
+                <figcaption>
+                  <span data-lang="es">Tocás una parcela y ves qué aporta al balance de carbono, a la biodiversidad, a los alimentos y a la economía.</span>
+                  <span data-lang="en" hidden>Tap a parcel and see what it contributes to the carbon balance, biodiversity, food and the economy.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-carbono.webp" width="1200" height="706" loading="lazy" alt="El territorio teñido por la capa de análisis de carbono: verde donde captura, naranja donde emite" />
+                <figcaption>
+                  <span data-lang="es">Capas de análisis sobre el mapa: dónde el territorio captura carbono y dónde lo emite, con los coeficientes del propio modelo.</span>
+                  <span data-lang="en" hidden>Analysis layers over the map: where the territory stores carbon and where it emits, straight from the model's own coefficients.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-situaciones.webp" width="1200" height="706" loading="lazy" alt="Bandeja de situaciones: casos que llegan al escritorio con sus opciones y su plazo" />
+                <figcaption>
+                  <span data-lang="es">Las situaciones llegan al escritorio y el reloj no se detiene: lo que no decidís, se decide solo y peor.</span>
+                  <span data-lang="en" hidden>Situations land on your desk and the clock does not stop: what you don't decide gets decided for you, and worse.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-politicas.webp" width="1200" height="706" loading="lazy" alt="Panel de políticas con sus familias, su costo y su eficiencia" />
+                <figcaption>
+                  <span data-lang="es">Diez familias de políticas con sus instrumentos, su costo como porcentaje del PBI y su eficiencia cayendo con los años.</span>
+                  <span data-lang="en" hidden>Ten policy families with their instruments, their cost as a share of GDP and their efficiency decaying over the years.</span>
+                </figcaption>
+              </figure>
+              <figure class="carousel-slide">
+                <img src="/assets/landing/territorio-rutas.webp" width="1200" height="706" loading="lazy" alt="Panel de rutas de victoria con cada condición y su valor actual" />
+                <figcaption>
+                  <span data-lang="es">Tres rutas de victoria —conservación, producción, innovación— con cada condición y su valor actual a la vista.</span>
+                  <span data-lang="en" hidden>Three win routes —conservation, production, innovation— with every condition and its current value in plain sight.</span>
+                </figcaption>
+              </figure>
             </div>
-            <div class="demo-frame demo-frame-2">
-              <span class="label-eyebrow">Simular Próximo Año</span>
-              <div class="demo-bar"><div class="demo-bar-fill"></div></div>
-            </div>
-            <div class="demo-frame demo-frame-3">
-              <span class="label-eyebrow">CO2eq/cápita</span>
-              <span class="text-2xl font-bold text-chlorophyll">▼ 0.4 t</span>
-            </div>
-            <div class="demo-frame demo-frame-4">
-              <span class="label-eyebrow">Informe del año</span>
-              <span class="text-sm text-bone" data-lang="es">Biodiversidad subió, emisiones bajaron.</span>
-              <span class="text-sm text-bone" data-lang="en" hidden>Biodiversity rose, emissions fell.</span>
-            </div>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-4">
+            <button id="shots-prev" type="button" class="px-3 py-1.5 text-sm text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+              ← <span data-lang="es">Anterior</span><span data-lang="en" hidden>Previous</span>
+            </button>
+            <div id="shots-dots" class="flex items-center gap-2"></div>
+            <button id="shots-next" type="button" class="px-3 py-1.5 text-sm text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+              <span data-lang="es">Siguiente</span><span data-lang="en" hidden>Next</span> →
+            </button>
           </div>
         </div>
       </section>
@@ -134,8 +182,10 @@
         <ul class="space-y-3 text-base sm:text-lg text-ash">
           <li data-lang="es">Activás y ajustás políticas climáticas reales (agroecología, carbono neutralidad, subsidios energéticos) y ves sus efectos cruzados en biodiversidad, economía y presión social.</li>
           <li data-lang="en" hidden>You activate and tune real climate policies (agroecology, carbon neutrality, energy subsidies) and see their cross-effects on biodiversity, economy and social pressure.</li>
-          <li data-lang="es">Dura entre 15 y 40 minutos, según cuántos niveles juegues.</li>
-          <li data-lang="en" hidden>It takes 15–40 minutes, depending on how many levels you play.</li>
+          <li data-lang="es">En Territorio declarás además usos públicos —áreas protegidas, restauración, humedales, parques energéticos— por lotes de 50 km², y resolvés las situaciones que llegan al escritorio mientras el reloj sigue corriendo.</li>
+          <li data-lang="en" hidden>In Territory you also declare public uses —protected areas, restoration, wetlands, energy parks— in lots of 50 km², and settle the situations that reach your desk while the clock keeps running.</li>
+          <li data-lang="es">Una partida entera son 30 años simulados: entre 15 y 40 minutos reales, según cuánto pares a mirar el mapa.</li>
+          <li data-lang="en" hidden>A full game is 30 simulated years: 15 to 40 real minutes, depending on how often you stop to look at the map.</li>
           <li data-lang="es">Al final te llevás un informe de tu propia partida: qué decidiste, qué tensiones enfrentaste, qué aprenderías distinto la próxima vez.</li>
           <li data-lang="en" hidden>At the end you get a report on your own session: what you decided, what tensions you faced, what you'd do differently next time.</li>
         </ul>
@@ -232,29 +282,72 @@
         </a>
       </section>
 
-      <!-- ══════════════════════════ LO PRÓXIMO ══════════════════════════
-           v4 preview (mejora-general/files/21_fusion_ecosim.md, decisión 2): the 3-level game stays
-           the main game; the single-level, monthly, map-based version is shown here, apart, as what
-           comes next. Kept below the teacher section on purpose so it never competes with the
-           main CTA. -->
-      <section id="proximo" class="container mx-auto px-4 pb-14 max-w-4xl">
-        <div class="panel overflow-hidden grid md:grid-cols-2">
-          <img src="/assets/ecosim/hero.webp" alt="" loading="lazy" class="h-48 w-full object-cover md:h-full" />
-          <div class="p-6">
-            <p class="inline-block rounded border border-ochre/50 px-2 py-0.5 text-xs text-ochre mb-3">
-              <span data-lang="es">En desarrollo · vista previa</span>
-              <span data-lang="en" hidden>In development · preview</span>
-            </p>
-            <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3" data-lang="es">Lo próximo: DecarboNation Territorio</h2>
-            <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-3" data-lang="en" hidden>Coming next: DecarboNation Territory</h2>
-            <p class="text-ash mb-3" data-lang="es">Una región, 30 años, mes a mes. Es el mismo modelo del juego, ahora sobre un mapa donde ves avanzar la frontera agrícola, crecer las áreas protegidas y reaccionar a productores, ambientalistas y ciudadanía.</p>
-            <p class="text-ash mb-3" data-lang="en" hidden>One region, 30 years, month by month. The same model as the game, now on a map where you watch the farming frontier advance, protected areas grow, and farmers, environmentalists and citizens react.</p>
-            <p class="text-sm text-ash-dim mb-5" data-lang="es">Todavía no reemplaza al juego principal ni al paquete docente: puede cambiar y no guarda la partida.</p>
-            <p class="text-sm text-ash-dim mb-5" data-lang="en" hidden>It does not replace the main game or the teacher package yet: it may change and does not save your game.</p>
-            <a href="/territorio" id="cta-territorio" class="inline-block px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
-              <span data-lang="es">Probar la vista previa →</span>
-              <span data-lang="en" hidden>Try the preview →</span>
-            </a>
+      <!-- ══════════════════════════ JUEGO DE 3 NIVELES ══════════════════════════
+           Hasta 2026-09-21 este era el juego principal y encabezaba la página. Ahora va debajo de
+           Territorio (pedido del usuario), presentado por lo que lo distingue: paso anual, tres
+           niveles encadenados y el panel de facilitación — el entorno para mirar los números y
+           ensayar escenarios. La micro-animación que estaba en el hero se mudó acá con él. -->
+      <section id="juego-principal" class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4 max-w-4xl">
+          <p class="label-eyebrow">
+            <span data-lang="es">La versión estable</span>
+            <span data-lang="en" hidden>The stable version</span>
+          </p>
+          <h2 class="mt-2 text-2xl sm:text-3xl font-bold font-[var(--font-display)] text-chlorophyll">
+            <span data-lang="es">El juego de 3 niveles: un país, año a año</span>
+            <span data-lang="en" hidden>The 3-level game: a country, year by year</span>
+          </h2>
+          <div class="mt-4 grid gap-6 md:grid-cols-2 md:items-start">
+            <div>
+              <p class="text-base text-ash">
+                <span data-lang="es">Más exigente y más cerca de un laboratorio de datos: tres niveles encadenados con paso anual, sin mapa que mirar, donde lo que ves son los indicadores, las presiones sectoriales y las finanzas públicas moviéndose año por año.</span>
+                <span data-lang="en" hidden>Harder, and closer to a data lab: three chained levels with a yearly step and no map to watch — what you see are the indicators, the sectoral pressures and the public finances moving year by year.</span>
+              </p>
+              <ul class="mt-4 space-y-2 text-sm text-ash">
+                <li data-lang="es">Es la versión que usa el paquete docente y la que guarda la partida.</li>
+                <li data-lang="en" hidden>It is the version the teacher package uses, and the one that saves your game.</li>
+                <li data-lang="es">Trae panel de facilitación para ajustar parámetros en vivo y proyectar una partida frente a la sala.</li>
+                <li data-lang="en" hidden>It ships a facilitation panel to tune parameters live and project a session in front of the room.</li>
+                <li data-lang="es">Mismo modelo y mismas ecuaciones que Territorio: lo que cambia es el paso del tiempo y la escala.</li>
+                <li data-lang="en" hidden>Same model and same equations as Territory: what changes is the time step and the scale.</li>
+              </ul>
+              <div class="mt-6 flex flex-wrap items-center gap-4">
+                <a href="/play" id="cta-play" class="px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
+                  <span data-lang="es">Jugar los 3 niveles</span>
+                  <span data-lang="en" hidden>Play the 3 levels</span>
+                </a>
+                <a href="/play?demo=1" id="cta-demo" class="text-sm text-hydro hover:underline">
+                  <span data-lang="es">Ver una demo guiada de 8 minutos →</span>
+                  <span data-lang="en" hidden>See an 8-minute guided demo →</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Micro-animación (20_landing_shareables.md §3): activar política → simular →
+                 indicadores cambian → informe. Sustituto del GIF pedido, sin asset de video. -->
+            <div class="panel p-4 sm:p-6" role="img"
+                 aria-label="Animación: activar una política, simular un año, los indicadores cambian y aparece un informe">
+              <div class="demo-strip">
+                <div class="demo-frame demo-frame-1">
+                  <span class="label-eyebrow">Panel de Políticas</span>
+                  <div class="demo-toggle"><div class="demo-toggle-dot"></div></div>
+                  <span class="text-sm text-bone">Políticas Agroecológicas</span>
+                </div>
+                <div class="demo-frame demo-frame-2">
+                  <span class="label-eyebrow">Simular Próximo Año</span>
+                  <div class="demo-bar"><div class="demo-bar-fill"></div></div>
+                </div>
+                <div class="demo-frame demo-frame-3">
+                  <span class="label-eyebrow">CO2eq/cápita</span>
+                  <span class="text-2xl font-bold text-chlorophyll">▼ 0.4 t</span>
+                </div>
+                <div class="demo-frame demo-frame-4">
+                  <span class="label-eyebrow">Informe del año</span>
+                  <span class="text-sm text-bone" data-lang="es">Biodiversidad subió, emisiones bajaron.</span>
+                  <span class="text-sm text-bone" data-lang="en" hidden>Biodiversity rose, emissions fell.</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -344,6 +437,26 @@
         .demo-frame { animation: none; opacity: 1; position: static; }
         .demo-strip { height: auto; display: flex; flex-direction: column; gap: 8px; }
       }
+
+      /* Carrusel de capturas. Sin JS es una tira con scroll horizontal y ajuste por captura;
+         src/landing.ts le agrega los botones y los puntos. */
+      .carousel-track {
+        display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+        scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      }
+      .carousel-track::-webkit-scrollbar { display: none; }
+      .carousel-track:focus-visible { outline: 2px solid var(--color-hydro); outline-offset: -2px; }
+      .carousel-slide { flex: 0 0 100%; scroll-snap-align: center; margin: 0; }
+      .carousel-slide img { display: block; width: 100%; height: auto; }
+      .carousel-slide figcaption {
+        padding: 12px 16px 14px; font-size: 13px; line-height: 1.5;
+        color: var(--color-ash); border-top: 1px solid var(--color-basalt-700);
+      }
+      .carousel-dot {
+        width: 8px; height: 8px; border-radius: 9999px; background: var(--color-basalt-600);
+        border: 0; padding: 0; cursor: pointer; transition: background-color 150ms, width 150ms;
+      }
+      .carousel-dot[aria-current="true"] { background: var(--color-chlorophyll); width: 20px; }
     </style>
 
     <script type="module" src="/src/landing.ts"></script>
