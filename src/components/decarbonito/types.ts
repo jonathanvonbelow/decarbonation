@@ -21,12 +21,14 @@ export interface DnAvatarProps {
   state?: DnState;
   emotion?: DnEmotion;
   tone?: DnTone;
-  /** Rendered pixel size (square-ish, actual aspect is 120:140). Below 40 the antenna and arms are dropped. */
+  /** Rendered pixel width; the figure's box is 120:140, and the still is anchored to its floor. */
   size?: number;
   /** Degrees, 0 = right. Used by `point` and `travel` to orient body, arm and beam. */
   targetAngle?: number;
   /** Beam length in local SVG units (see phase 7: computed from the anchor distance). */
   beamLength?: number;
+  /** `bust` renders just the head and shoulders, for chat headers and lists. */
+  variant?: 'full' | 'bust';
   /** Fires when a non-looping state finishes — lets the controller return to idle. */
   onStateComplete?: (state: DnState) => void;
   className?: string;

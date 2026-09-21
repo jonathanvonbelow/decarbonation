@@ -135,7 +135,7 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
       onKeyDown={onTrapKeyDown}
     >
       <div className="p-3 border-b border-basalt-700 flex items-center gap-3 shrink-0">
-        <DecarboNitoAvatar state="idle" emotion={isLoading ? 'focused' : 'neutral'} size={40} />
+        <DecarboNitoAvatar variant="bust" state="idle" emotion={isLoading ? 'focused' : 'neutral'} size={40} />
         <div className="flex-grow min-w-0">
           <h3 className="text-[15px] font-semibold text-bone truncate">{t('conversation.title')}</h3>
           {currentLevelName && <p className="text-xs text-ash-dim truncate">{t('conversation.focus')} {currentLevelName}</p>}

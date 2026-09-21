@@ -18,7 +18,14 @@ import { ANCHORS, getAnchorRect, subscribeAnchors, useAnchor } from './anchors';
 import { DecarboNitoAvatar } from './DecarboNitoAvatar';
 import ConversationPanel from './ConversationPanel';
 
-const AVATAR = 96;
+/**
+ * The 3D character reads as a character at this size; the old SVG bot was 96 px (the pack asks for
+ * 220 px centre-bottom, which in this HUD would sit on top of the indicator strip and the ticker,
+ * so it stays corner-docked and draggable — see docs/DESIGN_DECISIONS_LOG.md, 2026-09-21).
+ */
+const AVATAR = 128;
+/** The figure's box is taller than it is wide (120:140), and the docking maths needs the height. */
+const AVATAR_H = Math.round(AVATAR * (140 / 120));
 const MARGIN = 20;
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -30,7 +37,7 @@ function resolvePosition(p: DnPlacement, vw: number, vh: number): { x: number; y
     const bottom = p.corner.startsWith('b');
     return {
       x: right ? vw - AVATAR - MARGIN : MARGIN,
-      y: bottom ? vh - AVATAR - MARGIN : MARGIN + 72, // 72 = header height
+      y: bottom ? vh - AVATAR_H - MARGIN : MARGIN + 72, // 72 = header height
     };
   }
   const rect = getAnchorRect(p.anchorId);
@@ -38,13 +45,13 @@ function resolvePosition(p: DnPlacement, vw: number, vh: number): { x: number; y
   const preferRight = rect.right + AVATAR + 24 < vw;
   return {
     x: (preferRight ? rect.right + 16 : rect.left - AVATAR - 16) + (p.offset?.dx ?? 0),
-    y: clamp(rect.top + rect.height / 2 - AVATAR / 2, 80, vh - AVATAR - MARGIN) + (p.offset?.dy ?? 0),
+    y: clamp(rect.top + rect.height / 2 - AVATAR_H / 2, 80, vh - AVATAR_H - MARGIN) + (p.offset?.dy ?? 0),
   };
 }
 
 function nearestCorner(x: number, y: number, vw: number, vh: number): DnCorner {
   const right = x + AVATAR / 2 > vw / 2;
-  const bottom = y + AVATAR / 2 > vh / 2;
+  const bottom = y + AVATAR_H / 2 > vh / 2;
   return `${bottom ? 'b' : 't'}${right ? 'r' : 'l'}` as DnCorner;
 }
 
@@ -98,7 +105,7 @@ export const DecarboNitoLayer: React.FC<DecarboNitoLayerProps> = (chatProps) => 
   }, [dn.placement, viewport.vw, viewport.vh]);
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    const corner = nearestCorner(info.point.x - AVATAR / 2, info.point.y - AVATAR / 2, viewport.vw, viewport.vh);
+    const corner = nearestCorner(info.point.x - AVATAR / 2, info.point.y - AVATAR_H / 2, viewport.vw, viewport.vh);
     dn.setCorner(corner);
   };
 

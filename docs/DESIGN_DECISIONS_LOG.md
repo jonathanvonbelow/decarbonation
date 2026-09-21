@@ -1631,3 +1631,43 @@ ofrece mejor.
 
 **Verificación.** `tsc` limpio, build limpio, 163/163 tests, y revisado sobre el build servido:
 hero, carrusel (botones, puntos, teclado), sección del juego de 3 niveles y ancho de celular.
+
+## 2026-09-21 — DecarboNito 3D: el personaje pasa de SVG a renders
+
+**De dónde sale.** El usuario entregó `DecarboNito_3D_pack/` (fuera del repo): nueve renders 3D del
+asesor —cuerpo de cerámica marfil, articulaciones menta, ojos ámbar y el brote en la cabeza— con
+fondo recortado, más CSS/JS/JSX de ejemplo y un `SETUP.md`.
+
+**Qué se tomó y qué no.**
+
+- **El arte, sí.** Los nueve PNG con alfa se limpiaron del fleco verde que dejó el recorte, se
+  recortaron a su caja y se exportaron a WebP de 420 px de alto (312 kB los nueve) en
+  `public/assets/decarbonito/`. El `portrait_bust` del pack quedó afuera: es otro personaje
+  (cabeza cúbica con capucha, no coincide con el resto); el busto del panel de chat se generó
+  recortando la cabeza de `front_idle`.
+- **El CSS/JS/JSX del pack, no.** Proponen un dock propio que duplicaría el overlay que el juego ya
+  tiene (arrastrable, con globo flotante, notificaciones apiladas, menú contextual y panel de
+  conversación). Se cambió el dibujo dentro del componente existente y no se tocó el contrato:
+  `DecarboNitoAvatar` sigue recibiendo `state`/`emotion`/`tone`/`size`/`targetAngle`/`beamLength` y
+  devolviendo `onStateComplete`, así que el controlador, el agente de acciones y el tutorial
+  siguen funcionando sin cambios.
+- **La posición, no.** El `SETUP.md` pide 220 px centrado abajo. En este HUD esa franja la ocupan
+  la tira de indicadores y el ticker de noticias, así que el personaje queda en la esquina
+  (arrastrable, como estaba) pero pasa de 96 a **128 px**, que es donde se lee como personaje.
+
+**Cómo se resolvieron los catorce estados con nueve poses.** Cada estado mapea a la pose más
+cercana (`sprites.ts`) y el movimiento lo pone el componente sobre la figura entera: flotar, saludo,
+sacudida de alerta, salto de celebración, cabeceo. Las expresiones antes eran ojos animados por
+separado; ahora vienen en el render, así que `emotion` sólo elige pose cuando el estado no impone
+una (un *idle* alarmado es la pose de alerta quieta). Se conservan las dos cosas que los renders no
+pueden hacer solos: el halo de tono (normal / precaución / crítico / éxito) y el **haz de señalado**
+que la fase 8 apunta a coordenadas calculadas en tiempo real — sigue siendo un SVG sobre la figura,
+y la pose de señalar se espeja cuando el objetivo está del otro lado.
+
+**Verificación.** `tsc` limpio, 163/163 tests, build limpio. Revisado sobre el build servido: el
+laboratorio `#dev/decarbonito` con los catorce estados, el haz y el registro de `onStateComplete`;
+el personaje en Territorio sin cortarse contra el borde inferior (la caja es 120:140, el anclaje
+usaba el ancho para el alto: corregido); y el panel de conversación con el busto nuevo.
+
+**Nota de repo.** `DecarboNito_3D_pack/` queda sin versionar, como `combinacion/`: al repo entran
+los WebP ya procesados, no las fuentes.
