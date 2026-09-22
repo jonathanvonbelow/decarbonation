@@ -6,7 +6,8 @@ import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, POLICY_UI
 import { Line, LineChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
 import { getIndicatorName, getInstrumentName, getPactName, getPolicyName } from '../legacyContent/gameData';
 import { useT, type TranslationKey } from '../i18n';
-import { evaluateTerritorio } from './routes';
+import { evaluateTerritorio, leadingRouteId } from './routes';
+import { artRoute, newsArtUrl, themeForNews, themeForSituationNews } from './newsArt';
 import { portraitUrl, type PortraitActor } from './sprites';
 import { canDeclare, lotFor, parcelAt, publicUseCost, PUBLIC_USES, isProductive, regionAt, type PublicUse } from '../sim';
 import { EffortSlider } from '../components/ui/EffortSlider';
@@ -15,6 +16,7 @@ import type { Pact, PolicyInstrument, PolicyState, RandomEvent } from '../types'
 import { LandUseType, Policy } from '../types';
 import { fill, useCopy, type Copy } from './copy';
 import { rawCoefficient } from './heat';
+import { SITUATION_BY_ID } from './situations';
 import { SWATCH, TONE_DOT, useNewsText, type PanelId } from './hud';
 import { INSTRUMENTS_UNLOCK_YEAR, maxLoan, unlocks, type Session } from './session';
 
@@ -391,17 +393,30 @@ export function NewsPanel({ session }: { session: Session }) {
   const { c, monthName } = useCopy();
   const text = useNewsText();
   if (session.news.length === 0) return <p className="px-1 text-[13px] text-ash">{c.news.empty}</p>;
+  // The photograph follows the route the player is leading (newsArt.ts).
+  const route = artRoute(leadingRouteId(session.game, { ...session.game, indicators: session.game.levelBaseline }));
+  // A theme has a handful of frames, so two nearby entries about the same thing would show the
+  // same photograph twice: in a feed this long, the second one goes back to being a line of text.
+  const recent: string[] = [];
   return (
     <ol className="space-y-2">
       {session.news.map((item) => {
         const { title, body } = text(item);
+        const theme = themeForNews(item) ?? themeForSituationNews(item, (id) => SITUATION_BY_ID[id]);
+        const url = theme ? newsArtUrl(theme, route) : null;
+        const show = url && !recent.includes(url);
+        if (url) recent.push(url);
+        if (recent.length > 4) recent.shift();
         return (
-          <li key={item.id} className="flex gap-2 rounded-md bg-basalt-800 px-3 py-2">
-            <span className={`mt-1.5 size-2 shrink-0 rounded-full ${TONE_DOT[item.tone]}`} aria-hidden />
-            <div className="min-w-0">
-              <p className="tnum text-[11px] text-ash-dim">{monthName(item.month)} {item.year}</p>
-              <p className="text-[13px] text-bone">{title}</p>
-              {body && <p className="mt-0.5 text-[12px] text-ash">{body}</p>}
+          <li key={item.id} className="overflow-hidden rounded-md bg-basalt-800">
+            {show && <img src={url!} alt="" loading="lazy" className="h-24 w-full object-cover" />}
+            <div className="flex gap-2 px-3 py-2">
+              <span className={`mt-1.5 size-2 shrink-0 rounded-full ${TONE_DOT[item.tone]}`} aria-hidden />
+              <div className="min-w-0">
+                <p className="tnum text-[11px] text-ash-dim">{monthName(item.month)} {item.year}</p>
+                <p className="text-[13px] text-bone">{title}</p>
+                {body && <p className="mt-0.5 text-[12px] text-ash">{body}</p>}
+              </div>
             </div>
           </li>
         );

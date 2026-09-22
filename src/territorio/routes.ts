@@ -101,6 +101,18 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
   },
 ];
 
+/**
+ * The route the player is closest to completing. The feed's photography uses it to pick which
+ * version of a scene to show (src/territorio/newsArt.ts): the same drought looks different in a
+ * region that bet on conservation and in one that bet on production.
+ */
+export function leadingRouteId(s: GameState, baseline: GameState): string | null {
+  const routes = TERRITORIO_ROUTES.map((r) => evaluateRoute(r, s, baseline));
+  const best = routes.reduce((a, b) => (b.progress > a.progress ? b : a));
+  // Below a third of the way in, nothing is really being pursued yet.
+  return best.progress >= 0.34 ? best.route.id : null;
+}
+
 /** Same shape as `evaluateLevel`, against this preview's own floors and routes. */
 export function evaluateTerritorio(s: GameState, baseline: GameState): LevelOutcome {
   const failedFloors = TERRITORIO_FLOORS.filter((f) => (f.dir === 'min' ? f.read(s) < f.target : f.read(s) > f.target));

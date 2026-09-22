@@ -2,6 +2,7 @@ import React from 'react';
 import { GameState, RandomEvent } from '../../types';
 import Tooltip from '../common/Tooltip';
 import { useLanguageContext } from '../../contexts/LanguageContext';
+import { eventArtUrl } from '../../territorio/newsArt';
 const T = {
   es: { title: (y:number) => `Resumen de Eventos y Noticias - Año ${y}`, event: 'EVENTO:', impacts: 'Impactos Clave:', simulating: 'Recolectando inteligencia...', monitoring: (y:number) => `Monitoreando desarrollos nacionales para el Año ${y}...` },
   en: { title: (y:number) => `Events and News Summary - Year ${y}`, event: 'EVENT:', impacts: 'Key Impacts:', simulating: 'Gathering intelligence...', monitoring: (y:number) => `Monitoring national developments for Year ${y}...` },
@@ -16,6 +17,7 @@ interface EventsNewsPanelProps {
 const EventsNewsPanel: React.FC<EventsNewsPanelProps> = ({ currentEvent, newsHeadlines, gameState }) => {
   const { language } = useLanguageContext();
   const t = T[language];
+  const eventArt = currentEvent ? eventArtUrl(currentEvent.id) : null;
   const getEventTypeColor = (type: RandomEvent['type']) => {
     switch (type) {
       case 'positive': return 'text-green-400 border-green-500';
@@ -47,7 +49,11 @@ const EventsNewsPanel: React.FC<EventsNewsPanelProps> = ({ currentEvent, newsHea
       </h3>
 
       {currentEvent ? (
-        <div className={`p-4 rounded-md border-l-4 ${getEventTypeColor(currentEvent.type)} bg-gray-700 shadow-lg`}>
+        <div className={`rounded-md border-l-4 ${getEventTypeColor(currentEvent.type)} bg-gray-700 shadow-lg overflow-hidden`}>
+          {/* Agency photo of what the event is about, when the pack has one for it (newsArt.ts).
+              No route frame here: the 3-level game does not track a leading route as it goes. */}
+          {eventArt && <img src={eventArt} alt="" loading="lazy" className="h-28 w-full object-cover" />}
+          <div className="p-4">
           <h4 className={`text-lg font-semibold mb-1 ${getEventTypeColor(currentEvent.type)} flex items-center`}>
             <span className="text-2xl mr-2">{getEventIcon(currentEvent.category)}</span>
             {t.event} {currentEvent.name}
@@ -70,6 +76,7 @@ const EventsNewsPanel: React.FC<EventsNewsPanelProps> = ({ currentEvent, newsHea
               </ul>
             </div>
           )}
+          </div>
         </div>
       ) : newsHeadlines && newsHeadlines.length > 0 ? (
         <div className="space-y-2 flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pr-2">

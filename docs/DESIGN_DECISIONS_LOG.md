@@ -1671,3 +1671,49 @@ usaba el ancho para el alto: corregido); y el panel de conversación con el bust
 
 **Nota de repo.** `DecarboNito_3D_pack/` queda sin versionar, como `combinacion/`: al repo entran
 los WebP ya procesados, no las fuentes.
+
+## 2026-09-22 — Fotografía para las noticias y las situaciones
+
+**De dónde sale.** El usuario entregó `nuevo-arte/` con tres carpetas: `news_situations_pack`,
+`news_situations_by_route` y `news_situations_v3`, y pidió chequear que no hubiera imágenes
+repetidas antes de incorporarlas.
+
+**Lo primero fue contar.** Los tres packs son acumulativos: 68 archivos, **32 imágenes únicas**, y
+las 32 están en `news_situations_v3` (dentro de v3 no hay ninguna repetida). Los otros dos packs no
+aportan nada que v3 no tenga, así que sólo se procesó v3. De sus 32, entraron **31**: la única que
+quedó afuera es `reel/ev-climate_drought_reel.jpg`, que es la misma sequía que ya está en `wide/`.
+Exportadas a WebP de 800 px en `public/assets/news/` (1,7 MB), con el reel vertical recortado al
+mismo encuadre 16:9 que el resto.
+
+**Qué son y qué no.** Es fotografía de agencia: sequías, cortes de ruta con tractores, acampes
+ambientales, ollas populares, quemas, puertos, una instalación solar, una conferencia de prensa
+internacional, obra pública a medio hacer. No reemplazan nada de lo que dibuja el mapa —el mapa es
+el uso del suelo del modelo—. Lo que agregan es el registro que al feed le faltaba: una situación
+que llega con una foto de lo que trata se lee como algo que pasa en un lugar, no como una fila.
+
+**Cómo se elige la foto (`src/territorio/newsArt.ts`).** Diez temas (clima, agro, ambiental, social,
+emisiones, biodiversidad, economía, tesoro, internacional, tecnología). La situación resuelve su
+tema por su categoría, con una tabla de excepciones para las que la categoría manda a una foto poco
+feliz (un reclamo de consulta previa es el acampe, no una obra abandonada; el cierre de una escuela
+es la calle, no un tractor). Cada tema tiene además **una versión por vía de victoria**, y la que se
+usa es la vía que el jugador lleva adelante (`leadingRouteId`): la misma sequía se ve distinta en
+una región que apostó a la conservación y en una que apostó a la producción.
+
+**Dos reglas para que no se vuelva empapelado.** (1) Sólo lleva foto lo que tiene tema *cierto*: una
+categoría, un evento del modelo, un cruce que el feed ya nombra. Los movimientos de suelo, los
+desbloqueos, el balance anual y las declaraciones del jugador siguen siendo texto. (2) En el feed,
+si la misma foto se usó en los últimos cuatro ítems, el siguiente vuelve a ser texto — un tema tiene
+cinco encuadres y dos situaciones seguidas del mismo tema mostraban la misma imagen. Además, cuatro
+situaciones se dejaron **sin foto a propósito** (lluvias generosas, cosecha excepcional, piloto
+agroecológico, vivero comunitario): toda foto de clima del pack es una sequía o un incendio, y
+ilustrar una buena noticia con su opuesto miente.
+
+**Dónde aparece.** Bandeja de situaciones (banner con el retrato del actor montado sobre el borde),
+panel de noticias de Territorio, y el panel de eventos del nivel 3 del juego principal — ahí sin
+versión por vía, porque ese juego no lleva cuenta de una ruta en curso. `newsArt.ts` no importa nada
+en tiempo de ejecución (sólo tipos), así que el juego de 3 niveles puede usarlo sin arrastrar el
+catálogo de las cien situaciones a su bundle.
+
+**Verificación.** `tsc` limpio, 163/163 tests, build limpio, revisado sobre el build servido
+(bandeja y feed). `npx tsx scripts/news-art-audit.ts` imprime qué foto recibiría cada una de las
+cien situaciones, agrupadas por tema, que es como se detectaron los mapeos desafortunados.

@@ -8,6 +8,8 @@ import { Button } from '../components/ui/Button';
 import { fill, useCopy } from './copy';
 import { SITUATION_BY_ID, type OpenSituation, type SituationActor, type SituationDef } from './situations';
 import { situationCost } from './situations';
+import { artRoute, newsArtUrl, themeForSituation, type NewsRoute } from './newsArt';
+import { leadingRouteId } from './routes';
 import { portraitUrl, type PortraitActor } from './sprites';
 import type { Session } from './session';
 
@@ -32,13 +34,15 @@ function wearLabel(def: SituationDef): number {
   return conflict + ppAgricola + ppAmbientalista + ppSocial;
 }
 
-export function SituationCard({ item, def, monthIndex, reserves, game, onDecide }: {
+export function SituationCard({ item, def, monthIndex, reserves, game, route, onDecide }: {
   item: OpenSituation;
   def: SituationDef;
   monthIndex: number;
   reserves: number;
   /** Prices scale with the economy (situations.ts `situationCost`). */
   game: Session['game'];
+  /** Which frame of the photograph to use (newsArt.ts). */
+  route: NewsRoute;
   onDecide: (optionId: string) => void;
 }) {
   const { c, locale, fmt } = useCopy();
@@ -47,10 +51,23 @@ export function SituationCard({ item, def, monthIndex, reserves, game, onDecide 
   const total = Math.max(1, item.expiresAt - item.openedAt);
   const urgency = 1 - monthsLeft / total;
   const wear = wearLabel(def);
+  const theme = themeForSituation(def);
   return (
-    <article className={`rounded-md border bg-basalt-800 p-3 ${TONE_BORDER[def.tone]}`}>
+    <article className={`overflow-hidden rounded-md border bg-basalt-800 ${TONE_BORDER[def.tone]}`}>
+      {/* What the matter looks like from outside the office (newsArt.ts). */}
+      {theme && (
+        <div className="relative">
+          <img src={newsArtUrl(theme, route)} alt="" loading="lazy" className="h-28 w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-basalt-800 via-basalt-800/20 to-transparent" />
+        </div>
+      )}
+      <div className="p-3">
       <div className="flex gap-3">
-        <img src={portraitUrl(PORTRAIT[def.actor], def.id)} alt="" className="size-12 shrink-0 rounded-md object-cover" />
+        <img
+          src={portraitUrl(PORTRAIT[def.actor], def.id)}
+          alt=""
+          className={`size-12 shrink-0 rounded-md object-cover ${theme ? '-mt-8 border border-basalt-700 shadow-lg' : ''}`}
+        />
         <div className="min-w-0 flex-1">
           <p className="label-eyebrow !text-[10px]">{c.situations.actors[def.actor]}</p>
           <h3 className="text-[14px] leading-tight text-bone">{copy.title}</h3>
@@ -87,6 +104,7 @@ export function SituationCard({ item, def, monthIndex, reserves, game, onDecide 
           );
         })}
       </div>
+      </div>
     </article>
   );
 }
@@ -97,6 +115,7 @@ export function SituationsPanel({ session, onDecide }: {
 }) {
   const { c, fmt } = useCopy();
   const reserves = session.game.stellaSpecificState.Reservas_del_Tesoro;
+  const route = artRoute(leadingRouteId(session.game, { ...session.game, indicators: session.game.levelBaseline }));
   if (session.open.length === 0) {
     return (
       <div className="px-1">
@@ -121,6 +140,7 @@ export function SituationsPanel({ session, onDecide }: {
             monthIndex={session.monthIndex}
             reserves={reserves}
             game={session.game}
+            route={route}
             onDecide={(optionId) => onDecide(item.id, optionId)}
           />
         );
