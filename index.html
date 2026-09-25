@@ -175,6 +175,29 @@
         </div>
       </section>
 
+      <!-- ══════════════════════════ TUTORIAL EN VIDEO ══════════════════════════
+           Lista de reproducción de YouTube con el tutorial del juego (pedido del usuario,
+           2026-09-25). aspect-video + iframe con loading="lazy" para no penalizar la carga
+           inicial de la landing. -->
+      <section class="container mx-auto px-4 pb-14 max-w-3xl">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Tutorial en video</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Video tutorial</h2>
+        <p class="text-sm text-ash mb-4" data-lang="es">Serie de videos que explican cómo jugar, paso a paso.</p>
+        <p class="text-sm text-ash mb-4" data-lang="en" hidden>Video series explaining how to play, step by step.</p>
+        <div class="panel overflow-hidden p-0">
+          <div class="aspect-video">
+            <iframe
+              class="h-full w-full"
+              src="https://www.youtube.com/embed/videoseries?list=PLBMtnsUSTFj4"
+              title="DecarboNation — Tutorial en video"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </section>
+
       <!-- ══════════════════════════ QUÉ ES ══════════════════════════ -->
       <section class="container mx-auto px-4 pb-14 max-w-3xl">
         <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Qué es</h2>

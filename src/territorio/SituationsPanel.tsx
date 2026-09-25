@@ -56,13 +56,16 @@ export function SituationCard({ item, def, monthIndex, reserves, game, route, on
     <article className={`overflow-hidden rounded-md border bg-basalt-800 ${TONE_BORDER[def.tone]}`}>
       {/* What the matter looks like from outside the office (newsArt.ts). */}
       {theme && (
-        <div className="relative">
+        <div className="relative z-0">
           <img src={newsArtUrl(theme, route)} alt="" loading="lazy" className="h-28 w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-basalt-800 via-basalt-800/20 to-transparent" />
         </div>
       )}
       <div className="p-3">
-      <div className="flex gap-3">
+      {/* z-10 en position:relative es necesario: sin el, el retrato (no posicionado) pintaria
+          detras de la foto (position:relative) por orden de pintado CSS pese a ir despues en el
+          DOM, tapando la cara del personaje. */}
+      <div className="relative z-10 flex gap-3">
         <img
           src={portraitUrl(PORTRAIT[def.actor], def.id)}
           alt=""
