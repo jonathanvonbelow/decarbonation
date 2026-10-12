@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Descripcion del proyecto
 
-DecarboNation es un simulador de politica publica climatica (sector AFOLU) construido con React 19 + TypeScript + Vite 6 + Tailwind 4, desplegado en Vercel. El juego principal tiene 3 niveles con paso anual. En la rama `v4-fusion` se desarrolla una segunda version en vista previa ("DecarboNation Territorio"): un solo nivel, paso mensual y mapa isometrico, fusionando el arte e interfaz de EcoSIM (`combinacion/EcoSIM`, solo referencia, no se compila). Especificacion: `mejora-general/files/21_fusion_ecosim.md`.
+DecarboNation es un simulador de politica publica climatica (sector AFOLU) construido con React 19 + TypeScript + Vite 6 + Tailwind 4, desplegado en Vercel. Conviven dos versiones jugables: el juego de 3 niveles (`/play`, estable, paso anual) y **DecarboNation Territorio** (`/territorio`, vista previa en desarrollo recomendada para aula y talleres: un solo nivel, paso mensual y mapa isometrico), que ya vive en `main` y fusiona el arte e interfaz de EcoSIM (`combinacion/EcoSIM`, solo referencia, no se compila). Especificacion de Territorio: `mejora-general/files/21_fusion_ecosim.md`; de la landing, el paquete docente y el cuestionario (v5): `mejora-general/files/00_INDICE_v5.md` y siguientes.
 
 ## Comandos
 
@@ -26,7 +26,9 @@ El build es multipagina (`rollupOptions.input` en `vite.config.ts`); Vercel mape
 
 - `index.html` → landing estatica **sin React** (solo `src/index.css` + `src/landing.ts`). Ruta `/`.
 - `play.html` → juego principal: `src/main.tsx` → `src/App.tsx`. Ruta `/play` (`/play?demo=1` = modo demo).
-- `docentes*.html` → paquete docente, paginas estaticas. Rutas `/docentes/...`.
+- `docentes*.html` → paquete docente, paginas estaticas con variantes Territorio / 3 niveles (`data-version`, `src/docentes.ts`). Rutas `/docentes/...`.
+- `docentes-espacio.html` → espacio docente asincronico (`src/docentesEspacio.ts`, QR con `qrcode`). Ruta `/docentes/espacio`.
+- `territorio.html` → `src/territorio/main.tsx`. Ruta `/territorio`. `territorio-encuesta.html` → cuestionario anonimo (`src/territorio/survey/`). Ruta `/territorio/encuesta`.
 - `api/gemini.ts` → funcion serverless de Vercel (proxy de Gemini).
 
 No existe `App.tsx` en la raiz: desde la consolidacion (commit `5f415c7`) todo el codigo vive en `src/`. Alias `@/` → `src/`.
@@ -50,6 +52,7 @@ Se definen en `.env.local` (no commitear) y se inyectan con el bloque `define` d
   - Los pactos tienen funciones `effects`, que se pierden al clonar con JSON: se restauran desde `INITIAL_PACTS` despues de cada clon (ver `stepYear`).
 - **DecarboNito** (`src/components/decarbonito/`, `src/services/geminiService.ts`, `src/services/decarbonitoAgent.ts`): overlay flotante con avatar animado. El agente opera la interfaz via `src/game/uiActionRegistry.ts` (acciones `read` / `navigate` / `mutate` / `advance`, las `mutate` piden confirmacion) y resalta elementos por anclajes DOM (`anchors.ts`), que tambien usa el tutorial (`src/components/tutorial/`).
 - **i18n tipado** (`src/i18n/`): claves en `src/i18n/ui/es.ts` y `en.ts`; el contenido de dominio (nombres de politicas, eventos, usos del suelo) se traduce por ID en `src/legacyContent/gameData.ts`. Algunos textos del motor (p. ej. `gameOverReason`) quedan en español a proposito: se comparan como string en `App.tsx` y `geminiService.ts`.
+- **Cuestionario de Territorio**: anonimo, tabla `territorio_feedback` (insert-only para `anon`, `supabase/territorio_feedback_migration.sql`), envio por `fetch` directo sin `supabase-js` y cola offline en `localStorage` (`src/territorio/survey/feedbackService.ts`). Territorio no toca Supabase ni tiene login. **El cuestionario pre/post del juego de 3 niveles (`SurveyPre/Post`, tablas existentes) no se modifica.**
 - **Auth y persistencia**: `services/supabaseService.ts` exporta el singleton `supabase` (puede ser `null`); `hooks/useAuth.ts` maneja `authStage` (`'demo'` cuando no hay Supabase o el usuario elige "Continuar sin cuenta"); `hooks/useSessionPersistence.ts` guarda sesiones y encuestas. Esquema y migraciones en `supabase/*.sql`.
 - **Estilos**: `src/index.css` define tokens de Tailwind 4 con `@theme`. Conviven los tokens viejos (`custom-*`, `level-N-bg`) con el sistema v3 (`basalt-*`, `bone`, `ash`, `chlorophyll`, `ochre`, `ember`, `hydro`); lo nuevo usa los v3 y los primitivos de `src/components/ui/`.
 
@@ -62,3 +65,5 @@ Se definen en `.env.local` (no commitear) y se inyectan con el bloque `define` d
 - El trabajo se organiza en fases con especificacion en `mejora-general/files/NN_*.md`; cada fase agrega una entrada con fecha a `docs/DESIGN_DECISIONS_LOG.md` explicando desvios de la especificacion y deudas conocidas. Cada fase deja la app funcionando y desplegable.
 - Los cambios de formulas o parametros del modelo se documentan en `docs/audit-equations.md` y se verifican con `npm run sim`; el juego de 3 niveles no debe cambiar de comportamiento por trabajo de la vista previa (los tests de `tests/sim/` lo protegen).
 - `npx tsc --noEmit` debe quedar limpio. Patron recurrente: `Object.values()`/`Object.entries()` sobre `Record<K, V>` (`landUses`, `policies`, `pacts`, `policy.instruments`) se infiere como `unknown[]`; castear explicitamente, p. ej. `(Object.values(policy.instruments) as PolicyInstrument[])`.
+- El paquete docente usa variantes `data-version="territorio|niveles"` conmutadas por `src/docentes.ts` (`?v=`); todo texto nuevo de las paginas estaticas es es/en con pares `data-lang` adyacentes, y `npm run i18n:audit` tambien lo verifica sobre `index.html` y `docentes*.html` (`scripts/html-bilingual-audit.mjs`).
+- Las condiciones de ruta de la hoja de ecuaciones se generan con `npx tsx scripts/routes-table-html.ts` (no copiar umbrales a mano).

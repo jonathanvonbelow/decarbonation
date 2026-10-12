@@ -131,3 +131,16 @@ DecarboNation está diseñado para sesiones grupales e individuales. El juego in
 ## 📄 Licencia
 
 Desarrollado originalmente en Google AI Studio. Proyecto académico orientado a la formación en política climática y toma de decisiones de sostenibilidad.
+
+---
+
+## 🌐 Páginas públicas
+
+| Ruta | Qué es |
+|------|--------|
+| `/` | Landing (es/en) con las dos versiones |
+| `/territorio` | **DecarboNation Territorio** — vista previa recomendada para aula y talleres: una región, mes a mes, sobre un mapa. Admite `?taller=CODIGO` |
+| `/territorio/encuesta` | Cuestionario anónimo de 14 preguntas (agrupa por código de taller) |
+| `/play` | Juego de 3 niveles (estable, paso anual); `/play?demo=1` es la demo guiada |
+| `/docentes` | Paquete docente con variantes para las dos versiones |
+| `/docentes/espacio` | Espacio docente asincrónico: recorrido autoguiado, generador de link de taller y QR |
