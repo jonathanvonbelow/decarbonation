@@ -1,6 +1,7 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { GameState, Policy, PolicyState, LandUse, LandUseType, Pact, HistoricalDataPoint, ClosingSynthesis, Indicators } from '../types';
 import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS, GEMINI_TTS_VOICE_NAME, ALL_POLICIES } from '../constants';
+import { samplingFor } from './geminiConfig';
 import { Language } from '../hooks/useLanguage';
 import { getPolicyName, getIndicatorName } from '../legacyContent/gameData';
 
@@ -180,9 +181,7 @@ export const askGemini = async (userInput: string, gameState: GameState, purpose
       contents: fullPrompt,
       config: {
           systemInstruction: systemInstruction,
-          temperature: 0.6,
-          topP: 0.9,
-          topK: 40,
+          ...samplingFor(GEMINI_MODEL_TEXT, { temperature: 0.6, topP: 0.9, topK: 40 }),
       }
     });
 
@@ -247,7 +246,7 @@ Cómo trabajás:
 
 **${playerLabel}:**
 ${userInput}`,
-      config: { systemInstruction, temperature: 0.6, topP: 0.9, topK: 40 },
+      config: { systemInstruction, ...samplingFor(GEMINI_MODEL_TEXT, { temperature: 0.6, topP: 0.9, topK: 40 }) },
     });
     return stripMarkdown(response.text);
   } catch (error) {
@@ -297,7 +296,7 @@ export const generateNewsHeadlines = async (gameState: GameState, language: Lang
                         }
                     },
                 },
-                temperature: 0.8,
+                ...samplingFor(GEMINI_MODEL_TEXT, { temperature: 0.8 }),
             }
         });
 
@@ -520,7 +519,7 @@ No uses la palabra "juego". Referite a la experiencia como "exploración de esce
           },
           required: ["decisionsTaken", "tradeOffs", "crossSectoralEffects", "reflectionQuestions"],
         },
-        temperature: 0.7,
+        ...samplingFor(GEMINI_MODEL_TEXT, { temperature: 0.7 }),
       }
     });
 

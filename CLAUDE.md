@@ -38,7 +38,7 @@ Se definen en `.env.local` (no commitear) y se inyectan con el bloque `define` d
 | Variable | Uso |
 |----------|-----|
 | `GEMINI_API_KEY` | Gemini (DecarboNito). Tambien expuesta como `process.env.API_KEY` |
-| `GEMINI_MODEL` | Modelo del agente de acciones; si falta se usa `GEMINI_MODEL_TEXT` de `constants.ts` |
+| `GEMINI_MODEL` / `GEMINI_MODEL_FALLBACK` / `GEMINI_MODEL_TTS` | Modelos de Gemini (texto, fallback del proxy, TTS). Defaults en `src/services/geminiConfig.ts`. Rollback: `GEMINI_MODEL=gemini-2.5-flash` en Vercel y redeploy; `samplingFor` restaura los parametros viejos |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Auth + DB. Sin ellas `supabase === null` y el juego corre en modo demo |
 
 ## Arquitectura

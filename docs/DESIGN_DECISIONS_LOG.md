@@ -1717,3 +1717,13 @@ catálogo de las cien situaciones a su bundle.
 **Verificación.** `tsc` limpio, 163/163 tests, build limpio, revisado sobre el build servido
 (bandeja y feed). `npx tsx scripts/news-art-audit.ts` imprime qué foto recibiría cada una de las
 cien situaciones, agrupadas por tema, que es como se detectaron los mapeos desafortunados.
+
+## 2026-10-12 — v5 fase 24: Gemini con modelo configurable y parámetros de Gemini 3
+
+Nuevo `src/services/geminiConfig.ts` como única fuente de ids de modelo (`GEMINI_MODEL`, `GEMINI_MODEL_FALLBACK`, `GEMINI_MODEL_TTS`, con defaults `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.8-flash-tts`) y `samplingFor(model, legacy)`: en Gemini 3 omite `temperature/topP/topK` y manda `thinkingLevel: LOW`; en 2.5 devuelve los parámetros viejos (rollback con solo cambiar `GEMINI_MODEL`). `constants.ts` re-exporta; `geminiService`, `decarbonitoAgent` y `api/gemini.ts` ya no tienen literales de modelo. Fecha de consulta de la página de deprecaciones: 2026-10-12 (según la especificación; no se pudo reverificar desde este entorno).
+
+**Desvíos.** `thinkingLevel` se pasa como cadena `'LOW'` casteada a `ThinkingLevel` (el enum de `@google/genai` 1.41.0 es `LOW`, y evita un import en runtime que rompía el mock de `tests/agent/loop.spec.ts`). No se revisó el formato de `speechConfig` de TTS 3.8 (sin acceso a la API): se mantuvo el actual.
+
+**Deudas.** (1) Los ids `gemini-3.8-*` y `gemini-3.5-*` vienen de la especificación y no se pudieron comprobar aquí. (2) La API key sigue en el bundle del cliente (§6 opcional no hecho); plan: `geminiTransport.ts` contra `/api/gemini` y quitar `GEMINI_API_KEY` del `define`. **Pedido al equipo:** probar DecarboNito en `/play` y el asesor en `/territorio` con la key real antes del próximo taller, y cargar las tres variables en Vercel.
+
+**Verificación.** `tsc` limpio, 166/166 tests (3 nuevos en `tests/agent/geminiConfig.spec.ts`).

@@ -15,11 +15,8 @@ export const MAX_ACTIVE_POLICIES = 5; // Máximo de políticas activas simultán
 
 
 export const API_KEY_ERROR_MESSAGE = "La variable de entorno API_KEY no está configurada. La funcionalidad del chatbot estará desactivada.";
-// FIX: Updated model to recommended 'gemini-2.5-flash' from deprecated 'gemini-1.5-flash'.
-export const GEMINI_MODEL_TEXT = 'gemini-2.5-flash';
-// Native Gemini speech-generation model — reuses the same GEMINI_API_KEY, no
-// separate Google Cloud TTS project/billing/credentials required.
-export const GEMINI_MODEL_TTS = 'gemini-2.5-flash-preview-tts';
+// Model ids live in services/geminiConfig.ts (env-configurable); re-exported to keep imports stable.
+export { GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS } from './services/geminiConfig';
 // Prebuilt Gemini TTS voice for DecarboNito. Any of the ~30 prebuilt voice
 // names (Puck, Kore, Charon, Zephyr, ...) works for both ES and EN.
 export const GEMINI_TTS_VOICE_NAME = 'Puck';

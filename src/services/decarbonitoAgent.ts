@@ -13,7 +13,8 @@
 import { GoogleGenAI, FunctionCallingConfigMode, type Content, type FunctionCall, type Part } from '@google/genai';
 import { z } from 'zod';
 import { GameState } from '../types';
-import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT } from '../constants';
+import { LEVEL_CONFIGS } from '../constants';
+import { GEMINI_MODEL_TEXT, samplingFor } from './geminiConfig';
 import { tFor } from '../i18n';
 import type { Locale } from '../i18n/types';
 import { REGISTRY, type ActionContext } from '../game/uiActionRegistry';
@@ -24,7 +25,7 @@ import { logAgentAction } from './agentTelemetry';
 // docs/DESIGN_DECISIONS_LOG.md phase 8 entry for why the default stays GEMINI_MODEL_TEXT
 // ('gemini-2.5-flash', already verified working in this app) rather than the source file's
 // speculative 'gemini-3.6-flash', which this environment has no way to confirm is real/GA.
-export const AGENT_MODEL = process.env.GEMINI_MODEL || GEMINI_MODEL_TEXT;
+export const AGENT_MODEL = GEMINI_MODEL_TEXT;
 
 const API_KEY = process.env.API_KEY;
 // Constructed lazily, not at module scope: the installed @google/genai throws immediately in its
@@ -170,9 +171,7 @@ export async function agentTurn(userText: string, ctx: ActionContext, mode: Agen
       systemInstruction: buildSystemInstruction(ctx.state, ctx.locale),
       tools,
       toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO } },
-      temperature: 0.6,
-      topP: 0.9,
-      topK: 40,
+      ...samplingFor(AGENT_MODEL, { temperature: 0.6, topP: 0.9, topK: 40 }),
     });
 
     const candidateParts = res.candidates?.[0]?.content?.parts;

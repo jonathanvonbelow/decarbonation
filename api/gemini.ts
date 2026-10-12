@@ -41,7 +41,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   // Strict allowlist: the client does not choose the model or a raw systemInstruction override —
   // only the conversation contents and the tool/generation config it already builds locally.
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'; // keep in sync with src/services/geminiConfig.ts
   try {
     const res = await ai.models.generateContent({ model, contents: body.contents as any, config: body.config as any });
     return Response.json({ text: res.text, functionCalls: res.functionCalls ?? [], candidates: res.candidates });
@@ -49,7 +49,7 @@ export default async function handler(req: Request): Promise<Response> {
     // Degrade: single retry against the fallback model before giving up.
     try {
       const res = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash-lite',
+        model: process.env.GEMINI_MODEL_FALLBACK || 'gemini-3.5-flash-lite',
         contents: body.contents as any, config: body.config as any,
       });
       return Response.json({ text: res.text, functionCalls: res.functionCalls ?? [], degraded: true });
