@@ -9,6 +9,7 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
   title: {
     eyebrow: 'What comes next for DecarboNation',
     tagline: 'You govern a region for 30 years, month by month. It is the same model as the main game, now on a territory that changes before your eyes.',
+    survey: 'Already played? Answer the questionnaire',
     play: 'Start game',
     howTo: 'How to play',
     backToMain: 'Go to the main game',
@@ -40,6 +41,7 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
     language: 'Español',
     exit: 'Exit',
     progress: 'Game progress',
+    workshop: 'Workshop {code}',
     paused: 'Paused',
   },
   kinds: {
@@ -307,6 +309,7 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
     start: 'Start',
     final: 'End',
     declared: 'Public-use lots you declared',
+    survey: 'Tell us how it went (7 min)',
     again: 'Play again',
     toTitle: 'Back to start',
     toMain: 'Go to the main game',

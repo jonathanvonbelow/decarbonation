@@ -1737,3 +1737,15 @@ Nuevo `src/services/geminiConfig.ts` como única fuente de ids de modelo (`GEMIN
 **Acciones para el equipo (no automatizables).** (1) Pegar la migración en Supabase → SQL Editor → Run. (2) Probar con `curl -X POST "$SUPABASE_URL/rest/v1/territorio_feedback" -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -H "Prefer: return=minimal" -d '{"origen":"pagina","lang":"es","rol":"otro","taller_codigo":"PRUEBA"}'` (esperado HTTP 201) y un `GET ?select=id` (esperado error de permisos o `[]`). (3) Borrar la fila de prueba desde el Table Editor.
 
 **Verificación.** `tsc` limpio; 10 tests nuevos en `tests/territorio/feedbackService.spec.ts`.
+
+## 2026-10-12 — v5 fase 26: cuestionario de Territorio en `/territorio/encuesta`
+
+Página nueva (`territorio-encuesta.html` → `src/territorio/survey/`), una sola página con cinco `<fieldset>` y barra de progreso `n de 14`; envía a `territorio_feedback` (fase 25) sin cuenta. `summary.ts` guarda un resumen de la última partida en `localStorage` (`dn_territorio_last_game_v1`, vence a las 12 h) al cambiar el año y al terminar; `workshopCode.ts` propaga `?taller=` vía `sessionStorage`. `EndScreen` suma el botón primario "Contanos cómo te fue (7 min)", `TitleScreen` un link, y el HUD un chip "Taller {código}". Rewrite `/territorio/encuesta` antes de `/territorio`; `APP_VERSION` inyectada en `vite.config.ts`.
+
+**Mapeo ítems → columnas.** 1 `rol`(+`rol_otro`) · 2 `contexto_uso` · 3 `comprension` · 4 `ritmo` · 5 `mapa_utilidad` · 6 `elementos_utiles` (máx. 3) · 7 `tradeoffs` · 8 `realismo` · 9 `aprendizaje_texto` · 10 `mejora_prioritaria` · 11 `mejoras_texto` · 12 `uso_taller` · 13 `formatos_uso` · 14 `taller_conceptos_texto`.
+
+**Desvíos.** Los textos del cuestionario viven en `survey/copy.ts` + `copy.en.ts` (tipado espejo) y esos dos archivos se agregaron a la lista de ignorados de `scripts/i18n-audit.mjs`, igual que `src/i18n/`. No se hizo test de render de componentes (el repo no tiene setup de DOM). Verificación en navegador no realizada en esta fase.
+
+**Deuda conocida.** `npm run i18n:audit` ya reporta 29 textos en `src/territorio/advisorRules.ts` y `session.ts` (contexto del asesor y razones de colapso, en español a propósito); no son de esta fase y quedan sin tocar.
+
+**Verificación.** `tsc` limpio, 182/182 tests, `vite build` limpio (el chunk de la encuesta no incluye `@supabase/supabase-js`).

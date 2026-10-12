@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
         'process.env.GEMINI_MODEL': JSON.stringify(env.GEMINI_MODEL),
         'process.env.GEMINI_MODEL_FALLBACK': JSON.stringify(env.GEMINI_MODEL_FALLBACK),
         'process.env.GEMINI_MODEL_TTS': JSON.stringify(env.GEMINI_MODEL_TTS),
+        'process.env.APP_VERSION': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev').slice(0, 7)),
       },
       resolve: {
         dedupe: ['react', 'react-dom'],
@@ -53,6 +54,8 @@ export default defineConfig(({ mode }) => {
             // v4 preview (mejora-general/files/21_fusion_ecosim.md): single-level, monthly,
             // map-based version, published apart from the main game as "what comes next".
             territorio: path.resolve(__dirname, 'territorio.html'),
+            // v5/26: anonymous questionnaire for Territorio (no Supabase client in this bundle).
+            territorioEncuesta: path.resolve(__dirname, 'territorio-encuesta.html'),
           },
         },
       },

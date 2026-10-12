@@ -15,6 +15,7 @@ import { fill, useCopy, type Copy } from './copy';
 import { HEAT_MODES, type HeatMode } from './heat';
 import type { NewsItem } from './news';
 import { SITUATION_BY_ID } from './situations';
+import { activeWorkshopCode } from './survey/workshopCode';
 import { TOTAL_MONTHS, type MonthSample, type Session } from './session';
 
 export type Speed = 0 | 1 | 4;
@@ -43,6 +44,7 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
   const { c, fmt, locale, setLocale, monthName } = useCopy();
   const clockRef = useAnchor<HTMLDivElement>(ANCHOR.clock, 'reloj');
   const m = session.game.indicators;
+  const workshop = useMemo(activeWorkshopCode, []);
   const running = speed > 0 && !session.outcome;
   const btn = 'h-10 min-w-10 px-2 text-[13px] transition-colors';
   return (
@@ -52,6 +54,7 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
         <div className="min-w-0">
           <p className="font-[var(--font-display)] text-[15px] leading-tight text-bone">{c.brand.name}</p>
           <p className="text-[11px] text-ochre">{c.brand.preview}</p>
+          {workshop && <p className="text-[11px] text-ash">{fill(c.hud.workshop, { code: workshop })}</p>}
         </div>
         <div className="mx-1 h-8 w-px bg-basalt-600" />
         <p className="tnum text-[15px] text-bone" aria-live="polite">

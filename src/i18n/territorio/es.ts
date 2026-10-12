@@ -10,6 +10,7 @@ export const TERRITORIO_ES = {
   title: {
     eyebrow: 'Lo próximo de DecarboNation',
     tagline: 'Gobernás una región durante 30 años, mes a mes. Es el mismo modelo del juego principal, ahora sobre un territorio que cambia a la vista.',
+    survey: '¿Ya jugaste? Respondé el cuestionario',
     play: 'Empezar partida',
     howTo: 'Cómo se juega',
     backToMain: 'Ir al juego principal',
@@ -41,6 +42,7 @@ export const TERRITORIO_ES = {
     language: 'English',
     exit: 'Salir',
     progress: 'Progreso de la partida',
+    workshop: 'Taller {code}',
     paused: 'En pausa',
   },
   kinds: {
@@ -308,6 +310,7 @@ export const TERRITORIO_ES = {
     start: 'Inicio',
     final: 'Final',
     declared: 'Lotes de uso público que declaraste',
+    survey: 'Contanos cómo te fue (7 min)',
     again: 'Jugar de nuevo',
     toTitle: 'Volver al inicio',
     toMain: 'Ir al juego principal',

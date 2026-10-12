@@ -21,6 +21,8 @@ import { Actors, Dock, IndicatorStrip, LeftRail, NewsTicker, ProgressRail, TopBa
 import { IsoMap } from './IsoMap';
 import type { NewsItem } from './news';
 import { FinancePanel, NewsPanel, ParcelCard, PoliciesPanel, RoutesPanel, SideSheet } from './panels';
+import { buildSummary, saveSummary } from './survey/summary';
+import { flushFeedbackQueue } from './survey/feedbackService';
 import { SituationsPanel } from './SituationsPanel';
 import { BriefingScreen, EndScreen, TitleScreen } from './screens';
 import {
@@ -50,6 +52,16 @@ function TerritorioGame() {
   sessionRef.current = session;
   const speedRef = useRef(speed);
   speedRef.current = speed;
+
+  // Snapshot for the questionnaire: at every year boundary and when the game ends, so a game
+  // abandoned halfway still leaves a partial summary (26_cuestionario_territorio.md §5).
+  useEffect(() => {
+    if (screen === 'play') saveSummary(buildSummary(session));
+  }, [screen, session.game.year, session.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void flushFeedbackQueue();
+  }, []);
 
   useEffect(() => {
     document.title = c.brand.name;

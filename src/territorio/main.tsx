@@ -5,9 +5,12 @@ import ReactDOM from 'react-dom/client';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { I18nProvider } from '../i18n';
 import { TerritorioApp } from './TerritorioApp';
+import { captureWorkshopCode } from './survey/workshopCode';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Could not find root element to mount to');
+
+captureWorkshopCode();
 
 // Preview entry (mejora-general/files/21_fusion_ecosim.md §9). Deliberately does not register the
 // service worker or touch Supabase: it is a demo-mode preview of what comes next, not the game.

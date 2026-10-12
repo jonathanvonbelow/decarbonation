@@ -8,6 +8,7 @@ import { gameOverKind } from '../sim';
 import { Button } from '../components/ui/Button';
 import type { Indicators } from '../types';
 import { fill, useCopy } from './copy';
+import { withWorkshopCode } from './survey/workshopCode';
 import { SUSTAINED_REASONS, type Session } from './session';
 
 /** Which end-of-game copy a collapse gets: the model's four reasons, plus the two sustained ones. */
@@ -45,6 +46,7 @@ export function TitleScreen({ onPlay, onHowTo }: { onPlay: () => void; onHowTo: 
           <a href="/play" className="inline-flex h-12 items-center rounded-md px-6 text-[17px] text-ash hover:bg-basalt-800 hover:text-bone">{c.title.backToMain}</a>
         </div>
         <p className="mt-6 max-w-md text-[12px] text-ash-dim">{c.title.note}</p>
+        <a href="/territorio/encuesta" className="mt-3 w-fit text-[13px] text-ash underline-offset-2 hover:text-bone hover:underline">{c.title.survey}</a>
       </main>
     </div>
   );
@@ -133,7 +135,8 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
           </table>
         </div>
         <div className="mt-10 flex flex-wrap gap-3 pb-8">
-          <Button size="lg" variant="primary" onClick={onAgain}>{c.end.again}</Button>
+          <a href={withWorkshopCode('/territorio/encuesta?origen=fin_partida')} className="inline-flex h-12 items-center justify-center rounded-md bg-chlorophyll px-6 text-[17px] font-medium text-basalt-950 hover:brightness-110">{c.end.survey}</a>
+          <Button size="lg" variant="secondary" onClick={onAgain}>{c.end.again}</Button>
           <Button size="lg" variant="secondary" onClick={onTitle}>{c.end.toTitle}</Button>
           <a href="/play" className="inline-flex h-12 items-center rounded-md px-6 text-[17px] text-ash hover:bg-basalt-800 hover:text-bone">{c.end.toMain}</a>
         </div>

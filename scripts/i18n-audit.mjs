@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { glob } from 'node:fs/promises';
 
 const IGNORED = [
-  /^src\/i18n\//, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\/legacyContent\//,
+  /^src\/i18n\//, /^src\/territorio\/survey\/copy(\.en)?\.ts$/, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\/legacyContent\//,
   // Phase 11 (20_landing_shareables.md): the landing's own tiny module. Structurally outside the
   // React i18n system (useT/t() don't exist here -- the landing ships zero React on purpose, see
   // index.html's own comment), so its one aria-label string is handled by the same `data-lang`
