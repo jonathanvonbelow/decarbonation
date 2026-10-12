@@ -5,6 +5,7 @@
     { "source": "/territorio/encuesta", "destination": "/territorio-encuesta.html" },
     { "source": "/territorio", "destination": "/territorio.html" },
     { "source": "/docentes", "destination": "/docentes.html" },
+    { "source": "/docentes/espacio", "destination": "/docentes-espacio.html" },
     { "source": "/docentes/guia", "destination": "/docentes-guia.html" },
     { "source": "/docentes/consignas", "destination": "/docentes-consignas.html" },
     { "source": "/docentes/ecuaciones", "destination": "/docentes-ecuaciones.html" },

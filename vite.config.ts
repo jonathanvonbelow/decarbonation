@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
             docentesGuia: path.resolve(__dirname, 'docentes-guia.html'),
             docentesConsignas: path.resolve(__dirname, 'docentes-consignas.html'),
             docentesEcuaciones: path.resolve(__dirname, 'docentes-ecuaciones.html'),
+            docentesEspacio: path.resolve(__dirname, 'docentes-espacio.html'),
             docentesPlanClase: path.resolve(__dirname, 'docentes-plan-clase.html'),
             docentesDiapositivas: path.resolve(__dirname, 'docentes-diapositivas.html'),
             // v4 preview (mejora-general/files/21_fusion_ecosim.md): single-level, monthly,

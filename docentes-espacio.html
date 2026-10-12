@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecarboNation — Espacio docente</title>
+    <meta name="description" content="Un recorrido autoguiado de cuatro etapas para probar DecarboNation, elegir versión y formato, generar el link de tu grupo y preparar tu clase o taller a tu ritmo." />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="canonical" href="https://decarbonation.vercel.app/docentes/espacio">
+    <link rel="stylesheet" href="/src/index.css" />
+    <style>
+      .step { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.35rem 0; }
+      .step input[type="checkbox"] { margin-top: 0.3rem; accent-color: var(--color-chlorophyll); width: 1.05rem; height: 1.05rem; flex: none; }
+      .choice label { display: flex; gap: 0.5rem; align-items: center; padding: 0.4rem 0.6rem; border: 1px solid var(--color-basalt-600); border-radius: 8px; cursor: pointer; font-size: 0.875rem; color: var(--color-ash); }
+      .choice label:has(input:checked) { border-color: var(--color-chlorophyll); color: var(--color-bone); background: rgb(111 208 140 / 0.12); }
+      .choice input { accent-color: var(--color-chlorophyll); }
+      .field { background: var(--color-basalt-800); border: 1px solid var(--color-basalt-600); border-radius: 8px; padding: 0.5rem 0.7rem; color: var(--color-bone); font-size: 0.9rem; width: 100%; }
+      .field[aria-invalid="true"] { border-color: var(--color-ember); }
+      .btn { padding: 0.45rem 0.9rem; font-size: 0.8125rem; border: 1px solid var(--color-basalt-600); border-radius: 8px; color: var(--color-bone); background: var(--color-basalt-700); }
+      .btn:hover { background: var(--color-basalt-600); }
+      .btn-primary { background: var(--color-chlorophyll); color: var(--color-basalt-950); border-color: transparent; font-weight: 600; }
+      .btn:focus-visible, .field:focus-visible { outline: 2px solid var(--color-chlorophyll); outline-offset: 2px; }
+      #qr-box svg { width: 200px; height: 200px; background: #fff; border-radius: 8px; }
+      @media print {
+        .no-print, #wizard, #generator { display: none !important; }
+        body { background: #fff !important; color: #111 !important; }
+        .panel { background: transparent !important; border: 1px solid #bbb !important; }
+        h1, h2, h3 { color: #111 !important; }
+        .text-ash, .text-ash-dim, .text-bone { color: #222 !important; }
+      }
+    </style>
+  </head>
+  <body class="bg-level-ambience text-bone font-sans" style="--level-tint: 111 208 140; --level-tint-alpha: 0.05;">
+    <header class="border-b border-basalt-700 print:hidden">
+      <div class="container mx-auto flex items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ <span data-lang="es">Imprimir</span><span data-lang="en" hidden>Print</span></button>
+          <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
+            🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-12 max-w-3xl">
+      <a href="/docentes" data-no-version class="text-sm text-hydro hover:underline print:hidden"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a>
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-2">
+        <span data-lang="es">Espacio docente</span><span data-lang="en" hidden>Teacher space</span>
+      </h1>
+      <p class="text-ash mb-6">
+        <span data-lang="es">Un recorrido de cuatro etapas para preparar una clase o un taller con DecarboNation, a tu ritmo. Tu avance queda guardado en este navegador.</span>
+        <span data-lang="en" hidden>A four-stage path to prepare a class or workshop with DecarboNation, at your own pace. Your progress is saved in this browser.</span>
+      </p>
+
+      <div class="panel p-4 mb-10">
+        <p class="text-sm text-ash mb-2" aria-live="polite">
+          <span data-lang="es"><span data-progress-n>0</span> de 13 pasos</span>
+          <span data-lang="en" hidden><span data-progress-n>0</span> of 13 steps</span>
+        </p>
+        <div id="progress" class="h-2 rounded bg-basalt-700 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="13" aria-valuenow="0">
+          <div id="progress-bar" class="h-full bg-chlorophyll transition-[width]" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- ============ Etapa 1 ============ -->
+      <section id="etapa-1" class="panel p-6 mb-8 scroll-mt-20">
+        <p class="label-eyebrow mb-1"><span data-lang="es">Etapa 1 · ≈ 45 min</span><span data-lang="en" hidden>Stage 1 · ≈ 45 min</span></p>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">Jugá antes que tus estudiantes</span><span data-lang="en" hidden>Play before your students do</span>
+        </h2>
+        <div data-lang="es">
+          <p class="text-ash mb-3">La mejor preparación es una partida propia. Jugá Territorio completo una vez, sin apuro, mirando estas seis cosas:</p>
+          <ol class="list-decimal list-inside text-sm text-ash space-y-1 mb-5">
+            <li>Qué pasa con el bosque nativo del Sur Boscoso si no hacés nada los primeros dos años (probá la velocidad ×4).</li>
+            <li>Qué capa de análisis (carbono, biodiversidad, alimentos, economía) te cuenta más sobre el mapa.</li>
+            <li>Cómo cambia la presión de productores, ambientalistas y ciudadanía cuando activás o desactivás una política.</li>
+            <li>Qué pasa con una situación que dejás vencer.</li>
+            <li>Qué condición de qué ruta te cuesta más cumplir.</li>
+            <li>En qué momento sentiste que tenías que pausar para pensar: ese es un buen momento para pausar con tu grupo.</li>
+          </ol>
+        </div>
+        <div data-lang="en" hidden>
+          <p class="text-ash mb-3">The best preparation is a game of your own. Play Territory through once, unhurried, watching these six things:</p>
+          <ol class="list-decimal list-inside text-sm text-ash space-y-1 mb-5">
+            <li>What happens to the native forest of the Forested South if you do nothing for the first two years (try ×4 speed).</li>
+            <li>Which analysis layer (carbon, biodiversity, food, economy) tells you the most about the map.</li>
+            <li>How the pressure from producers, environmentalists and citizens changes when you switch a policy on or off.</li>
+            <li>What happens to a situation you let expire.</li>
+            <li>Which condition of which route is hardest for you to meet.</li>
+            <li>At what moment you felt you had to pause and think: that is a good moment to pause with your group.</li>
+          </ol>
+        </div>
+
+        <div class="step">
+          <input type="checkbox" id="step-1" data-step />
+          <label for="step-1" class="text-sm text-bone">
+            <span data-lang="es">Jugué una partida completa de Territorio</span><span data-lang="en" hidden>I played a full game of Territory</span>
+          </label>
+        </div>
+        <p class="ml-7 mb-2 no-print"><a class="btn btn-primary inline-block" href="/territorio" target="_blank" rel="noopener" data-no-version><span data-lang="es">Abrir Territorio</span><span data-lang="en" hidden>Open Territory</span></a></p>
+
+        <div class="step">
+          <input type="checkbox" id="step-2" data-step />
+          <label for="step-2" class="text-sm text-bone">
+            <span data-lang="es">Respondí el cuestionario como docente</span><span data-lang="en" hidden>I answered the questionnaire as a teacher</span>
+          </label>
+        </div>
+        <p class="ml-7 mb-2 text-xs text-ash-dim no-print">
+          <a class="text-hydro hover:underline" href="/territorio/encuesta?origen=espacio_docente" target="_blank" rel="noopener" data-no-version><span data-lang="es">Abrir el cuestionario</span><span data-lang="en" hidden>Open the questionnaire</span></a> —
+          <span data-lang="es">tus respuestas nos ayudan a mejorar el material.</span><span data-lang="en" hidden>your answers help us improve the material.</span>
+        </p>
+
+        <div class="step">
+          <input type="checkbox" id="step-3" data-step />
+          <label for="step-3" class="text-sm text-bone">
+            <span data-lang="es">(Opcional) Probé el juego de 3 niveles</span><span data-lang="en" hidden>(Optional) I tried the 3-level game</span>
+          </label>
+        </div>
+        <p class="ml-7 mb-4 no-print"><a class="text-sm text-hydro hover:underline" href="/play?demo=1" target="_blank" rel="noopener" data-no-version><span data-lang="es">Abrir la demo guiada</span><span data-lang="en" hidden>Open the guided demo</span></a></p>
+
+        <details class="no-print">
+          <summary class="cursor-pointer text-sm text-ash hover:text-bone">
+            <span data-lang="es">¿Preferís verlo antes de jugar?</span><span data-lang="en" hidden>Prefer to watch before playing?</span>
+          </summary>
+          <p class="mt-2 text-sm text-ash">
+            <a class="text-hydro hover:underline" href="https://www.youtube.com/playlist?list=PLBMtnsUSTFj4" target="_blank" rel="noopener" data-no-version>
+              <span data-lang="es">Serie de videos del tutorial de Territorio →</span><span data-lang="en" hidden>Territory tutorial video series →</span>
+            </a>
+          </p>
+        </details>
+      </section>
+
+      <!-- ============ Etapa 2 ============ -->
+      <section id="etapa-2" class="panel p-6 mb-8 scroll-mt-20">
+        <p class="label-eyebrow mb-1"><span data-lang="es">Etapa 2 · ≈ 5 min</span><span data-lang="en" hidden>Stage 2 · ≈ 5 min</span></p>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">Elegí versión y formato</span><span data-lang="en" hidden>Choose version and format</span>
+        </h2>
+        <noscript><p class="text-sm text-ash-dim mb-3">Sin JavaScript el asistente no calcula la recomendación: consultá la tabla “¿Qué versión usar?” del paquete. / Without JavaScript the wizard can't compute a recommendation: see the "Which version should I use?" table in the package.</p></noscript>
+
+        <form id="wizard" class="no-print space-y-5" onsubmit="return false">
+          <fieldset class="choice">
+            <legend class="text-sm text-bone mb-2"><span data-lang="es">¿Cuánto tiempo tenés?</span><span data-lang="en" hidden>How much time do you have?</span></legend>
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label><input type="radio" name="time" value="una" checked /><span data-lang="es">Una clase de 60–90 min</span><span data-lang="en" hidden>One 60–90 min class</span></label>
+              <label><input type="radio" name="time" value="dos" /><span data-lang="es">Dos clases o más</span><span data-lang="en" hidden>Two or more classes</span></label>
+              <label><input type="radio" name="time" value="taller" /><span data-lang="es">Un taller de medio día</span><span data-lang="en" hidden>A half-day workshop</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="choice">
+            <legend class="text-sm text-bone mb-2"><span data-lang="es">¿Con qué dispositivos?</span><span data-lang="en" hidden>With which devices?</span></legend>
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label><input type="radio" name="devices" value="pc" checked /><span data-lang="es">Una computadora por persona o pareja</span><span data-lang="en" hidden>One computer per person or pair</span></label>
+              <label><input type="radio" name="devices" value="cel" /><span data-lang="es">Solo celulares</span><span data-lang="en" hidden>Phones only</span></label>
+              <label><input type="radio" name="devices" value="pantalla" /><span data-lang="es">Una sola pantalla proyectada</span><span data-lang="en" hidden>A single projected screen</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="choice">
+            <legend class="text-sm text-bone mb-2"><span data-lang="es">¿Qué querés que se lleven?</span><span data-lang="en" hidden>What do you want them to take away?</span></legend>
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label><input type="radio" name="goal" value="intuicion" checked /><span data-lang="es">Intuición sobre los trade-offs</span><span data-lang="en" hidden>An intuition for the trade-offs</span></label>
+              <label><input type="radio" name="goal" value="datos" /><span data-lang="es">Análisis de datos e indicadores</span><span data-lang="en" hidden>Data and indicator analysis</span></label>
+              <label><input type="radio" name="goal" value="actores" /><span data-lang="es">Discusión entre actores</span><span data-lang="en" hidden>Discussion between stakeholders</span></label>
+            </div>
+          </fieldset>
+        </form>
+
+        <div id="wizard-result" class="mt-6 rounded-lg border border-chlorophyll/50 p-4" aria-live="polite">
+          <p class="label-eyebrow mb-1"><span data-lang="es">Recomendación</span><span data-lang="en" hidden>Recommendation</span></p>
+          <div data-result="territorio">
+            <p class="text-bone font-semibold"><span data-lang="es">Territorio</span><span data-lang="en" hidden>Territory</span></p>
+            <p class="text-sm text-ash"><span data-lang="es">Es la versión recomendada para aula y talleres: partidas cortas, sin cuenta y con un mapa que se entiende a la vista.</span><span data-lang="en" hidden>It is the recommended version for classes and workshops: short games, no account, and a map that reads at a glance.</span></p>
+          </div>
+          <div data-result="niveles">
+            <p class="text-bone font-semibold"><span data-lang="es">Juego de 3 niveles</span><span data-lang="en" hidden>3-level game</span></p>
+            <p class="text-sm text-ash"><span data-lang="es">Con varias clases y foco en datos conviene la versión estable: tres niveles encadenados, indicadores en detalle, guardado opcional y panel de facilitación.</span><span data-lang="en" hidden>With several classes and a focus on data, the stable version fits best: three chained levels, detailed indicators, optional saving and a facilitation panel.</span></p>
+          </div>
+          <p class="mt-2 text-sm text-ash">
+            <a class="text-hydro hover:underline" data-resource-hub href="/docentes#que-version" data-no-version><span data-lang="es">Ver la tabla “¿Qué versión usar?” →</span><span data-lang="en" hidden>See the "Which version should I use?" table →</span></a>
+          </p>
+          <p class="mt-3 text-sm text-bone">
+            <span data-lang="es">Empezá por:</span><span data-lang="en" hidden>Start with:</span>
+            <span data-start="plan-clase"><a class="text-hydro hover:underline" data-resource="plan-clase" href="/docentes/plan-clase" data-no-version><span data-lang="es">el plan de clase</span><span data-lang="en" hidden>the lesson plan</span></a></span>
+            <span data-start="guia"><a class="text-hydro hover:underline" data-resource="guia" href="/docentes/guia" data-no-version><span data-lang="es">la guía de facilitación</span><span data-lang="en" hidden>the facilitation guide</span></a></span>
+          </p>
+          <ul class="mt-3 space-y-1 text-sm text-ash">
+            <li data-notice="room"><span data-lang="es">Modo sala: vos jugás proyectado y la sala decide por votación en cada pausa. La guía de facilitación explica cómo conducirlo.</span><span data-lang="en" hidden>Room mode: you play on the projector and the room decides by vote at each pause. The facilitation guide explains how to run it.</span></li>
+            <li data-notice="phones"><span data-lang="es">Con celulares, jugá en parejas y, si es posible, sumá al menos una computadora por grupo.</span><span data-lang="en" hidden>With phones, play in pairs and, if possible, add at least one computer per group.</span></li>
+            <li data-notice="actors"><span data-lang="es">Para la discusión entre actores, usá el cierre comparativo de la guía (paso 4) con equipos que representen productores, ambientalistas y gobierno.</span><span data-lang="en" hidden>For stakeholder discussion, use the guide's comparative wrap-up (step 4) with teams representing producers, environmentalists and government.</span></li>
+          </ul>
+        </div>
+
+        <div class="step mt-4">
+          <input type="checkbox" id="step-4" data-step />
+          <label for="step-4" class="text-sm text-bone"><span data-lang="es">Elegí versión y formato</span><span data-lang="en" hidden>I chose version and format</span></label>
+        </div>
+      </section>
+
+      <!-- ============ Etapa 3 ============ -->
+      <section id="etapa-3" class="panel p-6 mb-8 scroll-mt-20">
+        <p class="label-eyebrow mb-1"><span data-lang="es">Etapa 3 · ≈ 20 min</span><span data-lang="en" hidden>Stage 3 · ≈ 20 min</span></p>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">Prepará la clase</span><span data-lang="en" hidden>Prepare the class</span>
+        </h2>
+
+        <div id="generator" class="rounded-lg border border-basalt-600 p-4 mb-4">
+          <label for="taller-code" class="text-sm text-bone block mb-1">
+            <span data-lang="es">Código de taller</span><span data-lang="en" hidden>Workshop code</span>
+          </label>
+          <p class="text-xs text-ash-dim mb-2">
+            <span data-lang="es">Formato sugerido <code>PROVINCIA-ESCUELA-FECHA</code>, por ejemplo <code>MIS-EPET3-1105</code>. 2 a 32 caracteres: letras, números, guion y guion bajo.</span>
+            <span data-lang="en" hidden>Suggested format <code>PROVINCE-SCHOOL-DATE</code>, for example <code>MIS-EPET3-1105</code>. 2 to 32 characters: letters, numbers, hyphen and underscore.</span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <input id="taller-code" class="field flex-1 min-w-[12rem]" type="text" maxlength="32" autocomplete="off" spellcheck="false" placeholder="MIS-EPET3-1105" aria-describedby="code-msg" />
+            <button id="code-suggest" type="button" class="btn"><span data-lang="es">Sugerir un código</span><span data-lang="en" hidden>Suggest a code</span></button>
+          </div>
+          <p id="code-msg" class="text-xs mt-2 min-h-[1.25rem]" aria-live="polite">
+            <span data-code-state="empty" class="text-ash-dim"><span data-lang="es">Sin JavaScript, armá el link a mano: <code>https://decarbonation.vercel.app/territorio?taller=TU-CODIGO</code></span><span data-lang="en" hidden>Without JavaScript, build the link by hand: <code>https://decarbonation.vercel.app/territorio?taller=YOUR-CODE</code></span></span>
+            <span data-code-state="bad" class="text-ember" hidden><span data-lang="es">El código no es válido: usá entre 2 y 32 letras, números, guiones o guiones bajos, sin espacios.</span><span data-lang="en" hidden>The code isn't valid: use 2 to 32 letters, numbers, hyphens or underscores, with no spaces.</span></span>
+            <span data-code-state="ok" class="text-chlorophyll" hidden><span data-lang="es">Código válido. Quedó guardado en este navegador.</span><span data-lang="en" hidden>Valid code. It's saved in this browser.</span></span>
+          </p>
+
+          <div id="code-outputs" class="mt-3 space-y-3" hidden>
+            <div>
+              <label for="link-play" class="text-xs text-ash block mb-1"><span data-lang="es">Link para jugar</span><span data-lang="en" hidden>Link to play</span></label>
+              <div class="flex gap-2"><input id="link-play" class="field" type="text" readonly /><button type="button" class="btn" data-copy="link-play"><span data-lang="es">Copiar</span><span data-lang="en" hidden>Copy</span></button></div>
+            </div>
+            <div>
+              <label for="link-survey" class="text-xs text-ash block mb-1"><span data-lang="es">Link del cuestionario</span><span data-lang="en" hidden>Questionnaire link</span></label>
+              <div class="flex gap-2"><input id="link-survey" class="field" type="text" readonly /><button type="button" class="btn" data-copy="link-survey"><span data-lang="es">Copiar</span><span data-lang="en" hidden>Copy</span></button></div>
+            </div>
+            <p id="copy-live" class="text-xs min-h-[1rem]" aria-live="polite">
+              <span data-copy-state="ok" class="text-chlorophyll" hidden><span data-lang="es">Copiado.</span><span data-lang="en" hidden>Copied.</span></span>
+              <span data-copy-state="fail" class="text-ember" hidden><span data-lang="es">No se pudo copiar: seleccioná el texto y copialo a mano.</span><span data-lang="en" hidden>Couldn't copy: select the text and copy it by hand.</span></span>
+            </p>
+            <div class="flex flex-wrap items-start gap-4">
+              <div>
+                <button id="qr-generate" type="button" class="btn"><span data-lang="es">Generar QR</span><span data-lang="en" hidden>Generate QR</span></button>
+                <a id="qr-download" class="btn ml-2 inline-block" href="#" hidden><span data-lang="es">Descargar PNG</span><span data-lang="en" hidden>Download PNG</span></a>
+                <p class="text-xs text-ash-dim mt-2"><span data-lang="es">Pensado para proyectar en la sala.</span><span data-lang="en" hidden>Meant to be projected in the room.</span></p>
+              </div>
+              <div id="qr-box" aria-live="polite"></div>
+            </div>
+          </div>
+          <p class="text-xs text-ash-dim mt-3">
+            <span data-lang="es">El código no identifica a nadie: solo sirve para que el equipo del proyecto agrupe las respuestas de tu grupo. Anotalo: lo vas a necesitar si querés pedir los resultados.</span>
+            <span data-lang="en" hidden>The code doesn't identify anyone: it only lets the project team group your class's answers. Write it down: you'll need it to request the results.</span>
+          </p>
+        </div>
+
+        <div class="step"><input type="checkbox" id="step-5" data-step /><label for="step-5" class="text-sm text-bone"><span data-lang="es">Generé el código y el link de mi grupo</span><span data-lang="en" hidden>I built my group's code and link</span></label></div>
+        <div class="step"><input type="checkbox" id="step-6" data-step /><label for="step-6" class="text-sm text-bone"><span data-lang="es">Leí el plan de clase</span><span data-lang="en" hidden>I read the lesson plan</span> — <a class="text-hydro hover:underline" data-resource="plan-clase" href="/docentes/plan-clase" data-no-version><span data-lang="es">abrir</span><span data-lang="en" hidden>open</span></a></label></div>
+        <div class="step"><input type="checkbox" id="step-7" data-step /><label for="step-7" class="text-sm text-bone"><span data-lang="es">Revisé las diapositivas de encuadre</span><span data-lang="en" hidden>I reviewed the framing slides</span> — <a class="text-hydro hover:underline" data-resource="diapositivas" href="/docentes/diapositivas" data-no-version><span data-lang="es">abrir</span><span data-lang="en" hidden>open</span></a></label></div>
+        <div class="step"><input type="checkbox" id="step-8" data-step /><label for="step-8" class="text-sm text-bone"><span data-lang="es">Leí la guía de facilitación</span><span data-lang="en" hidden>I read the facilitation guide</span> — <a class="text-hydro hover:underline" data-resource="guia" href="/docentes/guia" data-no-version><span data-lang="es">abrir</span><span data-lang="en" hidden>open</span></a></label></div>
+        <div class="step"><input type="checkbox" id="step-9" data-step /><label for="step-9" class="text-sm text-bone"><span data-lang="es">Probé el link en un dispositivo de la sala (y se ve el chip “Taller …” en el juego)</span><span data-lang="en" hidden>I tested the link on a device in the room (and the "Workshop …" chip shows in the game)</span></label></div>
+        <div class="step"><input type="checkbox" id="step-10" data-step /><label for="step-10" class="text-sm text-bone"><span data-lang="es">Imprimí las consignas o tengo el link del cuestionario listo</span><span data-lang="en" hidden>I printed the prompts or have the questionnaire link ready</span> — <a class="text-hydro hover:underline" data-resource="consignas" href="/docentes/consignas" data-no-version><span data-lang="es">abrir</span><span data-lang="en" hidden>open</span></a></label></div>
+      </section>
+
+      <!-- ============ Etapa 4 ============ -->
+      <section id="etapa-4" class="panel p-6 mb-8 scroll-mt-20">
+        <p class="label-eyebrow mb-1"><span data-lang="es">Etapa 4</span><span data-lang="en" hidden>Stage 4</span></p>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">Después de la clase</span><span data-lang="en" hidden>After the class</span>
+        </h2>
+        <div class="step"><input type="checkbox" id="step-11" data-step /><label for="step-11" class="text-sm text-bone"><span data-lang="es">Compartí el link del cuestionario con el grupo (si no lo respondieron en clase)</span><span data-lang="en" hidden>I shared the questionnaire link with the group (if they didn't answer in class)</span></label></div>
+        <div class="step"><input type="checkbox" id="step-12" data-step /><label for="step-12" class="text-sm text-bone"><span data-lang="es">Completé las notas del facilitador</span><span data-lang="en" hidden>I filled in the facilitator notes</span> — <a class="text-hydro hover:underline" data-resource="guia" data-hash="#notas" href="/docentes/guia#notas" data-no-version><span data-lang="es">abrir</span><span data-lang="en" hidden>open</span></a></label></div>
+        <div class="step"><input type="checkbox" id="step-13" data-step /><label for="step-13" class="text-sm text-bone"><span data-lang="es">Le conté al equipo cómo fue</span><span data-lang="en" hidden>I told the team how it went</span> — <a class="text-hydro hover:underline" data-mailto href="mailto:contacto@decarbonation.example" data-no-version><span data-lang="es">escribir</span><span data-lang="en" hidden>write</span></a></label></div>
+        <p class="ml-7 text-xs text-ash-dim">
+          <span data-lang="es">El correo sale con tres preguntas guía: qué funcionó, qué no, qué necesitarías.</span>
+          <span data-lang="en" hidden>The email comes with three guiding questions: what worked, what didn't, what you would need.</span>
+        </p>
+      </section>
+
+      <section class="panel p-6 mb-8">
+        <h2 class="text-lg font-bold font-[var(--font-display)] text-bone mb-3">
+          <span data-lang="es">Para profundizar</span><span data-lang="en" hidden>Going deeper</span>
+        </h2>
+        <ul class="text-sm text-ash space-y-1 list-disc list-inside">
+          <li><a class="text-hydro hover:underline" href="/docentes/ecuaciones" data-no-version><span data-lang="es">Hoja de ecuaciones</span><span data-lang="en" hidden>Equations sheet</span></a></li>
+          <li><a class="text-hydro hover:underline" href="/#rigor" data-no-version><span data-lang="es">Rigor del modelo</span><span data-lang="en" hidden>Model rigor</span></a></li>
+          <li>
+            <span data-lang="es">¿Querés usarlo en un taller más grande o con otro formato?</span><span data-lang="en" hidden>Want to use it in a bigger workshop or another format?</span>
+            <a class="text-hydro hover:underline" data-mailto href="mailto:contacto@decarbonation.example" data-no-version><span data-lang="es">Escribinos.</span><span data-lang="en" hidden>Write to us.</span></a>
+          </li>
+        </ul>
+      </section>
+
+      <p class="no-print">
+        <button id="reset-path" type="button" class="btn"><span data-lang="es">Reiniciar mi recorrido</span><span data-lang="en" hidden>Reset my path</span></button>
+      </p>
+    </main>
+
+    <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
+      <a href="/docentes" class="hover:text-ash underline" data-no-version><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a> ·
+      <a href="/" class="hover:text-ash underline"><span data-lang="es">Inicio</span><span data-lang="en" hidden>Home</span></a>
+    </footer>
+
+    <script type="module" src="/src/docentesEspacio.ts"></script>
+  </body>
+</html>

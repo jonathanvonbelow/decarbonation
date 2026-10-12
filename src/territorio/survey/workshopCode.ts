@@ -3,8 +3,10 @@
  * may be opened from a button that does not repeat the parameter. Kept in sessionStorage so it
  * lives as long as the tab and never leaks into a later, unrelated visit.
  */
+import { WORKSHOP_CODE_RE } from '../../shared/workshopCodeRe';
+
+export { WORKSHOP_CODE_RE };
 const KEY = 'dn_taller_v1';
-export const WORKSHOP_CODE_RE = /^[A-Za-z0-9_-]{2,32}$/;
 
 const read = (): string | null => {
   try {

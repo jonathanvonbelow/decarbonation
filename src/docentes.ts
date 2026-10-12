@@ -43,7 +43,7 @@ function apply(version: Version, persist: boolean): void {
     if (a.hasAttribute('data-no-version')) return;
     a.setAttribute('href', withVersion(original, version));
   });
-  document.documentElement.dataset.version = version;
+  document.documentElement.dataset.activeVersion = version;
   if (persist) {
     const url = new URL(window.location.href);
     url.searchParams.set('v', version);
