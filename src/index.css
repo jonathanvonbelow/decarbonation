@@ -170,3 +170,26 @@
      browsers; a real crossfade would need a two-layer structure this pass doesn't build. The
      tint still updates instantly on level change (docs/DESIGN_DECISIONS_LOG.md, phase 10 entry). */
 }
+
+/* v5/27: version switch of the teacher package (src/docentes.ts). Territorio / 3-level game tabs. */
+.version-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-basalt-600);
+  border-radius: 10px;
+  background: var(--color-basalt-900);
+}
+.version-switch [role="tab"] {
+  padding: 0.45rem 0.9rem;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  color: var(--color-ash);
+  transition: background-color 0.15s, color 0.15s;
+}
+.version-switch [role="tab"]:hover { color: var(--color-bone); }
+.version-switch [role="tab"][aria-selected="true"] { background: var(--color-chlorophyll); color: var(--color-basalt-950); font-weight: 600; }
+.version-switch [role="tab"]:focus-visible { outline: 2px solid var(--color-chlorophyll); outline-offset: 2px; }
+@media print {
+  .version-switch { display: none; }
+}

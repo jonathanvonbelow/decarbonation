@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Paquete para docentes</title>
-    <meta name="description" content="Materiales para llevar DecarboNation al aula: guía de facilitación, plan de clase, diapositivas de encuadre, consignas de debriefing y hoja de ecuaciones, sin formulario." />
+    <meta name="description" content="Materiales para llevar DecarboNation al aula: guía de facilitación, plan de clase, diapositivas de encuadre, consignas de debriefing y hoja de ecuaciones, para Territorio y para el juego de 3 niveles." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes">
     <link rel="stylesheet" href="/src/index.css" />
@@ -25,17 +25,86 @@
         <span data-lang="en" hidden>Teacher package</span>
       </h1>
       <p class="text-ash mb-10">
-        <span data-lang="es">Descargas directas, sin formulario. Todo en español e inglés donde ya existe.</span>
-        <span data-lang="en" hidden>Direct downloads, no form. Everything in Spanish and English where it already exists.</span>
+        <span data-lang="es">Todo lo necesario para usar DecarboNation en el aula, en un taller o para explorarlo por tu cuenta. Cada recurso tiene una versión para Territorio y otra para el juego de 3 niveles.</span>
+        <span data-lang="en" hidden>Everything you need to use DecarboNation in class, in a workshop or to explore it on your own. Each resource has a version for Territory and one for the 3-level game.</span>
       </p>
+
+      <!-- ¿Qué versión usar? (27 §4.1). Cada celda se verificó contra el código: duración de niveles
+           en LEVEL_CONFIGS, años en src/territorio/calendar.ts, 10.000 parcelas (100×100). -->
+      <section id="que-version" class="panel p-6 mb-8 scroll-mt-20">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-2" data-lang="es">¿Qué versión usar?</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-2" data-lang="en" hidden>Which version should I use?</h2>
+        <p class="text-bone mb-4" data-lang="es">Si es tu primera vez o tenés una sola clase, empezá por Territorio.</p>
+        <p class="text-bone mb-4" data-lang="en" hidden>If it's your first time or you only have one class, start with Territory.</p>
+
+        <div data-lang="es">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[560px] text-left text-sm">
+              <thead>
+                <tr class="text-ash-dim">
+                  <th class="py-2 pr-3 font-normal"></th>
+                  <th class="py-2 pr-3 font-semibold text-chlorophyll">Territorio <span class="font-normal text-ash-dim">(recomendada)</span></th>
+                  <th class="py-2 font-semibold text-bone">Juego de 3 niveles</th>
+                </tr>
+              </thead>
+              <tbody class="text-ash align-top">
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Estado</th><td class="py-2 pr-3">Vista previa en desarrollo</td><td class="py-2">Versión estable</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Qué gobernás</th><td class="py-2 pr-3">Una región de cuatro zonas, sobre un mapa de 10.000 parcelas</td><td class="py-2">Un país, a través de sus indicadores</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Paso del tiempo</th><td class="py-2 pr-3">Mes a mes, en tiempo real (con pausa)</td><td class="py-2">Año a año, por turnos</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Duración de una partida</th><td class="py-2 pr-3">15 a 40 minutos, un solo nivel (2024–2054)</td><td class="py-2">25–30 min por nivel, tres niveles encadenados</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Qué se ve</th><td class="py-2 pr-3">Frontera agrícola, áreas protegidas, situaciones que llegan al escritorio</td><td class="py-2">Indicadores, presiones sectoriales, finanzas públicas</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Guarda la partida</th><td class="py-2 pr-3">No: cerrar la pestaña la reinicia</td><td class="py-2">Sí, con cuenta de Google (opcional)</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Cierre</th><td class="py-2 pr-3">Tabla final + cuestionario anónimo</td><td class="py-2">Informe individual de DecarboNito + predicciones</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Panel de facilitación</th><td class="py-2 pr-3">No</td><td class="py-2">Sí, ajuste de parámetros en vivo</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Ideal para</th><td class="py-2 pr-3">Primer contacto, aula, talleres, público no técnico</td><td class="py-2">Cursos avanzados, análisis de datos, varias clases</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div data-lang="en" hidden>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[560px] text-left text-sm">
+              <thead>
+                <tr class="text-ash-dim">
+                  <th class="py-2 pr-3 font-normal"></th>
+                  <th class="py-2 pr-3 font-semibold text-chlorophyll">Territory <span class="font-normal text-ash-dim">(recommended)</span></th>
+                  <th class="py-2 font-semibold text-bone">3-level game</th>
+                </tr>
+              </thead>
+              <tbody class="text-ash align-top">
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Status</th><td class="py-2 pr-3">Preview in development</td><td class="py-2">Stable version</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">What you govern</th><td class="py-2 pr-3">A four-zone region, on a map of 10,000 parcels</td><td class="py-2">A country, through its indicators</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Pace of time</th><td class="py-2 pr-3">Month by month, in real time (with pause)</td><td class="py-2">Year by year, turn-based</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Length of a game</th><td class="py-2 pr-3">15 to 40 minutes, a single level (2024–2054)</td><td class="py-2">25–30 min per level, three chained levels</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">What you see</th><td class="py-2 pr-3">Farming frontier, protected areas, situations landing on your desk</td><td class="py-2">Indicators, sectoral pressures, public finances</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Saves your game</th><td class="py-2 pr-3">No: closing the tab restarts it</td><td class="py-2">Yes, with a Google account (optional)</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Wrap-up</th><td class="py-2 pr-3">Final table + anonymous questionnaire</td><td class="py-2">Individual DecarboNito report + predictions</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Facilitation panel</th><td class="py-2 pr-3">No</td><td class="py-2">Yes, live parameter tuning</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Best for</th><td class="py-2 pr-3">First contact, classes, workshops, non-technical audiences</td><td class="py-2">Advanced courses, data analysis, several classes</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Espacio docente asincrónico (fase 28). -->
+      <a href="/docentes/espacio" id="card-espacio" data-no-version class="panel p-5 mb-4 flex items-center justify-between gap-4 border !border-chlorophyll/60 hover:bg-basalt-800 transition-colors">
+        <div>
+          <h2 class="font-semibold text-chlorophyll" data-lang="es">Espacio docente</h2>
+          <h2 class="font-semibold text-chlorophyll" data-lang="en" hidden>Teacher space</h2>
+          <p class="text-sm text-ash" data-lang="es">Un recorrido autoguiado para probar el juego, elegir versión y preparar tu clase a tu ritmo.</p>
+          <p class="text-sm text-ash" data-lang="en" hidden>A self-guided path to try the game, pick a version and prepare your class at your own pace.</p>
+        </div>
+        <span class="text-hydro text-sm shrink-0" data-lang="es">Empezar →</span>
+        <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Start →</span>
+      </a>
 
       <!--
         Cada recurso tiene su propia página con el diseño del sitio (mismo src/index.css que la
         landing), no un link directo a un archivo -- pedido explícito del usuario tras el primer
-        deploy de la fase 11, cuando "Plan de clase" y "Diapositivas" todavía no existían y el
-        resto eran descargas crudas. Los archivos .md originales (guía, hoja de ecuaciones) siguen
-        disponibles como descarga secundaria desde su propia página, para quien prefiera
-        imprimir/exportar con pandoc. Ver docs/DESIGN_DECISIONS_LOG.md.
+        deploy de la fase 11. Los archivos .md originales (guía, hoja de ecuaciones) siguen
+        disponibles como descarga secundaria desde su propia página. Ver docs/DESIGN_DECISIONS_LOG.md.
+        Los chips indican que cada recurso tiene variante para ambas versiones (v5/27).
       -->
       <div class="space-y-4">
         <a href="/docentes/guia" class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
@@ -44,6 +113,7 @@
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Facilitation guide</h2>
             <p class="text-sm text-ash" data-lang="es">Guion de debriefing paso a paso para taller (10–15 min por ronda).</p>
             <p class="text-sm text-ash" data-lang="en" hidden>Step-by-step debriefing script for workshops (10–15 min per round).</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Territorio · 3 niveles</span><span data-lang="en" hidden>Territory · 3 levels</span></p>
           </div>
           <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
@@ -53,8 +123,9 @@
           <div>
             <h2 class="font-semibold text-bone" data-lang="es">Consignas de debriefing imprimibles</h2>
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Printable debriefing prompts</h2>
-            <p class="text-sm text-ash" data-lang="es">Las cinco preguntas de reflexión, en español e inglés, listas para imprimir (Ctrl/Cmd+P).</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>The five reflection questions, in Spanish and English, ready to print (Ctrl/Cmd+P).</p>
+            <p class="text-sm text-ash" data-lang="es">Las cinco preguntas de reflexión, listas para imprimir (Ctrl/Cmd+P).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The five reflection questions, ready to print (Ctrl/Cmd+P).</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Territorio · 3 niveles</span><span data-lang="en" hidden>Territory · 3 levels</span></p>
           </div>
           <span class="text-hydro text-sm shrink-0" data-lang="es">Abrir →</span>
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
@@ -66,6 +137,7 @@
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Equations sheet (advanced)</h2>
             <p class="text-sm text-ash" data-lang="es">Cómo funciona el modelo por dentro, y qué tan auditado está. Para estudiantes avanzados o revisores.</p>
             <p class="text-sm text-ash" data-lang="en" hidden>How the model works internally, and how audited it is. For advanced students or reviewers.</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Ambas</span><span data-lang="en" hidden>Both</span></p>
           </div>
           <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
@@ -77,6 +149,7 @@
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Lesson plan</h2>
             <p class="text-sm text-ash" data-lang="es">Una clase de 90 minutos, minuto a minuto, alineada a los tres objetivos de aprendizaje.</p>
             <p class="text-sm text-ash" data-lang="en" hidden>A 90-minute class, minute by minute, aligned to the three learning objectives.</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Territorio · 3 niveles</span><span data-lang="en" hidden>Territory · 3 levels</span></p>
           </div>
           <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
@@ -88,8 +161,21 @@
             <h2 class="font-semibold text-bone" data-lang="en" hidden>Framing slides</h2>
             <p class="text-sm text-ash" data-lang="es">Diez láminas para proyectar antes de jugar (~10 minutos).</p>
             <p class="text-sm text-ash" data-lang="en" hidden>Ten slides to project before playing (~10 minutes).</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Territorio · 3 niveles</span><span data-lang="en" hidden>Territory · 3 levels</span></p>
           </div>
           <span class="text-hydro text-sm shrink-0" data-lang="es">Ver →</span>
+          <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
+        </a>
+
+        <a href="/territorio/encuesta" id="card-cuestionario" data-no-version class="panel p-5 flex items-center justify-between gap-4 hover:bg-basalt-800 transition-colors">
+          <div>
+            <h2 class="font-semibold text-bone" data-lang="es">Cuestionario para participantes</h2>
+            <h2 class="font-semibold text-bone" data-lang="en" hidden>Questionnaire for participants</h2>
+            <p class="text-sm text-ash" data-lang="es">14 preguntas anónimas para el cierre. Si agregás un código de taller al link, las respuestas de tu grupo quedan agrupadas.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>14 anonymous questions for the wrap-up. Add a workshop code to the link and your group's answers stay grouped.</p>
+            <p class="mt-1 text-[11px] text-ash-dim"><span data-lang="es">Territorio</span><span data-lang="en" hidden>Territory</span></p>
+          </div>
+          <span class="text-hydro text-sm shrink-0" data-lang="es">Abrir →</span>
           <span class="text-hydro text-sm shrink-0" data-lang="en" hidden>Open →</span>
         </a>
       </div>
@@ -101,8 +187,8 @@
           <div>
             <h3 class="font-semibold text-bone" data-lang="es">¿Qué hago si un grupo termina antes que el resto?</h3>
             <h3 class="font-semibold text-bone" data-lang="en" hidden>What if a group finishes before the rest?</h3>
-            <p class="text-sm text-ash" data-lang="es">Sugeríles que reinicien el nivel probando una ruta distinta a la que ganaron, o que avancen al siguiente nivel si ya está habilitado.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Suggest they restart the level trying a different route than the one they won by, or move to the next level if it's already unlocked.</p>
+            <p class="text-sm text-ash" data-lang="es">Sugeríles que reinicien probando una ruta distinta a la que ganaron: en Territorio, una segunda partida buscando otra ruta; en el juego de 3 niveles, reiniciar el nivel o avanzar al siguiente si ya está habilitado.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Suggest they restart trying a different route than the one they won by: in Territory, a second game aiming for another route; in the 3-level game, restart the level or move to the next one if it's already unlocked.</p>
           </div>
           <div>
             <h3 class="font-semibold text-bone" data-lang="es">¿Y si no hay internet en la sala?</h3>
@@ -116,6 +202,30 @@
             <p class="text-sm text-ash" data-lang="es">Dejalo. Después preguntale qué aprendió rompiéndolo — casi siempre encuentra un límite real del modelo, que es en sí mismo un buen punto de debriefing.</p>
             <p class="text-sm text-ash" data-lang="en" hidden>Let them. Afterward, ask what they learned by breaking it — they almost always find a real limit of the model, which is itself a good debriefing point.</p>
           </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Qué pasa si alguien recarga la página en Territorio?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>What if someone reloads the page in Territory?</h3>
+            <p class="text-sm text-ash" data-lang="es">La partida empieza de cero: Territorio todavía no guarda. Si pasa a mitad de clase, que siga desde el inicio o que se sume a otra pantalla.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The game restarts: Territory doesn't save yet. If it happens mid-class, they can start over or join someone else's screen.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Funciona en celulares?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>Does it work on phones?</h3>
+            <p class="text-sm text-ash" data-lang="es">Territorio funciona, pero el mapa se aprovecha mucho mejor en computadora o tablet. Para celulares, mejor jugar en parejas con una computadora.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Territory works, but the map is far more useful on a computer or tablet. With phones, prefer pairs sharing a computer.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Cómo junto las respuestas de mi grupo?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>How do I collect my group's answers?</h3>
+            <p class="text-sm text-ash" data-lang="es">Usá un código de taller: <code class="text-xs bg-basalt-900 px-1 rounded">/territorio?taller=TU-CODIGO</code>. El código viaja al cuestionario y las respuestas quedan agrupadas. El <a href="/docentes/espacio" data-no-version class="text-hydro hover:underline">espacio docente</a> genera el link y un QR.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Use a workshop code: <code class="text-xs bg-basalt-900 px-1 rounded">/territorio?taller=YOUR-CODE</code>. It travels to the questionnaire and groups the answers. The <a href="/docentes/espacio" data-no-version class="text-hydro hover:underline">teacher space</a> builds the link and a QR.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-bone" data-lang="es">¿Puedo ver las respuestas de mi grupo?</h3>
+            <h3 class="font-semibold text-bone" data-lang="en" hidden>Can I see my group's answers?</h3>
+            <p class="text-sm text-ash" data-lang="es">Hoy no desde la web: son anónimas y las analiza el equipo del proyecto. Si las necesitás, escribí al contacto del pie de la <a href="/" data-no-version class="text-hydro hover:underline">página de inicio</a> con tu código de taller.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Not from the website yet: they're anonymous and analyzed by the project team. If you need them, write to the contact in the footer of the <a href="/" data-no-version class="text-hydro hover:underline">home page</a> with your workshop code.</p>
+          </div>
         </div>
       </section>
     </main>
@@ -125,6 +235,6 @@
       <a href="/" class="hover:text-ash underline" data-lang="en" hidden>← Back home</a>
     </footer>
 
-    <script type="module" src="/src/landing.ts"></script>
+    <script type="module" src="/src/docentes.ts"></script>
   </body>
 </html>

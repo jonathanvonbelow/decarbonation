@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Consignas de debriefing</title>
-    <meta name="description" content="Las cinco preguntas de reflexión del informe de cierre, en español e inglés, listas para imprimir." />
+    <meta name="description" content="Las cinco preguntas de reflexión para el cierre escrito, para Territorio y para el juego de 3 niveles, en español e inglés, listas para imprimir." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes/consignas">
     <link rel="stylesheet" href="/src/index.css" />
@@ -27,7 +27,7 @@
       <div class="container mx-auto flex items-center justify-between px-4 py-4">
         <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
         <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ <span data-lang="es">Imprimir</span><span data-lang="en" hidden>Print</span></button>
           <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
             🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
           </button>
@@ -36,16 +36,64 @@
     </header>
 
     <main class="container mx-auto px-4 py-12 max-w-2xl">
-      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden">← Paquete para docentes</a>
+      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a>
       <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">
         <span data-lang="es">Consignas de debriefing</span>
         <span data-lang="en" hidden>Debriefing prompts</span>
       </h1>
-      <p class="text-ash mb-10">
-        <span data-lang="es">Las mismas cinco preguntas que usa el informe de cierre individual dentro de la app — para repartir en papel al final de un taller.</span>
-        <span data-lang="en" hidden>The same five questions the individual closing report uses inside the app — to hand out on paper at the end of a workshop.</span>
+      <p class="text-ash mb-6">
+        <span data-lang="es">Cinco preguntas para el cierre escrito, para repartir en papel al final de una clase o taller. Elegí la variante de la versión que jugaron.</span>
+        <span data-lang="en" hidden>Five questions for the written wrap-up, to hand out on paper at the end of a class or workshop. Pick the variant for the version they played.</span>
       </p>
 
+      <div class="version-switch mb-8 print:hidden" role="tablist" aria-label="Versión del juego / Game version">
+        <button type="button" role="tab" data-version-tab="territorio" aria-selected="true">
+          <span data-lang="es">Territorio</span><span data-lang="en" hidden>Territory</span>
+        </button>
+        <button type="button" role="tab" data-version-tab="niveles" aria-selected="false">
+          <span data-lang="es">Juego de 3 niveles</span><span data-lang="en" hidden>3-level game</span>
+        </button>
+      </div>
+
+      <div data-version="territorio" role="tabpanel">
+        <section class="panel p-6">
+          <p class="text-ash mb-6" data-lang="es">Las mismas cinco preguntas para el cierre escrito, adaptadas a Territorio. Podés dejar alguna en blanco.</p>
+          <p class="text-ash mb-6" data-lang="en" hidden>The same five questions for the written wrap-up, adapted to Territory. You can leave some blank.</p>
+          <ol class="space-y-6">
+            <li>
+              <p class="text-bone" data-lang="es">¿Qué esperabas que pasara en el mapa que no pasó?</p>
+              <p class="text-bone" data-lang="en" hidden>What did you expect to happen on the map that didn't?</p>
+              <span class="answer-line"></span>
+            </li>
+            <li>
+              <p class="text-bone" data-lang="es">¿Cuál fue la situación más difícil de resolver y qué elegiste?</p>
+              <p class="text-bone" data-lang="en" hidden>Which situation was hardest to settle, and what did you choose?</p>
+              <span class="answer-line"></span>
+            </li>
+            <li>
+              <p class="text-bone" data-lang="es">¿La ruta a la que llegaste es la que te habías propuesto? ¿En qué año cambiaste de idea?</p>
+              <p class="text-bone" data-lang="en" hidden>Is the route you reached the one you set out for? In what year did you change your mind?</p>
+              <span class="answer-line"></span>
+            </li>
+            <li>
+              <p class="text-bone" data-lang="es">¿Qué harías distinto en los primeros cinco años de una nueva partida?</p>
+              <p class="text-bone" data-lang="en" hidden>What would you do differently in the first five years of a new game?</p>
+              <span class="answer-line"></span>
+            </li>
+            <li>
+              <p class="text-bone" data-lang="es">¿Qué de lo que viste en el territorio se parece a algo que pasa en tu región?</p>
+              <p class="text-bone" data-lang="en" hidden>What did you see in the territory that resembles something happening in your region?</p>
+              <span class="answer-line"></span>
+            </li>
+          </ol>
+        </section>
+        <div class="panel p-5 mt-6 print:hidden">
+          <p class="text-ash text-sm" data-lang="es">¿Preferís que las respuestas queden registradas? Compartí el cuestionario online: <a href="/territorio/encuesta" data-no-version class="text-hydro hover:underline font-mono">/territorio/encuesta</a>. Agregá <code class="text-xs bg-basalt-900 px-1 rounded">?taller=TU-CODIGO</code> al final para agrupar las respuestas de tu grupo.</p>
+          <p class="text-ash text-sm" data-lang="en" hidden>Would you rather have the answers recorded? Share the online questionnaire: <a href="/territorio/encuesta" data-no-version class="text-hydro hover:underline font-mono">/territorio/encuesta</a>. Add <code class="text-xs bg-basalt-900 px-1 rounded">?taller=YOUR-CODE</code> at the end to group your class's answers.</p>
+        </div>
+      </div>
+
+      <div data-version="niveles" role="tabpanel">
       <section class="panel p-6">
         <p class="text-ash mb-6" data-lang="es">Cinco preguntas, sin apuro. Podés dejar alguna en blanco.</p>
         <p class="text-ash mb-6" data-lang="en" hidden>Five questions, no rush. You can leave some blank.</p>
@@ -77,6 +125,7 @@
           </li>
         </ol>
       </section>
+      </div>
 
       <p class="text-xs text-ash-dim mt-6 print:hidden">
         <span data-lang="es">¿Preferís un solo archivo con las dos columnas (es/en) ya impresas juntas? Descargá la versión de impresión directa:</span>
@@ -86,10 +135,10 @@
     </main>
 
     <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
-      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
-      <a href="/" class="hover:text-ash underline">Inicio</a>
+      <a href="/docentes" class="hover:text-ash underline"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a> ·
+      <a href="/" class="hover:text-ash underline"><span data-lang="es">Inicio</span><span data-lang="en" hidden>Home</span></a>
     </footer>
 
-    <script type="module" src="/src/landing.ts"></script>
+    <script type="module" src="/src/docentes.ts"></script>
   </body>
 </html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Plan de clase</title>
-    <meta name="description" content="Plan de clase de 90 minutos, alineado a los tres objetivos de aprendizaje de DecarboNation, con variantes para más o menos tiempo." />
+    <meta name="description" content="Plan de clase de 90 minutos, alineado a los tres objetivos de aprendizaje de DecarboNation, con una variante para Territorio y otra para el juego de 3 niveles." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes/plan-clase">
     <link rel="stylesheet" href="/src/index.css" />
@@ -14,7 +14,7 @@
       <div class="container mx-auto flex items-center justify-between px-4 py-4">
         <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
         <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ <span data-lang="es">Imprimir</span><span data-lang="en" hidden>Print</span></button>
           <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
             🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
           </button>
@@ -23,130 +23,470 @@
     </header>
 
     <main class="container mx-auto px-4 py-12 max-w-3xl">
-      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden">← Paquete para docentes</a>
-      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">Plan de clase</h1>
-      <p class="text-ash mb-8">Una clase de 90 minutos, de la apertura al cierre, lista para llevar al aula tal cual o adaptar.</p>
+      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a>
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">
+        <span data-lang="es">Plan de clase</span><span data-lang="en" hidden>Lesson plan</span>
+      </h1>
+      <p class="text-ash mb-6">
+        <span data-lang="es">Una clase de 90 minutos, de la apertura al cierre, lista para llevar al aula tal cual o adaptar.</span>
+        <span data-lang="en" hidden>A 90-minute class, from opening to close, ready to take to the classroom as is or adapt.</span>
+      </p>
 
-      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div class="panel p-4">
-          <p class="label-eyebrow mb-1">Duración</p>
-          <p class="text-bone font-semibold">90 minutos <span class="text-ash-dim font-normal text-sm">(variantes: 60 min / dos clases)</span></p>
-        </div>
-        <div class="panel p-4">
-          <p class="label-eyebrow mb-1">Formato</p>
-          <p class="text-bone font-semibold">Individual o grupos de 2-3</p>
-        </div>
-        <div class="panel p-4">
-          <p class="label-eyebrow mb-1">Requisito previo</p>
-          <p class="text-bone font-semibold">Ninguno — apto para primer contacto</p>
-        </div>
-      </section>
+      <!-- Version switch: Territorio is the default (00_INDICE_v5 decision 8). -->
+      <div class="version-switch mb-2 print:hidden" role="tablist" aria-label="Versión del juego / Game version">
+        <button type="button" role="tab" data-version-tab="territorio" aria-selected="true">
+          <span data-lang="es">Territorio</span><span data-lang="en" hidden>Territory</span>
+        </button>
+        <button type="button" role="tab" data-version-tab="niveles" aria-selected="false">
+          <span data-lang="es">Juego de 3 niveles</span><span data-lang="en" hidden>3-level game</span>
+        </button>
+      </div>
+      <p class="text-xs text-ash-dim mb-8 print:hidden">
+        <span data-lang="es">Se imprime la versión seleccionada.</span>
+        <span data-lang="en" hidden>Prints the selected version.</span>
+      </p>
 
+      <!-- Común a ambas versiones: objetivos de aprendizaje -->
       <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Objetivos de aprendizaje</h2>
-        <p class="text-sm text-ash-dim mb-3">Los mismos tres objetivos que promete la landing — este plan de clase es la ruta para llegar a ellos en 90 minutos.</p>
-        <ol class="list-decimal list-inside text-ash space-y-1">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">Objetivos de aprendizaje</span><span data-lang="en" hidden>Learning objectives</span>
+        </h2>
+        <p class="text-sm text-ash-dim mb-3">
+          <span data-lang="es">Los mismos tres objetivos que promete la landing — este plan de clase es la ruta para llegar a ellos en 90 minutos.</span>
+          <span data-lang="en" hidden>The same three objectives the landing page promises — this lesson plan is the route to reach them in 90 minutes.</span>
+        </p>
+        <ol class="list-decimal list-inside text-ash space-y-1" data-lang="es">
           <li>Explicar por qué una política barata en lo económico puede salir cara en biodiversidad o presión social.</li>
           <li>Identificar qué indicadores compiten entre sí cuando se persigue la carbono-neutralidad.</li>
           <li>Argumentar a favor de una de tres vías de descarbonización distintas, con datos de la propia partida.</li>
         </ol>
+        <ol class="list-decimal list-inside text-ash space-y-1" data-lang="en" hidden>
+          <li>Explain why a policy that is cheap economically can be expensive in biodiversity or social pressure.</li>
+          <li>Identify which indicators compete with each other when pursuing carbon neutrality.</li>
+          <li>Argue in favor of one of three different decarbonization routes, using data from your own game.</li>
+        </ol>
       </section>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Materiales necesarios</h2>
-        <ul class="text-ash space-y-1 list-disc list-inside">
-          <li>Una computadora, tablet o celular por persona o por grupo (2-3 personas por dispositivo funciona bien).</li>
-          <li>Proyector o pantalla compartida para el docente (opcional pero recomendado para el encuadre y el cierre).</li>
-          <li>Este plan de clase, la <a href="/docentes/guia" class="text-hydro hover:underline">guía de facilitación</a> y las <a href="/docentes/consignas" class="text-hydro hover:underline">consignas de debriefing</a> impresas o a mano.</li>
-          <li>Conectividad: opcional después de la primera carga de la página (ver <a href="/docentes#faq" class="text-hydro hover:underline">preguntas frecuentes de aula</a>).</li>
-        </ul>
-      </section>
+      <!-- ===================== Variante Territorio ===================== -->
+      <div data-version="territorio" role="tabpanel">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-4">
+          <span data-lang="es">Variante Territorio</span><span data-lang="en" hidden>Territory variant</span>
+        </h2>
 
-      <section class="mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Estructura minuto a minuto</h2>
-        <div class="space-y-4">
-          <div class="panel p-5 flex gap-4">
-            <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">0–10</span></div>
-            <div>
-              <h3 class="font-semibold text-bone">Apertura y encuadre</h3>
-              <p class="text-sm text-ash mt-1">Presentar DecarboNation como laboratorio de escenarios, no como "ganar o perder". Mostrar (proyectado) la
-              pantalla de portada y recorrer en voz alta qué es, quién lo respalda y qué se obtiene al final. Si hay
-              tiempo, proyectar las <a href="/docentes/diapositivas" class="text-hydro hover:underline">diapositivas de encuadre</a> en vez de improvisar esta parte.</p>
+        <div data-lang="es">
+          <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Duración</p>
+              <p class="text-bone font-semibold">90 minutos <span class="text-ash-dim font-normal text-sm">(variantes: 60 min / dos clases)</span></p>
             </div>
-          </div>
-          <div class="panel p-5 flex gap-4">
-            <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">10–15</span></div>
-            <div>
-              <h3 class="font-semibold text-bone">Formación de grupos (opcional)</h3>
-              <p class="text-sm text-ash mt-1">Si el curso es numeroso, armar grupos de 2-3. Es el único paso realmente opcional: con grupos chicos o un
-              curso acostumbrado a trabajar solo, se puede saltar directo al juego.</p>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Formato</p>
+              <p class="text-bone font-semibold">Individual o parejas</p>
             </div>
-          </div>
-          <div class="panel p-5 flex gap-4">
-            <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">15–55</span></div>
-            <div>
-              <h3 class="font-semibold text-bone">Juego — Nivel 1</h3>
-              <p class="text-sm text-ash mt-1">Cada persona o grupo entra a <code class="text-xs bg-basalt-900 px-1 rounded">decarbonation.vercel.app/play</code> en
-              modo demo (sin necesidad de cuenta) y juega el Nivel 1 completo (~30 años simulados, unos 25-30 minutos
-              de juego efectivo). El docente circula por la sala; la predicción antes de simular (activada por
-              defecto) ayuda a que nadie llegue al final del nivel sin haber prestado atención a los indicadores en
-              el camino.</p>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Requisito previo</p>
+              <p class="text-bone font-semibold">Ninguno — apto para primer contacto</p>
             </div>
-          </div>
-          <div class="panel p-5 flex gap-4">
-            <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">55–80</span></div>
-            <div>
-              <h3 class="font-semibold text-bone">Debriefing grupal</h3>
-              <p class="text-sm text-ash mt-1">Seguir los 5 pasos de la <a href="/docentes/guia" class="text-hydro hover:underline">guía de facilitación</a>: encuadre,
-              relevamiento rápido, preguntas guía de Nivel 1, y — el paso que más rinde — el cierre comparativo entre
-              2-3 participantes que jugaron distinto entre sí.</p>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Materiales necesarios</h3>
+            <ul class="text-ash space-y-1 list-disc list-inside">
+              <li>Una computadora o tablet por persona o por pareja. Con celulares, jugar en parejas con una computadora cerca.</li>
+              <li>Proyector o pantalla compartida para el docente (recomendado para el encuadre, la pausa grupal y el cierre).</li>
+              <li>Este plan de clase, la <a href="/docentes/guia" class="text-hydro hover:underline">guía de facilitación</a> y las <a href="/docentes/consignas" class="text-hydro hover:underline">consignas de debriefing</a> impresas o a mano.</li>
+              <li>Un código de taller para el grupo (opcional): se genera en el <a href="/docentes/espacio" data-no-version class="text-hydro hover:underline">espacio docente</a>.</li>
+            </ul>
+          </section>
+
+          <section class="mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Estructura minuto a minuto</h3>
+            <div class="space-y-4">
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">0–10</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Encuadre</h4>
+                  <p class="text-sm text-ash mt-1">Proyectar las <a href="/docentes/diapositivas" class="text-hydro hover:underline">diapositivas de encuadre</a> (variante Territorio). Mostrar el mapa con la capa de carbono y explicar las tres rutas.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">10–15</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Ingreso</h4>
+                  <p class="text-sm text-ash mt-1">Escribir en el pizarrón el link con código: <code class="text-xs bg-basalt-900 px-1 rounded">decarbonation.vercel.app/territorio?taller=TU-CODIGO</code> (o QR desde el espacio docente). Verificar que todos ven el chip "Taller …" en el HUD. Recordar: no recargar la pestaña.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">15–50</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Partida</h4>
+                  <p class="text-sm text-ash mt-1">Jugar 2024–2054. Pausa grupal a los ~10 minutos: el docente pide que todos pongan pausa y pregunta "¿qué zona del mapa está cambiando más?" (2 min). El docente circula. Quien termina antes: segunda partida buscando <strong class="text-bone">otra</strong> ruta.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">50–75</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Debriefing</h4>
+                  <p class="text-sm text-ash mt-1">Guía de facilitación, variante Territorio, pasos 1–4.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">75–85</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Cuestionario</h4>
+                  <p class="text-sm text-ash mt-1">Botón "Contanos cómo te fue" de la pantalla final (o el link del cuestionario). 7 minutos.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">85–90</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Cierre</h4>
+                  <p class="text-sm text-ash mt-1">Una frase por persona: "me llevo…". Repartir las <a href="/docentes/consignas" class="text-hydro hover:underline">consignas</a> impresas para quien quiera profundizar.</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="panel p-5 flex gap-4">
-            <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">80–90</span></div>
-            <div>
-              <h3 class="font-semibold text-bone">Cierre y síntesis</h3>
-              <p class="text-sm text-ash mt-1">Cada participante completa (o al menos lee) su informe de cierre individual dentro de la app. Repartir las
-              <a href="/docentes/consignas" class="text-hydro hover:underline">consignas de debriefing</a> impresas para
-              quien quiera profundizar por escrito fuera de la clase.</p>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Variantes de tiempo</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <p class="font-semibold text-bone mb-1">Si tenés 60 minutos</p>
+                <p class="text-sm text-ash">Encuadre 5, partida 25 (no hace falta llegar a 2054: la pantalla del cuestionario recoge partidas incompletas), debriefing 20, cuestionario en casa.</p>
+              </div>
+              <div>
+                <p class="font-semibold text-bone mb-1">Si tenés dos clases</p>
+                <p class="text-sm text-ash">Clase 1: partida libre + debriefing corto. Clase 2: partida por equipos, cada equipo con una ruta asignada, y comparación de mapas finales.</p>
+              </div>
             </div>
-          </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Evidencia de aprendizaje</h3>
+            <p class="text-ash text-sm">La respuesta escrita a las consignas 2 y 4, y el ítem 7 del cuestionario (agregado por código de taller).</p>
+          </section>
         </div>
-      </section>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Variantes de tiempo</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <p class="font-semibold text-bone mb-1">Si tenés 60 minutos</p>
-            <p class="text-sm text-ash">Sacar la formación de grupos (jugar individual) y recortar el juego a ~20 minutos simulando menos años antes de pasar al debriefing igual — el Nivel 1 no necesita llegar al año final para generar material de discusión real.</p>
-          </div>
-          <div>
-            <p class="font-semibold text-bone mb-1">Si tenés dos clases</p>
-            <p class="text-sm text-ash">Primera clase: Nivel 1 completo + debriefing corto. Segunda clase: Nivel 2 (agrega presión política e instrumentos de esfuerzo) + el debriefing completo de la guía, incluido el bloque de preguntas de Nivel 2.</p>
-          </div>
+        <div data-lang="en" hidden>
+          <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Duration</p>
+              <p class="text-bone font-semibold">90 minutes <span class="text-ash-dim font-normal text-sm">(variants: 60 min / two classes)</span></p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Format</p>
+              <p class="text-bone font-semibold">Individual or pairs</p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Prerequisite</p>
+              <p class="text-bone font-semibold">None — suitable for first contact</p>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Materials needed</h3>
+            <ul class="text-ash space-y-1 list-disc list-inside">
+              <li>One computer or tablet per person or pair. With phones, play in pairs with a computer nearby.</li>
+              <li>A projector or shared screen for the teacher (recommended for the framing, the group pause and the wrap-up).</li>
+              <li>This lesson plan, the <a href="/docentes/guia" class="text-hydro hover:underline">facilitation guide</a> and the <a href="/docentes/consignas" class="text-hydro hover:underline">debriefing prompts</a>, printed or at hand.</li>
+              <li>A workshop code for the group (optional): build it in the <a href="/docentes/espacio" data-no-version class="text-hydro hover:underline">teacher space</a>.</li>
+            </ul>
+          </section>
+
+          <section class="mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Minute-by-minute structure</h3>
+            <div class="space-y-4">
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">0–10</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Framing</h4>
+                  <p class="text-sm text-ash mt-1">Project the <a href="/docentes/diapositivas" class="text-hydro hover:underline">framing slides</a> (Territory variant). Show the map with the carbon layer and explain the three routes.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">10–15</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Joining</h4>
+                  <p class="text-sm text-ash mt-1">Write the link with the code on the board: <code class="text-xs bg-basalt-900 px-1 rounded">decarbonation.vercel.app/territorio?taller=YOUR-CODE</code> (or a QR from the teacher space). Check that everyone sees the "Workshop …" chip in the HUD. Remind them: don't reload the tab.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">15–50</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Game</h4>
+                  <p class="text-sm text-ash mt-1">Play 2024–2054. Group pause at about 10 minutes: the teacher asks everyone to pause and asks "which zone of the map is changing most?" (2 min). The teacher circulates. Whoever finishes early: a second game aiming for a <strong class="text-bone">different</strong> route.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">50–75</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Debriefing</h4>
+                  <p class="text-sm text-ash mt-1">Facilitation guide, Territory variant, steps 1–4.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">75–85</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Questionnaire</h4>
+                  <p class="text-sm text-ash mt-1">The "Tell us how it went" button on the final screen (or the questionnaire link). 7 minutes.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">85–90</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Close</h4>
+                  <p class="text-sm text-ash mt-1">One sentence per person: "I take away…". Hand out the printed <a href="/docentes/consignas" class="text-hydro hover:underline">prompts</a> for anyone who wants to go deeper.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Time variants</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <p class="font-semibold text-bone mb-1">If you have 60 minutes</p>
+                <p class="text-sm text-ash">Framing 5, game 25 (reaching 2054 isn't needed: the questionnaire screen collects incomplete games), debriefing 20, questionnaire at home.</p>
+              </div>
+              <div>
+                <p class="font-semibold text-bone mb-1">If you have two classes</p>
+                <p class="text-sm text-ash">Class 1: free game + short debriefing. Class 2: team game, each team with an assigned route, and a comparison of final maps.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Evidence of learning</h3>
+            <p class="text-ash text-sm">The written answers to prompts 2 and 4, and item 7 of the questionnaire (aggregated by workshop code).</p>
+          </section>
         </div>
-      </section>
+      </div>
 
-      <section class="panel p-6">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Evidencia de aprendizaje</h2>
-        <p class="text-ash text-sm mb-3">
-          DecarboNation no tiene un examen al final — la evidencia de que se cumplieron los objetivos está en lo que
-          cada participante ya produjo durante la clase, sin instrumentación adicional:
-        </p>
-        <ul class="text-sm text-ash space-y-1 list-disc list-inside">
-          <li>El <strong class="text-bone">informe de cierre individual</strong> que la app genera automáticamente (decisiones, trade-offs, efectos intersectoriales, preguntas de reflexión) es, en sí mismo, la evidencia del objetivo 1 y 2.</li>
-          <li>La <strong class="text-bone">ruta de victoria lograda</strong> (o la más cercana, si no ganó) — visible en el propio informe — es la base concreta para el objetivo 3: pedirle a cada participante que la defienda en una frase es la forma más rápida de verificarlo.</li>
-          <li>Las <strong class="text-bone">notas del facilitador</strong> (sección 5 de la guía) documentan qué tensiones generaron más discusión — útil como registro de clase, no solo para el proyecto.</li>
-        </ul>
-      </section>
+      <!-- ===================== Variante juego de 3 niveles ===================== -->
+      <div data-version="niveles" role="tabpanel">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-4">
+          <span data-lang="es">Variante juego de 3 niveles</span><span data-lang="en" hidden>3-level game variant</span>
+        </h2>
+
+        <div data-lang="es">
+          <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Duración</p>
+              <p class="text-bone font-semibold">90 minutos <span class="text-ash-dim font-normal text-sm">(variantes: 60 min / dos clases)</span></p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Formato</p>
+              <p class="text-bone font-semibold">Individual o grupos de 2-3</p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Requisito previo</p>
+              <p class="text-bone font-semibold">Ninguno — apto para primer contacto</p>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Materiales necesarios</h3>
+            <ul class="text-ash space-y-1 list-disc list-inside">
+              <li>Una computadora, tablet o celular por persona o por grupo (2-3 personas por dispositivo funciona bien).</li>
+              <li>Proyector o pantalla compartida para el docente (opcional pero recomendado para el encuadre y el cierre).</li>
+              <li>Este plan de clase, la <a href="/docentes/guia" class="text-hydro hover:underline">guía de facilitación</a> y las <a href="/docentes/consignas" class="text-hydro hover:underline">consignas de debriefing</a> impresas o a mano.</li>
+              <li>Conectividad: opcional después de la primera carga de la página (ver <a href="/docentes#faq" data-no-version class="text-hydro hover:underline">preguntas frecuentes de aula</a>).</li>
+            </ul>
+          </section>
+
+          <section class="mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Estructura minuto a minuto</h3>
+            <div class="space-y-4">
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">0–10</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Apertura y encuadre</h4>
+                  <p class="text-sm text-ash mt-1">Presentar DecarboNation como laboratorio de escenarios, no como "ganar o perder". Mostrar (proyectado) la
+                  pantalla de portada y recorrer en voz alta qué es, quién lo respalda y qué se obtiene al final. Si hay
+                  tiempo, proyectar las <a href="/docentes/diapositivas" class="text-hydro hover:underline">diapositivas de encuadre</a> en vez de improvisar esta parte.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">10–15</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Formación de grupos (opcional)</h4>
+                  <p class="text-sm text-ash mt-1">Si el curso es numeroso, armar grupos de 2-3. Es el único paso realmente opcional: con grupos chicos o un
+                  curso acostumbrado a trabajar solo, se puede saltar directo al juego.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">15–55</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Juego — Nivel 1</h4>
+                  <p class="text-sm text-ash mt-1">Cada persona o grupo entra a <code class="text-xs bg-basalt-900 px-1 rounded">decarbonation.vercel.app/play</code> en
+                  modo demo (sin necesidad de cuenta) y juega el Nivel 1 completo (~30 años simulados, unos 25-30 minutos
+                  de juego efectivo). El docente circula por la sala; la predicción antes de simular (activada por
+                  defecto) ayuda a que nadie llegue al final del nivel sin haber prestado atención a los indicadores en
+                  el camino.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">55–80</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Debriefing grupal</h4>
+                  <p class="text-sm text-ash mt-1">Seguir los 5 pasos de la <a href="/docentes/guia" class="text-hydro hover:underline">guía de facilitación</a>: encuadre,
+                  relevamiento rápido, preguntas guía de Nivel 1, y — el paso que más rinde — el cierre comparativo entre
+                  2-3 participantes que jugaron distinto entre sí.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">80–90</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Cierre y síntesis</h4>
+                  <p class="text-sm text-ash mt-1">Cada participante completa (o al menos lee) su informe de cierre individual dentro de la app. Repartir las
+                  <a href="/docentes/consignas" class="text-hydro hover:underline">consignas de debriefing</a> impresas para
+                  quien quiera profundizar por escrito fuera de la clase.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Variantes de tiempo</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <p class="font-semibold text-bone mb-1">Si tenés 60 minutos</p>
+                <p class="text-sm text-ash">Sacar la formación de grupos (jugar individual) y recortar el juego a ~20 minutos simulando menos años antes de pasar al debriefing igual — el Nivel 1 no necesita llegar al año final para generar material de discusión real.</p>
+              </div>
+              <div>
+                <p class="font-semibold text-bone mb-1">Si tenés dos clases</p>
+                <p class="text-sm text-ash">Primera clase: Nivel 1 completo + debriefing corto. Segunda clase: Nivel 2 (agrega presión política e instrumentos de esfuerzo) + el debriefing completo de la guía, incluido el bloque de preguntas de Nivel 2.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Evidencia de aprendizaje</h3>
+            <p class="text-ash text-sm mb-3">
+              DecarboNation no tiene un examen al final — la evidencia de que se cumplieron los objetivos está en lo que
+              cada participante ya produjo durante la clase, sin instrumentación adicional:
+            </p>
+            <ul class="text-sm text-ash space-y-1 list-disc list-inside">
+              <li>El <strong class="text-bone">informe de cierre individual</strong> que la app genera automáticamente (decisiones, trade-offs, efectos intersectoriales, preguntas de reflexión) es, en sí mismo, la evidencia del objetivo 1 y 2.</li>
+              <li>La <strong class="text-bone">ruta de victoria lograda</strong> (o la más cercana, si no ganó) — visible en el propio informe — es la base concreta para el objetivo 3: pedirle a cada participante que la defienda en una frase es la forma más rápida de verificarlo.</li>
+              <li>Las <strong class="text-bone">notas del facilitador</strong> (sección 5 de la guía) documentan qué tensiones generaron más discusión — útil como registro de clase, no solo para el proyecto.</li>
+            </ul>
+          </section>
+        </div>
+
+        <div data-lang="en" hidden>
+          <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Duration</p>
+              <p class="text-bone font-semibold">90 minutes <span class="text-ash-dim font-normal text-sm">(variants: 60 min / two classes)</span></p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Format</p>
+              <p class="text-bone font-semibold">Individual or groups of 2-3</p>
+            </div>
+            <div class="panel p-4">
+              <p class="label-eyebrow mb-1">Prerequisite</p>
+              <p class="text-bone font-semibold">None — suitable for first contact</p>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Materials needed</h3>
+            <ul class="text-ash space-y-1 list-disc list-inside">
+              <li>One computer, tablet or phone per person or group (2-3 people per device works well).</li>
+              <li>A projector or shared screen for the teacher (optional but recommended for the framing and the wrap-up).</li>
+              <li>This lesson plan, the <a href="/docentes/guia" class="text-hydro hover:underline">facilitation guide</a> and the <a href="/docentes/consignas" class="text-hydro hover:underline">debriefing prompts</a>, printed or at hand.</li>
+              <li>Connectivity: optional after the page's first load (see the <a href="/docentes#faq" data-no-version class="text-hydro hover:underline">classroom FAQ</a>).</li>
+            </ul>
+          </section>
+
+          <section class="mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4">Minute-by-minute structure</h3>
+            <div class="space-y-4">
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">0–10</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Opening and framing</h4>
+                  <p class="text-sm text-ash mt-1">Present DecarboNation as a scenario lab, not as "win or lose". Show (projected) the
+                  cover screen and walk through out loud what it is, who backs it and what you get at the end. If there is
+                  time, project the <a href="/docentes/diapositivas" class="text-hydro hover:underline">framing slides</a> instead of improvising this part.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">10–15</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Forming groups (optional)</h4>
+                  <p class="text-sm text-ash mt-1">If the class is large, form groups of 2-3. It is the only truly optional step: with small groups or a
+                  class used to working alone, you can jump straight to the game.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">15–55</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Game — Level 1</h4>
+                  <p class="text-sm text-ash mt-1">Each person or group goes to <code class="text-xs bg-basalt-900 px-1 rounded">decarbonation.vercel.app/play</code> in
+                  demo mode (no account needed) and plays the whole of Level 1 (~30 simulated years, about 25-30 minutes
+                  of actual play). The teacher circulates; the prediction before simulating (on by
+                  default) helps make sure nobody reaches the end of the level without having paid attention to the indicators
+                  along the way.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">55–80</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Group debriefing</h4>
+                  <p class="text-sm text-ash mt-1">Follow the 5 steps of the <a href="/docentes/guia" class="text-hydro hover:underline">facilitation guide</a>: framing,
+                  quick round-up, Level 1 guiding questions, and — the step that pays off most — the comparative wrap-up between
+                  2-3 participants who played differently from each other.</p>
+                </div>
+              </div>
+              <div class="panel p-5 flex gap-4">
+                <div class="shrink-0 w-20 text-right"><span class="text-hydro font-mono text-sm">80–90</span></div>
+                <div>
+                  <h4 class="font-semibold text-bone">Close and synthesis</h4>
+                  <p class="text-sm text-ash mt-1">Each participant completes (or at least reads) their individual closing report inside the app. Hand out the printed
+                  <a href="/docentes/consignas" class="text-hydro hover:underline">debriefing prompts</a> for
+                  anyone who wants to go deeper in writing outside class.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Time variants</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <p class="font-semibold text-bone mb-1">If you have 60 minutes</p>
+                <p class="text-sm text-ash">Drop the group formation (play individually) and cut the game to ~20 minutes by simulating fewer years before moving on to the debriefing anyway — Level 1 doesn't need to reach the final year to produce real discussion material.</p>
+              </div>
+              <div>
+                <p class="font-semibold text-bone mb-1">If you have two classes</p>
+                <p class="text-sm text-ash">First class: the whole of Level 1 + a short debriefing. Second class: Level 2 (adds political pressure and effort instruments) + the guide's full debriefing, including the Level 2 question block.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">Evidence of learning</h3>
+            <p class="text-ash text-sm mb-3">
+              DecarboNation has no exam at the end — the evidence that the objectives were met is in what
+              each participant has already produced during the class, with no extra instrumentation:
+            </p>
+            <ul class="text-sm text-ash space-y-1 list-disc list-inside">
+              <li>The <strong class="text-bone">individual closing report</strong> the app generates automatically (decisions, trade-offs, cross-sector effects, reflection questions) is, in itself, the evidence for objectives 1 and 2.</li>
+              <li>The <strong class="text-bone">win route achieved</strong> (or the closest one, if they didn't win) — visible in the report itself — is the concrete basis for objective 3: asking each participant to defend it in one sentence is the quickest way to check.</li>
+              <li>The <strong class="text-bone">facilitator notes</strong> (section 5 of the guide) record which tensions sparked the most discussion — useful as a class record, not just for the project.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
     </main>
 
     <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
-      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
-      <a href="/" class="hover:text-ash underline">Inicio</a>
+      <a href="/docentes" class="hover:text-ash underline"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a> ·
+      <a href="/" class="hover:text-ash underline"><span data-lang="es">Inicio</span><span data-lang="en" hidden>Home</span></a>
     </footer>
 
-    <script type="module" src="/src/landing.ts"></script>
+    <script type="module" src="/src/docentes.ts"></script>
   </body>
 </html>

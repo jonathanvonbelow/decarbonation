@@ -1,8 +1,70 @@
 # Guía del Facilitador — Debriefing de Taller
 
-> **Nota de formato:** este documento es la fuente en Markdown. Para uso impreso o proyectado en taller (Misiones, Bariloche, espacio docente asincrónico), exportarlo a PDF vía Word, Google Docs o `pandoc` (ej. `pandoc guia_facilitador_debriefing.md -o guia_facilitador_debriefing.pdf`). No requiere ninguna herramienta adicional del proyecto: es un documento descargable, independiente de la aplicación.
+> **Nota de formato:** este documento es la fuente en Markdown. Para uso impreso o proyectado en taller, exportarlo a PDF vía Word, Google Docs o `pandoc`. Contiene **dos variantes**: la Parte A es para **Territorio** (versión recomendada para aula y talleres) y la Parte B para el **juego de 3 niveles**. La sección de Notas del facilitador es común a ambas.
 
 ---
+
+# Parte A — Variante Territorio
+
+## A.1 Qué es este documento y cuándo usarlo
+
+DecarboNation es un **simulador estratégico de política pública climática**: un laboratorio de escenarios donde cada participante o grupo ensaya combinaciones de políticas y observa sus consecuencias sistémicas. Esta parte es la **versión taller** del cierre de una partida de Territorio, para sesiones presenciales o virtuales con grupo.
+
+En Territorio no hay síntesis individual de DecarboNito al cierre: el insumo de cada participante es **su pantalla final** (rutas, indicadores de inicio y fin, áreas declaradas) y lo que recuerda de las situaciones. Pedí que saquen una captura de la pantalla final antes del debriefing.
+
+Duración sugerida: 10 a 15 minutos por ronda de debriefing.
+
+## A.2 Guion de debriefing paso a paso
+
+Asume un grupo de 4 a 12 participantes que jugaron individualmente o en equipos (2-3 personas por pantalla).
+
+- **Paso 1 — Encuadre (1-2 min).** Recordar que el objetivo no es evaluar quién "ganó" sino identificar qué tensiones del territorio aparecieron. Frase sugerida: *"Terminamos la partida. Ahora vamos a mirar juntos qué decisiones tomamos, qué dejamos sin resolver, y qué nos llevamos de esto. No hay una respuesta correcta única — el objetivo es entender la lógica del sistema, no memorizar un resultado."*
+- **Paso 2 — Relevamiento (2-3 min).** Cada persona o equipo dice en una frase: año al que llegó, ruta lograda o más cercana, y "la decisión que más me costó". Anotar en el pizarrón en tres columnas, una por ruta (integridad ecológica / transición productiva / innovación).
+- **Paso 3 — Preguntas guía (5-8 min).** Elegir 2-3 preguntas de A.3.
+- **Paso 4 — Cierre comparativo (3-4 min).** Juntar a dos personas que terminaron cerca de rutas distintas y que comparen sus mapas finales: ¿dónde está la diferencia, en el mapa o en los números?
+- **Paso 5 — Registro (1-2 min).** Completar las Notas del facilitador y compartir el link del cuestionario con el código de taller.
+
+**Tips exclusivos de Territorio**
+
+- El juego se puede **pausar** desde el HUD: usá la pausa para preguntar en voz alta "¿qué creen que va a pasar en los próximos dos años?" antes de seguir.
+- En pantalla grande, la velocidad ×4 sirve para mostrar en un minuto cómo avanza la frontera agrícola si nadie hace nada.
+- La partida no se guarda: avisá antes de empezar que no recarguen la pestaña.
+
+## A.3 Preguntas guía para Territorio
+
+**Decisiones**
+
+1. ¿Qué parte del mapa cambió más durante tu partida? ¿Lo provocaste vos o pasó solo?
+2. ¿Dónde declaraste usos públicos y por qué ahí?
+
+**Trade-offs**
+
+3. Elegí una situación que te llegó al escritorio: ¿qué opciones tenías y qué perdías con cada una?
+4. ¿Hubo un momento en que proteger bosque te complicó la economía o la seguridad alimentaria? ¿Cómo lo resolviste?
+
+**Efectos intersectoriales y tiempo**
+
+5. Las situaciones no detienen el reloj. ¿Qué pasó con las que dejaste sin resolver? ¿Se parece a cómo funciona la gestión real?
+6. ¿Qué cambio tardó años en verse en el mapa o en los indicadores? ¿Qué implica eso para alguien que gobierna con mandatos de 4 años?
+7. ¿Qué actor —productores, ambientalistas o ciudadanía— te presionó más y cuándo?
+
+**Reflexión abierta**
+
+8. Si tuvieras que gobernar una región real parecida, ¿qué harías en los primeros cinco años?
+9. ¿Qué le falta al mapa para parecerse a tu provincia o región?
+
+## A.4 Cierre grupal: comparar pantallas finales entre rutas distintas
+
+**Objetivo:** mostrar que las mismas restricciones del sistema producen trade-offs distintos según la ruta que cada participante persiguió.
+
+1. Elegir 2 o 3 participantes (o equipos) que hayan terminado cerca de rutas marcadamente distintas.
+2. Pedirles que muestren su captura de la pantalla final.
+3. Preguntar al resto: *"¿Qué tienen en común estos resultados, a pesar de que las decisiones fueron distintas? ¿Qué restricción del sistema está por detrás de los tres casos?"*
+4. Cerrar con una síntesis del facilitador en una frase que nombre la tensión estructural que el grupo identificó.
+
+---
+
+# Parte B — Variante juego de 3 niveles
 
 ## 1. Qué es este documento y cuándo usarlo
 
@@ -107,7 +169,9 @@ Si ningún participante tiene a mano su síntesis individual (por ejemplo, jugar
 - Fecha: ___________________________
 - Lugar / modalidad (presencial Misiones / presencial Bariloche / espacio docente asincrónico / otro): ___________________________
 - Cantidad de participantes: ___________________________
-- Nivel(es) jugado(s) por el grupo: ___________________________
+- Versión jugada (Territorio / 3 niveles): ___________________________
+- Código de taller usado: ___________________________
+- Nivel(es) jugado(s) por el grupo (juego de 3 niveles): ___________________________
 - ¿Jugaron individualmente o en equipos con roles asignados?: ___________________________
 
 **Observaciones cualitativas**

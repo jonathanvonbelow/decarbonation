@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Guía de facilitación</title>
-    <meta name="description" content="Guion de debriefing paso a paso para taller: encuadre, preguntas guía por nivel, cierre grupal comparativo y notas del facilitador." />
+    <meta name="description" content="Guion de debriefing paso a paso para taller, con una variante para Territorio y otra para el juego de 3 niveles: encuadre, preguntas guía, cierre grupal comparativo y notas del facilitador." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes/guia">
     <link rel="stylesheet" href="/src/index.css" />
@@ -14,7 +14,7 @@
       <div class="container mx-auto flex items-center justify-between px-4 py-4">
         <a href="/" class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</a>
         <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ Imprimir</button>
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">🖨️ <span data-lang="es">Imprimir</span><span data-lang="en" hidden>Print</span></button>
           <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
             🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
           </button>
@@ -23,193 +23,648 @@
     </header>
 
     <main class="container mx-auto px-4 py-12 max-w-3xl">
-      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden">← Paquete para docentes</a>
-      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">Guía de facilitación</h1>
-      <p class="text-ash mb-10">Debriefing de taller — versión grupal del cierre de partida.</p>
+      <a href="/docentes" class="text-sm text-hydro hover:underline print:hidden"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a>
+      <h1 class="text-3xl font-bold font-[var(--font-display)] text-chlorophyll mt-3 mb-1">
+        <span data-lang="es">Guía de facilitación</span>
+        <span data-lang="en" hidden>Facilitation guide</span>
+      </h1>
+      <p class="text-ash mb-6">
+        <span data-lang="es">Debriefing de taller — versión grupal del cierre de partida.</span>
+        <span data-lang="en" hidden>Workshop debriefing — the group version of the end-of-game wrap-up.</span>
+      </p>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">1. Qué es este documento y cuándo usarlo</h2>
-        <p class="text-ash mb-3">
-          DecarboNation es un <strong class="text-bone">simulador estratégico de política pública climática</strong>: un
-          laboratorio de escenarios donde cada participante o grupo ensaya combinaciones de políticas y observa sus
-          consecuencias sistémicas. Esta guía es la <strong class="text-bone">versión taller</strong> del cierre de
-          partida — pensada para sesiones presenciales o virtuales con grupo, donde un facilitador conduce la
-          conversación después de que los participantes terminan una sesión (individual o en pequeños grupos).
-        </p>
-        <p class="text-ash mb-3">
-          Existe una <strong class="text-bone">versión individual</strong> de este cierre: al finalizar una sesión
-          dentro de la aplicación, cada participante recibe automáticamente una síntesis personalizada generada por
-          DecarboNito (decisiones tomadas, trade-offs identificados, efectos intersectoriales observados y preguntas
-          de reflexión abiertas). Esta guía <strong class="text-bone">no reemplaza</strong> esa síntesis — la
-          complementa, dándole un espacio grupal de puesta en común. Si el taller lo permite, pedile a cada
-          participante que tenga a mano el texto de su síntesis individual antes de empezar el debriefing (ver
-          sección 5).
-        </p>
-        <p class="text-sm text-ash-dim">⏱️ Duración sugerida: 10 a 15 minutos por ronda de debriefing (al cierre de un nivel, o al cierre de la sesión completa).</p>
-      </section>
+      <!-- Version switch: Territorio is the default (00_INDICE_v5 decision 8). -->
+      <div class="version-switch mb-2 print:hidden" role="tablist" aria-label="Versión del juego / Game version">
+        <button type="button" role="tab" data-version-tab="territorio" aria-selected="true">
+          <span data-lang="es">Territorio</span><span data-lang="en" hidden>Territory</span>
+        </button>
+        <button type="button" role="tab" data-version-tab="niveles" aria-selected="false">
+          <span data-lang="es">Juego de 3 niveles</span><span data-lang="en" hidden>3-level game</span>
+        </button>
+      </div>
+      <p class="text-xs text-ash-dim mb-8 print:hidden">
+        <span data-lang="es">Se imprime la versión seleccionada.</span>
+        <span data-lang="en" hidden>Prints the selected version.</span>
+      </p>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">2. Guion de debriefing paso a paso</h2>
-        <p class="text-ash mb-4">
-          Este guion asume un grupo de 4 a 12 participantes que jugaron individualmente o en pequeños equipos (2-3
-          personas por rol/cartera), y que acaban de terminar Nivel 1, Nivel 2, o ambos.
-        </p>
-        <ol class="space-y-4">
-          <li>
-            <h3 class="font-semibold text-bone">Paso 1 — Encuadre <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h3>
-            <p class="text-ash text-sm mb-2">Reunir al grupo y recordar el objetivo del cierre: no es evaluar quién "ganó", sino identificar qué tensiones del sistema aparecieron y qué aprendimos sobre ellas. Frase sugerida:</p>
-            <blockquote class="border-l-2 border-hydro pl-4 text-sm text-ash italic">"Terminamos la sesión de simulación. Ahora vamos a mirar juntos qué decisiones tomamos, qué compensamos por el camino, y qué nos llevamos de esto. No hay una respuesta correcta única — el objetivo es entender la lógica del sistema, no memorizar un resultado."</blockquote>
-          </li>
-          <li>
-            <h3 class="font-semibold text-bone">Paso 2 — Relevamiento rápido de resultados <span class="text-ash-dim font-normal text-sm">(2-3 min)</span></h3>
-            <p class="text-ash text-sm">Pedir a cada participante o equipo que comparta en una frase: nivel jugado, resultado (alcanzó el umbral o no), y una política que consideran su "sello distintivo". Anotar en un pizarrón/rotafolio visible — esto arma el mapa de partida para las preguntas siguientes y ya empieza a mostrar diversidad de enfoques dentro del grupo.</p>
-          </li>
-          <li>
-            <h3 class="font-semibold text-bone">Paso 3 — Preguntas guía diferenciadas por nivel <span class="text-ash-dim font-normal text-sm">(5-8 min)</span></h3>
-            <p class="text-ash text-sm">Usar el bloque de preguntas correspondiente al nivel jugado por el grupo (sección 3). Si el grupo jugó ambos niveles, dedicar 3-4 minutos a cada bloque. No es necesario recorrer todas las preguntas — elegir 2-3 según lo que haya sido más visible durante la partida.</p>
-          </li>
-          <li>
-            <h3 class="font-semibold text-bone">Paso 4 — Cierre grupal comparativo <span class="text-ash-dim font-normal text-sm">(3-4 min)</span></h3>
-            <p class="text-ash text-sm">Aplicar el ejercicio de cierre de la sección 4 (comparación de síntesis individuales entre roles distintos).</p>
-          </li>
-          <li>
-            <h3 class="font-semibold text-bone">Paso 5 — Registro del facilitador <span class="text-ash-dim font-normal text-sm">(1-2 min, en paralelo o inmediatamente después)</span></h3>
-            <p class="text-ash text-sm">Completar la sección "Notas del facilitador" (sección 5) mientras la conversación está fresca. No es necesario hacerlo en vivo frente al grupo.</p>
-          </li>
-        </ol>
-      </section>
+      <!-- ===================== Variante Territorio ===================== -->
+      <div data-version="territorio" role="tabpanel">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-4">
+          <span data-lang="es">Variante Territorio</span><span data-lang="en" hidden>Territory variant</span>
+        </h2>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">3. Preguntas guía por nivel</h2>
-        <p class="text-ash mb-5">
-          Las dinámicas de Nivel 1 y Nivel 2 son distintas — Nivel 1 es fundacional y ambiental (menos variables,
-          decisiones binarias de activar/desactivar política), Nivel 2 agrega presión política, indicadores
-          socioeconómicos e instrumentos de esfuerzo graduado. Las preguntas reflejan esa diferencia y siguen la
-          misma estructura de 4 bloques que la síntesis individual: <strong class="text-bone">decisiones tomadas /
-          trade-offs / efectos intersectoriales / reflexión abierta</strong>.
-        </p>
+        <div data-lang="es">
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">1. Qué es este documento y cuándo usarlo</h3>
+            <p class="text-ash mb-3">
+              DecarboNation es un <strong class="text-bone">simulador estratégico de política pública climática</strong>: un
+              laboratorio de escenarios donde cada participante o grupo ensaya combinaciones de políticas y observa sus
+              consecuencias sistémicas. Esta guía es la <strong class="text-bone">versión taller</strong> del cierre de
+              partida de Territorio, pensada para sesiones presenciales o virtuales con grupo, donde un facilitador conduce la
+              conversación después de que los participantes terminan una partida (individual o en pequeños grupos).
+            </p>
+            <p class="text-ash mb-3">
+              En Territorio no hay síntesis individual de DecarboNito al cierre: el insumo de cada participante es
+              <strong class="text-bone">su pantalla final</strong> (rutas, indicadores de inicio y fin, áreas declaradas) y lo que
+              recuerda de las situaciones. Pedí que saquen una captura de la pantalla final antes del debriefing.
+            </p>
+            <p class="text-sm text-ash-dim">⏱️ Duración sugerida: 10 a 15 minutos por ronda de debriefing.</p>
+          </section>
 
-        <h3 class="text-lg font-semibold text-hydro mb-2">3.1 — Nivel 1: Estrategia Nacional Fundacional</h3>
-        <p class="text-ash text-sm mb-3">
-          Contexto: el foco está en biodiversidad, emisiones de CO₂eq per cápita y % de bosque nativo, mediante la
-          activación/desactivación de políticas (sin instrumentos de esfuerzo graduado). Las tensiones típicas
-          aparecen entre políticas de conservación/agroecológicas y políticas productivas (agricultura intensiva,
-          normativas ambientales flexibles).
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
-          <div>
-            <p class="label-eyebrow mb-1">Decisiones tomadas</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Qué políticas activaron primero, y qué política dejaron para más adelante o nunca activaron? ¿Por qué ese orden?</li>
-              <li>¿Hubo alguna política que desactivaron durante la partida? ¿Qué los llevó a esa decisión?</li>
-            </ul>
-          </div>
-          <div>
-            <p class="label-eyebrow mb-1">Trade-offs</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Notaron sinergias (Conservación + Ganadería Sostenible) o antagonismos (Agricultura Intensiva + Normativas Flexibles)?</li>
-              <li>Si priorizaron biodiversidad, ¿qué otro indicador quedó relegado? ¿Fue una decisión consciente?</li>
-            </ul>
-          </div>
-          <div>
-            <p class="label-eyebrow mb-1">Efectos intersectoriales</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Vieron la advertencia de costo fiscal? ¿Qué relación causal identificaron (política ambiental → costo → necesidad de política productiva)?</li>
-              <li>¿Qué transición de uso del suelo fue más determinante para el balance de carbono?</li>
-            </ul>
-          </div>
-          <div>
-            <p class="label-eyebrow mb-1">Reflexión abierta</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>Si jugaran de nuevo, ¿qué combinación activarían en el primer año?</li>
-              <li>¿Qué fue lo que más les costó entender de cómo se relacionan las políticas entre sí?</li>
-            </ul>
-          </div>
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">2. Guion de debriefing paso a paso</h3>
+            <p class="text-ash mb-4">
+              Este guion asume un grupo de 4 a 12 participantes que jugaron individualmente o en pequeños equipos (2-3
+              personas por pantalla) y que acaban de terminar una partida de Territorio (completa o no).
+            </p>
+            <ol class="space-y-4">
+              <li>
+                <h4 class="font-semibold text-bone">Paso 1 — Encuadre <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm mb-2">Reunir al grupo y recordar el objetivo del cierre: no es evaluar quién "ganó", sino identificar qué tensiones del territorio aparecieron y qué aprendimos sobre ellas. Frase sugerida:</p>
+                <blockquote class="border-l-2 border-hydro pl-4 text-sm text-ash italic">"Terminamos la partida. Ahora vamos a mirar juntos qué decisiones tomamos, qué dejamos sin resolver, y qué nos llevamos de esto. No hay una respuesta correcta única — el objetivo es entender la lógica del sistema, no memorizar un resultado."</blockquote>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 2 — Relevamiento <span class="text-ash-dim font-normal text-sm">(2-3 min)</span></h4>
+                <p class="text-ash text-sm">Cada persona o equipo dice en una frase: año al que llegó, ruta lograda o más cercana, y "la decisión que más me costó". Anotar en el pizarrón en tres columnas, una por ruta (integridad ecológica / transición productiva / innovación).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 3 — Preguntas guía <span class="text-ash-dim font-normal text-sm">(5-8 min)</span></h4>
+                <p class="text-ash text-sm">Elegir 2-3 preguntas de la sección 3 según lo que haya sido más visible durante las partidas.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 4 — Cierre comparativo <span class="text-ash-dim font-normal text-sm">(3-4 min)</span></h4>
+                <p class="text-ash text-sm">Juntar a dos personas que terminaron cerca de <strong class="text-bone">rutas distintas</strong> y que comparen sus mapas finales: ¿dónde está la diferencia, en el mapa o en los números? (ver sección 4).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 5 — Registro <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm">Completar las notas del facilitador (sección 5) mientras la conversación está fresca, y compartir el link del cuestionario con el código de taller.</p>
+              </li>
+            </ol>
+            <div class="mt-5 rounded-lg border border-basalt-600 p-4">
+              <p class="label-eyebrow mb-2">Tips exclusivos de Territorio</p>
+              <ul class="list-disc list-inside text-sm text-ash space-y-1">
+                <li>El juego se puede <strong class="text-bone">pausar</strong> desde el HUD: usá la pausa para preguntar en voz alta "¿qué creen que va a pasar en los próximos dos años?" antes de seguir.</li>
+                <li>En pantalla grande, la velocidad ×4 sirve para mostrar en un minuto cómo avanza la frontera agrícola si nadie hace nada.</li>
+                <li>La partida no se guarda: avisá antes de empezar que no recarguen la pestaña.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">3. Preguntas guía para Territorio</h3>
+            <p class="text-ash mb-5">Cuatro bloques, la misma estructura que usa el cierre individual del juego de 3 niveles.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisiones</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Qué parte del mapa cambió más durante tu partida? ¿Lo provocaste vos o pasó solo?</li>
+                  <li>¿Dónde declaraste usos públicos y por qué ahí?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Elegí una situación que te llegó al escritorio: ¿qué opciones tenías y qué perdías con cada una?</li>
+                  <li>¿Hubo un momento en que proteger bosque te complicó la economía o la seguridad alimentaria? ¿Cómo lo resolviste?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Efectos intersectoriales y tiempo</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Las situaciones no detienen el reloj. ¿Qué pasó con las que dejaste sin resolver? ¿Se parece a cómo funciona la gestión real?</li>
+                  <li>¿Qué cambio tardó años en verse en el mapa o en los indicadores? ¿Qué implica eso para alguien que gobierna con mandatos de 4 años?</li>
+                  <li>¿Qué actor —productores, ambientalistas o ciudadanía— te presionó más y cuándo?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Reflexión abierta</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Si tuvieras que gobernar una región real parecida, ¿qué harías en los primeros cinco años?</li>
+                  <li>¿Qué le falta al mapa para parecerse a tu provincia o región?</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">4. Cierre grupal: comparar pantallas finales entre rutas distintas</h3>
+            <p class="text-ash mb-3">
+              <strong class="text-bone">Objetivo:</strong> mostrar que las mismas restricciones del sistema (los mismos
+              indicadores, las mismas políticas disponibles, el mismo motor de simulación) producen trade-offs distintos
+              según la ruta que cada participante persiguió. Es el momento más potente del debriefing para el aprendizaje
+              social — vale la pena no saltearlo aunque el tiempo esté ajustado.
+            </p>
+            <p class="label-eyebrow mb-2">Cómo hacerlo</p>
+            <ol class="list-decimal list-inside text-ash text-sm space-y-2 mb-3">
+              <li>Elegir 2 o 3 participantes (o equipos) que hayan terminado cerca de rutas marcadamente distintas.</li>
+              <li>Pedirles que muestren (proyecten) su captura de la pantalla final: ruta, indicadores de inicio y fin, áreas declaradas.</li>
+              <li>Preguntar al resto: <em>"¿Qué tienen en común estos resultados, a pesar de que las decisiones fueron distintas? ¿Qué restricción del sistema está por detrás de los tres casos?"</em></li>
+              <li>Cerrar con una síntesis del facilitador en una frase: nombrar la tensión estructural que el grupo identificó (ej.: "no existe una combinación de políticas sin costo — cada decisión reasigna el problema a otro indicador, nunca lo elimina").</li>
+            </ol>
+            <p class="text-sm text-ash-dim">Si nadie tiene la captura a mano, reconstruí el ejercicio con las notas del Paso 2: funciona igual, con menos detalle.</p>
+          </section>
         </div>
 
-        <h3 class="text-lg font-semibold text-hydro mb-2">3.2 — Nivel 2: Coordinación Regional y Sostenibilidad Ampliada</h3>
-        <p class="text-ash text-sm mb-3">
-          Contexto: se suman seguridad alimentaria, seguridad económica, bienestar social y estabilidad política,
-          además de las tres presiones políticas (agrícola, ambientalista, social) y los instrumentos de política.
-          Las tensiones típicas ya no son solo "qué política activar" sino "cuánto esfuerzo darle a cada
-          instrumento" y "a qué grupo de presión atender primero".
+        <div data-lang="en" hidden>
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">1. What this document is and when to use it</h3>
+            <p class="text-ash mb-3">
+              DecarboNation is a <strong class="text-bone">strategic simulator of public climate policy</strong>: a
+              scenario lab where each participant or group tries out policy combinations and watches their systemic
+              consequences. This guide is the <strong class="text-bone">workshop version</strong> of the Territory
+              end-of-game wrap-up, designed for in-person or virtual group sessions where a facilitator leads the
+              conversation after participants finish a game (alone or in small groups).
+            </p>
+            <p class="text-ash mb-3">
+              Territory has no individual DecarboNito summary at the end: each participant's input is
+              <strong class="text-bone">their final screen</strong> (routes, start and end indicators, areas declared) and what they
+              remember of the situations. Ask them to take a screenshot of the final screen before the debriefing.
+            </p>
+            <p class="text-sm text-ash-dim">⏱️ Suggested time: 10 to 15 minutes per debriefing round.</p>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">2. Step-by-step debriefing script</h3>
+            <p class="text-ash mb-4">
+              This script assumes a group of 4 to 12 participants who played alone or in small teams (2-3
+              people per screen) and have just finished a Territory game (complete or not).
+            </p>
+            <ol class="space-y-4">
+              <li>
+                <h4 class="font-semibold text-bone">Step 1 — Framing <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm mb-2">Gather the group and restate the aim of the wrap-up: it's not about who "won", but about which tensions of the territory showed up and what we learned about them. Suggested line:</p>
+                <blockquote class="border-l-2 border-hydro pl-4 text-sm text-ash italic">"The game is over. Now let's look together at the decisions we made, what we left unresolved, and what we take away. There's no single right answer — the point is to understand the logic of the system, not to memorize a result."</blockquote>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 2 — Quick round-up <span class="text-ash-dim font-normal text-sm">(2-3 min)</span></h4>
+                <p class="text-ash text-sm">Each person or team says in one sentence: the year they reached, the route achieved or closest, and "the decision that was hardest for me". Write it on the board in three columns, one per route (ecological integrity / productive transition / innovation).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 3 — Guiding questions <span class="text-ash-dim font-normal text-sm">(5-8 min)</span></h4>
+                <p class="text-ash text-sm">Pick 2-3 questions from section 3, depending on what stood out most during the games.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 4 — Comparative wrap-up <span class="text-ash-dim font-normal text-sm">(3-4 min)</span></h4>
+                <p class="text-ash text-sm">Pair two people who ended up near <strong class="text-bone">different routes</strong> and have them compare their final maps: where is the difference, on the map or in the numbers? (see section 4).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 5 — Record <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm">Fill in the facilitator notes (section 5) while the conversation is fresh, and share the questionnaire link with the workshop code.</p>
+              </li>
+            </ol>
+            <div class="mt-5 rounded-lg border border-basalt-600 p-4">
+              <p class="label-eyebrow mb-2">Territory-only tips</p>
+              <ul class="list-disc list-inside text-sm text-ash space-y-1">
+                <li>The game can be <strong class="text-bone">paused</strong> from the HUD: use the pause to ask out loud "what do you think will happen over the next two years?" before moving on.</li>
+                <li>On a big screen, ×4 speed shows in one minute how the farming frontier advances if nobody does anything.</li>
+                <li>The game doesn't save: tell everyone before starting not to reload the tab.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">3. Guiding questions for Territory</h3>
+            <p class="text-ash mb-5">Four blocks, the same structure as the individual wrap-up of the 3-level game.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisions</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Which part of the map changed most during your game? Did you cause it or did it happen on its own?</li>
+                  <li>Where did you declare public uses, and why there?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Pick a situation that landed on your desk: what options did you have, and what did you lose with each?</li>
+                  <li>Was there a moment when protecting forest complicated the economy or food security? How did you solve it?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Cross-sector effects and time</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Situations don't stop the clock. What happened to the ones you left unresolved? Is that how real governance works?</li>
+                  <li>Which change took years to show up on the map or in the indicators? What does that mean for someone governing on 4-year terms?</li>
+                  <li>Which stakeholder —producers, environmentalists or citizens— pressured you most, and when?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Open reflection</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>If you had to govern a similar real region, what would you do in the first five years?</li>
+                  <li>What does the map lack to look like your province or region?</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">4. Group wrap-up: compare final screens across different routes</h3>
+            <p class="text-ash mb-3">
+              <strong class="text-bone">Goal:</strong> show that the same system constraints (the same
+              indicators, the same available policies, the same simulation engine) produce different trade-offs
+              depending on the route each participant pursued. It is the most powerful moment of the debriefing for social
+              learning — worth keeping even when time is tight.
+            </p>
+            <p class="label-eyebrow mb-2">How to do it</p>
+            <ol class="list-decimal list-inside text-ash text-sm space-y-2 mb-3">
+              <li>Pick 2 or 3 participants (or teams) who ended up near clearly different routes.</li>
+              <li>Ask them to show (project) their final-screen capture: route, start and end indicators, areas declared.</li>
+              <li>Ask the rest: <em>"What do these results have in common, even though the decisions were different? Which constraint of the system lies behind all three cases?"</em></li>
+              <li>Close with a one-sentence synthesis from the facilitator, naming the structural tension the group found (e.g. "there is no policy combination without a cost — every decision reassigns the problem to another indicator, it never removes it").</li>
+            </ol>
+            <p class="text-sm text-ash-dim">If nobody has the capture at hand, rebuild the exercise from the Step 2 notes: it still works, with less detail.</p>
+          </section>
+        </div>
+      </div>
+
+      <!-- ===================== Variante juego de 3 niveles ===================== -->
+      <div data-version="niveles" role="tabpanel">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-bone mb-4">
+          <span data-lang="es">Variante juego de 3 niveles</span><span data-lang="en" hidden>3-level game variant</span>
+        </h2>
+
+        <div data-lang="es">
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">1. Qué es este documento y cuándo usarlo</h3>
+            <p class="text-ash mb-3">
+              DecarboNation es un <strong class="text-bone">simulador estratégico de política pública climática</strong>: un
+              laboratorio de escenarios donde cada participante o grupo ensaya combinaciones de políticas y observa sus
+              consecuencias sistémicas. Esta guía es la <strong class="text-bone">versión taller</strong> del cierre de
+              partida — pensada para sesiones presenciales o virtuales con grupo, donde un facilitador conduce la
+              conversación después de que los participantes terminan una sesión (individual o en pequeños grupos).
+            </p>
+            <p class="text-ash mb-3">
+              Existe una <strong class="text-bone">versión individual</strong> de este cierre: al finalizar una sesión
+              dentro de la aplicación, cada participante recibe automáticamente una síntesis personalizada generada por
+              DecarboNito (decisiones tomadas, trade-offs identificados, efectos intersectoriales observados y preguntas
+              de reflexión abiertas). Esta guía <strong class="text-bone">no reemplaza</strong> esa síntesis — la
+              complementa, dándole un espacio grupal de puesta en común. Si el taller lo permite, pedile a cada
+              participante que tenga a mano el texto de su síntesis individual antes de empezar el debriefing (ver
+              sección 5).
+            </p>
+            <p class="text-sm text-ash-dim">⏱️ Duración sugerida: 10 a 15 minutos por ronda de debriefing (al cierre de un nivel, o al cierre de la sesión completa).</p>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">2. Guion de debriefing paso a paso</h3>
+            <p class="text-ash mb-4">
+              Este guion asume un grupo de 4 a 12 participantes que jugaron individualmente o en pequeños equipos (2-3
+              personas por rol/cartera), y que acaban de terminar Nivel 1, Nivel 2, o ambos.
+            </p>
+            <ol class="space-y-4">
+              <li>
+                <h4 class="font-semibold text-bone">Paso 1 — Encuadre <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm mb-2">Reunir al grupo y recordar el objetivo del cierre: no es evaluar quién "ganó", sino identificar qué tensiones del sistema aparecieron y qué aprendimos sobre ellas. Frase sugerida:</p>
+                <blockquote class="border-l-2 border-hydro pl-4 text-sm text-ash italic">"Terminamos la sesión de simulación. Ahora vamos a mirar juntos qué decisiones tomamos, qué compensamos por el camino, y qué nos llevamos de esto. No hay una respuesta correcta única — el objetivo es entender la lógica del sistema, no memorizar un resultado."</blockquote>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 2 — Relevamiento rápido de resultados <span class="text-ash-dim font-normal text-sm">(2-3 min)</span></h4>
+                <p class="text-ash text-sm">Pedir a cada participante o equipo que comparta en una frase: nivel jugado, resultado (alcanzó el umbral o no), y una política que consideran su "sello distintivo". Anotar en un pizarrón/rotafolio visible — esto arma el mapa de partida para las preguntas siguientes y ya empieza a mostrar diversidad de enfoques dentro del grupo.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 3 — Preguntas guía diferenciadas por nivel <span class="text-ash-dim font-normal text-sm">(5-8 min)</span></h4>
+                <p class="text-ash text-sm">Usar el bloque de preguntas correspondiente al nivel jugado por el grupo (sección 3). Si el grupo jugó ambos niveles, dedicar 3-4 minutos a cada bloque. No es necesario recorrer todas las preguntas — elegir 2-3 según lo que haya sido más visible durante la partida.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 4 — Cierre grupal comparativo <span class="text-ash-dim font-normal text-sm">(3-4 min)</span></h4>
+                <p class="text-ash text-sm">Aplicar el ejercicio de cierre de la sección 4 (comparación de síntesis individuales entre roles distintos).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Paso 5 — Registro del facilitador <span class="text-ash-dim font-normal text-sm">(1-2 min, en paralelo o inmediatamente después)</span></h4>
+                <p class="text-ash text-sm">Completar la sección "Notas del facilitador" (sección 5) mientras la conversación está fresca. No es necesario hacerlo en vivo frente al grupo.</p>
+              </li>
+            </ol>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">3. Preguntas guía por nivel</h3>
+            <p class="text-ash mb-5">
+              Las dinámicas de Nivel 1 y Nivel 2 son distintas — Nivel 1 es fundacional y ambiental (menos variables,
+              decisiones binarias de activar/desactivar política), Nivel 2 agrega presión política, indicadores
+              socioeconómicos e instrumentos de esfuerzo graduado. Las preguntas reflejan esa diferencia y siguen la
+              misma estructura de 4 bloques que la síntesis individual: <strong class="text-bone">decisiones tomadas /
+              trade-offs / efectos intersectoriales / reflexión abierta</strong>.
+            </p>
+
+            <h4 class="text-lg font-semibold text-hydro mb-2">3.1 — Nivel 1: Estrategia Nacional Fundacional</h4>
+            <p class="text-ash text-sm mb-3">
+              Contexto: el foco está en biodiversidad, emisiones de CO₂eq per cápita y % de bosque nativo, mediante la
+              activación/desactivación de políticas (sin instrumentos de esfuerzo graduado). Las tensiones típicas
+              aparecen entre políticas de conservación/agroecológicas y políticas productivas (agricultura intensiva,
+              normativas ambientales flexibles).
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisiones tomadas</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Qué políticas activaron primero, y qué política dejaron para más adelante o nunca activaron? ¿Por qué ese orden?</li>
+                  <li>¿Hubo alguna política que desactivaron durante la partida? ¿Qué los llevó a esa decisión?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Notaron sinergias (Conservación + Ganadería Sostenible) o antagonismos (Agricultura Intensiva + Normativas Flexibles)?</li>
+                  <li>Si priorizaron biodiversidad, ¿qué otro indicador quedó relegado? ¿Fue una decisión consciente?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Efectos intersectoriales</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Vieron la advertencia de costo fiscal? ¿Qué relación causal identificaron (política ambiental → costo → necesidad de política productiva)?</li>
+                  <li>¿Qué transición de uso del suelo fue más determinante para el balance de carbono?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Reflexión abierta</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Si jugaran de nuevo, ¿qué combinación activarían en el primer año?</li>
+                  <li>¿Qué fue lo que más les costó entender de cómo se relacionan las políticas entre sí?</li>
+                </ul>
+              </div>
+            </div>
+
+            <h4 class="text-lg font-semibold text-hydro mb-2">3.2 — Nivel 2: Coordinación Regional y Sostenibilidad Ampliada</h4>
+            <p class="text-ash text-sm mb-3">
+              Contexto: se suman seguridad alimentaria, seguridad económica, bienestar social y estabilidad política,
+              además de las tres presiones políticas (agrícola, ambientalista, social) y los instrumentos de política.
+              Las tensiones típicas ya no son solo "qué política activar" sino "cuánto esfuerzo darle a cada
+              instrumento" y "a qué grupo de presión atender primero".
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisiones tomadas</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Cómo distribuyeron el esfuerzo entre instrumentos? ¿Concentrado o repartido?</li>
+                  <li>¿Reasignaron esfuerzo en respuesta a una presión política que subía? ¿Cuál fue el disparador?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Qué presión (agrícola, ambientalista, social) les costó más controlar? ¿Qué sacrificaron?</li>
+                  <li>¿Mejoraron un indicador socioeconómico a costa de otro? ¿Cómo lo manejaron?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Efectos intersectoriales</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Identificaron una cadena causal presión política → decisión → indicador ambiental (o viceversa)?</li>
+                  <li>Si jugaron con roles, ¿en qué momento entraron en conflicto dos prioridades? ¿Cómo se resolvió?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Reflexión abierta</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>¿Qué les enseñó este nivel sobre el costo político de una decisión "técnicamente correcta"?</li>
+                  <li>¿Qué le dirían a alguien que empieza el Nivel 2 sobre usar los instrumentos de política?</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">4. Cierre grupal: comparar síntesis individuales entre roles distintos</h3>
+            <p class="text-ash mb-3">
+              <strong class="text-bone">Objetivo:</strong> mostrar que las mismas restricciones del sistema (los mismos
+              indicadores, las mismas políticas disponibles, el mismo motor de simulación) producen trade-offs distintos
+              según el rol o el énfasis que cada participante eligió. Este es el momento más potente del debriefing para
+              el aprendizaje social — vale la pena no saltearlo aunque el tiempo esté ajustado.
+            </p>
+            <p class="label-eyebrow mb-2">Cómo hacerlo</p>
+            <ol class="list-decimal list-inside text-ash text-sm space-y-2 mb-3">
+              <li>Elegir 2 o 3 participantes (o equipos) que hayan jugado con combinaciones de políticas o roles marcadamente distintos — idealmente uno más ambiental, otro más productivo/económico, y un tercero más social o político si lo hay.</li>
+              <li>Pedirles que lean en voz alta (o proyecten) la sección "Trade-offs identificados" de su síntesis individual.</li>
+              <li>Preguntar al resto: <em>"¿Qué tienen en común estos trade-offs, a pesar de que las decisiones fueron distintas? ¿Qué restricción del sistema está por detrás de los tres casos?"</em></li>
+              <li>Cerrar con una síntesis del facilitador en una frase: nombrar la tensión estructural que el grupo identificó (ej.: "no existe una combinación de políticas sin costo — cada decisión reasigna el problema a otro indicador, nunca lo elimina").</li>
+            </ol>
+            <p class="text-sm text-ash-dim">Si ningún participante tiene a mano su síntesis individual, el facilitador puede reconstruir el ejercicio con las notas del Paso 2 — igual funciona, aunque con menos detalle.</p>
+          </section>
+        </div>
+
+        <div data-lang="en" hidden>
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">1. What this document is and when to use it</h3>
+            <p class="text-ash mb-3">
+              DecarboNation is a <strong class="text-bone">strategic simulator of public climate policy</strong>: a
+              scenario lab where each participant or group tries out policy combinations and watches their systemic
+              consequences. This guide is the <strong class="text-bone">workshop version</strong> of the end-of-game
+              wrap-up — designed for in-person or virtual group sessions, where a facilitator leads the
+              conversation after participants finish a session (alone or in small groups).
+            </p>
+            <p class="text-ash mb-3">
+              There is an <strong class="text-bone">individual version</strong> of this wrap-up: when a session ends
+              inside the app, each participant automatically receives a personalized summary written by
+              DecarboNito (decisions taken, trade-offs identified, cross-sector effects observed and open
+              reflection questions). This guide <strong class="text-bone">does not replace</strong> that summary — it
+              complements it by giving it a group space to share. If the workshop allows, ask each
+              participant to have the text of their individual summary at hand before the debriefing starts (see
+              section 5).
+            </p>
+            <p class="text-sm text-ash-dim">⏱️ Suggested time: 10 to 15 minutes per debriefing round (at the end of a level, or at the end of the whole session).</p>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">2. Step-by-step debriefing script</h3>
+            <p class="text-ash mb-4">
+              This script assumes a group of 4 to 12 participants who played alone or in small teams (2-3
+              people per role/portfolio) and have just finished Level 1, Level 2, or both.
+            </p>
+            <ol class="space-y-4">
+              <li>
+                <h4 class="font-semibold text-bone">Step 1 — Framing <span class="text-ash-dim font-normal text-sm">(1-2 min)</span></h4>
+                <p class="text-ash text-sm mb-2">Gather the group and restate the aim of the wrap-up: it's not about who "won", but about which tensions of the system showed up and what we learned about them. Suggested line:</p>
+                <blockquote class="border-l-2 border-hydro pl-4 text-sm text-ash italic">"The simulation session is over. Now let's look together at the decisions we made, what we traded off along the way, and what we take away. There's no single right answer — the point is to understand the logic of the system, not to memorize a result."</blockquote>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 2 — Quick round-up of results <span class="text-ash-dim font-normal text-sm">(2-3 min)</span></h4>
+                <p class="text-ash text-sm">Ask each participant or team to share in one sentence: the level played, the result (reached the threshold or not), and a policy they consider their "signature". Write it on a visible board/flipchart — this builds the starting map for the next questions and already shows the diversity of approaches within the group.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 3 — Guiding questions by level <span class="text-ash-dim font-normal text-sm">(5-8 min)</span></h4>
+                <p class="text-ash text-sm">Use the block of questions for the level the group played (section 3). If the group played both levels, spend 3-4 minutes on each block. You don't need to go through every question — pick 2-3 depending on what stood out most during the game.</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 4 — Comparative group wrap-up <span class="text-ash-dim font-normal text-sm">(3-4 min)</span></h4>
+                <p class="text-ash text-sm">Run the wrap-up exercise in section 4 (comparing individual summaries across different roles).</p>
+              </li>
+              <li>
+                <h4 class="font-semibold text-bone">Step 5 — Facilitator record <span class="text-ash-dim font-normal text-sm">(1-2 min, in parallel or right after)</span></h4>
+                <p class="text-ash text-sm">Fill in the "Facilitator notes" section (section 5) while the conversation is fresh. It doesn't have to be done live in front of the group.</p>
+              </li>
+            </ol>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">3. Guiding questions by level</h3>
+            <p class="text-ash mb-5">
+              Level 1 and Level 2 play differently — Level 1 is foundational and environmental (fewer variables,
+              binary decisions to switch a policy on or off), Level 2 adds political pressure, socioeconomic
+              indicators and graduated-effort instruments. The questions reflect that difference and follow the
+              same 4-block structure as the individual summary: <strong class="text-bone">decisions taken /
+              trade-offs / cross-sector effects / open reflection</strong>.
+            </p>
+
+            <h4 class="text-lg font-semibold text-hydro mb-2">3.1 — Level 1: Foundational National Strategy</h4>
+            <p class="text-ash text-sm mb-3">
+              Context: the focus is on biodiversity, per-capita CO₂eq emissions and % of native forest, by
+              switching policies on and off (no graduated-effort instruments). Typical tensions
+              appear between conservation/agroecological policies and productive policies (intensive agriculture,
+              flexible environmental regulations).
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisions taken</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Which policies did you switch on first, and which did you leave for later or never switch on? Why that order?</li>
+                  <li>Did you switch off any policy during the game? What led you to that decision?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Did you notice synergies (Conservation + Sustainable Livestock) or antagonisms (Intensive Agriculture + Flexible Regulations)?</li>
+                  <li>If you prioritized biodiversity, which other indicator was left behind? Was it a conscious decision?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Cross-sector effects</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Did you see the fiscal-cost warning? What causal link did you identify (environmental policy → cost → need for a productive policy)?</li>
+                  <li>Which land-use transition was most decisive for the carbon balance?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Open reflection</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>If you played again, which combination would you switch on in the first year?</li>
+                  <li>What was hardest to understand about how policies relate to each other?</li>
+                </ul>
+              </div>
+            </div>
+
+            <h4 class="text-lg font-semibold text-hydro mb-2">3.2 — Level 2: Regional Coordination and Expanded Sustainability</h4>
+            <p class="text-ash text-sm mb-3">
+              Context: food security, economic security, social well-being and political stability are added,
+              along with the three political pressures (agricultural, environmentalist, social) and the policy instruments.
+              Typical tensions are no longer just "which policy to switch on" but "how much effort to give each
+              instrument" and "which pressure group to attend to first".
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="label-eyebrow mb-1">Decisions taken</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>How did you distribute effort among instruments? Concentrated or spread out?</li>
+                  <li>Did you reassign effort in response to a rising political pressure? What was the trigger?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Trade-offs</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Which pressure (agricultural, environmentalist, social) was hardest to control? What did you sacrifice?</li>
+                  <li>Did you improve one socioeconomic indicator at the expense of another? How did you handle it?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Cross-sector effects</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>Did you identify a causal chain political pressure → decision → environmental indicator (or the other way round)?</li>
+                  <li>If you played with roles, when did two priorities come into conflict? How was it resolved?</li>
+                </ul>
+              </div>
+              <div>
+                <p class="label-eyebrow mb-1">Open reflection</p>
+                <ul class="list-disc list-inside text-ash space-y-1">
+                  <li>What did this level teach you about the political cost of a "technically correct" decision?</li>
+                  <li>What would you tell someone starting Level 2 about using the policy instruments?</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-6 mb-8">
+            <h3 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">4. Group wrap-up: compare individual summaries across different roles</h3>
+            <p class="text-ash mb-3">
+              <strong class="text-bone">Goal:</strong> show that the same system constraints (the same
+              indicators, the same available policies, the same simulation engine) produce different trade-offs
+              depending on the role or emphasis each participant chose. This is the most powerful moment of the debriefing for
+              social learning — worth keeping even when time is tight.
+            </p>
+            <p class="label-eyebrow mb-2">How to do it</p>
+            <ol class="list-decimal list-inside text-ash text-sm space-y-2 mb-3">
+              <li>Pick 2 or 3 participants (or teams) who played with clearly different policy combinations or roles — ideally one more environmental, another more productive/economic, and a third more social or political if there is one.</li>
+              <li>Ask them to read aloud (or project) the "Trade-offs identified" section of their individual summary.</li>
+              <li>Ask the rest: <em>"What do these trade-offs have in common, even though the decisions were different? Which constraint of the system lies behind all three cases?"</em></li>
+              <li>Close with a one-sentence synthesis from the facilitator, naming the structural tension the group found (e.g. "there is no policy combination without a cost — every decision reassigns the problem to another indicator, it never removes it").</li>
+            </ol>
+            <p class="text-sm text-ash-dim">If no participant has their individual summary at hand, the facilitator can rebuild the exercise from the Step 2 notes — it still works, with less detail.</p>
+          </section>
+        </div>
+      </div>
+
+      <!-- ===================== Común a ambas versiones ===================== -->
+      <section id="notas" class="panel p-6 scroll-mt-20">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">
+          <span data-lang="es">5. Notas del facilitador</span><span data-lang="en" hidden>5. Facilitator notes</span>
+        </h2>
+        <p class="text-sm text-ash-dim italic mb-4">
+          <span data-lang="es">Espacio para observaciones cualitativas del grupo. No hace falta prosa elaborada, alcanza con notas breves y concretas.</span>
+          <span data-lang="en" hidden>Space for qualitative observations about the group. No elaborate prose needed — short, concrete notes are enough.</span>
         </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p class="label-eyebrow mb-1">Decisiones tomadas</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Cómo distribuyeron el esfuerzo entre instrumentos? ¿Concentrado o repartido?</li>
-              <li>¿Reasignaron esfuerzo en respuesta a una presión política que subía? ¿Cuál fue el disparador?</li>
-            </ul>
+        <div data-lang="es">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-6">
+            <p class="text-ash">Fecha: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
+            <p class="text-ash">Lugar / modalidad: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
+            <p class="text-ash">Cantidad de participantes: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Versión jugada: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Código de taller usado: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Nivel(es) jugado(s) (3 niveles): <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash sm:col-span-2">¿Individual o en equipos con roles?: <span class="inline-block border-b border-basalt-600 w-48">&nbsp;</span></p>
           </div>
-          <div>
-            <p class="label-eyebrow mb-1">Trade-offs</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Qué presión (agrícola, ambientalista, social) les costó más controlar? ¿Qué sacrificaron?</li>
-              <li>¿Mejoraron un indicador socioeconómico a costa de otro? ¿Cómo lo manejaron?</li>
-            </ul>
+          <div class="space-y-4 text-sm">
+            <p class="text-ash">¿Qué tensión o trade-off generó más discusión espontánea en el grupo?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">¿Hubo desacuerdos notables entre roles/participantes? ¿Cómo se resolvieron?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">¿Qué pregunta de la sección 3 generó más silencio o dificultad para responder?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">¿Surgió algún malentendido sobre la mecánica que valga la pena aclarar en una futura sesión?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">¿Qué participante o equipo mostró el cambio de estrategia más marcado ante un evento/crisis?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Observación libre / cita textual relevante:<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span><br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
           </div>
-          <div>
-            <p class="label-eyebrow mb-1">Efectos intersectoriales</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Identificaron una cadena causal presión política → decisión → indicador ambiental (o viceversa)?</li>
-              <li>Si jugaron con roles, ¿en qué momento entraron en conflicto dos prioridades? ¿Cómo se resolvió?</li>
-            </ul>
+        </div>
+        <div data-lang="en" hidden>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-6">
+            <p class="text-ash">Date: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
+            <p class="text-ash">Place / format: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
+            <p class="text-ash">Number of participants: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Version played: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Workshop code used: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash">Level(s) played (3-level game): <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
+            <p class="text-ash sm:col-span-2">Individual or in teams with roles?: <span class="inline-block border-b border-basalt-600 w-48">&nbsp;</span></p>
           </div>
-          <div>
-            <p class="label-eyebrow mb-1">Reflexión abierta</p>
-            <ul class="list-disc list-inside text-ash space-y-1">
-              <li>¿Qué les enseñó este nivel sobre el costo político de una decisión "técnicamente correcta"?</li>
-              <li>¿Qué le dirían a alguien que empieza el Nivel 2 sobre usar los instrumentos de política?</li>
-            </ul>
+          <div class="space-y-4 text-sm">
+            <p class="text-ash">Which tension or trade-off sparked the most spontaneous discussion in the group?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Were there notable disagreements between roles/participants? How were they resolved?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Which question from section 3 caused the most silence or difficulty answering?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Did any misunderstanding about the mechanics come up that is worth clarifying in a future session?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Which participant or team showed the sharpest change of strategy in response to an event/crisis?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
+            <p class="text-ash">Free observation / relevant quote:<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span><br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
           </div>
         </div>
       </section>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">4. Cierre grupal: comparar síntesis individuales entre roles distintos</h2>
-        <p class="text-ash mb-3">
-          <strong class="text-bone">Objetivo:</strong> mostrar que las mismas restricciones del sistema (los mismos
-          indicadores, las mismas políticas disponibles, el mismo motor de simulación) producen trade-offs distintos
-          según el rol o el énfasis que cada participante eligió. Este es el momento más potente del debriefing para
-          el aprendizaje social — vale la pena no saltearlo aunque el tiempo esté ajustado.
-        </p>
-        <p class="label-eyebrow mb-2">Cómo hacerlo</p>
-        <ol class="list-decimal list-inside text-ash text-sm space-y-2 mb-3">
-          <li>Elegir 2 o 3 participantes (o equipos) que hayan jugado con combinaciones de políticas o roles marcadamente distintos — idealmente uno más ambiental, otro más productivo/económico, y un tercero más social o político si lo hay.</li>
-          <li>Pedirles que lean en voz alta (o proyecten) la sección "Trade-offs identificados" de su síntesis individual.</li>
-          <li>Preguntar al resto: <em>"¿Qué tienen en común estos trade-offs, a pesar de que las decisiones fueron distintas? ¿Qué restricción del sistema está por detrás de los tres casos?"</em></li>
-          <li>Cerrar con una síntesis del facilitador en una frase: nombrar la tensión estructural que el grupo identificó (ej.: "no existe una combinación de políticas sin costo — cada decisión reasigna el problema a otro indicador, nunca lo elimina").</li>
-        </ol>
-        <p class="text-sm text-ash-dim">Si ningún participante tiene a mano su síntesis individual, el facilitador puede reconstruir el ejercicio con las notas del Paso 2 — igual funciona, aunque con menos detalle.</p>
-      </section>
-
-      <section class="panel p-6">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-3">5. Notas del facilitador</h2>
-        <p class="text-sm text-ash-dim italic mb-4">Espacio para observaciones cualitativas del grupo. No hace falta prosa elaborada, alcanza con notas breves y concretas.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-6">
-          <p class="text-ash">Fecha: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
-          <p class="text-ash">Lugar / modalidad: <span class="inline-block border-b border-basalt-600 w-40">&nbsp;</span></p>
-          <p class="text-ash">Cantidad de participantes: <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
-          <p class="text-ash">Nivel(es) jugado(s): <span class="inline-block border-b border-basalt-600 w-32">&nbsp;</span></p>
-          <p class="text-ash sm:col-span-2">¿Individual o en equipos con roles?: <span class="inline-block border-b border-basalt-600 w-48">&nbsp;</span></p>
-        </div>
-        <div class="space-y-4 text-sm">
-          <p class="text-ash">¿Qué tensión o trade-off generó más discusión espontánea en el grupo?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-          <p class="text-ash">¿Hubo desacuerdos notables entre roles/participantes? ¿Cómo se resolvieron?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-          <p class="text-ash">¿Qué pregunta de la sección 3 generó más silencio o dificultad para responder?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-          <p class="text-ash">¿Surgió algún malentendido sobre la mecánica que valga la pena aclarar en una futura sesión?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-          <p class="text-ash">¿Qué participante o equipo mostró el cambio de estrategia más marcado ante un evento/crisis?<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-          <p class="text-ash">Observación libre / cita textual relevante:<br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span><br><span class="inline-block border-b border-basalt-600 w-full mt-1">&nbsp;</span></p>
-        </div>
-      </section>
+      <p class="text-xs text-ash-dim mt-6 print:hidden">
+        <span data-lang="es">¿Preferís el texto plano? Descargá la guía en Markdown:</span>
+        <span data-lang="en" hidden>Prefer plain text? Download the guide as Markdown:</span>
+        <a href="/docentes/guia-facilitacion.md" data-no-version class="text-hydro hover:underline" data-lang="es">guia-facilitacion.md</a>
+        <a href="/docentes/guia-facilitacion.en.md" data-no-version class="text-hydro hover:underline" data-lang="en" hidden>guia-facilitacion.en.md</a>
+      </p>
     </main>
 
     <footer class="py-10 text-center text-xs text-ash-dim print:hidden">
-      <a href="/docentes" class="hover:text-ash underline">← Paquete para docentes</a> ·
-      <a href="/" class="hover:text-ash underline">Inicio</a>
+      <a href="/docentes" class="hover:text-ash underline"><span data-lang="es">← Paquete para docentes</span><span data-lang="en" hidden>← Teacher package</span></a> ·
+      <a href="/" class="hover:text-ash underline"><span data-lang="es">Inicio</span><span data-lang="en" hidden>Home</span></a>
     </footer>
 
-    <script type="module" src="/src/landing.ts"></script>
+    <script type="module" src="/src/docentes.ts"></script>
   </body>
 </html>
