@@ -19,7 +19,7 @@ const IGNORED = [
   // React i18n system (useT/t() don't exist here -- the landing ships zero React on purpose, see
   // index.html's own comment), so its one aria-label string is handled by the same `data-lang`
   // toggle pattern the landing HTML uses everywhere else, not by this module.
-  /^src\/landing\.ts$/,
+  /^src\/(landing|shared\/locale)\.ts$/,
   // Phase 12 (12_i18n_completo.md SS4.1, "closed" -- see docs/DESIGN_DECISIONS_LOG.md): `Policy`/
   // `LandUseType` enum *values* are themselves Spanish prose used as stable IDs throughout the
   // app (Policy.ForeignInvestment = "Politicas de Inversion Extranjera (P-PIE)") -- exactly the

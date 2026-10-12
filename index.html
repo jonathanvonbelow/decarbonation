@@ -3,20 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DecarboNation Territorio — Simulador de política climática AFOLU</title>
-    <meta name="description" content="Gobernás una región durante 30 años, mes a mes, sobre un territorio que cambia a la vista. Simulador del sector AFOLU para aula, taller o autoexploración. Sin registro." />
+    <title>DecarboNation — Simulador de política climática AFOLU · Territorio y juego de 3 niveles</title>
+    <meta name="description" content="Simulador del sector AFOLU para aula, taller o exploración propia. Gobernás una región mes a mes en Territorio, o un país año a año en el juego de 3 niveles. Gratis y sin registro." />
 
-    <!-- Open Graph / Twitter Card (20_landing_shareables.md §6). og:image intencionalmente
-         omitido: no existe ningún asset PNG 1200x630 en este repo y no hay herramienta de
-         generación de imágenes en este entorno -- publicar una referencia rota se ve peor en
-         WhatsApp/LinkedIn/X que omitir la etiqueta (la mayoría de los clientes cae a
-         título+descripción sin imagen). Agregar /og-default.png antes de este deploy real y
-         restaurar la etiqueta -- ver docs/DESIGN_DECISIONS_LOG.md, fase 11. -->
+    <!-- Open Graph / Twitter Card (20_landing_shareables.md §6). og:image: recorte 1200x630 del mapa
+         de Territorio (public/og-default.png, v5/30). -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="DecarboNation Territorio — Simulador de política climática AFOLU">
-    <meta property="og:description" content="Gobernás una región 30 años, mes a mes, sobre un mapa que cambia a la vista. Sin registro.">
+    <meta property="og:title" content="DecarboNation — Simulador de política climática AFOLU · Territorio y juego de 3 niveles">
+    <meta property="og:description" content="Gobernás una región mes a mes, o un país año a año. Simulador del sector AFOLU para aula, taller o exploración propia. Gratis y sin registro.">
     <meta property="og:url" content="https://decarbonation.vercel.app/">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="https://decarbonation.vercel.app/og-default.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
 
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -38,7 +37,11 @@
           "operatingSystem": "Any (web browser)",
           "url": "https://decarbonation.vercel.app/",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-          "description": "Simulador estratégico de política climática del sector AFOLU (agricultura, silvicultura y otros usos de la tierra) para exploración de escenarios, aula y talleres."
+          "description": "Simulador estratégico de política climática del sector AFOLU (agricultura, silvicultura y otros usos de la tierra) para exploración de escenarios, aula y talleres. Dos versiones: Territorio (una región, mes a mes) y el juego de 3 niveles (un país, año a año).",
+          "hasPart": [
+            { "@type": "SoftwareApplication", "name": "DecarboNation Territorio", "url": "https://decarbonation.vercel.app/territorio", "applicationCategory": "EducationalApplication" },
+            { "@type": "SoftwareApplication", "name": "DecarboNation — juego de 3 niveles", "url": "https://decarbonation.vercel.app/play", "applicationCategory": "EducationalApplication" }
+          ]
         },
         {
           "@type": "LearningResource",
@@ -62,6 +65,11 @@
     <header class="border-b border-basalt-700">
       <div class="container mx-auto flex items-center justify-between px-4 py-4">
         <span class="text-xl font-bold text-chlorophyll font-[var(--font-display)] tracking-tight">DecarboNation</span>
+        <nav class="hidden sm:flex items-center gap-5 text-sm text-ash" aria-label="Secciones / Sections">
+          <a href="#versiones" class="hover:text-bone"><span data-lang="es">Versiones</span><span data-lang="en" hidden>Versions</span></a>
+          <a href="#docentes" class="hover:text-bone"><span data-lang="es">Docentes</span><span data-lang="en" hidden>Teachers</span></a>
+          <a href="#faq" class="hover:text-bone"><span data-lang="es">Preguntas</span><span data-lang="en" hidden>FAQ</span></a>
+        </nav>
         <button id="lang-toggle" type="button" class="px-3 py-1.5 text-xs text-ash hover:text-bone border border-basalt-600 hover:border-ash-dim rounded-lg transition-colors">
           🌐 <span data-lang="es">English</span><span data-lang="en" hidden>Español</span>
         </button>
@@ -77,8 +85,8 @@
         <div class="max-w-3xl">
           <span class="label-eyebrow">Proyecto IKI · Fundación Bariloche · FCF-UNaM · CONICET</span>
           <p class="mt-3 inline-block rounded border border-ochre/50 px-2 py-0.5 text-xs text-ochre">
-            <span data-lang="es">En desarrollo · vista previa jugable</span>
-            <span data-lang="en" hidden>In development · playable preview</span>
+            <span data-lang="es">Vista previa · recomendada para aula y talleres</span>
+            <span data-lang="en" hidden>Preview · recommended for classes and workshops</span>
           </p>
           <h1 class="mt-3 text-3xl sm:text-5xl font-bold font-[var(--font-display)] leading-tight">
             <span data-lang="es">Gobernás una región durante 30 años. El territorio cambia a la vista, mes a mes.</span>
@@ -93,13 +101,13 @@
               <span data-lang="es">Jugar Territorio</span>
               <span data-lang="en" hidden>Play Territory</span>
             </a>
-            <a href="#juego-principal" class="text-sm text-hydro hover:underline">
-              <span data-lang="es">Ver el juego de 3 niveles, más exigente ↓</span>
-              <span data-lang="en" hidden>See the harder 3-level game ↓</span>
+            <a href="#versiones" class="text-sm text-hydro hover:underline">
+              <span data-lang="es">Comparar las dos versiones ↓</span>
+              <span data-lang="en" hidden>Compare both versions ↓</span>
             </a>
           </div>
-          <p class="mt-4 text-sm text-ash-dim" data-lang="es">Es una versión en desarrollo: puede cambiar y todavía no guarda la partida.</p>
-          <p class="mt-4 text-sm text-ash-dim" data-lang="en" hidden>This is a version in development: it may change and does not save your game yet.</p>
+          <p class="mt-4 text-sm text-ash-dim" data-lang="es">Es una vista previa: puede cambiar y todavía no guarda la partida. La versión estable es el <a href="#versiones" class="underline hover:text-ash">juego de 3 niveles</a>.</p>
+          <p class="mt-4 text-sm text-ash-dim" data-lang="en" hidden>This is a preview: it may change and doesn't save your game yet. The stable version is the <a href="#versiones" class="underline hover:text-ash">3-level game</a>.</p>
         </div>
       </section>
 
@@ -180,10 +188,10 @@
            2026-09-25). aspect-video + iframe con loading="lazy" para no penalizar la carga
            inicial de la landing. -->
       <section class="container mx-auto px-4 pb-14 max-w-3xl">
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Tutorial en video</h2>
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Video tutorial</h2>
-        <p class="text-sm text-ash mb-4" data-lang="es">Serie de videos que explican cómo jugar, paso a paso.</p>
-        <p class="text-sm text-ash mb-4" data-lang="en" hidden>Video series explaining how to play, step by step.</p>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Cómo se juega Territorio</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>How to play Territory</h2>
+        <p class="text-sm text-ash mb-4" data-lang="es">Serie de videos, paso a paso.</p>
+        <p class="text-sm text-ash mb-4" data-lang="en" hidden>Step-by-step video series.</p>
         <div class="panel overflow-hidden p-0">
           <div class="aspect-video">
             <iframe
@@ -198,159 +206,70 @@
         </div>
       </section>
 
-      <!-- ══════════════════════════ QUÉ ES ══════════════════════════ -->
-      <section class="container mx-auto px-4 pb-14 max-w-3xl">
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Qué es</h2>
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>What it is</h2>
-        <ul class="space-y-3 text-base sm:text-lg text-ash">
-          <li data-lang="es">Activás y ajustás políticas climáticas reales (agroecología, carbono neutralidad, subsidios energéticos) y ves sus efectos cruzados en biodiversidad, economía y presión social.</li>
-          <li data-lang="en" hidden>You activate and tune real climate policies (agroecology, carbon neutrality, energy subsidies) and see their cross-effects on biodiversity, economy and social pressure.</li>
-          <li data-lang="es">En Territorio declarás además usos públicos —áreas protegidas, restauración, humedales, parques energéticos— por lotes de 50 km², y resolvés las situaciones que llegan al escritorio mientras el reloj sigue corriendo.</li>
-          <li data-lang="en" hidden>In Territory you also declare public uses —protected areas, restoration, wetlands, energy parks— in lots of 50 km², and settle the situations that reach your desk while the clock keeps running.</li>
-          <li data-lang="es">Una partida entera son 30 años simulados: entre 15 y 40 minutos reales, según cuánto pares a mirar el mapa.</li>
-          <li data-lang="en" hidden>A full game is 30 simulated years: 15 to 40 real minutes, depending on how often you stop to look at the map.</li>
-          <li data-lang="es">Al final te llevás un informe de tu propia partida: qué decidiste, qué tensiones enfrentaste, qué aprenderías distinto la próxima vez.</li>
-          <li data-lang="en" hidden>At the end you get a report on your own session: what you decided, what tensions you faced, what you'd do differently next time.</li>
-        </ul>
-      </section>
+      <!-- ══════════════════════════ DOS VERSIONES, UN MISMO MODELO ══════════════════════════
+           v5/30: absorbe la antigua sección #juego-principal (se conserva el ancla para no romper
+           links viejos). Territorio primero; el juego de 3 niveles es la versión estable. -->
+      <section id="versiones" class="bg-basalt-900 border-y border-basalt-700 py-14 scroll-mt-16">
+        <span id="juego-principal"></span>
+        <div class="container mx-auto px-4 max-w-5xl">
+          <h2 class="text-2xl sm:text-3xl font-bold font-[var(--font-display)] text-chlorophyll" data-lang="es">Dos versiones, un mismo modelo</h2>
+          <h2 class="text-2xl sm:text-3xl font-bold font-[var(--font-display)] text-chlorophyll" data-lang="en" hidden>Two versions, one model</h2>
+          <p class="mt-3 text-base text-ash max-w-3xl" data-lang="es">Las dos usan el mismo modelo del sector AFOLU y las mismas ecuaciones. Cambian la escala, el paso del tiempo y lo que ves.</p>
+          <p class="mt-3 text-base text-ash max-w-3xl" data-lang="en" hidden>Both use the same AFOLU model and the same equations. What changes is the scale, the pace of time and what you see.</p>
 
-      <!-- ══════════════════════════ PARA QUIÉN ══════════════════════════
-           No existe un "kit de convocatoria" en este repo (buscado en mejora-general/ y docs/)
-           del que reusar texto literal, como pide §3 -- las cuatro tarjetas de abajo se
-           redactaron de cero a partir de los públicos que el propio juego ya sirve (docente,
-           facilitador de taller, investigador/institución, formulador de política), no de un
-           documento fuente que no existe. Documentado en docs/DESIGN_DECISIONS_LOG.md. -->
-      <section class="bg-basalt-900 border-y border-basalt-700 py-14">
-        <div class="container mx-auto px-4">
-          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Para quién</h2>
-          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>Who it's for</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="panel p-5">
-              <h3 class="font-semibold text-bone mb-2" data-lang="es">Docentes</h3>
-              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Teachers</h3>
-              <p class="text-sm text-ash mb-4" data-lang="es">Una actividad de 90 minutos lista para el aula, con guía de facilitación y preguntas de cierre incluidas.</p>
-              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A ready-made 90-minute classroom activity, with a facilitation guide and closing questions included.</p>
-              <a href="/docentes" class="text-sm text-hydro hover:underline" data-lang="es">Ver paquete docente →</a>
-              <a href="/docentes" class="text-sm text-hydro hover:underline" data-lang="en" hidden>See teacher package →</a>
-            </div>
-            <div class="panel p-5">
-              <h3 class="font-semibold text-bone mb-2" data-lang="es">Facilitadores de taller</h3>
-              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Workshop facilitators</h3>
-              <p class="text-sm text-ash mb-4" data-lang="es">Panel en vivo para ajustar parámetros y proyectar una partida frente a la sala, sin perder el hilo del grupo.</p>
-              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A live panel to tune parameters and project a session in front of the room, without losing the group's thread.</p>
-              <a href="/play?demo=1" class="text-sm text-hydro hover:underline" data-lang="es">Probar la demo de 8 min →</a>
-              <a href="/play?demo=1" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Try the 8-min demo →</a>
-            </div>
-            <div class="panel p-5">
-              <h3 class="font-semibold text-bone mb-2" data-lang="es">Investigadores e instituciones</h3>
-              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Researchers and institutions</h3>
-              <p class="text-sm text-ash mb-4" data-lang="es">Un modelo con ecuaciones documentadas y una auditoría pública, no una caja negra.</p>
-              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A model with documented equations and a public audit, not a black box.</p>
-              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="es">Ver el rigor del modelo →</a>
-              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="en" hidden>See the model's rigor →</a>
-            </div>
-            <div class="panel p-5">
-              <h3 class="font-semibold text-bone mb-2" data-lang="es">Formuladores de política</h3>
-              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Policymakers</h3>
-              <p class="text-sm text-ash mb-4" data-lang="es">Un entorno seguro para ensayar trade-offs antes de defenderlos en una mesa real.</p>
-              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A safe environment to rehearse trade-offs before defending them at a real table.</p>
-              <a href="/play" class="text-sm text-hydro hover:underline" data-lang="es">Jugar ahora →</a>
-              <a href="/play" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Play now →</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ══════════════════════════ QUÉ SE APRENDE ══════════════════════════ -->
-      <section class="container mx-auto px-4 py-14 max-w-3xl">
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Qué se aprende</h2>
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>What you'll learn</h2>
-        <ol class="space-y-4 text-base sm:text-lg text-ash list-decimal list-inside">
-          <li data-lang="es">Vas a poder explicar por qué una política barata en lo económico puede salir cara en biodiversidad o presión social.</li>
-          <li data-lang="en" hidden>You'll be able to explain why a policy that's cheap economically can turn out costly in biodiversity or social pressure.</li>
-          <li data-lang="es">Vas a poder identificar qué indicadores compiten entre sí cuando se persigue la carbono-neutralidad.</li>
-          <li data-lang="en" hidden>You'll be able to identify which indicators compete with each other when pursuing carbon neutrality.</li>
-          <li data-lang="es">Vas a poder argumentar a favor de una de tres vías de descarbonización distintas, con datos de tu propia partida.</li>
-          <li data-lang="en" hidden>You'll be able to argue for one of three different decarbonization routes, with data from your own session.</li>
-        </ol>
-      </section>
-
-      <!-- ══════════════════════════ RIGOR ══════════════════════════ -->
-      <section id="rigor" class="bg-basalt-900 border-y border-basalt-700 py-14">
-        <div class="container mx-auto px-4 max-w-3xl">
-          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Rigor del modelo</h2>
-          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Model rigor</h2>
-          <ul class="space-y-2 text-base text-ash">
-            <li data-lang="es">📐 Modelo de simulación con ecuaciones documentadas, no una caja negra.</li>
-            <li data-lang="en" hidden>📐 Simulation model with documented equations, not a black box.</li>
-            <li data-lang="es">🔍 Auditoría propia de cada fórmula frente a su fuente original, con hallazgos publicados.</li>
-            <li data-lang="en" hidden>🔍 In-house audit of every formula against its original source, with published findings.</li>
-            <li data-lang="es">🏛️ Desarrollado por Fundación Bariloche, junto a la FCF-UNaM y CONICET.</li>
-            <li data-lang="en" hidden>🏛️ Developed by Fundación Bariloche, together with FCF-UNaM and CONICET.</li>
-            <li data-lang="es">💶 Financiado por el proyecto IKI.</li>
-            <li data-lang="en" hidden>💶 Funded by the IKI project.</li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- ══════════════════════════ DOCENTES ══════════════════════════ -->
-      <section class="container mx-auto px-4 py-14 max-w-3xl text-center">
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-3" data-lang="es">¿Sos docente?</h2>
-        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-3" data-lang="en" hidden>Are you a teacher?</h2>
-        <p class="text-ash mb-5" data-lang="es">Guía de facilitación, plan de clase, diapositivas y consignas de debriefing, listos para usar.</p>
-        <p class="text-ash mb-5" data-lang="en" hidden>Facilitation guide, lesson plan, framing slides and debriefing prompts, ready to use.</p>
-        <a href="/docentes" class="inline-block px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
-          <span data-lang="es">Ver paquete docente</span>
-          <span data-lang="en" hidden>See teacher package</span>
-        </a>
-      </section>
-
-      <!-- ══════════════════════════ JUEGO DE 3 NIVELES ══════════════════════════
-           Hasta 2026-09-21 este era el juego principal y encabezaba la página. Ahora va debajo de
-           Territorio (pedido del usuario), presentado por lo que lo distingue: paso anual, tres
-           niveles encadenados y el panel de facilitación — el entorno para mirar los números y
-           ensayar escenarios. La micro-animación que estaba en el hero se mudó acá con él. -->
-      <section id="juego-principal" class="bg-basalt-900 border-y border-basalt-700 py-14">
-        <div class="container mx-auto px-4 max-w-4xl">
-          <p class="label-eyebrow">
-            <span data-lang="es">La versión estable</span>
-            <span data-lang="en" hidden>The stable version</span>
-          </p>
-          <h2 class="mt-2 text-2xl sm:text-3xl font-bold font-[var(--font-display)] text-chlorophyll">
-            <span data-lang="es">El juego de 3 niveles: un país, año a año</span>
-            <span data-lang="en" hidden>The 3-level game: a country, year by year</span>
-          </h2>
-          <div class="mt-4 grid gap-6 md:grid-cols-2 md:items-start">
-            <div>
-              <p class="text-base text-ash">
-                <span data-lang="es">Más exigente y más cerca de un laboratorio de datos: tres niveles encadenados con paso anual, sin mapa que mirar, donde lo que ves son los indicadores, las presiones sectoriales y las finanzas públicas moviéndose año por año.</span>
-                <span data-lang="en" hidden>Harder, and closer to a data lab: three chained levels with a yearly step and no map to watch — what you see are the indicators, the sectoral pressures and the public finances moving year by year.</span>
-              </p>
-              <ul class="mt-4 space-y-2 text-sm text-ash">
-                <li data-lang="es">Es la versión que usa el paquete docente y la que guarda la partida.</li>
-                <li data-lang="en" hidden>It is the version the teacher package uses, and the one that saves your game.</li>
-                <li data-lang="es">Trae panel de facilitación para ajustar parámetros en vivo y proyectar una partida frente a la sala.</li>
-                <li data-lang="en" hidden>It ships a facilitation panel to tune parameters live and project a session in front of the room.</li>
-                <li data-lang="es">Mismo modelo y mismas ecuaciones que Territorio: lo que cambia es el paso del tiempo y la escala.</li>
-                <li data-lang="en" hidden>Same model and same equations as Territory: what changes is the time step and the scale.</li>
+          <div class="mt-8 grid gap-6 md:grid-cols-2 md:items-stretch">
+            <!-- Territorio -->
+            <article class="panel flex flex-col p-6 border !border-chlorophyll/60">
+              <p class="label-eyebrow" data-lang="es">Vista previa · recomendada</p>
+              <p class="label-eyebrow" data-lang="en" hidden>Preview · recommended</p>
+              <h3 class="mt-2 text-xl font-bold font-[var(--font-display)] text-bone" data-lang="es">Territorio: una región, mes a mes</h3>
+              <h3 class="mt-2 text-xl font-bold font-[var(--font-display)] text-bone" data-lang="en" hidden>Territory: a region, month by month</h3>
+              <ul class="mt-4 space-y-2 text-sm text-ash" data-lang="es">
+                <li>Un mapa de 10.000 parcelas donde ves avanzar la frontera agrícola y crecer las áreas protegidas.</li>
+                <li>Situaciones que llegan al escritorio sin detener el reloj.</li>
+                <li>Una partida de 15 a 40 minutos, sin registro.</li>
+                <li>Al final, un cuestionario anónimo de 7 minutos.</li>
               </ul>
-              <div class="mt-6 flex flex-wrap items-center gap-4">
-                <a href="/play" id="cta-play" class="px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
-                  <span data-lang="es">Jugar los 3 niveles</span>
-                  <span data-lang="en" hidden>Play the 3 levels</span>
+              <ul class="mt-4 space-y-2 text-sm text-ash" data-lang="en" hidden>
+                <li>A map of 10,000 parcels where you watch the farming frontier advance and protected areas grow.</li>
+                <li>Situations that land on your desk without stopping the clock.</li>
+                <li>A 15-to-40-minute game, no signup.</li>
+                <li>At the end, an anonymous 7-minute questionnaire.</li>
+              </ul>
+              <div class="mt-auto pt-6 flex flex-wrap items-center gap-4">
+                <a href="/territorio" id="cta-territorio-card" class="px-5 py-2.5 bg-chlorophyll text-basalt-950 font-semibold rounded-lg hover:brightness-110 transition-colors">
+                  <span data-lang="es">Jugar Territorio</span><span data-lang="en" hidden>Play Territory</span>
                 </a>
-                <a href="/play?demo=1" id="cta-demo" class="text-sm text-hydro hover:underline">
-                  <span data-lang="es">Ver una demo guiada de 8 minutos →</span>
-                  <span data-lang="en" hidden>See an 8-minute guided demo →</span>
+                <a href="/docentes?v=territorio" class="text-sm text-hydro hover:underline">
+                  <span data-lang="es">Material para docentes →</span><span data-lang="en" hidden>Teacher materials →</span>
                 </a>
               </div>
-            </div>
+            </article>
 
+            <!-- Juego de 3 niveles -->
+            <article class="panel flex flex-col p-6">
+              <p class="label-eyebrow" data-lang="es">Versión estable</p>
+              <p class="label-eyebrow" data-lang="en" hidden>Stable version</p>
+              <h3 class="mt-2 text-xl font-bold font-[var(--font-display)] text-bone" data-lang="es">El juego de 3 niveles: un país, año a año</h3>
+              <h3 class="mt-2 text-xl font-bold font-[var(--font-display)] text-bone" data-lang="en" hidden>The 3-level game: a country, year by year</h3>
+              <ul class="mt-4 space-y-2 text-sm text-ash" data-lang="es">
+                <li>Tres niveles encadenados con paso anual: indicadores, presiones sectoriales y finanzas públicas.</li>
+                <li>Guarda la partida con tu cuenta de Google (opcional).</li>
+                <li>Panel de facilitación para ajustar parámetros en vivo.</li>
+                <li>Informe individual de cierre generado por DecarboNito.</li>
+              </ul>
+              <ul class="mt-4 space-y-2 text-sm text-ash" data-lang="en" hidden>
+                <li>Three chained levels, one year per turn: indicators, sectoral pressures and public finances.</li>
+                <li>Saves your game with your Google account (optional).</li>
+                <li>Facilitation panel to tune parameters live.</li>
+                <li>Individual closing report written by DecarboNito.</li>
+              </ul>
+              <div class="mt-5 scale-90 origin-left w-[111%] -mb-2">
             <!-- Micro-animación (20_landing_shareables.md §3): activar política → simular →
                  indicadores cambian → informe. Sustituto del GIF pedido, sin asset de video. -->
             <div class="panel p-4 sm:p-6" role="img"
                  aria-label="Animación: activar una política, simular un año, los indicadores cambian y aparece un informe">
-              <div class="demo-strip">
+              <div class="demo-strip" aria-hidden="true">
                 <div class="demo-frame demo-frame-1">
                   <span class="label-eyebrow">Panel de Políticas</span>
                   <div class="demo-toggle"><div class="demo-toggle-dot"></div></div>
@@ -371,16 +290,206 @@
                 </div>
               </div>
             </div>
+              </div>
+              <div class="mt-auto pt-6 flex flex-wrap items-center gap-4">
+                <a href="/play" id="cta-play" class="px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
+                  <span data-lang="es">Jugar los 3 niveles</span><span data-lang="en" hidden>Play the 3 levels</span>
+                </a>
+                <a href="/play?demo=1" id="cta-demo" class="text-sm text-hydro hover:underline">
+                  <span data-lang="es">Demo guiada de 8 minutos →</span><span data-lang="en" hidden>8-minute guided demo →</span>
+                </a>
+                <a href="/docentes?v=niveles" class="text-sm text-hydro hover:underline">
+                  <span data-lang="es">Material para docentes →</span><span data-lang="en" hidden>Teacher materials →</span>
+                </a>
+              </div>
+            </article>
+          </div>
+
+          <!-- Comparación compacta (tabla completa en /docentes#que-version). En móvil, dos listas apiladas. -->
+          <div class="mt-8" data-lang="es">
+            <table class="hidden sm:table w-full text-left text-sm">
+              <thead><tr class="text-ash-dim"><th class="py-2 pr-3 font-normal"></th><th class="py-2 pr-3 font-semibold text-chlorophyll">Territorio</th><th class="py-2 font-semibold text-bone">Juego de 3 niveles</th></tr></thead>
+              <tbody class="text-ash align-top">
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Paso del tiempo</th><td class="py-2 pr-3">Mes a mes, en tiempo real (con pausa)</td><td class="py-2">Año a año, por turnos</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Duración</th><td class="py-2 pr-3">15 a 40 minutos, un solo nivel</td><td class="py-2">25–30 min por nivel, tres niveles</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Guarda la partida</th><td class="py-2 pr-3">No</td><td class="py-2">Sí, con cuenta de Google (opcional)</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Ideal para</th><td class="py-2 pr-3">Primer contacto, aula, talleres</td><td class="py-2">Cursos avanzados, análisis de datos</td></tr>
+              </tbody>
+            </table>
+            <div class="sm:hidden space-y-4 text-sm text-ash">
+              <dl><dt class="font-semibold text-chlorophyll">Territorio</dt><dd>Mes a mes · 15 a 40 min · no guarda · primer contacto, aula, talleres</dd></dl>
+              <dl><dt class="font-semibold text-bone">Juego de 3 niveles</dt><dd>Año a año · 25–30 min por nivel · guarda (opcional) · cursos avanzados, análisis de datos</dd></dl>
+            </div>
+          </div>
+          <div class="mt-8" data-lang="en" hidden>
+            <table class="hidden sm:table w-full text-left text-sm">
+              <thead><tr class="text-ash-dim"><th class="py-2 pr-3 font-normal"></th><th class="py-2 pr-3 font-semibold text-chlorophyll">Territory</th><th class="py-2 font-semibold text-bone">3-level game</th></tr></thead>
+              <tbody class="text-ash align-top">
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Pace of time</th><td class="py-2 pr-3">Month by month, in real time (with pause)</td><td class="py-2">Year by year, turn-based</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Length</th><td class="py-2 pr-3">15 to 40 minutes, a single level</td><td class="py-2">25–30 min per level, three levels</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Saves your game</th><td class="py-2 pr-3">No</td><td class="py-2">Yes, with a Google account (optional)</td></tr>
+                <tr class="border-t border-basalt-700"><th class="py-2 pr-3 font-normal text-ash-dim">Best for</th><td class="py-2 pr-3">First contact, classes, workshops</td><td class="py-2">Advanced courses, data analysis</td></tr>
+              </tbody>
+            </table>
+            <div class="sm:hidden space-y-4 text-sm text-ash">
+              <dl><dt class="font-semibold text-chlorophyll">Territory</dt><dd>Month by month · 15 to 40 min · doesn't save · first contact, classes, workshops</dd></dl>
+              <dl><dt class="font-semibold text-bone">3-level game</dt><dd>Year by year · 25–30 min per level · saves (optional) · advanced courses, data analysis</dd></dl>
+            </div>
+          </div>
+          <p class="mt-4 text-sm">
+            <a href="/docentes#que-version" class="text-hydro hover:underline"><span data-lang="es">Ver la comparación completa →</span><span data-lang="en" hidden>See the full comparison →</span></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ QUÉ ES ══════════════════════════ -->
+      <section class="container mx-auto px-4 pb-14 max-w-3xl">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Qué es</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>What it is</h2>
+        <ul class="space-y-3 text-base sm:text-lg text-ash">
+          <li data-lang="es">Activás y ajustás políticas climáticas reales (agroecología, carbono neutralidad, subsidios energéticos) y ves sus efectos cruzados en biodiversidad, economía y presión social.</li>
+          <li data-lang="en" hidden>You activate and tune real climate policies (agroecology, carbon neutrality, energy subsidies) and see their cross-effects on biodiversity, economy and social pressure.</li>
+          <li data-lang="es">En Territorio declarás además usos públicos —áreas protegidas, restauración, humedales, parques energéticos— por lotes de 50 km², y resolvés las situaciones que llegan al escritorio mientras el reloj sigue corriendo.</li>
+          <li data-lang="en" hidden>In Territory you also declare public uses —protected areas, restoration, wetlands, energy parks— in lots of 50 km², and settle the situations that reach your desk while the clock keeps running.</li>
+          <li data-lang="es">Una partida de Territorio son 30 años simulados en 15 a 40 minutos; el juego de 3 niveles lleva unos 25 a 30 minutos por nivel.</li>
+          <li data-lang="en" hidden>A Territory game is 30 simulated years in 15 to 40 minutes; the 3-level game takes about 25 to 30 minutes per level.</li>
+          <li data-lang="es">Al cierre, Territorio te muestra cómo cambió tu región y te invita a un cuestionario breve; el juego de 3 niveles te entrega además un informe escrito de tu partida.</li>
+          <li data-lang="en" hidden>At the end, Territory shows you how your region changed and invites you to a short questionnaire; the 3-level game also hands you a written report of your session.</li>
+        </ul>
+      </section>
+
+      <!-- ══════════════════════════ PARA QUIÉN ══════════════════════════
+           No existe un "kit de convocatoria" en este repo (buscado en mejora-general/ y docs/)
+           del que reusar texto literal, como pide §3 -- las cuatro tarjetas de abajo se
+           redactaron de cero a partir de los públicos que el propio juego ya sirve (docente,
+           facilitador de taller, investigador/institución, formulador de política), no de un
+           documento fuente que no existe. Documentado en docs/DESIGN_DECISIONS_LOG.md. -->
+      <section class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Para quién</h2>
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>Who it's for</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Docentes</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Teachers</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Planes de clase, diapositivas y guías para las dos versiones, y un espacio para prepararte a tu ritmo.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>Lesson plans, slides and guides for both versions, plus a space to prepare at your own pace.</p>
+              <a href="/docentes/espacio" id="audience-docentes" class="text-sm text-hydro hover:underline" data-lang="es">Ir al espacio docente →</a>
+              <a href="/docentes/espacio" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Go to the teacher space →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Facilitadores de taller</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Workshop facilitators</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Un link con código de taller para tu grupo, guía de debriefing y un cuestionario que agrupa las respuestas de la sala.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A workshop-coded link for your group, a debriefing guide and a questionnaire that groups the room's answers.</p>
+              <a href="/docentes/espacio#etapa-3" class="text-sm text-hydro hover:underline" data-lang="es">Preparar un taller →</a>
+              <a href="/docentes/espacio#etapa-3" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Prepare a workshop →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Investigadores e instituciones</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Researchers and institutions</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Un modelo con ecuaciones documentadas y una auditoría pública, no una caja negra.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>A model with documented equations and a public audit, not a black box.</p>
+              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="es">Ver el rigor del modelo →</a>
+              <a href="#rigor" class="text-sm text-hydro hover:underline" data-lang="en" hidden>See the model's rigor →</a>
+            </div>
+            <div class="panel p-5">
+              <h3 class="font-semibold text-bone mb-2" data-lang="es">Formuladores de política</h3>
+              <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Policymakers</h3>
+              <p class="text-sm text-ash mb-4" data-lang="es">Ensayá trade-offs sobre un territorio que cambia a la vista, antes de defenderlos en una mesa real.</p>
+              <p class="text-sm text-ash mb-4" data-lang="en" hidden>Rehearse trade-offs on a territory that changes before your eyes, before defending them at a real table.</p>
+              <a href="/territorio" class="text-sm text-hydro hover:underline" data-lang="es">Jugar Territorio →</a>
+              <a href="/territorio" class="text-sm text-hydro hover:underline" data-lang="en" hidden>Play Territory →</a>
+            </div>
           </div>
         </div>
       </section>
 
+      <!-- ══════════════════════════ QUÉ SE APRENDE ══════════════════════════ -->
+      <section class="container mx-auto px-4 py-14 max-w-3xl">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Qué se aprende</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>What you'll learn</h2>
+        <ol class="space-y-4 text-base sm:text-lg text-ash list-decimal list-inside">
+          <li data-lang="es">Vas a poder explicar por qué una política barata en lo económico puede salir cara en biodiversidad o presión social.</li>
+          <li data-lang="en" hidden>You'll be able to explain why a policy that's cheap economically can turn out costly in biodiversity or social pressure.</li>
+          <li data-lang="es">Vas a poder identificar qué indicadores compiten entre sí cuando se persigue la carbono-neutralidad.</li>
+          <li data-lang="en" hidden>You'll be able to identify which indicators compete with each other when pursuing carbon neutrality.</li>
+          <li data-lang="es">Vas a poder argumentar a favor de una de tres vías de descarbonización distintas, con datos de tu propia partida.</li>
+          <li data-lang="en" hidden>You'll be able to argue for one of three different decarbonization routes, with data from your own session.</li>
+          <li data-lang="es">Vas a poder reconocer cómo las decisiones se acumulan en el territorio con los años, y por qué lo que no se decide a tiempo también tiene consecuencias.</li>
+          <li data-lang="en" hidden>You'll be able to recognize how decisions accumulate on the land over the years, and why what isn't decided in time also has consequences.</li>
+        </ol>
+      </section>
+
+      <!-- ══════════════════════════ PARA AULAS Y TALLERES ══════════════════════════ -->
+      <section id="docentes" class="container mx-auto px-4 py-14 max-w-4xl scroll-mt-16">
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Para aulas y talleres</h2>
+        <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>For classrooms and workshops</h2>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <a href="/docentes" id="teachers-package" class="panel p-5 block hover:bg-basalt-800 transition-colors">
+            <h3 class="font-semibold text-bone mb-2" data-lang="es">Paquete docente</h3>
+            <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Teacher package</h3>
+            <p class="text-sm text-ash" data-lang="es">Guía de facilitación, plan de clase de 90 minutos, diapositivas y consignas, para las dos versiones.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Facilitation guide, 90-minute lesson plan, slides and prompts, for both versions.</p>
+          </a>
+          <a href="/docentes/espacio" id="teachers-space" class="panel p-5 block hover:bg-basalt-800 transition-colors">
+            <h3 class="font-semibold text-bone mb-2" data-lang="es">Espacio docente</h3>
+            <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Teacher space</h3>
+            <p class="text-sm text-ash" data-lang="es">Un recorrido autoguiado: jugá, elegí versión, generá el link de tu grupo y prepará la clase.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>A self-guided path: play, pick a version, build your group's link and prepare the class.</p>
+          </a>
+          <a href="/territorio/encuesta" id="teachers-survey" data-origin="teachers_card" class="panel p-5 block hover:bg-basalt-800 transition-colors">
+            <h3 class="font-semibold text-bone mb-2" data-lang="es">Cuestionario para tu grupo</h3>
+            <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Questionnaire for your group</h3>
+            <p class="text-sm text-ash" data-lang="es">14 preguntas anónimas para el cierre. Con un código de taller, las respuestas de tu grupo quedan juntas.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>14 anonymous questions for the wrap-up. With a workshop code, your group's answers stay together.</p>
+          </a>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ CONTANOS CÓMO TE FUE ══════════════════════════ -->
+      <section class="bg-basalt-900 border-y border-basalt-700 py-10">
+        <div class="container mx-auto px-4 max-w-3xl text-center">
+          <p class="text-base sm:text-lg text-ash" data-lang="es">¿Ya jugaste Territorio? Contanos cómo te fue: son 7 minutos y nos ayudan a mejorar el juego y los talleres.</p>
+          <p class="text-base sm:text-lg text-ash" data-lang="en" hidden>Already played Territory? Tell us how it went: it takes 7 minutes and helps us improve the game and the workshops.</p>
+          <a href="/territorio/encuesta" id="survey-band" data-origin="band" class="mt-5 inline-block px-5 py-2.5 bg-basalt-700 hover:bg-basalt-600 text-bone font-semibold rounded-lg transition-colors">
+            <span data-lang="es">Responder el cuestionario</span><span data-lang="en" hidden>Answer the questionnaire</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ RIGOR ══════════════════════════ -->
+      <section id="rigor" class="bg-basalt-900 border-y border-basalt-700 py-14">
+        <div class="container mx-auto px-4 max-w-3xl">
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Rigor del modelo</h2>
+          <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Model rigor</h2>
+          <ul class="space-y-2 text-base text-ash">
+            <li data-lang="es">📐 Modelo de simulación con ecuaciones documentadas, no una caja negra.</li>
+            <li data-lang="en" hidden>📐 Simulation model with documented equations, not a black box.</li>
+            <li data-lang="es">🔍 Auditoría propia de cada fórmula frente a su fuente original, con hallazgos publicados.</li>
+            <li data-lang="en" hidden>🔍 In-house audit of every formula against its original source, with published findings.</li>
+            <li data-lang="es">🗺️ En Territorio, las rutas de victoria se calibran simulando estrategias completas hasta 2054: cada ruta la gana quien la persigue y no hacer nada pierde. <a href="/docentes/ecuaciones" class="text-hydro hover:underline">Cómo funciona el modelo →</a></li>
+            <li data-lang="en" hidden>🗺️ In Territory, win routes are calibrated by simulating full strategies to 2054: each route is won by whoever pursues it, and doing nothing loses. <a href="/docentes/ecuaciones" class="text-hydro hover:underline">How the model works →</a></li>
+            <li data-lang="es">🏛️ Desarrollado por Fundación Bariloche, junto a la FCF-UNaM y CONICET.</li>
+            <li data-lang="en" hidden>🏛️ Developed by Fundación Bariloche, together with FCF-UNaM and CONICET.</li>
+            <li data-lang="es">💶 Financiado por el proyecto IKI.</li>
+            <li data-lang="en" hidden>💶 Funded by the IKI project.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══════════════════════════ PREGUNTAS ══════════════════════════ -->
-      <section class="bg-basalt-900 border-y border-basalt-700 py-14">
+      <section id="faq" class="bg-basalt-900 border-y border-basalt-700 py-14 scroll-mt-16">
         <div class="container mx-auto px-4 max-w-3xl">
           <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="es">Preguntas frecuentes</h2>
           <h2 class="text-2xl font-bold font-[var(--font-display)] text-chlorophyll mb-6" data-lang="en" hidden>Frequently asked questions</h2>
           <div class="space-y-5">
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Qué versión me conviene?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Which version suits me?</h3>
+              <p class="text-sm text-ash" data-lang="es">Si es tu primera vez o tenés una sola clase, Territorio. Si querés analizar indicadores en detalle, guardar la partida o usar el panel de facilitación, el juego de 3 niveles. <a href="#versiones" class="text-hydro hover:underline">Ver la comparación →</a></p>
+              <p class="text-sm text-ash" data-lang="en" hidden>If it's your first time or you only have one class, Territory. If you want to analyze indicators in detail, save your game or use the facilitation panel, the 3-level game. <a href="#versiones" class="text-hydro hover:underline">See the comparison →</a></p>
+            </div>
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Es gratis?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>Is it free?</h3>
@@ -390,32 +499,38 @@
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Necesito registrarme?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>Do I need to sign up?</h3>
-              <p class="text-sm text-ash" data-lang="es">No. Podés jugar en modo demo sin cuenta; iniciar sesión con Google es opcional y solo sirve para guardar tu progreso entre sesiones.</p>
-              <p class="text-sm text-ash" data-lang="en" hidden>No. You can play in demo mode without an account; signing in with Google is optional and only used to save your progress between sessions.</p>
+              <p class="text-sm text-ash" data-lang="es">No. Territorio no tiene cuentas. En el juego de 3 niveles podés jugar sin cuenta; iniciar sesión con Google es opcional y solo sirve para guardar tu progreso.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>No. Territory has no accounts. In the 3-level game you can play without one; signing in with Google is optional and only saves your progress.</p>
             </div>
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Funciona en el celular?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>Does it work on mobile?</h3>
-              <p class="text-sm text-ash" data-lang="es">Sí, aunque la experiencia es más cómoda en una pantalla más grande (tablet o computadora) por la cantidad de indicadores en pantalla.</p>
-              <p class="text-sm text-ash" data-lang="en" hidden>Yes, though it's more comfortable on a larger screen (tablet or computer) given how many indicators are on screen at once.</p>
+              <p class="text-sm text-ash" data-lang="es">Sí, las dos. En Territorio el mapa se aprovecha mucho más en computadora o tablet; en el celular conviene jugar en parejas con una pantalla más grande cerca.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, both. In Territory the map is far more useful on a computer or tablet; on phones, playing in pairs with a larger screen nearby works better.</p>
             </div>
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Está en inglés?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>Is it available in English?</h3>
-              <p class="text-sm text-ash" data-lang="es">Sí, español e inglés, con un conmutador dentro del juego.</p>
-              <p class="text-sm text-ash" data-lang="en" hidden>Yes, Spanish and English, with a switcher inside the game.</p>
+              <p class="text-sm text-ash" data-lang="es">Sí: las dos versiones, el paquete docente y el cuestionario están en español e inglés.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes: both versions, the teacher package and the questionnaire are in Spanish and English.</p>
             </div>
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Qué datos guardan?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>What data do you store?</h3>
-              <p class="text-sm text-ash" data-lang="es">Tus decisiones de juego, tus predicciones y tus respuestas del informe de cierre, si elegís completarlo. En modo demo no se guarda nada. No guardamos tu identidad, tu correo (salvo el de tu cuenta de Google si iniciás sesión) ni transcripciones de chat sin tu consentimiento. Podés pedir que se elimine tu información escribiendo al contacto del pie de página.</p>
-              <p class="text-sm text-ash" data-lang="en" hidden>Your in-game decisions, your predictions, and your closing-report answers if you choose to complete it. Nothing is saved in demo mode. We don't store your identity, your email (other than your Google account email if you sign in), or chat transcripts without your consent. You can request deletion of your data by writing to the contact in the footer.</p>
+              <p class="text-sm text-ash" data-lang="es">En Territorio no guardamos la partida. Si respondés el cuestionario, guardamos tus respuestas de forma anónima —sin nombre ni correo—, un resumen de tu última partida y, si lo usaste, el código de taller. En el juego de 3 niveles guardamos tus decisiones, predicciones y respuestas del informe de cierre si iniciás sesión; en modo demo no se guarda nada. No guardamos transcripciones de chat sin tu consentimiento. Para pedir que se elimine información, escribí al contacto del pie de página; en el caso de respuestas anónimas, indicá el código de taller y la fecha aproximada para que podamos ubicarlas.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>In Territory we don't save the game. If you answer the questionnaire, we store your answers anonymously —no name or email—, a summary of your latest game and, if you used one, the workshop code. In the 3-level game we store your decisions, predictions and closing-report answers if you sign in; nothing is saved in demo mode. We don't store chat transcripts without your consent. To request deletion, write to the contact in the footer; for anonymous answers, include the workshop code and the approximate date so we can find them.</p>
+            </div>
+            <div>
+              <h3 class="font-semibold text-bone" data-lang="es">¿Puedo usarlo en un taller?</h3>
+              <h3 class="font-semibold text-bone" data-lang="en" hidden>Can I use it in a workshop?</h3>
+              <p class="text-sm text-ash" data-lang="es">Sí. Desde el <a href="/docentes/espacio" class="text-hydro hover:underline">espacio docente</a> generás un link con código para tu grupo y un QR para proyectar; las respuestas del cuestionario quedan agrupadas por ese código.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes. From the <a href="/docentes/espacio" class="text-hydro hover:underline">teacher space</a> you build a coded link for your group and a QR to project; the questionnaire answers are grouped by that code.</p>
             </div>
             <div>
               <h3 class="font-semibold text-bone" data-lang="es">¿Puedo usarlo en mi curso?</h3>
               <h3 class="font-semibold text-bone" data-lang="en" hidden>Can I use it in my course?</h3>
-              <p class="text-sm text-ash" data-lang="es">Sí, es justamente para eso. Empezá por el paquete docente.</p>
-              <p class="text-sm text-ash" data-lang="en" hidden>Yes, that's exactly what it's for. Start with the teacher package.</p>
+              <p class="text-sm text-ash" data-lang="es">Sí, es justamente para eso. Empezá por el <a href="/docentes/espacio" class="text-hydro hover:underline">espacio docente</a>.</p>
+              <p class="text-sm text-ash" data-lang="en" hidden>Yes, that's exactly what it's for. Start with the <a href="/docentes/espacio" class="text-hydro hover:underline">teacher space</a>.</p>
             </div>
           </div>
         </div>
@@ -426,7 +541,11 @@
     <footer class="py-10 text-center text-xs text-ash-dim">
       <p>Fundación Bariloche · FCF-UNaM · CONICET · Proyecto IKI</p>
       <p class="mt-2">
-        <a href="mailto:contacto@decarbonation.example" class="hover:text-ash underline" data-lang="es">Contacto</a>
+        <a href="/territorio/encuesta" id="footer-survey" data-origin="footer" class="hover:text-ash underline" data-lang="es">Cuestionario</a>
+        <a href="/territorio/encuesta" data-origin="footer" class="hover:text-ash underline" data-lang="en" hidden>Questionnaire</a>
+        · <a href="/docentes" class="hover:text-ash underline" data-lang="es">Docentes</a>
+        <a href="/docentes" class="hover:text-ash underline" data-lang="en" hidden>Teachers</a>
+        · <a href="mailto:contacto@decarbonation.example" class="hover:text-ash underline" data-lang="es">Contacto</a>
         <a href="mailto:contacto@decarbonation.example" class="hover:text-ash underline" data-lang="en" hidden>Contact</a>
         · <span data-lang="es">Licencia por definir</span><span data-lang="en" hidden>License to be defined</span>
         · <a href="https://github.com/jonathanvonbelow/decarbonation" class="hover:text-ash underline" data-lang="es">Repositorio</a>

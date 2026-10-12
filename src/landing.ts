@@ -8,6 +8,7 @@
 import { logFunnelEventLite as logFunnelEvent } from './services/funnelTelemetryLite';
 
 import { detectLocale, initLocale } from './shared/locale';
+import { WORKSHOP_CODE_RE } from './shared/workshopCodeRe';
 
 function initFunnelTracking(): void {
   // Shared by index.html (the landing proper) and docentes.html (this same module, reused for
@@ -30,12 +31,34 @@ function initFunnelTracking(): void {
     });
   });
 
-  // Territorio keeps its own event, so the two funnels stay separable now that the preview is
-  // what the page leads with (21_fusion_ecosim.md; reordenado 2026-09-21).
-  document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio"]').forEach((link) => {
+  // Territorio keeps its own event, so the two funnels stay separable. The questionnaire has its own
+  // (`survey_click`), so it is excluded here.
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio"]:not([href^="/territorio/encuesta"])').forEach((link) => {
     link.addEventListener('click', () => {
       logFunnelEvent('preview_click', { preview: 'territorio', origin: link.id === 'cta-territorio' ? 'hero' : 'other' });
     });
+  });
+
+  // v5/30: questionnaire and teacher-space entries (origin comes from `data-origin`).
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio/encuesta"]').forEach((link) => {
+    link.addEventListener('click', () => logFunnelEvent('survey_click', { origin: link.dataset.origin ?? 'other' }));
+  });
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="/docentes/espacio"]').forEach((link) => {
+    link.addEventListener('click', () => logFunnelEvent('teacher_space_click', { origin: link.id || 'other' }));
+  });
+}
+
+/**
+ * A facilitator can share the landing with `?taller=CODE`: the code is forwarded to every link to
+ * Territorio and to the questionnaire, so the whole room arrives with it (v5/30 §6).
+ */
+function initWorkshopCode(): void {
+  const code = new URLSearchParams(window.location.search).get('taller');
+  if (!code || !WORKSHOP_CODE_RE.test(code)) return;
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="/territorio"]').forEach((link) => {
+    const url = new URL(link.getAttribute('href') as string, window.location.origin);
+    url.searchParams.set('taller', code);
+    link.setAttribute('href', `${url.pathname}${url.search}${url.hash}`);
   });
 }
 
@@ -93,4 +116,5 @@ function initCarousel(): void {
 
 initLocale();
 initFunnelTracking();
+initWorkshopCode();
 initCarousel();
