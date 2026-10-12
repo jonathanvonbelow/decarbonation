@@ -1727,3 +1727,13 @@ Nuevo `src/services/geminiConfig.ts` como única fuente de ids de modelo (`GEMIN
 **Deudas.** (1) Los ids `gemini-3.8-*` y `gemini-3.5-*` vienen de la especificación y no se pudieron comprobar aquí. (2) La API key sigue en el bundle del cliente (§6 opcional no hecho); plan: `geminiTransport.ts` contra `/api/gemini` y quitar `GEMINI_API_KEY` del `define`. **Pedido al equipo:** probar DecarboNito en `/play` y el asesor en `/territorio` con la key real antes del próximo taller, y cargar las tres variables en Vercel.
 
 **Verificación.** `tsc` limpio, 166/166 tests (3 nuevos en `tests/agent/geminiConfig.spec.ts`).
+
+## 2026-10-12 — v5 fase 25: tabla `territorio_feedback` y servicio de envío anónimo
+
+`supabase/territorio_feedback_migration.sql` (idempotente, RLS solo `INSERT` para `anon`/`authenticated`, validación en `CHECK` de columna), consultas de análisis al final de `analytics_queries.sql`, tipos y listas de opciones en `src/territorio/survey/types.ts`, y `feedbackService.ts` (fetch directo con `Prefer: return=minimal`, cola offline en `localStorage` de hasta 20 registros, resultado tipado, sanitización). Un test lee el `.sql` y compara las listas de opciones con las constantes de TypeScript.
+
+**Desvíos.** Ninguno. Se añadió `sanitizeRow` exportado para poder testearlo y `rol_otro` solo se conserva si `rol === 'otro'`.
+
+**Acciones para el equipo (no automatizables).** (1) Pegar la migración en Supabase → SQL Editor → Run. (2) Probar con `curl -X POST "$SUPABASE_URL/rest/v1/territorio_feedback" -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -H "Prefer: return=minimal" -d '{"origen":"pagina","lang":"es","rol":"otro","taller_codigo":"PRUEBA"}'` (esperado HTTP 201) y un `GET ?select=id` (esperado error de permisos o `[]`). (3) Borrar la fila de prueba desde el Table Editor.
+
+**Verificación.** `tsc` limpio; 10 tests nuevos en `tests/territorio/feedbackService.spec.ts`.

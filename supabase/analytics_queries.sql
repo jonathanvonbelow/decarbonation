@@ -307,3 +307,30 @@ LEFT JOIN public.post_survey        post ON post.session_id = gs.id;
 -- Actualizar bajo demanda (no automático):
 -- REFRESH MATERIALIZED VIEW public.session_summary;
 */
+
+-- ===================== Territorio: cuestionario (v5/25) =====================
+-- Respuestas por taller
+SELECT COALESCE(taller_codigo, '(sin codigo)') AS taller, COUNT(*) AS n,
+       ROUND(AVG(comprension), 2) AS comprension, ROUND(AVG(ritmo), 2) AS ritmo,
+       ROUND(AVG(mapa_utilidad), 2) AS mapa, ROUND(AVG(tradeoffs), 2) AS tradeoffs,
+       ROUND(AVG(realismo), 2) AS realismo, ROUND(AVG(uso_taller), 2) AS uso_taller
+FROM public.territorio_feedback GROUP BY 1 ORDER BY n DESC;
+
+-- Elementos mas utiles (multi-respuesta)
+SELECT e AS elemento, COUNT(*) FROM public.territorio_feedback, unnest(elementos_utiles) e
+GROUP BY 1 ORDER BY 2 DESC;
+
+-- Mejora prioritaria por rol
+SELECT rol, mejora_prioritaria, COUNT(*) FROM public.territorio_feedback
+GROUP BY 1, 2 ORDER BY 1, 3 DESC;
+
+-- Aprendizaje percibido segun como termino la partida
+SELECT partida_estado, resultado, COALESCE(ruta_lograda, ruta_cercana) AS ruta,
+       COUNT(*) AS n, ROUND(AVG(tradeoffs), 2) AS tradeoffs
+FROM public.territorio_feedback GROUP BY 1, 2, 3 ORDER BY n DESC;
+
+-- Textos abiertos para analisis cualitativo (exportar como CSV desde el SQL Editor)
+SELECT created_at, taller_codigo, rol, contexto_uso, aprendizaje_texto, mejoras_texto, taller_conceptos_texto
+FROM public.territorio_feedback
+WHERE num_nonnulls(aprendizaje_texto, mejoras_texto, taller_conceptos_texto) > 0
+ORDER BY created_at;
