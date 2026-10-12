@@ -1767,3 +1767,11 @@ Página estática `docentes-espacio.html` + `src/docentesEspacio.ts`: cuatro eta
 **Corrección en caliente de la fase 27.** `docentes.ts` ponía `data-version` en `<html>` y el conmutador lo ocultaba; ahora usa `data-active-version`. Detectado probando en navegador.
 
 **Verificación.** `tsc` limpio, 9 tests nuevos (`tests/docentes/espacioRules.spec.ts`), probado en Chrome sobre el dev server: código inválido rechazado, QR generado, asistente cambia la recomendación y los links `?v=`, checklist cuenta, conmutador de versión del plan de clase alterna las variantes.
+
+## 2026-10-12 — v5 fase 29: paquete docente bilingüe completo (cierra el pendiente del 2026-08-07)
+
+Cierra la entrada "Deliberadamente no bilingüe" del 2026-08-07: guía de facilitación, plan de clase y diapositivas ya tienen inglés completo en ambas variantes (la traducción se escribió junto con el envoltorio de variantes en la fase 27, con `data-lang` en bloques gemelos). Nuevo `public/docentes/guia-facilitacion.en.md` (generado desde el inglés de `docentes-guia.html` y revisado; la página en inglés enlaza esa descarga) y nuevo `scripts/html-bilingual-audit.mjs`, integrado en `npm run i18n:audit`: falla si un `data-lang="es"` no tiene gemelo `en` inmediato, o si hay texto visible fuera de `data-lang` (se permiten nombres propios, rutas/URLs y contenido bajo `aria-hidden="true"`). Cubre `index.html` y `docentes*.html`. La hoja de ecuaciones en Markdown no tiene versión `.en.md`: la página ya cubre el contenido en inglés, según la especificación.
+
+**Desvíos.** (1) El inventario "antes" no se guardó como script aparte: el auditor nuevo es el inventario. (2) `npm run i18n:audit` ya fallaba antes de v5 por 29 textos en `src/territorio/advisorRules.ts` y `session.ts` (contexto en español para Gemini y razones de colapso comparadas como string, como el resto del motor según CLAUDE.md); se agregaron a la lista de archivos verificados con su justificación, y `src/shared/locale.ts` sigue la misma excepción que `landing.ts`. (3) La maqueta decorativa de la landing en español (Panel de Políticas, etc.) queda marcada por el auditor hasta la fase 30, que la deja con `aria-hidden`.
+
+**Verificación.** Auditor en cero para las 7 páginas docentes; `index.html` pendiente de la fase 30. Revisión manual del inglés en navegador: pendiente.

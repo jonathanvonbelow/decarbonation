@@ -11,6 +11,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { glob } from 'node:fs/promises';
+import { auditStaticHtml } from './html-bilingual-audit.mjs';
 
 const IGNORED = [
   /^src\/i18n\//, /^src\/territorio\/survey\/copy(\.en)?\.ts$/, /\.test\.tsx?$/, /^src\/constants\.ts$/, /^src\/legacyContent\//,
@@ -40,6 +41,14 @@ const IGNORED = [
 // away" from real hardcoded copy. Kept in this list (not moved to IGNORED) so that distinction --
 // and which lines are the one real intentional exception -- stays documented, not silently lost.
 const CAPA_B_C_VERIFIED_BILINGUAL = [
+  // v5/29: Territorio's advisor builds its Gemini context in Spanish on purpose (Capa C: prompts to
+  // the model may stay in Spanish), and the sustained-collapse reasons in session.ts are compared as
+  // strings in screens.tsx, like the engine's gameOverReason (see CLAUDE.md). Both were already
+  // flagged before v5; listed here so the audit is actionable again.
+  'src/territorio/advisorRules.ts',
+  'src/territorio/session.ts',
+  // v5/28: this static page script picks es/en strings by document language at runtime.
+  'src/docentesEspacio.ts',
   // Capa C (AI prompts) -- already fully bilingual before this phase touched anything; verified
   // by inspection, not modified.
   'src/services/geminiService.ts',
@@ -127,12 +136,22 @@ for await (const file of glob('src/**/*.{ts,tsx}')) {
   });
 }
 
+const htmlFindings = await auditStaticHtml();
+if (htmlFindings.length) {
+  console.error(`
+✗ ${htmlFindings.length} static-HTML bilingual problem(s) (index.html, docentes*.html):
+`);
+  for (const f of htmlFindings) console.error(`  ${f}`);
+  process.exitCode = 1;
+}
+
 if (findings.length) {
   console.error(`\n✗ ${findings.length} hardcoded Spanish string(s) found outside src/i18n/ and outside not-yet-migrated components\n`);
   for (const f of findings) console.error(`  ${f.file}:${f.line}  "${f.text}"`);
   console.error('\nMove them to src/i18n/ui/es.ts (+ en.ts) and use t(), or add the file to IGNORED_COMPONENTS if it is a known pending migration.\n');
   process.exit(1);
 }
+if (htmlFindings.length) process.exit(1);
 console.log(
   `✓ i18n audit clean (${IGNORED_COMPONENTS.length} Capa A component(s) still pending migration + ${CAPA_B_C_VERIFIED_BILINGUAL.length} Capa B/C file(s) verified bilingual, both tracked explicitly above).`,
 );
