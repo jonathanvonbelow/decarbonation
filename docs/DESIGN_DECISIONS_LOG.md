@@ -1795,3 +1795,7 @@ Cierre: `vercel.json` con rewrites en orden (más específico primero, `.en.md` 
 **Acciones manuales pendientes del equipo.** (1) Correr `supabase/territorio_feedback_migration.sql` y la prueba `curl` de la fase 25; (2) cargar `GEMINI_MODEL`, `GEMINI_MODEL_FALLBACK`, `GEMINI_MODEL_TTS` en Vercel y probar DecarboNito y el asesor con la key real; (3) reemplazar el contacto y la licencia (`grep -rn "decarbonation.example"` + `src/shared/contact.ts`); (4) recorrido manual del punto 3.2 de la fase 31 en el preview.
 
 **Verificación final.** `tsc` limpio, 196/196 tests, build limpio, `i18n:audit` limpio.
+
+## 2026-10-13 — v5: contacto y licencia definidos
+
+El equipo confirmó el contacto (`fombis.von@gmail.com`) y que todo el material tiene licencia abierta. Se reemplazó el placeholder en `index.html`, `docentes-espacio.html` y `src/shared/contact.ts`, y el pie dice "Licencia abierta" / "Open license". Deja de ser un pendiente bloqueante de las fases 28, 30 y 31. Las variables `GEMINI_MODEL*` no hace falta cargarlas: todas tienen default en `src/services/geminiConfig.ts`.
