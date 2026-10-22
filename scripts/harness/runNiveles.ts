@@ -75,7 +75,7 @@ export function activatePolicies(
 }
 
 /** Joins every pact of the list that is unlocked and affordable, like App.tsx `togglePact`. */
-function joinPacts(state: GameState, strategy: NivelesStrategy, level: number): void {
+export function joinPacts(state: GameState, strategy: NivelesStrategy, level: number): void {
   if (level < 2) return;
   (strategy.pacts ?? []).forEach((code) => {
     const pact = state.pacts[PACT_BY_CODE[code]];

@@ -74,6 +74,9 @@ const CAPA_B_C_VERIFIED_BILINGUAL = [
   // same `language === 'en' ? ... : ...` pattern as the 4 sim files above.
   'src/sim/gameOver.ts',
   'src/sim/monthly.ts',
+  // v6 fase 35: the bodies of stepYear and stepMonth moved, unchanged, into the single integrator
+  // advance() -- same bilingual `language === 'en' ? ... : ...` log lines.
+  'src/sim/v2/core.ts',
 ];
 
 // Components still using their own local `T = { es: {...}, en: {...} }` dictionary instead of

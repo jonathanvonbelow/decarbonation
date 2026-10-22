@@ -2026,3 +2026,89 @@ tratado y los saltos de E) y CN decae. Ninguna estrategia dirigida bajó más de
 ningún umbral de rutas del juego de 3 niveles (§10). C5 y C6 los atacan las fases 36–43.
 
 **Pendiente para el equipo.** Aplicar `supabase/model_version_migration.sql` y empujar los tags `model-v1.0` y `model-v1.1`.
+
+## 2026-10-22 — v6 fase 35: motor 2.0 — estructura, parámetros y anclas
+
+**Qué se hizo** (`mejora-general/files/35_motor_v2_estructura.md`; rama `v6-modelo-v2`). `MODEL_VERSION = '2.0-dev'`.
+- `src/sim/v2/`: `math.ts` (§3, idéntico al prototipo), `params.ts` (`PARAMS_V2` = `P` del prototipo, `PID`, mapa de
+  nombres en la cabecera), `anchors.ts` (`computeAnchors` / `createModelState`), `core.ts` (`advance`), `README.md`
+  (módulos, orden, convenciones, qué fase hace qué).
+- `advance(state, dt, rng, CP, opts)` es el único cuerpo de los dos juegos: `stepYear` = `advance(…, 1)` y
+  `stepMonth` = `advance(…, 1/12, { month })`. En esta fase llama a las funciones 1.1 en el orden 1.1 (pasos 0–14 +
+  11.5). `rng = null` corre sin eventos. `rollMonthlyEvent`, `monthlyTriggerChance`, `declaredProtectedOf` y
+  `MONTHS_PER_YEAR` se mudaron a `core.ts` y `monthly.ts` los reexporta (ningún import cambió).
+- Tipos: `ModelAnchors`, `ModelIndicatorKey`, `TargetImpulse`, `ModelState`, `GameState.model?`,
+  `PolicyState.rampTime?` / `fatigueTime?` (solo declarados; los usa la 36). `createInitialState` devuelve `model`
+  (anclas + stocks 2.0 en cero); `advance` solo mueve `model.t` += dt.
+- `CONTROL_PARAMS`: `Poblacion_Inicial`, `Velocidad_Ajuste_*` (6), `Eficiencia_Minima_Politicas`,
+  `Recuperacion_Politicas_Anios`, `Gasto_Publico_Base_Nivel_1..3` con el aviso de sensibilidad. Ninguna ecuación los lee
+  todavía (no están en el panel del facilitador: los expone la fase 50).
+- Anclas: logits de B, F, E, C, Pc y las tres presiones; B0/F0/E0/W0; hábitat, valor productivo, concentración,
+  participaciones, ρ₀ (producción per cápita), presiones, PBI, áreas agrícolas; c₀ y emisiones por fuente con la
+  corrida en seco de la matriz de suelo del prototipo (`dryRunLandFlows`: tasas base, barbecho, pool con rentas
+  ancladas, neteo de todos los pares, escalado) y la energía a eps₀ del nivel. Coinciden con `new_state()` del
+  prototipo en los tres niveles (c₀ = 5,947 / 7,135 / 5,733; test en `core.spec.ts`).
+- Tests: `tests/sim/core.spec.ts` (trayectorias de referencia generadas con los cuerpos 1.1 de `caa9275` — N2/N3 con
+  eventos, préstamo, impuesto y tratado, 40 meses de N2 — que `advance` reproduce a 1e-9; relax anual = x + k(x* − x); 12 pasos mensuales = 1 anual a 1e-9; `advance` no
+  muta; `advance` = `stepYear` / `stepMonth` paso a paso durante 24 pasos; calendario; anclas y logits por nivel;
+  N1 con colapso 5), `tests/sim/golden.v2.spec.ts` (`GOLDEN_ACTIVE = false`, lee `scripts/reference/golden_v2.csv`) y
+  `playLevel` en `tests/sim/testHelpers.ts` (estrategias de `scripts/harness/strategies.ts`, `rng = () => 0.999`;
+  `joinPacts` de `runNiveles.ts` pasa a exportarse).
+- `vitest.config.ts`: la cobertura mide `src/sim/**/*.ts` (antes `src/sim/**`, que intentaba parsear el README).
+  `scripts/i18n-audit.mjs`: `src/sim/v2/core.ts` entra en la lista de archivos de motor verificados bilingües (sus
+  líneas de log son las de `stepYear`/`stepMonth`, mudadas sin cambios).
+
+**Desvíos y discrepancias** (filas de la fase 35 en `docs/v6-spec-vs-motor.md`).
+- *Colapso N1 = 5* (§8, `INITIAL_STELLA_STOCKS.Colapso_politico` 0 → 5): es el **único** cambio numérico de la fase.
+  En N1 el colapso nunca vuelve al piso 0, así que la estabilidad queda 5 puntos más baja durante toda la partida
+  (inicio 95; p50 final de `do_nothing` 89,7 → 84,7). N1 no tiene piso de estabilidad ni la usa en el puntaje: ninguna
+  victoria, ruta, puntaje ni criterio cambia. N2, N3 y Territorio (nivel 2) no cambian.
+- *Ramas por `dt` heredadas de 1.1*: el `toward` de Euler (con `dt = 1` devuelve el valor anual tal cual, para que el
+  juego de 3 niveles sea idéntico bit a bit), el sorteo anual/mensual, el préstamo (dentro de `updateEconomy` en el
+  anual, entero después de los flujos en el mensual) y el calendario (el anual simula `year + 1`). Se van en 39–46.
+  En el paso anual también se arma `flows` (stepYear lo descarta); el ajuste de `declaredProtectedArea` sigue siendo
+  solo mensual, y la fusión de pactos/economía conserva la semántica de spread del viejo `stepYear`.
+- *Spec §4 vs `P`*: varias entradas de `P` son escalares de `CONTROL_PARAMS` (nuevos o ya existentes con el mismo valor:
+  `Tasa_Crecimiento_Poblacional_Base`, `Tasa_Base_Crecimiento_PBI`, `Tasa_Impositiva_General_Sobre_PBI`,
+  `Tasa_de_interes_Nivel_*`, `Pago_deuda_anual_Nivel_*`); se agregó `finance.breachEps` (= `BREACH_EPS` del prototipo,
+  fase 32). Los coeficientes que el prototipo escribe dentro de sus funciones pasan a `params.ts` en la fase de cada una.
+- *Pactos* con los IDs del código (`biodiversityTreaty`, …); claves `s`/`u` → `renewables`/`efficiency`.
+- *Población*: las anclas usan `Poblacion_Inicial` = 400 000; el motor 1.1 sigue leyendo `Poblacion_Total` = 10
+  millones hasta la fase 38.
+- *Golden*: el CSV trae `pa, pe, ps, DY, S` además de las 9 columnas del test; se leen solo esas 9.
+- *C9*: con `'2.0-dev'` el arnés evalúa la consistencia anual–mensual (mayor ≥ 2). Da FAIL 1,529, el mismo valor que
+  antes figuraba como SKIP: el mensual sigue siendo Euler hasta la fase 46. No es regresión (quick sale 0).
+- *`'2.0-dev'`* se reutiliza en las fases 36–46 con ecuaciones distintas: la rama no se despliega ni recolecta datos
+  hasta la fase 51, que fija `'2.0'`. Si alguna build intermedia se usara en un taller, antes hay que darle un sufijo
+  propio (p. ej. `2.0-dev.36`).
+- *Motivo del colapso 5*: `logit()` recorta en 1e-4, así que logit(0) es finito (−9,2) pero queda pegado al recorte;
+  el valor 5 es el del prototipo (`LEVELS[1].Pc`), y con él las anclas coinciden.
+- `PIDS` verificados contra el enum `Policy` (`CN` es "(P-C)") y contra `POLICY_BY_CODE` del arnés (test).
+
+**Verificación.** `npx tsc --noEmit`, `npm test` (28 archivos), `npm run build`, `npm run i18n:audit` limpios.
+`npm run sim:check -- --quick` antes de tocar el colapso y con `MODEL_VERSION` todavía en 1.1: JSON idéntico byte a
+byte al de HEAD (`caa9275`). Con el colapso: solo cambia St de N1. Con `'2.0-dev'` (`reports/balance-2.0-dev-quick.md`):
+
+| Criterio | 1.1 (quick) | 2.0-dev (quick) |
+|---|---|---|
+| C1 do_nothing nunca gana | FAIL 0,100 | FAIL 0,100 |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,000 |
+| C3 ninguna gana todas | PASS 0,200 | PASS 0,200 |
+| C4 atajos cerrados | FAIL 0,600 | FAIL 0,600 |
+| C5 la estrategia decide | FAIL 3 | FAIL 3 |
+| C6 recorrido ≥ 15 | FAIL 0,341 | FAIL 0,341 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 |
+| C9 anual–mensual | SKIP 1,529 | FAIL 1,529 |
+
+Sin cambios de UI: no se probó en navegador.
+
+**Revisión de código** (aplicada): el test de equivalencia comparaba `advance` consigo mismo (los envoltorios) →
+trayectorias de referencia de 1.1; fusión de `stellaStocks` de pactos y de la economía con la semántica de spread
+del viejo `stepYear`; `declaredProtectedArea` vuelve a ser solo mensual; `createModelState` ya no corre dos veces la
+corrida en seco; `eps` sin el factor `× 1`; motivo del colapso 5 corregido. No aplicadas: el doble
+`computeLandUseFlows` por paso (heredado de 1.1, lo reemplaza la matriz de la fase 37) y `'2.0-dev'` (pedido por la
+spec; ver desvíos).
+
+**Deudas.** La corrida en seco de `anchors.ts` duplica la matriz de la fase 37: cuando exista, `computeAnchors` debe
+llamarla (el test de anclas contra el prototipo lo protege). `golden.v2.spec.ts` se enciende en la fase 46.

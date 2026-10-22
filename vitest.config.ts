@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.spec.ts'],
-    coverage: { include: ['src/sim/**'], thresholds: { lines: 80, functions: 85 } },
+    coverage: { include: ['src/sim/**/*.ts'], thresholds: { lines: 80, functions: 85 } },
   },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 });

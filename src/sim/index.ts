@@ -13,35 +13,30 @@
  * logic still lives in src/App.tsx today and will be replaced wholesale by `evaluateLevel` in
  * phase 5 (mejora-general/files/17_multiples_vias_victoria.md). `stepYear` only advances state;
  * the caller decides whether to keep looping.
+ *
+ * Since phase 35 (mejora-general/files/35_motor_v2_estructura.md) the body of `stepYear` and of
+ * `stepMonth` is the single integrator `advance(state, dt, …)` of src/sim/v2/core.ts, and
+ * `createInitialState` stores the 2.0 anchors of the level in `GameState.model` (src/sim/v2/anchors.ts).
  */
 import {
-  ALL_RANDOM_EVENTS, CONTROL_PARAMS, INITIAL_INDICATORS, INITIAL_LAND_USES, INITIAL_PACTS,
+  CONTROL_PARAMS, INITIAL_INDICATORS, INITIAL_LAND_USES, INITIAL_PACTS,
   INITIAL_POLICIES, INITIAL_STELLA_STOCKS, INITIAL_YEAR, LEVEL_2_INITIAL_INDICATOR_OVERRIDES,
   LEVEL_2_INITIAL_LAND_USES, LEVEL_2_INITIAL_STELLA_OVERRIDES, LEVEL_3_INITIAL_INDICATOR_OVERRIDES,
   LEVEL_3_INITIAL_LAND_USES, LEVEL_3_INITIAL_STELLA_OVERRIDES, LEVEL_CONFIGS,
 } from '../constants';
 import type {
   ControlParams, GameState, HistoricalDataPoint, Indicators, InitialIndicatorOverrides, LandUse,
-  LandUseType, LevelConfig, Pact, PolicyState, StellaStocks,
+  LandUseType, Pact, PolicyState, StellaStocks,
 } from '../types';
 import { Policy } from '../types';
 import { computeCarbonBalance } from './carbon';
-import { computeTotalPactCost, updateEconomy } from './economy';
-import {
-  calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
-  calculatePoliticalCollapseChange, calculateSocialConflictChange,
-} from './indicators';
-import { DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from './landUse';
-import { checkEfficiencyWarning, computeTotalPolicyCost, updatePolicyEfficiency } from './policies';
-import { updatePressures } from './pressures';
 import type { Rng } from './rng';
-import { rollEvent } from './events';
 import { computeScore } from './score';
-import { buildTrace, type SimTrace } from './trace';
-import { evaluateGameOver } from './gameOver';
-import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from './deferred';
+import type { SimTrace } from './trace';
+import { restorePactFunctions } from './deferred';
 import type { Language } from '../hooks/useLanguage';
-import { getPolicyName } from '../legacyContent/gameData';
+import { advance, type StepYearChatMessage } from './v2/core';
+import { createModelState } from './v2/anchors';
 
 export { makeRng, type Rng } from './rng';
 export { MODEL_VERSION, MODEL_VERSION_BY_GAME } from './version';
@@ -59,12 +54,8 @@ export * from './gameOver';
 export * from './deferred';
 export * from './monthly';
 export * from './territory';
-
-export interface StepYearChatMessage {
-  text: string;
-  /** Matches the two emphasisType values the original `runSimulationRound` used for these. */
-  emphasisType: 'game_event' | 'policy_efficiency_warning';
-}
+export { advance, MONTHLY_DT, type AdvanceOptions, type AdvanceResult, type StepYearChatMessage } from './v2/core';
+export { computeAnchors, createModelState } from './v2/anchors';
 
 export interface StepYearResult {
   next: GameState;
@@ -76,11 +67,10 @@ export interface StepYearResult {
 }
 
 /**
- * Advances `state` by exactly one simulated year. Pure: never mutates its input, and — for a
- * given `(state, rng, CP)` — always produces the same `next`/`trace`. Deep-clones internally
- * (mirroring the `JSON.parse(JSON.stringify(...))` the original used per simulation round) and
- * restores pact `effects` functions afterward, since — like the original — a JSON round-trip
- * strips them.
+ * Advances `state` by exactly one simulated year: a thin wrapper of `advance(state, 1, …)`
+ * (src/sim/v2/core.ts, phase 35), which holds the body, the order of operations and its history.
+ * Pure: never mutates its input, and — for a given `(state, rng, CP)` — always produces the same
+ * `next`/`trace`. Pact `effects` functions are restored after the internal JSON clone.
  *
  * `CP` defaults to the static `CONTROL_PARAMS` but is a parameter, not a hardcoded import: the
  * app reads `controlParamsRef.current` here (see App.tsx and CLAUDE.md's "CP alias" pattern),
@@ -88,162 +78,7 @@ export interface StepYearResult {
  * override the moment `runSimulationRound` switched to calling this function.
  */
 export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): StepYearResult {
-  const next: GameState = JSON.parse(JSON.stringify(state));
-  restorePactFunctions(next.pacts);
-
-  const logs: string[] = [];
-  const chatMessages: StepYearChatMessage[] = [];
-  const before: Indicators = JSON.parse(JSON.stringify(next.indicators));
-
-  next.year++;
-  next.yearsSimulatedInCurrentLevel++;
-  const currentYear = next.year;
-  const currentLevel = next.currentLevel;
-  const additionalTaxPressurePercentage = next.additionalTaxPressurePercentage;
-
-  // 0. Population growth.
-  next.stellaSpecificState.Poblacion_Total *= 1 + CP.Tasa_Crecimiento_Poblacional_Base;
-
-  // 1. Confirm policy activation year (bookkeeping only — decay runs later, after the event roll,
-  //    matching the original order).
-  (Object.values(next.policies) as PolicyState[]).forEach((p) => {
-    if (p.isActive && p.activationYear === undefined) {
-      p.activationYear = currentYear;
-      const policyName = getPolicyName(p.id, language);
-      logs.push(
-        language === 'en'
-          ? `Policy '${policyName}' activated and confirmed for year ${currentYear}.`
-          : `Política '${policyName}' activada y confirmada para el año ${currentYear}.`
-      );
-    }
-  });
-
-  // 2. Random event roll (level<3: sequential; level 3: dynamic weighted). Applied BEFORE policy
-  //    decay/costs/land use/financial/indicator math, exactly like the original.
-  const yearsElapsedInCurrentLevel = next.yearsSimulatedInCurrentLevel - 1;
-  next.currentEvent = null;
-  // Effects on indicators this year recomputes later are held back and applied at step 11.5 —
-  // before this they were written here and silently overwritten (see src/sim/deferred.ts).
-  const deferred: DeferredAdjustment[] = [];
-  const rolled = rollEvent(next, ALL_RANDOM_EVENTS, yearsElapsedInCurrentLevel, rng, language, deferred);
-  logs.push(...rolled.logs);
-  if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
-  if (rolled.event) next.currentEvent = rolled.event;
-
-  // 3. Policy activation-time counters + efficiency decay.
-  updatePolicyEfficiency(next.policies, next.stellaSpecificState);
-
-  // 4. Annual costs (policy + pacts), tallied on PBI_Real *before* this year's growth — matches
-  //    the original, where these sums are computed before "3. Financial Calculations" runs.
-  const totalPolicyCost = computeTotalPolicyCost(next.policies, next.stellaSpecificState.PBI_Real);
-  const totalPactCost = computeTotalPactCost(next.pacts);
-
-  // 5. Pact effects on indicators/stella stocks, and the land-use change-factor multipliers they
-  //    contribute (both read from the same `pact.effects(...)` call per active pact, as before).
-  //    Since model 1.1 no pact writes B, F or E here: those are `impulses`, summed in step 8.
-  let landUseChangeFactors: LandUseChangeFactors = { ...DEFAULT_LAND_USE_CHANGE_FACTORS };
-  (Object.values(next.pacts) as Pact[]).forEach((pact) => {
-    if (!pact.isActive) return;
-    const effects = pact.effects(next.indicators, next.stellaSpecificState);
-    if (effects.indicators) {
-      // Derived indicators are handled at step 11.5, by re-evaluating the pact against the year's
-      // own values; applying them here would be overwritten (src/sim/deferred.ts).
-      const durable = Object.fromEntries(
-        Object.entries(effects.indicators).filter(([key]) => !isDerivedIndicator(key)),
-      );
-      next.indicators = { ...next.indicators, ...durable };
-    }
-    if (effects.stellaStocks) next.stellaSpecificState = { ...next.stellaSpecificState, ...effects.stellaStocks };
-    if (effects.landUseChangeFactors) {
-      landUseChangeFactors = {
-        tasa_BNNP_a_BNP: landUseChangeFactors.tasa_BNNP_a_BNP * (effects.landUseChangeFactors.tasa_BNNP_a_BNP ?? 1),
-        tasa_BNNP_a_CC: landUseChangeFactors.tasa_BNNP_a_CC * (effects.landUseChangeFactors.tasa_BNNP_a_CC ?? 1),
-        tasa_BNNP_a_CA: landUseChangeFactors.tasa_BNNP_a_CA * (effects.landUseChangeFactors.tasa_BNNP_a_CA ?? 1),
-        tasa_CA_a_BNNP: landUseChangeFactors.tasa_CA_a_BNNP * (effects.landUseChangeFactors.tasa_CA_a_BNNP ?? 1),
-        tasa_CC_a_CA: landUseChangeFactors.tasa_CC_a_CA * (effects.landUseChangeFactors.tasa_CC_a_CA ?? 1),
-      };
-    }
-  });
-
-  // 6. Land use transitions.
-  next.landUses = updateLandUse(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
-
-  // 7. Financial calculations (GDP growth, tax, interest, debt, reserves, pending loan).
-  const econ = updateEconomy(
-    next.stellaSpecificState, next.policies, currentLevel, additionalTaxPressurePercentage,
-    totalPolicyCost, totalPactCost, next.loanRequestedThisRound, CP, language,
-  );
-  next.stellaSpecificState = { ...next.stellaSpecificState, ...econ.stella };
-  if (econ.loanProcessedLog) {
-    logs.push(econ.loanProcessedLog);
-    next.loanRequestedThisRound = 0;
-  }
-
-  // 8. Indicator calculations.
-  //    Active pacts enter through `impulses`, inside each function's policy impact (model 1.1, N-03).
-  next.indicators.biodiversity = calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP, next.pacts);
-  next.indicators.foodSecurity = calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts);
-  next.indicators.economicSecurity = calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, additionalTaxPressurePercentage, CP, undefined, next.pacts);
-  next.stellaSpecificState.Conflicto_social = calculateSocialConflictChange(next.policies, next.landUses, next.stellaSpecificState, next.indicators, currentLevel, additionalTaxPressurePercentage, CP);
-  next.indicators.socialWellbeing = 100 - next.stellaSpecificState.Conflicto_social;
-  next.stellaSpecificState.Colapso_politico = calculatePoliticalCollapseChange(next.stellaSpecificState, next.indicators, CP);
-  next.indicators.politicalStability = 100 - next.stellaSpecificState.Colapso_politico;
-
-  // 9. CO2eq emissions per capita.
-  next.indicators.co2EqEmissionsPerCapita = computeCarbonBalance(next.landUses, next.policies, currentLevel, next.stellaSpecificState.Poblacion_Total, CP);
-
-  // 10. Sectoral political pressures (reads the CO2/biodiversity values just updated above).
-  const pressures = updatePressures(
-    { ppAgricola: next.stellaSpecificState.PP_AGRICOLA, ppAmbientalista: next.stellaSpecificState.PP_AMBIENTALISTA, ppSocial: next.stellaSpecificState.PP_SOCIAL },
-    next.policies, next.indicators, currentLevel, additionalTaxPressurePercentage, CP,
-  );
-  next.stellaSpecificState.PP_AGRICOLA = pressures.ppAgricola;
-  next.stellaSpecificState.PP_AMBIENTALISTA = pressures.ppAmbientalista;
-  next.stellaSpecificState.PP_SOCIAL = pressures.ppSocial;
-
-  // 11. Sync derived indicators from Stella stocks, then clamp every 0-100 indicator (final step,
-  //     not per-term — matches the original's ordering, see docs/audit-equations.md item I-3).
-  next.indicators.pbi = next.stellaSpecificState.PBI_Real;
-  next.indicators.debt = next.stellaSpecificState.Deuda;
-  next.indicators.treasuryReserves = next.stellaSpecificState.Reservas_del_Tesoro;
-  next.indicators.ppAgricola = next.stellaSpecificState.PP_AGRICOLA;
-  next.indicators.ppAmbientalista = next.stellaSpecificState.PP_AMBIENTALISTA;
-  next.indicators.ppSocial = next.stellaSpecificState.PP_SOCIAL;
-  (Object.keys(next.indicators) as (keyof Indicators)[]).forEach((key) => {
-    if (!['co2EqEmissionsPerCapita', 'pbi', 'treasuryReserves', 'debt', 'generalScore'].includes(key as string)) {
-      next.indicators[key] = Math.max(0, Math.min(100, next.indicators[key])) as never;
-    }
-  });
-
-  // 11.5 Pact and event effects on the indicators this year recomputed (src/sim/deferred.ts).
-  applyPactEffectsOnDerived(next.pacts, next.indicators, next.stellaSpecificState);
-  applyDeferredAdjustments(next.indicators, deferred);
-
-  // 12. Score.
-  next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);
-
-  // 13. Game-over conditions.
-  // `gameOverReason` is deliberately left Spanish-only, unlike the log/warning strings just
-  // above (phase 12, 12_i18n_completo.md Capa B/C): grep-confirmed it is never rendered as text
-  // anywhere in the UI (only read as a boolean via `!!gameOverReason` for the "game over" badge,
-  // pattern-matched internally with `.includes('victoria')`/`=== 'Partida abandonada...'` in
-  // App.tsx and geminiService.ts, and sent to Gemini as AI context) — Capa C's own guidance
-  // (§5) is that context sent to the model can stay Spanish, the model understands it fine.
-  // Converting these four strings into locale-aware keys would mean also updating every
-  // comparison site across two files for a value nothing ever displays; judged not worth the
-  // risk. See docs/DESIGN_DECISIONS_LOG.md, phase 12 entry.
-  const gameOverReason = evaluateGameOver(next);
-  if (gameOverReason) next.gameOverReason = gameOverReason;
-
-  // 14. Policy-efficiency-crossed-40%-threshold warning (side effect only: no state besides the
-  //     policy's own notification bookkeeping, handled inside checkEfficiencyWarning).
-  const warning = checkEfficiencyWarning(next.policies, language);
-  if (warning) {
-    chatMessages.push({ text: warning, emphasisType: 'policy_efficiency_warning' });
-    logs.push(warning);
-  }
-
-  const trace = buildTrace(currentYear, before, next.indicators);
+  const { next, trace, logs, chatMessages } = advance(state, 1, rng, CP, { language });
   return { next, trace, logs, chatMessages };
 }
 
@@ -255,7 +90,7 @@ export interface LevelInitializationResult {
     | 'year' | 'currentLevel' | 'policies' | 'landUses' | 'indicators' | 'stellaSpecificState'
     | 'pacts' | 'activeLevelConfig' | 'yearsSimulatedInCurrentLevel' | 'level3EventsTriggeredCount'
     | 'additionalTaxPressurePercentage' | 'decarbonitoProactiveMessageSentInLevel'
-    | 'lastConcludedLevelInfo' | 'sentLevelReflectionMessage' | 'levelBaseline'
+    | 'lastConcludedLevelInfo' | 'sentLevelReflectionMessage' | 'levelBaseline' | 'model'
   >;
   initialHistoricalDataPoint: HistoricalDataPoint;
 }
@@ -348,6 +183,11 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
       // Snapshot for win-route progress bars (src/sim/winRoutes.ts) — "how far the player moved"
       // is measured from here, not from zero.
       levelBaseline: { ...newIndicators },
+      // Model 2.0 anchors of this level's starting state (phase 35, src/sim/v2/anchors.ts).
+      model: createModelState(
+        { currentLevel: levelNumber, landUses: newLandUses, indicators: newIndicators, stellaSpecificState: newStellaState },
+        CP,
+      ),
     },
     initialHistoricalDataPoint,
   };

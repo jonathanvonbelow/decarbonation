@@ -1,0 +1,458 @@
+/**
+ * Single integrator of both games (mejora-general/files/35_motor_v2_estructura.md §1, §7).
+ *
+ * `advance(state, dt, rng, CP, opts)` is the one body behind `stepYear` (dt = 1, src/sim/index.ts) and
+ * `stepMonth` (dt = 1/12, src/sim/monthly.ts). In phase 35 it still calls the model-1.1 functions in the
+ * 1.1 order — the goal of this phase is to move the code, not the equations: `stepYear` and `stepMonth`
+ * produce exactly the numbers they produced before (`npm run sim:check -- --quick` gave a byte-identical
+ * report; tests/sim/core.spec.ts pins reference trajectories). The one numeric change of phase 35 is not
+ * here but in the data: level 1 starts with Colapso_politico = 5 (src/constants.ts).
+ *
+ * Known cost kept from 1.1: computeLandUseFlows runs twice per step (once for `flows`, once inside
+ * updateLandUse); phase 37 replaces both with the transition matrix. Each later phase replaces one step with its 2.0 equation; see
+ * src/sim/v2/README.md for which phase implements what.
+ *
+ * Order of model 2.0 (target; each step reads what the previous ones already updated):
+ *  1. population            P *= (1 + g_P)^dt
+ *  2. policy clocks         rampTime/fatigueTime (36)
+ *  3. random events         independent draws, level shocks, land -> fallow (46)
+ *  4. effective efficiency  per policy and channel (36)
+ *  5. land                  conservative transition matrix, realised flows in ha (37)
+ *  6. economy               GDP, revenue, base spending, policies, pacts, debt (44)
+ *  7. carbon                energy, AFOLU flux, LUC from realised flows (38)
+ *  8. indicators            B -> F -> E -> C (W) -> Pc (St) -> pressures (39-42, 45)
+ *  9. bookkeeping           cumulative emissions, fiscal history, productive years, game over
+ *
+ * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
+ *  0 population, 1 activation year, 2 event roll, 3 policy counters + efficiency decay, 4 policy and
+ *  pact costs, 5 pact effects, 6 land use, 7 finances, 8 indicators B -> F -> E -> C -> Pc,
+ *  9 CO2 per capita, 10 pressures, 11 sync + clamp, 11.5 deferred effects, 12 score, 13 game over,
+ *  14 efficiency warning.
+ *
+ * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
+ * phase must not change a number (each goes away in the phase noted):
+ *  - the 1.1 stocks move by Euler `x + (F(x) − x)·dt` toward the value the annual equation gives
+ *    (`toward`); with dt = 1 the annual value is taken as is, so stepYear is bit-identical (39–42, 46);
+ *  - event roll: dt = 1 uses the yearly draw (`rollEvent`, at most one event, level-3 weighting),
+ *    dt < 1 the monthly Bernoulli walk (`rollMonthlyEvent`) (46);
+ *  - a requested loan: dt = 1 goes through `updateEconomy` (its 1.1 order), dt < 1 is credited whole
+ *    after the monthly flows (44);
+ *  - calendar: dt = 1 simulates year `state.year + 1` (the year advances first, the 1.1 convention);
+ *    dt < 1 simulates month `opts.month` of `state.year` and advances the year after December (46).
+ *
+ * Pure: never mutates its input; deterministic for a given (state, dt, rng, CP, opts). Nothing here
+ * imports React or uses Math.random / Date.now.
+ */
+import { ALL_RANDOM_EVENTS } from '../../constants';
+import type { ControlParams, GameState, Indicators, Pact, PolicyState, RandomEvent, StellaStocks } from '../../types';
+import { LandUseType } from '../../types';
+import type { Language } from '../../hooks/useLanguage';
+import { getEventDescription, getEventName, getPolicyName } from '../../legacyContent/gameData';
+import { computeCarbonBalance } from '../carbon';
+import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from '../deferred';
+import { computeTotalPactCost, updateEconomy } from '../economy';
+import { applyRandomEventEffects, rollEvent } from '../events';
+import { evaluateGameOver } from '../gameOver';
+import {
+  calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
+  calculatePoliticalCollapseChange, calculateSocialConflictChange,
+} from '../indicators';
+import { computeLandUseFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from '../landUse';
+import { checkEfficiencyWarning, computeTotalPolicyCost, updatePolicyEfficiency } from '../policies';
+import { updatePressures } from '../pressures';
+import type { Rng } from '../rng';
+import { computeScore } from '../score';
+import type { LandFlow } from '../territory';
+import { buildTrace, type SimTrace } from '../trace';
+
+export const MONTHS_PER_YEAR = 12;
+/** dt of the monthly step (Territorio). */
+export const MONTHLY_DT = 1 / MONTHS_PER_YEAR;
+
+/** Draw used when `advance` gets no rng: above every trigger chance, so no event fires. */
+const NO_EVENTS: Rng = () => 0.999;
+
+/**
+ * Model-1.1 move of a stock toward the value its annual equation gives: the annual value itself for
+ * dt = 1 (bit-identical to the old stepYear), one Euler step of size dt otherwise (the old stepMonth).
+ */
+const toward = (current: number, annualValue: number, dt: number): number =>
+  (dt === 1 ? annualValue : current + (annualValue - current) * dt);
+
+const clamp100 = (n: number): number => Math.max(0, Math.min(100, n));
+
+export interface StepYearChatMessage {
+  text: string;
+  /** Matches the two emphasisType values the original `runSimulationRound` used for these. */
+  emphasisType: 'game_event' | 'policy_efficiency_warning';
+}
+
+export interface AdvanceOptions {
+  /** Language of logs and chat messages. Default 'es'. */
+  language?: Language;
+  /** Month (0 = January) of `state.year` being simulated. Monthly step only (dt < 1); default 0. */
+  month?: number;
+  /** Applies the additional-tax terms in economic security and social conflict. Default: level 3 only. */
+  fiscalTermsActive?: boolean;
+  /** Event pool. Default: the model's `ALL_RANDOM_EVENTS`. */
+  events?: RandomEvent[];
+  /**
+   * Charges the yearly upkeep of the land under public use (protected forest the player declared,
+   * wetland, restoration, energy park) to the treasury, × dt. Territorio only: off by default.
+   */
+  publicUseUpkeep?: boolean;
+  /**
+   * Deferred effects decided outside the step (Territorio situations, phase 34 T-12): applied at
+   * step 11.5 together with this step's event, after the recomputation that would erase them.
+   */
+  extraDeferred?: DeferredAdjustment[];
+}
+
+export interface AdvanceResult {
+  next: GameState;
+  /** Random event that fired this step, if any (its effects are already applied). */
+  event: RandomEvent | null;
+  /**
+   * Land transfers of this step, one per edge of the transition matrix (× dt), plus area removed by
+   * an event (to 'fallow'). The Territorio map moves parcels along these.
+   */
+  flows: LandFlow[];
+  /** Upkeep charged this step for the land under public use (0 unless `publicUseUpkeep`). */
+  upkeep: number;
+  /** Area change per land use this step, after − before, in kHa. */
+  landUseDelta: Record<LandUseType, number>;
+  /** Monthly step: month (0-11) of `next.year` the next call simulates. Annual step: always 0. */
+  month: number;
+  /** True when this step advanced `next.year` (every annual step; the December monthly step). */
+  yearRolled: boolean;
+  trace: SimTrace;
+  /** Narrative log lines produced this step, oldest first. */
+  logs: string[];
+  /** Chat-worthy messages (event banners, efficiency warnings), oldest first. */
+  chatMessages: StepYearChatMessage[];
+}
+
+/** Per-step probability that keeps an event's annual probability `annual` (monthly step: dt = 1/12). */
+export function monthlyTriggerChance(annual: number, dt: number = MONTHLY_DT): number {
+  const p = Math.max(0, Math.min(1, annual));
+  return 1 - Math.pow(1 - p, dt);
+}
+
+/**
+ * Monthly random-event roll: walks the pool in order (like `rollEvent`'s level<3 branch) and fires
+ * the first event whose draw lands under its monthly chance. One rng draw per eligible event.
+ */
+export function rollMonthlyEvent(
+  workingState: GameState,
+  events: RandomEvent[],
+  rng: Rng,
+  month: number,
+  language: Language = 'es',
+  deferred?: DeferredAdjustment[],
+): { event: RandomEvent | null; logs: string[]; chatMessage: string | null } {
+  const logs: string[] = [];
+  for (const event of events) {
+    if (event.minLevel && workingState.currentLevel < event.minLevel) continue;
+    if (rng() >= monthlyTriggerChance(event.triggerChance(workingState))) continue;
+    const name = getEventName(event.id, language);
+    const description = getEventDescription(event.id, language, event.description);
+    const stamp = `${String(month + 1).padStart(2, '0')}/${workingState.year}`;
+    logs.push(language === 'en' ? `EVENT (${stamp}): ${name} - ${description}` : `EVENTO (${stamp}): ${name} - ${description}`);
+    applyRandomEventEffects(
+      event.effects(workingState), workingState.indicators, workingState.stellaSpecificState,
+      workingState.landUses, logs, language, deferred,
+    );
+    return { event, logs, chatMessage: `${name}: ${description}` };
+  }
+  return { event: null, logs, chatMessage: null };
+}
+
+/** Protected forest the player declared, never more than the protected forest that exists. */
+export function declaredProtectedOf(state: GameState): number {
+  return Math.min(state.declaredProtectedArea ?? 0, state.landUses[LandUseType.ProtectedNativeForest].area);
+}
+
+function areasOf(state: GameState): Record<LandUseType, number> {
+  const out = {} as Record<LandUseType, number>;
+  (Object.values(LandUseType) as LandUseType[]).forEach((k) => { out[k] = state.landUses[k].area; });
+  return out;
+}
+
+/**
+ * One step of the model. dt = 1 (3-level game, `stepYear`) or 1/12 (Territorio, `stepMonth`).
+ * Pure: never mutates its input; deterministic for a given (state, dt, rng, CP, opts).
+ * `rng = null` runs without events.
+ */
+export function advance(state: GameState, dt: number, rng: Rng | null, CP: ControlParams, opts: AdvanceOptions = {}): AdvanceResult {
+  if (!(dt > 0 && dt <= 1)) throw new RangeError(`advance: dt must be in (0, 1], got ${dt}`);
+  const annual = dt === 1;
+  const language = opts.language ?? 'es';
+  const month = annual ? 0 : opts.month ?? 0;
+  const draw = rng ?? NO_EVENTS;
+
+  const next: GameState = JSON.parse(JSON.stringify(state));
+  restorePactFunctions(next.pacts);
+
+  const logs: string[] = [];
+  const chatMessages: StepYearChatMessage[] = [];
+  const before: Indicators = { ...next.indicators };
+  const areasBefore = areasOf(next);
+
+  // Calendar (1.1 convention): the annual step simulates year state.year + 1, so it advances first.
+  if (annual) {
+    next.year++;
+    next.yearsSimulatedInCurrentLevel++;
+  }
+  const currentYear = next.year;
+  const currentLevel = next.currentLevel;
+  const tax = next.additionalTaxPressurePercentage;
+  const fiscalTermsActive = opts.fiscalTermsActive ?? currentLevel === 3;
+
+  // 0. Population growth (annual rate × dt).
+  next.stellaSpecificState.Poblacion_Total *= 1 + CP.Tasa_Crecimiento_Poblacional_Base * dt;
+
+  // 1. Confirm policy activation year (bookkeeping only — decay runs after the event roll).
+  (Object.values(next.policies) as PolicyState[]).forEach((p) => {
+    if (p.isActive && p.activationYear === undefined) {
+      p.activationYear = currentYear;
+      const policyName = getPolicyName(p.id, language);
+      if (annual) {
+        logs.push(language === 'en'
+          ? `Policy '${policyName}' activated and confirmed for year ${currentYear}.`
+          : `Política '${policyName}' activada y confirmada para el año ${currentYear}.`);
+      } else {
+        logs.push(language === 'en' ? `Policy '${policyName}' in force from ${currentYear}.` : `Política '${policyName}' vigente desde ${currentYear}.`);
+      }
+    }
+  });
+
+  // 2. Random event roll, applied BEFORE policy decay/costs/land use/finances/indicators. Effects on
+  //    indicators this step recomputes are held back and applied at step 11.5 (src/sim/deferred.ts).
+  next.currentEvent = null;
+  const deferred: DeferredAdjustment[] = [];
+  const events = opts.events ?? ALL_RANDOM_EVENTS;
+  const areasBeforeEvent = areasOf(next);
+  const rolled = annual
+    ? rollEvent(next, events, next.yearsSimulatedInCurrentLevel - 1, draw, language, deferred)
+    : rollMonthlyEvent(next, events, draw, month, language, deferred);
+  logs.push(...rolled.logs);
+  if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
+  if (rolled.event) next.currentEvent = rolled.event;
+  const flows: LandFlow[] = [];
+  const areasAfterEvent = areasOf(next);
+  (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
+    const lost = areasBeforeEvent[k] - areasAfterEvent[k];
+    if (lost > 0) flows.push({ from: k, to: 'fallow', kHa: lost });
+  });
+
+  // 3. Policy "years active" counters (+dt) and efficiency decay.
+  updatePolicyEfficiency(next.policies, next.stellaSpecificState, dt);
+  const stella: StellaStocks = next.stellaSpecificState;
+
+  // 4. Annual costs (policy + pacts), on PBI_Real before this step's growth (× dt in step 7).
+  const totalPolicyCost = computeTotalPolicyCost(next.policies, stella.PBI_Real);
+  const totalPactCost = computeTotalPactCost(next.pacts);
+
+  // 5. Pact effects: each returns the value one full year of the pact would reach (moved × dt), and the
+  //    land-use change-factor multipliers. Since model 1.1 no pact writes B, F or E here (`impulses`).
+  let landUseChangeFactors: LandUseChangeFactors = { ...DEFAULT_LAND_USE_CHANGE_FACTORS };
+  (Object.values(next.pacts) as Pact[]).forEach((pact) => {
+    if (!pact.isActive) return;
+    const effects = pact.effects(next.indicators, stella);
+    if (effects.indicators) {
+      (Object.keys(effects.indicators) as (keyof Indicators)[]).forEach((k) => {
+        const value = effects.indicators![k];
+        // Derived indicators are applied after the recomputation, at step 11.5 (src/sim/deferred.ts).
+        if (typeof value === 'number' && !isDerivedIndicator(k as string)) next.indicators[k] = toward(next.indicators[k], value, dt);
+      });
+    }
+    if (effects.stellaStocks) {
+      (Object.keys(effects.stellaStocks) as (keyof StellaStocks)[]).forEach((k) => {
+        const value = effects.stellaStocks![k];
+        const current = stella[k];
+        // Annual step: the old `{ ...stella, ...effects.stellaStocks }` merge (a pact may set a key the state lacks).
+        if (typeof value === 'number' && (annual || typeof current === 'number')) (stella as any)[k] = annual ? value : toward(current as number, value, dt);
+      });
+    }
+    if (effects.landUseChangeFactors) {
+      const f = effects.landUseChangeFactors;
+      landUseChangeFactors = {
+        tasa_BNNP_a_BNP: landUseChangeFactors.tasa_BNNP_a_BNP * (f.tasa_BNNP_a_BNP ?? 1),
+        tasa_BNNP_a_CC: landUseChangeFactors.tasa_BNNP_a_CC * (f.tasa_BNNP_a_CC ?? 1),
+        tasa_BNNP_a_CA: landUseChangeFactors.tasa_BNNP_a_CA * (f.tasa_BNNP_a_CA ?? 1),
+        tasa_CA_a_BNNP: landUseChangeFactors.tasa_CA_a_BNNP * (f.tasa_CA_a_BNNP ?? 1),
+        tasa_CC_a_CA: landUseChangeFactors.tasa_CC_a_CA * (f.tasa_CC_a_CA ?? 1),
+      };
+    }
+  });
+
+  // 6. Land-use transitions: the annual transfer × dt.
+  const annualFlows = computeLandUseFlows(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
+  flows.push(
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ProtectedNativeForest, kHa: annualFlows.BNNP_to_BNP * dt },
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ConventionalCrops, kHa: annualFlows.BNNP_to_CC * dt },
+    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.AgroecologicalCrops, kHa: annualFlows.BNNP_to_CA * dt },
+    { from: LandUseType.AgroecologicalCrops, to: LandUseType.UnprotectedNativeForest, kHa: annualFlows.CA_to_BNNP * dt },
+    { from: LandUseType.ConventionalCrops, to: LandUseType.AgroecologicalCrops, kHa: annualFlows.CC_to_CA * dt },
+    { from: LandUseType.RestorationForest, to: LandUseType.ProtectedNativeForest, kHa: annualFlows.RES_to_BNP * dt },
+  );
+  const annualLandUses = updateLandUse(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
+  (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
+    next.landUses[k].area = Math.max(0, toward(next.landUses[k].area, annualLandUses[k].area, dt));
+  });
+  // Public restoration that matures into protected forest stays public (model 1.1, phase 34, T-07),
+  // kept within the protected forest that exists. Monthly step only, as in 1.1 (the old stepYear never
+  // touched it; Territorio is the only game with declared land).
+  if (!annual) {
+    if (annualFlows.RES_to_BNP > 0) next.declaredProtectedArea = (next.declaredProtectedArea ?? 0) + annualFlows.RES_to_BNP * dt;
+    if (next.declaredProtectedArea !== undefined) {
+      next.declaredProtectedArea = Math.min(next.declaredProtectedArea, next.landUses[LandUseType.ProtectedNativeForest].area);
+    }
+  }
+
+  // 7. Public finances: the annual flows × dt. A requested loan: annual step inside updateEconomy (1.1
+  //    order), monthly step credited whole after the flows.
+  const loanInEconomy = annual ? next.loanRequestedThisRound : 0;
+  const econ = updateEconomy(stella, next.policies, currentLevel, tax, totalPolicyCost, totalPactCost, loanInEconomy, CP, language);
+  if (annual) {
+    // The old stepYear merge: every stock updateEconomy returns, as is.
+    Object.assign(stella, econ.stella);
+  } else {
+    stella.PBI_Real = toward(stella.PBI_Real, econ.stella.PBI_Real, dt);
+    stella.Reservas_del_Tesoro = toward(stella.Reservas_del_Tesoro, econ.stella.Reservas_del_Tesoro, dt);
+    stella.Deuda = Math.max(0, toward(stella.Deuda, econ.stella.Deuda, dt));
+  }
+  if (econ.loanProcessedLog) {
+    logs.push(econ.loanProcessedLog);
+    next.loanRequestedThisRound = 0;
+  }
+  let upkeep = 0;
+  if (opts.publicUseUpkeep) {
+    // What the state protects, it also maintains: only the forest the state declared (T-07).
+    const publicArea = declaredProtectedOf(next)
+      + next.landUses[LandUseType.PublicWetland].area
+      + next.landUses[LandUseType.RestorationForest].area
+      + next.landUses[LandUseType.EnergyPark].area;
+    upkeep = publicArea * CP.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual * dt;
+    stella.Reservas_del_Tesoro -= upkeep;
+  }
+  if (!annual && next.loanRequestedThisRound > 0) {
+    const loan = next.loanRequestedThisRound;
+    stella.Reservas_del_Tesoro += loan;
+    stella.Deuda += loan;
+    logs.push(language === 'en'
+      ? `Loan of ${loan.toFixed(0)} processed. Debt and Reserves updated.`
+      : `Préstamo de ${loan.toFixed(0)} procesado. Deuda y Reservas actualizadas.`);
+    next.loanRequestedThisRound = 0;
+  }
+
+  // 8. Indicators (each reads the ones already updated this step). Active pacts enter through
+  //    `impulses`, inside each function's policy impact (model 1.1, N-03).
+  next.indicators.biodiversity = toward(
+    next.indicators.biodiversity,
+    calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP, next.pacts),
+    dt,
+  );
+  next.indicators.foodSecurity = toward(
+    next.indicators.foodSecurity,
+    calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts),
+    dt,
+  );
+  next.indicators.economicSecurity = toward(
+    next.indicators.economicSecurity,
+    calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, tax, CP, fiscalTermsActive, next.pacts),
+    dt,
+  );
+  stella.Conflicto_social = toward(
+    stella.Conflicto_social,
+    calculateSocialConflictChange(next.policies, next.landUses, stella, next.indicators, currentLevel, tax, CP, fiscalTermsActive),
+    dt,
+  );
+  next.indicators.socialWellbeing = 100 - stella.Conflicto_social;
+  stella.Colapso_politico = toward(stella.Colapso_politico, calculatePoliticalCollapseChange(stella, next.indicators, CP), dt);
+  next.indicators.politicalStability = 100 - stella.Colapso_politico;
+
+  // 9. CO2eq per capita — a function of the current state, recomputed every step.
+  next.indicators.co2EqEmissionsPerCapita = computeCarbonBalance(next.landUses, next.policies, currentLevel, stella.Poblacion_Total, CP);
+
+  // 10. Sectoral political pressures (read the CO2/biodiversity values just updated): annual impulse × dt.
+  const pressures = updatePressures(
+    { ppAgricola: stella.PP_AGRICOLA, ppAmbientalista: stella.PP_AMBIENTALISTA, ppSocial: stella.PP_SOCIAL },
+    next.policies, next.indicators, currentLevel, tax, CP,
+  );
+  stella.PP_AGRICOLA = toward(stella.PP_AGRICOLA, pressures.ppAgricola, dt);
+  stella.PP_AMBIENTALISTA = toward(stella.PP_AMBIENTALISTA, pressures.ppAmbientalista, dt);
+  stella.PP_SOCIAL = toward(stella.PP_SOCIAL, pressures.ppSocial, dt);
+
+  // 11. Sync derived indicators from Stella stocks, then clamp every 0-100 indicator (final step, not
+  //     per term — docs/audit-equations.md item I-3).
+  next.indicators.pbi = stella.PBI_Real;
+  next.indicators.debt = stella.Deuda;
+  next.indicators.treasuryReserves = stella.Reservas_del_Tesoro;
+  next.indicators.ppAgricola = stella.PP_AGRICOLA;
+  next.indicators.ppAmbientalista = stella.PP_AMBIENTALISTA;
+  next.indicators.ppSocial = stella.PP_SOCIAL;
+  (Object.keys(next.indicators) as (keyof Indicators)[]).forEach((key) => {
+    if (!['co2EqEmissionsPerCapita', 'pbi', 'treasuryReserves', 'debt', 'generalScore'].includes(key as string)) {
+      next.indicators[key] = clamp100(next.indicators[key]) as never;
+    }
+  });
+
+  // 11.5 Pact and event effects on the indicators this step recomputed (src/sim/deferred.ts). A pact's
+  //      effect is a rate per year of membership (× dt); an event's is a one-off shock and lands whole.
+  const beforePacts: Indicators = { ...next.indicators };
+  applyPactEffectsOnDerived(next.pacts, next.indicators, stella);
+  if (!annual) {
+    (Object.keys(next.indicators) as (keyof Indicators)[]).forEach((k) => {
+      if (isDerivedIndicator(k as string)) next.indicators[k] = toward(beforePacts[k], next.indicators[k], dt) as never;
+    });
+  }
+  applyDeferredAdjustments(next.indicators, deferred);
+  if (opts.extraDeferred?.length) applyDeferredAdjustments(next.indicators, opts.extraDeferred);
+
+  // 12. Score.
+  next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);
+
+  // 13. Game over. `gameOverReason` stays Spanish-only on purpose (compared as a string in App.tsx and
+  //     geminiService.ts; never rendered) — docs/DESIGN_DECISIONS_LOG.md, phase 12.
+  const gameOverReason = evaluateGameOver(next);
+  if (gameOverReason) next.gameOverReason = gameOverReason;
+
+  // 14. Policy-efficiency-crossed-40%-threshold warning.
+  const warning = checkEfficiencyWarning(next.policies, language);
+  if (warning) {
+    chatMessages.push({ text: warning, emphasisType: 'policy_efficiency_warning' });
+    logs.push(warning);
+  }
+
+  // Bookkeeping of the 2.0 sub-state (only the clock in phase 35) and the monthly calendar.
+  if (next.model) next.model.t += dt;
+  let nextMonth = 0;
+  let yearRolled = annual;
+  if (!annual) {
+    nextMonth = month + 1;
+    if (nextMonth >= MONTHS_PER_YEAR) {
+      nextMonth = 0;
+      next.year++;
+      next.yearsSimulatedInCurrentLevel++;
+      yearRolled = true;
+    }
+  }
+
+  const areasAfter = areasOf(next);
+  const landUseDelta = {} as Record<LandUseType, number>;
+  (Object.values(LandUseType) as LandUseType[]).forEach((k) => { landUseDelta[k] = areasAfter[k] - areasBefore[k]; });
+
+  return {
+    next,
+    event: rolled.event,
+    flows,
+    upkeep,
+    landUseDelta,
+    month: nextMonth,
+    yearRolled,
+    trace: buildTrace(currentYear, before, next.indicators),
+    logs,
+    chatMessages,
+  };
+}

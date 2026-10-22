@@ -9,7 +9,7 @@
  * analyses can stratify by model. Never reuse a version string for different equations.
  * (v6 / phase 32, mejora-general/files/32_versionado_del_modelo.md)
  */
-export const MODEL_VERSION = '1.1' as const;
+export const MODEL_VERSION = '2.0-dev' as const;
 
 /**
  * Per-game override, only used if the team decides to keep the 3-level game on an older model

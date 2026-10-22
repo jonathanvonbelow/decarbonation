@@ -1,0 +1,74 @@
+# `src/sim/v2/` — motor del modelo 2.0
+
+Esqueleto del modelo 2.0 de DecarboNation (paquete v6, `mejora-general/files/35`–`51`). El prototipo ejecutable de
+todas las ecuaciones es `scripts/reference/modelo_v2.py`; sus valores sin eventos están en
+`scripts/reference/golden_v2.csv`. **El prototipo manda en las ecuaciones, el arnés (`npm run sim:check`) en la
+calibración.**
+
+## Módulos
+
+| Archivo | Contenido |
+|---|---|
+| `math.ts` | `sigmoid`, `logit`, `target100`, `relax` (discretización exacta), `sLow`/`sHigh`, `phiEffort`, `toLogitDelta` |
+| `params.ts` | `PARAMS_V2`: tablas del modelo (copia fiel de `P` del prototipo), `PID` (códigos cortos → enum `Policy`) |
+| `anchors.ts` | `computeAnchors` / `createModelState`: anclas del estado inicial de cada nivel (`GameState.model`) |
+| `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
+
+`stepYear` (`src/sim/index.ts`) es `advance(…, dt = 1)`; `stepMonth` (`src/sim/monthly.ts`) es
+`advance(…, dt = 1/12, { month })`. `createInitialState` guarda las anclas en `gameStatePatch.model`.
+
+## Orden de operaciones 2.0 (objetivo)
+
+1. población `P *= (1 + g_P)^dt`
+2. relojes de políticas `rampTime` / `fatigueTime` (36)
+3. eventos aleatorios: sorteos independientes, choques de nivel, suelo → barbecho (46)
+4. eficiencia efectiva por política y canal (36)
+5. suelo: matriz de transición conservativa, flujos realizados en ha (37)
+6. economía: PBI, recaudación, gasto base, políticas, pactos, deuda (44)
+7. carbono: energía, flujo AFOLU, LUC de los flujos realizados (38)
+8. indicadores B → F → E → C (W) → Pc (St) → presiones (39–42, 45)
+9. contabilidad: emisiones acumuladas, historia fiscal, años productivos, fin de partida
+
+Hoy (`MODEL_VERSION = '2.0-dev'`, fase 35) `advance` todavía ejecuta las funciones 1.1 en el orden 1.1 (pasos
+0–14 + 11.5 del viejo `stepYear`, ver el comentario de cabecera de `core.ts`): `stepYear` y `stepMonth` dan
+exactamente los números de antes. Lo único que todavía depende de que `dt` sea el paso anual — porque 1.1 tenía dos
+cuerpos distintos — es: el `toward` de Euler de los stocks 1.1 (con `dt = 1` toma el valor anual tal cual), el sorteo
+de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fases 39–46.
+
+## Qué fase implementa qué
+
+| Fase | Paso de `advance` / módulo | Estado |
+|---|---|---|
+| 35 | estructura, `math`, `params`, `anchors`, `advance` con funciones 1.1, golden test apagado | hecho |
+| 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `costShare`) | pendiente |
+| 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | pendiente |
+| 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`) | pendiente |
+| 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`) | pendiente |
+| 40 | B por especies-área (`habitat`, `zSAR`, `qB`) | pendiente |
+| 41 | F por balance oferta/demanda (`food`, `foodPerCapita0`) | pendiente |
+| 42 | presiones en logit, ancladas (`pressure`) | pendiente |
+| 43 | pactos como desplazamiento de objetivo (`pacts`) | pendiente |
+| 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`) | pendiente |
+| 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
+| 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
+
+## Convenciones
+
+- Ningún número del modelo vive en una función: tablas en `params.ts`, escalares que el facilitador puede mover en
+  `CONTROL_PARAMS` / `ControlParams` (`src/constants.ts`, `src/types.ts`), con unidad, fuente o "criterio experto" e ID
+  de fase. Los coeficientes que el prototipo escribe dentro de sus funciones pasan a `params.ts` en la fase que porta
+  cada función.
+- Pureza: nada aquí importa React ni usa `Math.random` / `Date.now`; la aleatoriedad entra por `Rng`. `advance` nunca
+  muta su entrada (`tests/sim/core.spec.ts`).
+- Pactos con los IDs del código (`biodiversityTreaty`, `globalCarbonAccord`, `techTransferInitiative`), no los del
+  prototipo (`treaty` / `accord` / `tech`).
+- Las anclas usan `CP.Poblacion_Inicial` (400 000); el motor 1.1 sigue leyendo `Poblacion_Total` (10 millones) hasta
+  la fase 38.
+- Golden: `tests/sim/golden.v2.spec.ts` (apagado con `GOLDEN_ACTIVE = false` hasta la fase 46) compara B, F, E, W, St
+  y c de `playLevel` (`tests/sim/testHelpers.ts`, estrategias de `scripts/harness/strategies.ts`, sin eventos) con
+  `golden_v2.csv`. Si una fase cambia una ecuación o un parámetro del prototipo, regenera el golden en el mismo commit
+  (`python scripts/reference/modelo_v2.py --golden > scripts/reference/golden_v2.csv`).
+
+## Recortes
+
+Ninguno en la fase 35.

@@ -245,7 +245,10 @@ export const INITIAL_STELLA_STOCKS: StellaStocks = {
   Conteo_Inver_Extran: 0, Conteo_Subsidios: 0, MEAN_colapso: 0,
   Poblacion_Total: 10000000,
   PP_AGRICOLA: 30, PP_AMBIENTALISTA: 30, PP_SOCIAL: 30,
-  Colapso_politico: 0,
+  // Nivel 1 arranca en 5 (antes 0), como el prototipo (LEVELS[1].Pc = 5): con 0 el logit del colapso
+  // queda pegado al recorte de logit() (−9,2) y el objetivo 2.0 no podría moverse (fase 35 §8;
+  // DESIGN_DECISIONS_LOG 2026-10-22). Único cambio numérico de la fase. Niveles 2 y 3: 30.
+  Colapso_politico: 5,
   Deuda: 0,
   Flag_Prestamo_Tomado_Stock: 0,
   PBI_Real: 10000,
@@ -483,6 +486,26 @@ export const CONTROL_PARAMS: ControlParams = {
   Factor_Desplazamiento_Emisiones_Parque_Energetico: 0.6,
   // La restauración madura hacia bosque nativo: 4 % del área por año, ~25 años para convertirse.
   Tasa_de_RES_a_BNNP_Base: 0.04,
+
+  // --- Modelo 2.0 (fase 35, 35_motor_v2_estructura.md §5) ---
+  // Escalares que el facilitador podrá mover en vivo (los expone la fase 50). En la fase 35 todavía no
+  // los lee ninguna ecuación del motor: cada uno entra en la fase que porta su ecuación (36–44).
+  // Las tablas del modelo 2.0 viven en src/sim/v2/params.ts.
+  Poblacion_Inicial: 400_000,             // habitantes; 00_INDICE_v6 decisión 4 (densidad 67–80 hab/km²). Lo usan las anclas (fase 35) y Poblacion_Total desde la fase 38
+  Velocidad_Ajuste_Biodiversidad: 0.12,   // k_B, fracción anual del camino al objetivo logístico (fase 39–40). Criterio experto
+  Velocidad_Ajuste_Seg_Alimentaria: 0.35, // k_F (fase 41). Criterio experto
+  Velocidad_Ajuste_Seg_Economica: 0.30,   // k_E (fase 39). Criterio experto
+  Velocidad_Ajuste_Conflicto: 0.35,       // k_C (fase 39/45). Criterio experto
+  Velocidad_Ajuste_Colapso: 0.25,         // k_P (fase 39). Criterio experto
+  Velocidad_Ajuste_Presiones: 0.35,       // k_pi (fase 42). Criterio experto
+  Eficiencia_Minima_Politicas: 0.35,      // piso institucional de la eficiencia con fatiga, 0-1 (fase 36). Criterio experto
+  Recuperacion_Politicas_Anios: 5,        // años; constante de recuperación del desgaste en reposo (fase 36). Criterio experto
+  // Gasto público base, fracción del PBI por año (fase 44). ATENCIÓN: es el parámetro más sensible del
+  // modelo (paper técnico §9): +20 % deja a la cartera verde con −14 puntos de seguridad económica en N2.
+  // No moverlo sin correr `npm run sim:check` completo.
+  Gasto_Publico_Base_Nivel_1: 0.13,
+  Gasto_Publico_Base_Nivel_2: 0.125,
+  Gasto_Publico_Base_Nivel_3: 0.125,
 };
 
 

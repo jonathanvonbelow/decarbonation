@@ -31,13 +31,13 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 34 | T-06: el reset de eficiencia dura un solo paso | El arreglo apunta a la UI y al re-armado del aviso del 40 % | Resuelta (fase 34, `efficiencyFromCounter`) |
 | 34 | El arreglo de la sequía quita el +0,02 en N2 (150/600 = 0,25, no es > 0,25) | Documentar | Documentada (fase 34) |
 | 34 | Hay copias muertas del motor en `App.tsx:99-352` y `EquationsManual.tsx` referencia parámetros que se borran | Borrar las copias y limpiar el manual | Resuelta (fase 34) |
-| 37 | La spec netea solo el pool; el prototipo netea todos los pares (c₀ depende de eso) | Seguir el prototipo y corregir el texto | Pendiente |
+| 37 | La spec netea solo el pool; el prototipo netea todos los pares (c₀ depende de eso) | Seguir el prototipo y corregir el texto | Seguido en la corrida en seco de `src/sim/v2/anchors.ts` (fase 35, c₀ = prototipo); pendiente en la matriz (37) |
 | 37 | Las situaciones usan pares ±; la regla "positivo sale de FAL" depende del orden | Pares = transferencia directa origen→destino; FAL solo para efectos sueltos | Resuelta en el prototipo (fase 32); pendiente en TS |
 | 37 | El parámetro `Tasa_de_RES_a_BNNP_Base` en realidad va a BNP | Renombrar o comentar | Pendiente |
 | 38 | Innovación da 4,75, no "≈ 4,9"; las claves de pactos s/u difieren de renewables/efficiency | Gana el prototipo | Pendiente |
 | 40 | Territorio usa `neighbors8`; K pide 4-conexo | 4-conexo según la spec | Pendiente |
 | 43 | Costo anual de pactos 30/50/100 → 0,002/0,004/0,008·PBI: baja sin decirlo | Documentar | Pendiente |
-| 43 | Las claves `treaty`/`accord`/`tech` del prototipo no son las del código (`biodiversityTreaty`/…) | `PARAMS_V2.pacts` usa las del código | Pendiente |
+| 43 | Las claves `treaty`/`accord`/`tech` del prototipo no son las del código (`biodiversityTreaty`/…) | `PARAMS_V2.pacts` usa las del código | Resuelta en `PARAMS_V2` (fase 35; `s`/`u` → `renewables`/`efficiency`, `m_protect`/`m_deforest` → `protectFactor`/`deforestFactor`); el modelo de pactos es de la 43 |
 | 43 | `restorePactFunctions` no existe; la restauración está inline en 3 lugares | La crea la fase 34 y la borra la 43 | Creada (fase 34); la borra la 43 |
 | 44 | `breach += dt` quiebra en el mes 25, no en el 24 (1/12 × 24 ≈ 1,9999…) | Prototipo: tolerancia `breach ≥ 2 − 1e-9` (vale para cualquier `dt`); TS: misma tolerancia o pasos enteros | Resuelta en el prototipo (fase 32); pendiente en TS |
 | 44 | Préstamo habilitado en N1/N2 desde 2035 (`App.tsx:1139`) | Documentar | Pendiente |
@@ -51,6 +51,13 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 48 | El prototipo no genera bandas, Brier ni regret | Las bandas se generan con el arnés TS | Pendiente |
 | 49 | `Referencia_Max_CO2_per_Capita_Puntaje` también se usa en `App.tsx:358,368` y `FacilitatorPanel` | Limpiarlo ahí también | Pendiente |
 | 50 | Términos de búsqueda: "40.000" da falso positivo; falta `docentes-consignas.html` | Ajustar la búsqueda | Pendiente |
+| 35 | `stepYear` (`index.ts`) y `stepMonth` (`monthly.ts`) repetían el cuerpo (pasos 0–14 + 11.5) | Un solo cuerpo, `advance(state, dt, …)` en `src/sim/v2/core.ts`; los dos quedan como envoltorios | Resuelta (fase 35). Quedan 4 ramas por `dt` heredadas de 1.1 (Euler `toward` con `dt = 1` exacto, sorteo anual/mensual, préstamo, calendario): las borran 39–46 |
+| 35 | Con `MODEL_VERSION = '2.0-dev'` el arnés pasa a evaluar C9 (mayor ≥ 2): el paso mensual sigue siendo Euler | Esperado: lo resuelve la fase 46 (`relax`) | Documentada (fase 35): C9 SKIP → FAIL con el mismo valor 1,529; no es regresión (antes no se evaluaba) |
+| 35 | `Colapso_politico` = 5 en N1 (§8) sí cambia números 1.1 | Única diferencia aceptada de la fase | Documentada (fase 35): St de N1 −5 en toda la partida; ninguna victoria, ruta, puntaje ni criterio cambia |
+| 35 | La spec §4 no lista todo `P`: `pop0`, `pop_growth`, `eta_min`, `rho_recovery`, `k`, `g0`, `tax0`, `gamma`, `i`, `alpha` | Son escalares de `CONTROL_PARAMS` (nuevos o ya existentes con el mismo valor); `BREACH_EPS` va a `PARAMS_V2.finance.breachEps`; los coeficientes internos de las funciones del prototipo pasan a `params.ts` en la fase que porta cada función | Documentada (fase 35, mapa en la cabecera de `params.ts`) |
+| 35 | Las anclas usan 400 000 habitantes (`Poblacion_Inicial`) pero el motor 1.1 sigue con `Poblacion_Total` = 10 millones | La fase 38 iguala `Poblacion_Total` a `Poblacion_Inicial` | Pendiente (38) |
+| 35 | c₀ del prototipo: 5,947 / 7,135 / 5,733 (la spec 38 dice "≈ 6,0 / 7,1 / 5,7") | Gana el prototipo; `tests/sim/core.spec.ts` fija los valores | Documentada (fase 35) |
+| 35 | `golden_v2.csv` tiene columnas extra (`pa`, `pe`, `ps`, `DY`, `S`) además de las 9 del test | El test lee solo las 9; las demás quedan para depurar | Documentada (fase 35) |
 | 34 | `evenEffort` en todos los niveles cambia N2/N3: antes una política recién activada tenía esfuerzo 0 hasta mover los sliders (P-2) | Se sigue la spec; el aviso "sin esfuerzo" queda para cuando el jugador baja todo a 0 | Documentada (fase 34) |
 | 34 | `INSTRUMENT_IMPACT_HINTS` no se muestra en ningún panel (Dashboard recibe la prop y no la usa) | El aviso 1.1 va bajo el subtítulo del panel de instrumentos y en Territorio bajo "Esfuerzo por instrumento" | Documentada (fase 34); la fase 36 vuelve reales las pistas |
 | 34/46 | T-12: ninguna situación del catálogo tiene efectos sobre indicadores derivados; un diferido sobre `treasuryReserves`/`pp*` solo toca la copia en `indicators` (igual que los eventos) | Mecanismo listo y probado con una situación sintética; lo reemplaza la fase 46 | Documentada (fase 34) |

@@ -105,6 +105,7 @@ guarda la versión; ningún análisis mezcla versiones sin estratificar. Nunca s
 |---|---|---|
 | Modelo 1.0 — commit 144c321 — estado auditado el 19/10/2026 | `144c321`, tag local `model-v1.0` (pendiente de `git push origin model-v1.0`) | Modelo con el que se recolectaron todos los datos de talleres hasta la fase 32 del paquete v6. Las filas existentes quedan con `'1.0'` (default de la migración `supabase/model_version_migration.sql`). |
 | Modelo 1.1 — correcciones de la auditoría (fase 34, 22/10/2026) | rama `v6-modelo-1-1`, tag local `model-v1.1` | Cambia trayectorias en los dos juegos; detalle por ID en la sección siguiente y balance en `reports/balance-1.1.md`. |
+| Modelo 2.0 — en desarrollo, `'2.0-dev'` (fase 35, 22/10/2026) | rama `v6-modelo-v2` | Estructura del motor 2.0 (`src/sim/v2/`); las ecuaciones siguen siendo las 1.1. Única diferencia numérica: el Nivel 1 arranca con `Colapso_politico` = 5 (ver la sección de la fase 35). Las fases 36–46 reemplazan cada submodelo; la versión `2.0` se publica en la fase 51. |
 
 ## Modelo 1.1 — correcciones de la auditoría (fase 34, 2026-10-22)
 
@@ -122,4 +123,16 @@ completo (`reports/balance-1.1.md`, comparado con `reports/balance-1.0.md`).
 | T-07 | `GameState.declaredProtectedArea`: el bosque protegido que declara el jugador (más lo que madura de la restauración pública) se cuenta aparte. `publicNaturePct` y el mantenimiento usan ese valor (acotado al BNP existente), no todo el BNP. `cond.publicNature` 12 → 4,5 %. | `src/sim/territory.ts`, `src/sim/monthly.ts`, `src/territorio/routes.ts` | Ninguno (solo Territorio). |
 | T-12 | Los efectos de las situaciones sobre indicadores derivados (CO₂, estabilidad, dinero, presiones) ya no se aplican en el acto: van a `Session.pendingDeferred` y `stepMonth` los aplica en el paso 11.5 (`options.extraDeferred`). Antes los borraba el recálculo del mes siguiente. | `src/territorio/situations/index.ts`, `session.ts`, `src/sim/monthly.ts` | Ninguno (solo Territorio). |
 | N-08 | Interfaz honesta: el panel del facilitador deja de exponer 8 claves sin efecto; el manual del facilitador y la hoja docente dejan de describir sinergias de carbono inexistentes, una presión con curva S y una eficiencia "afectada por el entorno político"; se borran de `CONTROL_PARAMS`/`ControlParams` las 70 claves que ningún camino del motor lee; aviso bajo las pistas de instrumentos. `tests/sim/facilitatorParams.spec.ts` comprueba que cada clave del panel mueve algo. | `FacilitatorPanel.tsx` (`paramGroups.ts`), `FacilitatorManual.tsx`, `EquationsManual.tsx`, `descriptions.ts`, `docentes-ecuaciones.html` | Ninguno numérico. |
+
+## Modelo 2.0-dev — estructura, parámetros y anclas (fase 35, 2026-10-22)
+
+Spec: `mejora-general/files/35_motor_v2_estructura.md`. La fase mueve el código, no las ecuaciones: `stepYear` y
+`stepMonth` pasan a ser envoltorios de `advance(state, dt, …)` (`src/sim/v2/core.ts`), que llama a las funciones 1.1
+en el orden 1.1. Verificado con `npm run sim:check -- --quick`: con `MODEL_VERSION` todavía en 1.1, el JSON del reporte
+es idéntico byte a byte al de antes de la fase; los criterios C1–C8 dan los mismos valores con `'2.0-dev'`.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| — (estructura) | Integrador único `advance(state, dt, rng, CP, opts)`; `PARAMS_V2` (tablas del prototipo), `math.ts`, anclas del estado inicial en `GameState.model` (`computeAnchors`, con la corrida en seco de la matriz de suelo del prototipo para c₀), tipos `ModelAnchors` / `ModelState` / `TargetImpulse`, `PolicyState.rampTime` / `fatigueTime`, 12 escalares nuevos en `CONTROL_PARAMS` que todavía no lee ninguna ecuación. | `src/sim/v2/*`, `src/sim/index.ts`, `src/sim/monthly.ts`, `src/types.ts`, `src/constants.ts` | Ninguno. |
+| — (§8) | El Nivel 1 arranca con `Colapso_politico` = 5 (antes 0; `INITIAL_STELLA_STOCKS`), para que el logit del colapso sea finito, como en el prototipo. | `src/constants.ts` | Estabilidad política de N1 5 puntos más baja en toda la partida (95 al inicio; p50 final de `do_nothing` 89,7 → 84,7): en N1 el colapso nunca toca el piso 0, así que el corrimiento se mantiene entero. No cambia ninguna victoria, ruta, puntaje ni criterio del arnés (N1 no tiene piso de estabilidad). N2, N3 y Territorio (que usa el nivel 2) no cambian. |
 
