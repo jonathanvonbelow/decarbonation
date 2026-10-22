@@ -6,7 +6,14 @@
  * UI. On network errors / 5xx the row is queued in localStorage and retried by `flushFeedbackQueue`.
  *
  * The table has no SELECT policy, so inserts must ask for `Prefer: return=minimal`.
+ *
+ * v6 / phase 32: rows carry `model_version`. A project that has not run
+ * supabase/model_version_migration.sql answers 400 (PGRST204) to the unknown column, and a rejected
+ * row is dropped (it is never queued), so only in that case the row is resent once without the
+ * column (sendWithModelVersion): the answers matter more than the version tag. Any other 4xx (e.g.
+ * the version failing the CHECK) is rejected as before. Queued rows keep their tag.
  */
+import { MODEL_VERSION_RE, sendWithModelVersion } from '../../services/modelVersionColumn';
 import {
   CONTEXTOS, ELEMENTOS, FORMATOS, MAX_ELEMENTOS, MAX_ROL_OTRO, MAX_TEXT, MEJORAS, ROLES,
   type TerritorioFeedbackRow,
@@ -73,6 +80,9 @@ export function sanitizeRow(row: TerritorioFeedbackRow): TerritorioFeedbackRow {
     uso_taller: likert(row.uso_taller),
     formatos_uso: many(FORMATOS, row.formatos_uso),
     taller_conceptos_texto: text(row.taller_conceptos_texto, MAX_TEXT),
+    model_version: MODEL_VERSION_RE.test(row.model_version ?? '') && (row.model_version ?? '').length <= 16
+      ? row.model_version
+      : null,
   };
 }
 
@@ -90,8 +100,9 @@ function writeQueue(rows: TerritorioFeedbackRow[]): void {
 }
 
 type Attempt = 'sent' | 'rejected' | 'retry';
+type PostResult = { attempt: Attempt; error: { code?: string; message?: string } | null };
 
-async function post(row: TerritorioFeedbackRow): Promise<Attempt> {
+async function post(row: Record<string, unknown>): Promise<PostResult> {
   const { url, key } = config();
   try {
     const res = await fetch(`${url}/rest/v1/territorio_feedback`, {
@@ -105,11 +116,21 @@ async function post(row: TerritorioFeedbackRow): Promise<Attempt> {
       body: JSON.stringify(row),
       keepalive: true,
     });
-    if (res.ok) return 'sent';
-    return res.status >= 500 ? 'retry' : 'rejected';
+    if (res.ok) return { attempt: 'sent', error: null };
+    if (res.status >= 500) return { attempt: 'retry', error: null };
+    // PostgREST error body ({ code, message }); unreadable bodies are a plain rejection.
+    let error: PostResult['error'] = { message: `HTTP ${res.status}` };
+    try { error = (await res.json()) as PostResult['error']; } catch { /* no JSON body */ }
+    return { attempt: 'rejected', error };
   } catch {
-    return 'retry';
+    return { attempt: 'retry', error: null };
   }
+}
+
+/** Posts a row tagged with its model_version; resends it once untagged only if the column is missing. */
+async function postTagged(row: TerritorioFeedbackRow): Promise<Attempt> {
+  const { model_version, ...rest } = row;
+  return (await sendWithModelVersion('territorio_feedback', rest, model_version ?? null, post)).attempt;
 }
 
 export async function submitFeedback(input: TerritorioFeedbackRow): Promise<SubmitResult> {
@@ -119,7 +140,7 @@ export async function submitFeedback(input: TerritorioFeedbackRow): Promise<Subm
     return { ok: false, reason: 'no_config' };
   }
   const row = sanitizeRow(input);
-  const attempt = await post(row);
+  const attempt = await postTagged(row);
   if (attempt === 'sent') return { ok: true, queued: false };
   if (attempt === 'rejected') return { ok: false, reason: 'rejected' };
   writeQueue([...readQueue(), row]);
@@ -134,7 +155,7 @@ export async function flushFeedbackQueue(): Promise<void> {
   if (!queue.length) return;
   const pending: TerritorioFeedbackRow[] = [];
   for (const row of queue) {
-    if ((await post(row)) === 'retry') pending.push(row);
+    if ((await postTagged(row)) === 'retry') pending.push(row);
   }
   writeQueue(pending);
 }

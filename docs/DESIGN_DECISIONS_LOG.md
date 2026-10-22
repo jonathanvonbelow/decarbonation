@@ -1799,3 +1799,93 @@ Cierre: `vercel.json` con rewrites en orden (más específico primero, `.en.md` 
 ## 2026-10-13 — v5: contacto y licencia definidos
 
 El equipo confirmó el contacto (`fombis.von@gmail.com`) y que todo el material tiene licencia abierta. Se reemplazó el placeholder en `index.html`, `docentes-espacio.html` y `src/shared/contact.ts`, y el pie dice "Licencia abierta" / "Open license". Deja de ser un pendiente bloqueante de las fases 28, 30 y 31. Las variables `GEMINI_MODEL*` no hace falta cargarlas: todas tienen default en `src/services/geminiConfig.ts`.
+
+## 2026-10-22 — v6 fase 32: versión del modelo en los datos de investigación
+
+**Qué se hizo.**
+- Paquete v6 copiado a `mejora-general/files/` (`00_INDICE_v6.md` y `32`–`51`) y el material de referencia a
+  `scripts/reference/` (`modelo_v2.py`, `golden_v2.csv`, `export_situations.ts`, `README.md`). En el paquete la carpeta se
+  llama `referencia/`; en el repo, `scripts/reference/` como pide 32 §3.5. `scripts/reference/situations.json` y
+  `__pycache__/` van a `.gitignore`.
+- `src/sim/version.ts`: `MODEL_VERSION = '1.0'` y `MODEL_VERSION_BY_GAME` (los dos juegos en `MODEL_VERSION`: el 🟧 de la
+  decisión 3 del índice queda en su valor por defecto, "los dos juegos reciben el modelo 2.0"). Reexport en `src/sim/index.ts`.
+- `model_version` en `createGameSession` (`niveles`), `logPrediction` (`niveles`) y el cuestionario de Territorio:
+  `GameSummary.modelVersion` (`buildSummary`), `TerritorioFeedbackRow.model_version` (`toRowFields`) y `sanitizeRow`
+  (`text(row.model_version, 16)`).
+- `supabase/model_version_migration.sql` (idempotente, **sin aplicar**: pegar en el SQL Editor de Supabase).
+- `tests/sim/version.spec.ts`; casos nuevos en `tests/territorio/feedbackService.spec.ts` y `surveySummary.spec.ts`.
+- Sección "Historial de versiones del modelo" en `docs/audit-equations.md`.
+- `docs/v6-spec-vs-motor.md`: registro vivo de las discrepancias entre el paquete v6 y el motor, que completan las fases 33–51.
+- Tag local `model-v1.0` sobre `144c321`. **Pendiente de push:** `git push origin model-v1.0`.
+
+**Desvíos y discrepancias (gana el código).**
+- *`warnedOnce` en `feedbackService`.* 32 §3.3 supone que el cuestionario usa el patrón `warnedOnce`; no lo usa: `post()`
+  devuelve `'sent'`/`'rejected'`/`'retry'` y un 4xx (`'rejected'`) nunca se encola, se pierde. El reintento sin
+  `model_version` va en esa rama, una sola vez, tanto en `submitFeedback` como en `flushFeedbackQueue`, y **solo** si el
+  cuerpo del error dice que falta la columna (`PGRST204`/`42703` nombrando `model_version`). Cualquier otro 4xx —por
+  ejemplo, una versión que no cumple el `CHECK`— se rechaza como antes, para no guardar como 1.0 una fila de otro modelo.
+  Las filas encoladas conservan su etiqueta.
+- *También en `game_sessions` y `predictions`.* La spec solo pide el reintento en el cuestionario. Pero si se despliega
+  antes de migrar, `createGameSession` fallaría y la partida entera quedaría sin fila. Los tres caminos usan el mismo
+  helper sin dependencias, `src/services/modelVersionColumn.ts` (`sendWithModelVersion`): reenvía sin la columna solo en
+  ese caso, avisa una vez por consola y recuerda la tabla para no gastar dos pedidos en cada insert.
+- *`sanitizeRow`* anula (no trunca) un `model_version` que no cumple la expresión del `CHECK` (`MODEL_VERSION_RE`).
+- *SQL.* El `CHECK` de `territorio_feedback.model_version` va en un bloque `DO` con nombre propio
+  (`territorio_feedback_model_version_check`) en vez de inline en el `ADD COLUMN IF NOT EXISTS`: inline, si la columna ya
+  existía el `CHECK` no se crea nunca. La política de INSERT (`WITH CHECK (true)`) y el `GRANT INSERT` son de tabla, no
+  enumeran columnas: no hay que tocar RLS. Idempotencia revisada a mano (no hay Postgres local).
+- *Cuestionario sin partida.* Con `partida_estado = 'sin_partida'` la fila guarda la versión actual de Territorio (las
+  respuestas son sobre la app que se está usando). Un resumen guardado en `localStorage` antes de esta fase (TTL 12 h) no
+  trae `modelVersion`: se registra `'1.0'`, que es el modelo que lo produjo.
+- *`npm run sim`* da exactamente la misma salida antes y después (esta fase no toca ecuaciones).
+
+**Correcciones al prototipo `scripts/reference/modelo_v2.py`** (decisión del usuario: corregir y regenerar).
+1. `declare()` cobraba el lote dos veces (`pay()` ya descuenta y además `s["R"] -= cost`) y cobraba aunque no hubiera un
+   uso de origen con un lote completo. Ahora busca el origen primero y cobra una vez.
+2. Quiebra: `breach += dt` sumaba 1/12 en coma flotante y a los 24 meses daba 1,9999… < 2, así que se disparaba en el
+   mes 25. Ahora la comparación es `breach ≥ 2 − BREACH_EPS` (1e-9 años) y quiebra en el mes 24 con cualquier `dt`
+   (contar meses redondeados fallaba con pasos de menos de un mes). El port a TS (fase 44) debe usar la misma tolerancia
+   o contar pasos enteros.
+3. `add_situation_effect` ignoraba los efectos `landUseChange` y el campo `when`. Ahora: los pares ± de una opción son una
+   transferencia directa origen→destino (si el origen no alcanza, se mueve lo que hay y el destino no se completa desde
+   otro lado); un negativo suelto va a barbecho (FAL); un positivo suelto sale de FAL, luego PRG, luego CC (47 §2 / 37).
+   El área que mueve una situación nunca cuenta como área *declarada*; si BNP baja, `declared_BNP` se recorta a BNP.
+   `when` es representable: `export_situations.ts` traduce los 22 predicados del catálogo a `whenExpr` (nombres `A["…"]`,
+   B, F, E, W, St, pa, pe, ps, D, Y, R; `===` pasa a `==`; un `=` suelto, `&&` o `||` no se traduce) y el prototipo los
+   evalúa al sortear la llegada, como `rollSituation` (incluido no
+   gastar el segundo sorteo cuando no hay elegibles). Un predicado no traducible se avisa en consola y cuenta como verdadero.
+4. Los efectos sobre `Reservas_del_Tesoro` escalaban con √(Y/Y₀) también cuando eran negativos. Ahora solo escalan los
+   ingresos positivos, con el mismo factor que los costos (`min(2,5, max(1, √(Y/Y₀)))`, `cost_scale`); antes era √(Y/Y₀)
+   sin tope ni piso.
+
+**Cifras del prototipo que cambian.** `golden_v2.csv` **no cambió** (se regeneró y es idéntico: es de 3 niveles sin
+eventos, donde no actúa ninguna corrección) y la caracterización de 3 niveles (`python scripts/reference/modelo_v2.py`)
+tampoco. Cambia la parte Territorio (8 estrategias × 20 semillas, 360 meses; % de semillas que cumplen la ruta, medias al
+final), base de las fases 44, 47 y 49:
+
+| Estrategia | Ruta (antes → después) | B | F | E | W | c | lotes | D/Y |
+|---|---|---|---|---|---|---|---|---|
+| do_nothing | 0 → 0 | 38,3 → 37,6 | 33,0 → 35,5 | 28,3 → 29,4 | 37,7 → 40,9 | 6,9 → 6,8 | 0 | 0,00 |
+| conservation | cons 100 → 100 | 62,2 → 63,5 | 30,8 → 29,1 | 24,7 → 26,1 | 57,6 → 70,2 | 5,9 → 5,4 | 11,9 → 12,0 | 0,59 → 0,52 |
+| production | **prod 75 → 55** | 36,6 → 37,8 | 47,0 → 43,6 | 48,9 → 47,9 | 74,7 → 76,3 | 7,7 → 7,3 | 0 | 0,20 |
+| innovation | inno 100 → 100 | 44,3 → 45,5 | 38,3 → 36,2 | 30,2 → 31,5 | 71,2 → 79,0 | 4,1 → 3,9 | 4,0 | 0,58 → 0,46 |
+| settle_only | 0 → 0 | 40,4 → 41,4 | 38,8 → 35,4 | 31,4 → 30,7 | 65,7 → 70,0 | 7,0 → 6,5 | 0 | 0,00 |
+| cheap_production | 0 → 0 | 39,9 → 41,0 | 35,0 → 31,4 | 36,1 → 35,0 | 65,6 → 69,2 | 7,1 → 6,6 | 0 | 0,00 |
+| extractive | 0 → 0 | 29,9 → 31,1 | 47,7 → 42,3 | 47,3 → 46,2 | 55,9 → 58,0 | 8,1 → 7,3 | 0 | 0,54 → 0,55 |
+| buy_everything | 0 → 0 (quiebra 100 % → 100 %) | 55,8 → 55,4 | 24,9 → 19,4 | 10,9 → 12,0 | 27,0 → 31,1 | 3,3 → 2,9 | 13,2 → 23,5 | 1,09 → 0,92 |
+
+Lectura: `buy_everything` declara casi el doble de lotes porque ya no paga dos veces cada uno, y sigue quebrando (criterio
+§6 del índice: es la única estrategia a la que se le permite). **La ruta de producción cae de 75 % a 55 %**, dentro de la
+franja 30–70 % que el índice prohíbe ("la estrategia decide, no la semilla"). La ablación muestra que la causa son los
+efectos de suelo de las situaciones (sin ellos vuelve a 75 %; sin `when` baja a 35 %): resolver la bandeja con la primera
+opción pagable convierte CC en CA/HUM/RES y las 9 semillas que fallan lo hacen solo por F < 44. Queda para la
+recalibración de Territorio (fases 47 y 49), anotado en `docs/v6-spec-vs-motor.md`. `TERR_ROUTES` no se tocó.
+
+**Discrepancias nuevas encontradas.**
+- El prototipo sigue ignorando los efectos de las situaciones sobre `stella.PBI_Real` (5 efectos en el catálogo) y los
+  efectos en porcentaje (`pct`) sobre `Reservas_del_Tesoro`/`Deuda`. Se deja anotado para la fase 47.
+
+**Pendiente del equipo.** (1) Correr `supabase/model_version_migration.sql` en el SQL Editor (antes o después del deploy:
+el cliente tolera la columna faltante). (2) `git push origin model-v1.0`.
+
+**Verificación.** `npx tsc --noEmit` limpio, `npm test`, `npm run build`, `npm run i18n:audit` en verde; `npm run sim` idéntico.

@@ -44,6 +44,7 @@ import type { Language } from '../hooks/useLanguage';
 import { getPolicyName } from '../legacyContent/gameData';
 
 export { makeRng, type Rng } from './rng';
+export { MODEL_VERSION, MODEL_VERSION_BY_GAME } from './version';
 export type { SimTrace } from './trace';
 export * from './policies';
 export * from './indicators';

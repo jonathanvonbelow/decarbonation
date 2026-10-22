@@ -1,4 +1,6 @@
 import { createClient, Session } from '@supabase/supabase-js';
+import { MODEL_VERSION_BY_GAME } from '../sim/version';
+import { sendWithModelVersion } from './modelVersionColumn';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -61,11 +63,15 @@ export async function createGameSession(
   anioInicio: number
 ): Promise<string | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('game_sessions')
-    .insert({ user_id: userId, nivel_alcanzado: nivel, anio_inicio: anioInicio })
-    .select('id')
-    .single();
+  const client = supabase;
+  // v6 / phase 32: tagged with model_version; a project without supabase/model_version_migration.sql
+  // gets the row resent once without the column so the playthrough is still recorded.
+  const { data, error } = await sendWithModelVersion(
+    'game_sessions',
+    { user_id: userId, nivel_alcanzado: nivel, anio_inicio: anioInicio },
+    MODEL_VERSION_BY_GAME.niveles,
+    (row) => client.from('game_sessions').insert(row).select('id').single(),
+  );
   if (error) { console.error('createGameSession:', error); return null; }
   return data?.id ?? null;
 }

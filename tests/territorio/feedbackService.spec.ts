@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushFeedbackQueue, sanitizeRow, submitFeedback } from '../../src/territorio/survey/feedbackService';
+import { resetModelVersionColumnCache } from '../../src/services/modelVersionColumn';
 import { CONTEXTOS, ELEMENTOS, FORMATOS, MEJORAS, ROLES, type TerritorioFeedbackRow } from '../../src/territorio/survey/types';
 
 const base = (over: Partial<TerritorioFeedbackRow> = {}): TerritorioFeedbackRow => ({
@@ -11,11 +12,13 @@ const base = (over: Partial<TerritorioFeedbackRow> = {}): TerritorioFeedbackRow 
   partida_estado: 'sin_partida', resultado: null, ruta_lograda: null, ruta_cercana: null, ruta_cercana_progreso: null,
   pisos_cumplidos: null, anio_alcanzado: null, meses_jugados: null, situaciones_resueltas: null,
   situaciones_vencidas: null, areas_declaradas: null, politicas_activas: null, indicadores_finales: null, seed: null,
+  model_version: '1.0',
   ...over,
 });
 
 let store: Record<string, string>;
 beforeEach(() => {
+  resetModelVersionColumnCache();
   store = {};
   vi.stubGlobal('localStorage', {
     getItem: (k: string) => store[k] ?? null,
@@ -54,6 +57,57 @@ describe('submitFeedback', () => {
     expect(store.dn_territorio_feedback_queue_v1).toBeUndefined();
   });
 
+  it('envia model_version en el cuerpo', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201 });
+    vi.stubGlobal('fetch', fetchMock);
+    await submitFeedback(base());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model_version).toBe('1.0');
+  });
+
+  // v6 / fase 32: proyecto sin supabase/model_version_migration.sql -> PostgREST responde 400 PGRST204.
+  const MISSING = { code: 'PGRST204', message: "Could not find the 'model_version' column of 'territorio_feedback' in the schema cache" };
+  const rejectsColumn = () => vi.fn().mockImplementation(async (_url: string, init: { body: string }) =>
+    ('model_version' in JSON.parse(init.body)
+      ? { ok: false, status: 400, json: async () => MISSING }
+      : { ok: true, status: 201 }));
+
+  it('sin la columna migrada reintenta una vez sin model_version, avisa y no pierde la respuesta', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = rejectsColumn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await submitFeedback(base({ aprendizaje_texto: 'hola' }))).toEqual({ ok: true, queued: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retried = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(retried).not.toHaveProperty('model_version');
+    expect(retried.aprendizaje_texto).toBe('hola');
+    expect(warn).toHaveBeenCalledTimes(1);
+    // el siguiente envio ya no intenta la columna
+    await submitFeedback(base());
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('otro 400 (p. ej. el CHECK de la version) es rejected sin reintentar sin la columna', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false, status: 400,
+      json: async () => ({ code: '23514', message: 'new row violates check constraint "territorio_feedback_model_version_check"' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await submitFeedback(base())).toEqual({ ok: false, reason: 'rejected' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('una fila encolada conserva model_version y flush la reenvia sin la columna si la base no la tiene', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await submitFeedback(base());
+    expect(JSON.parse(store.dn_territorio_feedback_queue_v1)[0].model_version).toBe('1.0');
+    const fetchMock = rejectsColumn();
+    vi.stubGlobal('fetch', fetchMock);
+    await flushFeedbackQueue();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(store.dn_territorio_feedback_queue_v1)).toHaveLength(0);
+  });
+
   it('sin configuracion devuelve no_config', async () => {
     delete process.env.SUPABASE_URL;
     vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -71,6 +125,14 @@ describe('sanitizeRow', () => {
     expect(r.taller_codigo).toBeNull();
     expect(r.elementos_utiles).toEqual(['mapa', 'rutas', 'noticias']);
     expect(r.mejoras_texto).toBeNull();
+  });
+
+  it('model_version que no cumple el CHECK del SQL se anula (no se trunca)', () => {
+    expect(sanitizeRow(base({ model_version: '1.1' })).model_version).toBe('1.1');
+    expect(sanitizeRow(base({ model_version: '2.0.1-dev' })).model_version).toBe('2.0.1-dev');
+    expect(sanitizeRow(base({ model_version: '1.0.0-dev-xxxxxxxxxxxx' })).model_version).toBeNull();
+    expect(sanitizeRow(base({ model_version: '2.0-rc1' })).model_version).toBeNull();
+    expect(sanitizeRow(base({ model_version: '  ' })).model_version).toBeNull();
   });
 });
 

@@ -25,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# v6 / fase 32: material de referencia del modelo 2.0 (se regenera)
+scripts/reference/situations.json
+__pycache__/

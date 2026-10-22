@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceMonth, createSession } from '../../src/territorio/session';
 import { buildSummary, loadSummary, saveSummary, toRowFields } from '../../src/territorio/survey/summary';
+import { MODEL_VERSION_BY_GAME } from '../../src/sim/version';
 
 beforeEach(() => {
   const store: Record<string, string> = {};
@@ -37,5 +38,16 @@ describe('survey summary', () => {
     const f = toRowFields(null);
     expect(f.partida_estado).toBe('sin_partida');
     expect(f.seed).toBeNull();
+    expect(f.model_version).toBe(MODEL_VERSION_BY_GAME.territorio);
+  });
+
+  it('el resumen guarda la version del modelo (v6 / fase 32)', () => {
+    const sum = buildSummary(played(), 1000);
+    expect(sum.modelVersion).toBe(MODEL_VERSION_BY_GAME.territorio);
+    expect(toRowFields(sum).model_version).toBe(MODEL_VERSION_BY_GAME.territorio);
+    // un resumen guardado antes de la fase 32 no tiene el campo: lo produjo el modelo 1.0
+    const legacy = { ...sum };
+    delete legacy.modelVersion;
+    expect(toRowFields(legacy).model_version).toBe('1.0');
   });
 });

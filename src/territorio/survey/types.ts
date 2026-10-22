@@ -81,4 +81,6 @@ export interface TerritorioFeedbackRow {
   politicas_activas: string[] | null;
   indicadores_finales: Record<string, number> | null;
   seed: number | null;
+  /** v6 / phase 32: model version (src/sim/version.ts) of the game summarised, or of this app when there is none. */
+  model_version: string | null;
 }

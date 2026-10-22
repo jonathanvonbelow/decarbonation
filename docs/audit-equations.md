@@ -93,3 +93,14 @@ por quiebra.
 políticas termina con decenas de miles en el tesoro: el ingreso público crece con el PBI y el gasto
 no. El tope por ruta lo neutraliza como vía de victoria, pero el dinero sigue sin ser escaso en la
 segunda mitad de la partida.
+
+## Historial de versiones del modelo
+
+`MODEL_VERSION` (`src/sim/version.ts`) versiona las ecuaciones y parámetros, no la app. Reglas: *patch* = solo texto o UI,
+ninguna trayectoria cambia; *minor* = correcciones que cambian trayectorias sin cambiar la estructura; *major* = variables
+de estado o formas de ecuación nuevas. Cada fila de investigación (`game_sessions`, `predictions`, `territorio_feedback`)
+guarda la versión; ningún análisis mezcla versiones sin estratificar. Nunca se reutiliza una cadena para ecuaciones distintas.
+
+| Versión | Commit / tag | Estado |
+|---|---|---|
+| Modelo 1.0 — commit 144c321 — estado auditado el 19/10/2026 | `144c321`, tag local `model-v1.0` (pendiente de `git push origin model-v1.0`) | Modelo con el que se recolectaron todos los datos de talleres hasta la fase 32 del paquete v6. Las filas existentes quedan con `'1.0'` (default de la migración `supabase/model_version_migration.sql`). |

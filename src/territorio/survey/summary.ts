@@ -5,6 +5,7 @@
  * Storage key: dn_territorio_last_game_v1. Expires after 12 h (a stale game is not "the latest").
  */
 import type { Policy } from '../../types';
+import { MODEL_VERSION_BY_GAME } from '../../sim/version';
 import { evaluateTerritorio } from '../routes';
 import type { Session } from '../session';
 import type { RouteCode, TerritorioFeedbackRow } from './types';
@@ -29,6 +30,11 @@ export interface GameSummary {
   politicasActivas: string[];
   indicadoresFinales: Record<'biodiversity' | 'foodSecurity' | 'economicSecurity' | 'socialWellbeing' | 'politicalStability' | 'co2', number>;
   seed: number;
+  /**
+   * v6 / phase 32: model version that produced this game. Optional only because summaries saved
+   * before phase 32 (still in localStorage, TTL 12 h) do not have it; those were played with 1.0.
+   */
+  modelVersion?: string;
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -66,6 +72,7 @@ export function buildSummary(session: Session, now: number = Date.now()): GameSu
       co2: r1(ind.co2EqEmissionsPerCapita),
     },
     seed: session.seed,
+    modelVersion: MODEL_VERSION_BY_GAME.territorio,
   };
 }
 
@@ -88,7 +95,7 @@ export function loadSummary(now: number = Date.now()): GameSummary | null {
 type SummaryFields = Pick<TerritorioFeedbackRow,
   'partida_estado' | 'resultado' | 'ruta_lograda' | 'ruta_cercana' | 'ruta_cercana_progreso' | 'pisos_cumplidos'
   | 'anio_alcanzado' | 'meses_jugados' | 'situaciones_resueltas' | 'situaciones_vencidas' | 'areas_declaradas'
-  | 'politicas_activas' | 'indicadores_finales' | 'seed'>;
+  | 'politicas_activas' | 'indicadores_finales' | 'seed' | 'model_version'>;
 
 export function toRowFields(s: GameSummary | null): SummaryFields {
   if (!s) {
@@ -96,6 +103,8 @@ export function toRowFields(s: GameSummary | null): SummaryFields {
       partida_estado: 'sin_partida', resultado: null, ruta_lograda: null, ruta_cercana: null, ruta_cercana_progreso: null,
       pisos_cumplidos: null, anio_alcanzado: null, meses_jugados: null, situaciones_resueltas: null,
       situaciones_vencidas: null, areas_declaradas: null, politicas_activas: null, indicadores_finales: null, seed: null,
+      // No game to describe: the answers are about the app the respondent is using now.
+      model_version: MODEL_VERSION_BY_GAME.territorio,
     };
   }
   return {
@@ -113,5 +122,7 @@ export function toRowFields(s: GameSummary | null): SummaryFields {
     politicas_activas: s.politicasActivas.slice(0, 12),
     indicadores_finales: s.indicadoresFinales,
     seed: s.seed,
+    // A summary without the field was saved before phase 32, i.e. by model 1.0.
+    model_version: s.modelVersion ?? '1.0',
   };
 }
