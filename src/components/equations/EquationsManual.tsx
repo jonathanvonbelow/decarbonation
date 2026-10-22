@@ -3,10 +3,12 @@ import { GameState, ControlParams, Policy, LandUseType } from '../../types';
 import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, LEVEL_CONFIGS } from '../../constants';
 import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
+import { PARAMS_V2 } from '../../sim/v2/params';
+import { costShareOf, PID_OF } from '../../sim/v2/policies';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const EQ_UI = {
-  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo', thDecay: 'Decaimiento (Años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
-  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost', thDecay: 'Decay (Years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)', noDescription: 'No description.' },
+  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo (% PBI, esfuerzo pleno)', thDecay: 'Puesta en marcha / desgaste (años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
+  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost (% GDP, full effort)', thDecay: 'Start-up / wear (years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)', noDescription: 'No description.' },
 } as const;
 
 // Helper components for styling
@@ -73,11 +75,11 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
     return Object.values(INITIAL_POLICIES).map(p => ({
       name: p.name,
       id: p.id,
-      costFactor: p.costFactor,
-      initialEfficiency: p.initialEfficiency,
-      decayDuration: p.efficiencyDecayDuration,
-      liveEfficiency: gameState.policies[p.id]?.isActive ? <LiveValue>{(gameState.policies[p.id].currentEfficiency * 100).toFixed(1)}%</LiveValue> : "Inactiva",
-      liveEffort: gameState.currentLevel >= 2 && gameState.policies[p.id]?.isActive ? <LiveValue>{(gameState.policies[p.id].totalInstrumentEffortApplied || 0)}%</LiveValue> : "N/A"
+      // Model 2.0 (phase 36): cost share κ and the ramp / fatigue time constants λ / δ of PARAMS_V2.
+      costShare: `${(costShareOf(PID_OF[p.id]) * 100).toFixed(1)} %`,
+      decayDuration: `${PARAMS_V2.rampYears[PID_OF[p.id]]} / ${PARAMS_V2.fatigueYears[PID_OF[p.id]]}`,
+      liveEfficiency: gameState.policies[p.id]?.isActive ? <LiveValue>{((gameState.policies[p.id].currentEfficiency ?? 0) * 100).toFixed(1)}%</LiveValue> : "—",
+      liveEffort: gameState.policies[p.id]?.isActive ? <LiveValue>{(gameState.policies[p.id].totalInstrumentEffortApplied || 0)}%</LiveValue> : "—"
     }));
   }, [gameState.policies, gameState.currentLevel]);
 
@@ -175,7 +177,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                                     {p.name}
                                   </Tooltip>
                                 </td>
-                                <td className="p-2">{p.costFactor}</td>
+                                <td className="p-2">{p.costShare}</td>
                                 <td className="p-2">{p.decayDuration}</td>
                                 <td className="p-2">{p.liveEfficiency}</td>
                                 <td className="p-2">{p.liveEffort}</td>
@@ -216,9 +218,12 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
             <SectionTitle tooltipText={d('TITLE_EQUATIONS')}>Ecuaciones Fundamentales</SectionTitle>
             
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLICY_EFFICIENCY')}>Eficiencia de Política</SubSectionTitle>
-            <p className="text-sm mb-2">La efectividad de una política no es estática; disminuye con el tiempo a medida que el sistema se adapta o surgen nuevas barreras. Esta 'entropía' se modela con un decaimiento exponencial.</p>
-            <Formula>Eficiencia = <Param>EficienciaInicial</Param> * e^(-<Param>TiempoActivacion</Param> / <Param>DuracionEfecto</Param>) * <Param>FactorPresionGeneral</Param></Formula>
-            <p className="text-sm">Si Nivel &ge; 2, la eficiencia anterior se multiplica por el factor (<Code>EsfuerzoTotalInstrumentos / 100</Code>), permitiendo al jugador 'reinvertir' en una política para mantener su relevancia.</p>
+            <p className="text-sm mb-2">Una política recién activada tarda en ponerse en marcha (λ años), se desgasta con el uso hacia un piso institucional (δ años) y, si se la deja descansar, recupera su empuje (ρ años).</p>
+            <Formula>{`Eficiencia = (1 − e^(−τ/λ)) · [η_min + (1 − η_min) · e^(−T/δ)]
+τ: años desde la activación (vuelve a 0 al desactivar) · T: años de uso acumulados (T · e^(−dt/ρ) en reposo)
+Canal c = Σ μ_k · φ(e_k) / Σ μ_k · φ(25),  φ(e) = 1 − e^(−e/40)
+Costo anual = κ · PBI · (0,3 + 0,7 · esfuerzo total / 100)`}</Formula>
+            <p className="text-sm">Por defecto <Param>η_min</Param> = {CONTROL_PARAMS.Eficiencia_Minima_Politicas} y <Param>ρ</Param> = {CONTROL_PARAMS.Recuperacion_Politicas_Anios} años (el facilitador puede cambiarlos). κ es el costo a esfuerzo pleno de la tabla (escala transitoria hasta que exista el gasto público base). Cada instrumento pesa distinto en cada canal (suelo, producción, social); el reparto parejo 25/25/25/25 da 1 en todos, concentrar sube un canal y baja los demás. En el Nivel 1 el esfuerzo siempre es parejo.</p>
             
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_CARBON_BALANCE')}>Balance de Carbono</SubSectionTitle>
             <p className="text-sm mb-2">Esta es la contabilidad climática de la nación. El objetivo final es hacer que el secuestro supere a las emisiones.</p>
@@ -242,7 +247,7 @@ FuerzaNormalización = (<Param>PuntoEquilibrio</Param> - <Param>PresiónActual</
             <Formula>ΔPBI = <Param>PBI_Actual</Param> * (<Param>TasaBase</Param> + Σ(<Param>Efectos Políticas</Param>))
 ΔReservas = <Param>Ingresos</Param> - <Param>Egresos</Param></Formula>
             <p className="text-sm"><Code>Ingresos</Code> = Impuestos sobre PBI (con tasa base + tasa adicional en N3) + Préstamos solicitados.</p>
-            <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (basado en su <Code>costFactor</Code> y PBI) + Costos Anuales de Pactos + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
+            <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (<Code>κ · PBI · (0,3 + 0,7 · esfuerzo)</Code>) + Costos Anuales de Pactos + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
             <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>

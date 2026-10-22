@@ -1,5 +1,5 @@
 import { CONTROL_PARAMS } from '../../src/constants';
-import { createInitialState, stepYear } from '../../src/sim';
+import { baseEfficiency, createInitialState, stepYear } from '../../src/sim';
 import type { ControlParams, GameState, Indicators, Policy } from '../../src/types';
 import { activatePolicies, freshLevelState, joinPacts } from '../../scripts/harness/runNiveles';
 import { NIVELES_STRATEGIES, nivelesTax } from '../../scripts/harness/strategies';
@@ -21,13 +21,13 @@ export function freshState(level = 1): GameState {
   };
 }
 
-/** Returns a copy of `state` with the given policies switched on (mirrors togglePolicy's isActive+currentEfficiency reset). */
+/** Returns a copy of `state` with the given policies switched on (mirrors togglePolicy: isActive, base efficiency from the clocks, even effort). */
 export function withActivePolicies(state: GameState, policyIds: Policy[]): GameState {
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   policyIds.forEach((id) => {
     const p = next.policies[id];
     p.isActive = true;
-    p.currentEfficiency = p.initialEfficiency ?? 1;
+    p.currentEfficiency = baseEfficiency(p, CONTROL_PARAMS);
     if (p.instruments) {
       const ids = Object.keys(p.instruments);
       const share = ids.length > 0 ? 100 / ids.length : 0;

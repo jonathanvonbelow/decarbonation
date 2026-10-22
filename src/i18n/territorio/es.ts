@@ -197,6 +197,7 @@ export const TERRITORIO_ES = {
   },
   policies: {
     cost: 'Costo {pct} del PBI',
+    costFull: 'Costo hasta {pct} del PBI',
     years: '{n} años activa',
     tradeoff: 'Trade-off',
     filters: { all: 'Todas', green: 'Verdes', extractive: 'Extractivas', active: 'Activas' },
@@ -218,9 +219,12 @@ export const TERRITORIO_ES = {
     active: 'Activa',
     lockedUntil: 'Vigente hasta {year}',
     efficiency: 'Eficiencia {pct}',
+    // Fase 36 (modelo 2.0): estados visibles de la eficiencia.
+    starting: 'En marcha ({pct})',
+    worn: 'Desgastada: si descansa, se recupera',
     instrumentsLocked: 'Desde {year} vas a poder repartir el esfuerzo entre sus instrumentos. Por ahora se reparte en partes iguales.',
     effortTitle: 'Esfuerzo por instrumento',
-    hintsNote: 'Orientativo: en el modelo 1.1 el efecto se calcula a nivel de política; solo Renovables y Captura tienen un efecto propio sobre el CO₂.',
+    hintsNote: 'Cada instrumento pesa distinto sobre suelo, producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo, concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. En esta versión en desarrollo los indicadores leen el canal de producción; Renovables y Captura además actúan directo sobre el CO₂.',
   },
   finance: {
     reserves: 'Reservas del tesoro',

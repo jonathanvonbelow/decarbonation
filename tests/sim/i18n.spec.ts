@@ -56,16 +56,18 @@ describe('checkEfficiencyWarning language param', () => {
   it('translates the warning message and includes the localized policy name', () => {
     const state = withActivePolicies(freshState(2), [Policy.Agroecological]);
     const policy = state.policies[Policy.Agroecological];
-    policy.currentEfficiency = 0.35; // below the 40% threshold
-    policy.previousEfficiencyForNotification = 0.5; // was above it -- crossing detected
+    // Model 2.0 (phase 36): the warning fires when the fatigue factor e^(-T/δ) crosses below 0.5 (δ = 15 for AS).
+    policy.fatigueTime = 15 * Math.log(2) + 0.1;
+    policy.currentEfficiency = 0.6;
+    policy.previousFatigueFactor = 0.55; // was above it -- crossing detected
 
     const esWarning = checkEfficiencyWarning({ ...state.policies, [Policy.Agroecological]: { ...policy } }, 'es');
-    expect(esWarning).toContain('¡Atención!');
-    expect(esWarning).toContain('Agroecológicas');
+    expect(esWarning).toHaveLength(1);
+    expect(esWarning[0]).toContain('¡Atención!');
+    expect(esWarning[0]).toContain('Agroecológicas');
 
-    policy.previousEfficiencyForNotification = 0.5; // reset -- checkEfficiencyWarning mutates it
     const enWarning = checkEfficiencyWarning({ ...state.policies, [Policy.Agroecological]: { ...policy } }, 'en');
-    expect(enWarning).toContain('Warning!');
-    expect(enWarning).toContain('Agro-ecological');
+    expect(enWarning[0]).toContain('Warning!');
+    expect(enWarning[0]).toContain('Agro-ecological');
   });
 });

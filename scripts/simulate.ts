@@ -10,9 +10,9 @@
  * "do_nothing wins" and "one strategy wins every route" -- without building the full harness this
  * phase doesn't need yet. Run with: npx tsx scripts/simulate.ts
  */
-import { createInitialState, stepYear, evaluateLevel, makeRng } from '../src/sim';
+import { baseEfficiency, createInitialState, stepYear, evaluateLevel, makeRng } from '../src/sim';
 import { Policy, type GameState } from '../src/types';
-import { YEARS_PER_LEVEL, INITIAL_YEAR } from '../src/constants';
+import { YEARS_PER_LEVEL, INITIAL_YEAR, CONTROL_PARAMS } from '../src/constants';
 
 function freshState(level: number): GameState {
   const { gameStatePatch } = createInitialState(level);
@@ -28,7 +28,7 @@ function activate(state: GameState, ids: Policy[], effortByPolicy?: Partial<Reco
   ids.forEach((id) => {
     const p = state.policies[id];
     p.isActive = true;
-    p.currentEfficiency = p.initialEfficiency ?? 1;
+    p.currentEfficiency = baseEfficiency(p, CONTROL_PARAMS);
     if (p.instruments) {
       const overrides = effortByPolicy?.[id];
       const instIds = Object.keys(p.instruments);
@@ -45,8 +45,8 @@ function activate(state: GameState, ids: Policy[], effortByPolicy?: Partial<Reco
 
 interface Strategy {
   id: string;
-  /** Called every simulated year so strategies can stagger *never-before-activated* policies in
-   *  as earlier ones decay -- see the note on Tiempo_Activacion_X below. `apply(state)` alone
+  /** Called every simulated year so strategies can stagger policies in as earlier ones wear
+   *  out -- see the note on policy efficiency below. `apply(state)` alone
    *  (year-independent) is still fine for simple always-on strategies. */
   perYear: (state: GameState, yearsIntoLevel: number) => void;
 }
@@ -76,11 +76,8 @@ const STRATEGIES: Strategy[] = [
     id: 'balanced',
     perYear: (s) => activate(s, [Policy.NaturalConservation, Policy.Agroecological, Policy.IntensiveAgriculture, Policy.AgriculturalExports]),
   },
-  // Rotates in policies the player has *never activated before* as earlier ones decay --
-  // Tiempo_Activacion_X only increments while a policy is active (src/sim/policies.ts), so a
-  // policy activated for the first time always starts at full efficiency regardless of what year
-  // it is. A player who understands this can sustain meaningful effect all level; one who
-  // "sets and forgets" (the other strategies above) cannot -- see docs/audit-equations.md P-1.
+  // Rotates in fresh policies as earlier ones wear out (fatigue only accumulates while a policy is
+  // active, src/sim/v2/policies.ts; a fresh one still needs its start-up ramp) -- see the note below.
   {
     id: 'rotating_green',
     perYear: (s, y) => {
@@ -99,17 +96,11 @@ const STRATEGIES: Strategy[] = [
   },
 ];
 
-// NOTE on policy efficiency decay (docs/audit-equations.md item P-1, upgraded from PENDIENTE to
-// a confirmed finding by this harness): `Tiempo_Activacion_X` (the stock the exponential decay
-// e^(-years/D) reads) only ever increments in src/sim/policies.ts -- nothing in togglePolicy or
-// anywhere else resets it on deactivation. So a policy's decay is permanent and cumulative for
-// the lifetime of the session, not "per current activation streak" -- toggling a policy off and
-// back on does NOT refresh its efficiency in the real game either. A synthetic strategy that
-// "activates once and never touches it again" is therefore not a shortcut; it is what the real
-// game actually does. Confirmed this is severe: most decay durations (~10 years) put efficiency
-// under 10% by year 30 of a 30-year level. This harness does not paper over that with an
-// unrealistic "refresh" -- routes are calibrated against what the decayed reality actually
-// allows, which is the honest question this harness exists to answer.
+// NOTE on policy efficiency (docs/audit-equations.md P-1 / N-07): until model 1.1 the decay counter
+// Tiempo_Activacion_X never reset, so wear was permanent. Since model 2.0 (phase 36,
+// src/sim/v2/policies.ts) a policy ramps up after activation, wears towards an institutional floor
+// (Eficiencia_Minima_Politicas) and recovers while resting (Recuperacion_Politicas_Anios), so the
+// rotating strategies above now measure a real trade-off.
 
 function runLevel(level: number, strategy: Strategy, seed: number) {
   let state = freshState(level);

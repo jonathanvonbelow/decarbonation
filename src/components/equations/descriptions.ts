@@ -44,20 +44,20 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The policy's name as shown in the interface.",
   },
   POLICY_TABLE_HEADER_COST: {
-    es: "Factor de costo base de la política, expresado como un porcentaje del PBI cuando está activa.",
-    en: "The policy's base cost factor, expressed as a percentage of GDP while active.",
+    es: "Costo anual de la política con esfuerzo pleno, como porcentaje del PBI. El 30 % se paga siempre; el resto, según el esfuerzo asignado a sus instrumentos.",
+    en: "The policy's annual cost at full effort, as a percentage of GDP. 30% is always paid; the rest scales with the effort assigned to its instruments.",
   },
   POLICY_TABLE_HEADER_DECAY: {
-    es: "Número de años teóricos que tarda la eficiencia de una política en decaer significativamente si no se gestiona. Un número más bajo significa un decaimiento más rápido.",
-    en: "The theoretical number of years it takes a policy's efficiency to decay significantly if left unmanaged. A lower number means faster decay.",
+    es: "Puesta en marcha (λ): años hasta alcanzar el 63 % del efecto tras activarla. Desgaste (δ): años de uso tras los que perdió el 63 % de su empuje por encima del piso institucional; descansar lo recupera.",
+    en: "Start-up (λ): years to reach 63% of the effect after activation. Wear (δ): years of use after which it has lost 63% of its push above the institutional floor; resting recovers it.",
   },
   POLICY_TABLE_HEADER_EFFICIENCY_LIVE: {
-    es: "La eficiencia actual de la política en el juego (0-100%). Este valor se ve afectado por el tiempo de activación y otros factores como la estabilidad política. Es el multiplicador real del efecto de la política.",
-    en: "The policy's current in-game efficiency (0-100%). This value is affected by time since activation and other factors like political stability. It's the real multiplier on the policy's effect.",
+    es: "La eficiencia base actual de la política (0-100%): puesta en marcha por desgaste. El reparto del esfuerzo entre instrumentos la escala por canal.",
+    en: "The policy's current base efficiency (0-100%): start-up times wear. The split of effort across instruments scales it per channel.",
   },
   POLICY_TABLE_HEADER_EFFORT_LIVE: {
-    es: "El esfuerzo total (0-100%) asignado a los instrumentos de esta política (Nivel 2+). Este valor modula la 'Eficiencia Viva' para determinar el impacto final.",
-    en: "The total effort (0-100%) assigned to this policy's instruments (Level 2+). This value modulates 'Live Efficiency' to determine the final impact.",
+    es: "El esfuerzo total (0-100%) asignado a los instrumentos de esta política (parejo en el Nivel 1). Con rendimientos decrecientes por instrumento, escala el efecto de cada canal y el costo.",
+    en: "The total effort (0-100%) assigned to this policy's instruments (even on Level 1). With diminishing returns per instrument, it scales each channel's effect and the cost.",
   },
 
   // Land Use Table Headers
@@ -80,8 +80,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
 
   // Equation Section Titles
   EQUATION_TITLE_POLICY_EFFICIENCY: {
-    es: "La fórmula que determina cuán efectiva es una política en un año determinado. Disminuye con el tiempo que lleva activa (decaimiento exponencial); desde el Nivel 2 se escala por el esfuerzo asignado a sus instrumentos.",
-    en: "The formula that determines how effective a policy is in a given year. It decreases with the time it has been active (exponential decay); from Level 2 it is scaled by the effort assigned to its instruments.",
+    es: "La fórmula que determina cuán efectiva es una política: arranca de a poco (puesta en marcha), se desgasta con el uso hacia un piso y se recupera en reposo; el esfuerzo en sus instrumentos la escala por canal.",
+    en: "The formula that determines how effective a policy is: it starts slowly (start-up), wears with use towards a floor and recovers while resting; the effort on its instruments scales it per channel.",
   },
   EQUATION_TITLE_CARBON_BALANCE: {
     es: "La ecuación central para el cambio climático. Calcula la diferencia neta entre el carbono capturado por los ecosistemas y el carbono emitido por las actividades humanas anualmente.",

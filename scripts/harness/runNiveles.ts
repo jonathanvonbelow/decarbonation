@@ -4,7 +4,7 @@
  * call the game makes in App.tsx `runSimulationRound`, and reports the end state as a `RunResult`.
  *
  * Player actions mirror what App.tsx lets a player do, not what the prototype does:
- *   - a policy is switched on like `togglePolicy` (isActive + currentEfficiency reset; at most
+ *   - a policy is switched on like `togglePolicy` (isActive + its base efficiency from the clocks; at most
  *     MAX_ACTIVE_POLICIES), with instrument effort set like the instrument panel;
  *   - a pact is joined like `togglePact`: only once `year ≥ unlockYear`, paying `costToJoin` from
  *     reserves and only if reserves cover it (the prototype charges entry × GDP and may borrow);
@@ -12,7 +12,7 @@
  * Events are drawn with `makeRng(seed, year)`, so a (strategy, level, seed) run is reproducible.
  */
 import { CONTROL_PARAMS, INITIAL_YEAR, MAX_ACTIVE_POLICIES, YEARS_PER_LEVEL } from '../../src/constants';
-import { createInitialState, evaluateLevel, gameOverKind, makeRng, stepMonth, stepYear, type Rng } from '../../src/sim';
+import { baseEfficiency, createInitialState, evaluateLevel, fatigueFactor, gameOverKind, makeRng, stepMonth, stepYear, type Rng } from '../../src/sim';
 import type { ControlParams, GameState, PolicyInstrument, PolicyState } from '../../src/types';
 import type { RunResult, Snapshot } from './metrics';
 import {
@@ -66,8 +66,8 @@ export function activatePolicies(
     const active = (Object.values(state.policies) as PolicyState[]).filter((x) => x.isActive).length;
     if (active >= MAX_ACTIVE_POLICIES) return;
     p.isActive = true;
-    p.currentEfficiency = p.initialEfficiency || 1;
-    p.previousEfficiencyForNotification = p.currentEfficiency;
+    p.currentEfficiency = baseEfficiency(p, CONTROL_PARAMS); // 0 until it ramps up (phase 36)
+    p.previousFatigueFactor = fatigueFactor(p);
     const vector = level >= 2 ? effort?.[code] : undefined;
     if (vector) setEffortVector(p, code, vector);
     else setEvenEffort(p);

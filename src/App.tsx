@@ -39,7 +39,7 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogDrawer from './components/GameLogDrawer';
-import { stepYear, createInitialState, evaluateLevel, efficiencyFromCounter, evenEffort, restorePactFunctions } from './sim';
+import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, restorePactFunctions } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -798,12 +798,12 @@ export const App = () => {
           return prev;
         }
         policyToggled.isActive = true;
-        // Model 1.1 (phase 34): resume from the active-time counter instead of restoring full
-        // efficiency (T-06; the engine recomputed it from the counter on the next year anyway, so
-        // the reset only re-armed the 40 % warning), and split effort evenly across instruments
-        // (N-02: level 1 has no instrument panel, so Carbon Neutrality's CO2 channels ran at 0).
-        policyToggled.currentEfficiency = efficiencyFromCounter(policyToggled, prev.stellaSpecificState);
-        policyToggled.previousEfficiencyForNotification = policyToggled.currentEfficiency;
+        // Model 2.0 (phase 36): the shown efficiency is the one the clocks give — 0 on a fresh
+        // activation (it is starting up), never a reset to 100 % (T-06) — and the fatigue warning keeps
+        // the policy's own wear. Effort is split evenly across instruments (model 1.1, N-02: level 1
+        // has no instrument panel).
+        policyToggled.currentEfficiency = baseEfficiency(policyToggled, controlParamsRef.current);
+        policyToggled.previousFatigueFactor = fatigueFactor(policyToggled);
         evenEffort(policyToggled);
         logEvent(`Política '${policyToggled.name}' seleccionada. Se activará en la próxima simulación.`);
         

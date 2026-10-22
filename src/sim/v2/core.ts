@@ -7,6 +7,8 @@
  * produce exactly the numbers they produced before (`npm run sim:check -- --quick` gave a byte-identical
  * report; tests/sim/core.spec.ts pins reference trajectories). The one numeric change of phase 35 is not
  * here but in the data: level 1 starts with Colapso_politico = 5 (src/constants.ts).
+ * Phase 36 replaces steps 2 and 4 of 2.0 (policy clocks, efficiency per channel, cost by effort; see
+ * src/sim/v2/policies.ts): from here on the numbers differ from 1.1 on purpose (docs/audit-equations.md).
  *
  * Known cost kept from 1.1: computeLandUseFlows runs twice per step (once for `flows`, once inside
  * updateLandUse); phase 37 replaces both with the transition matrix. Each later phase replaces one step with its 2.0 equation; see
@@ -24,10 +26,10 @@
  *  9. bookkeeping           cumulative emissions, fiscal history, productive years, game over
  *
  * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
- *  0 population, 1 activation year, 2 event roll, 3 policy counters + efficiency decay, 4 policy and
- *  pact costs, 5 pact effects, 6 land use, 7 finances, 8 indicators B -> F -> E -> C -> Pc,
+ *  0 population, 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event roll, 3 policy
+ *  efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact costs, 5 pact effects, 6 land use, 7 finances, 8 indicators B -> F -> E -> C -> Pc,
  *  9 CO2 per capita, 10 pressures, 11 sync + clamp, 11.5 deferred effects, 12 score, 13 game over,
- *  14 efficiency warning.
+ *  14 fatigue warning (phase 36).
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
@@ -58,7 +60,9 @@ import {
   calculatePoliticalCollapseChange, calculateSocialConflictChange,
 } from '../indicators';
 import { computeLandUseFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from '../landUse';
-import { checkEfficiencyWarning, computeTotalPolicyCost, updatePolicyEfficiency } from '../policies';
+import { checkEfficiencyWarning } from '../policies';
+import { computeEfficiencies, policyCost, tickPolicyClocks, type PolicyEfficiency } from './policies';
+import type { Pid } from './params';
 import { updatePressures } from '../pressures';
 import type { Rng } from '../rng';
 import { computeScore } from '../score';
@@ -126,6 +130,8 @@ export interface AdvanceResult {
   /** True when this step advanced `next.year` (every annual step; the December monthly step). */
   yearRolled: boolean;
   trace: SimTrace;
+  /** Effective efficiency per policy and channel this step (phase 36), for the trace and later phases. */
+  efficiencies: Record<Pid, PolicyEfficiency>;
   /** Narrative log lines produced this step, oldest first. */
   logs: string[];
   /** Chat-worthy messages (event banners, efficiency warnings), oldest first. */
@@ -226,7 +232,11 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     }
   });
 
-  // 2. Random event roll, applied BEFORE policy decay/costs/land use/finances/indicators. Effects on
+  // 2.0 step 2. Policy clocks: ramp and fatigue run while active; at rest the ramp resets and the
+  //    fatigue recovers (phase 36, src/sim/v2/policies.ts). Before the event roll, as in the prototype.
+  tickPolicyClocks(next.policies, dt, CP);
+
+  // 2. Random event roll, applied BEFORE policy efficiency/costs/land use/finances/indicators. Effects on
   //    indicators this step recomputes are held back and applied at step 11.5 (src/sim/deferred.ts).
   next.currentEvent = null;
   const deferred: DeferredAdjustment[] = [];
@@ -245,12 +255,14 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     if (lost > 0) flows.push({ from: k, to: 'fallow', kHa: lost });
   });
 
-  // 3. Policy "years active" counters (+dt) and efficiency decay.
-  updatePolicyEfficiency(next.policies, next.stellaSpecificState, dt);
+  // 3 (2.0 step 4). Effective efficiency per policy and channel (phase 36): stores the base η in
+  //    `currentEfficiency`; the 1.1 submodels read `eff[pid].prod` through getPolicyEfficiency.
+  const eff: Record<Pid, PolicyEfficiency> = computeEfficiencies(next.policies, currentLevel, CP);
   const stella: StellaStocks = next.stellaSpecificState;
 
-  // 4. Annual costs (policy + pacts), on PBI_Real before this step's growth (× dt in step 7).
-  const totalPolicyCost = computeTotalPolicyCost(next.policies, stella.PBI_Real);
+  // 4. Annual costs (policy + pacts), on PBI_Real before this step's growth (× dt in step 7). Policy
+  //    cost by effort, κ·Y·(0.3 + 0.7·ē) (phase 36).
+  const totalPolicyCost = policyCost(next.policies, stella.PBI_Real);
   const totalPactCost = computeTotalPactCost(next.pacts);
 
   // 5. Pact effects: each returns the value one full year of the pact would reach (moved × dt), and the
@@ -418,12 +430,11 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const gameOverReason = evaluateGameOver(next);
   if (gameOverReason) next.gameOverReason = gameOverReason;
 
-  // 14. Policy-efficiency-crossed-40%-threshold warning.
-  const warning = checkEfficiencyWarning(next.policies, language);
-  if (warning) {
+  // 14. Fatigue warning: a policy lost half of its push (phase 36 §3.2).
+  checkEfficiencyWarning(next.policies, language).forEach((warning) => {
     chatMessages.push({ text: warning, emphasisType: 'policy_efficiency_warning' });
     logs.push(warning);
-  }
+  });
 
   // Bookkeeping of the 2.0 sub-state (only the clock in phase 35) and the monthly calendar.
   if (next.model) next.model.t += dt;
@@ -452,6 +463,7 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     month: nextMonth,
     yearRolled,
     trace: buildTrace(currentYear, before, next.indicators),
+    efficiencies: eff,
     logs,
     chatMessages,
   };

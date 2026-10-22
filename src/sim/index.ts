@@ -56,6 +56,10 @@ export * from './monthly';
 export * from './territory';
 export { advance, MONTHLY_DT, type AdvanceOptions, type AdvanceResult, type StepYearChatMessage } from './v2/core';
 export { computeAnchors, createModelState } from './v2/anchors';
+export {
+  baseEfficiency, channelStrength, computeEfficiencies, costShareOf, effortShare, fatigueFactor, INSTRUMENT_CHANNELS, PID_OF,
+  policyCost, policyCostOf, policyStatus, rampFactor, tickPolicyClocks, type PolicyEfficiency, type PolicyStatus,
+} from './v2/policies';
 
 export interface StepYearResult {
   next: GameState;

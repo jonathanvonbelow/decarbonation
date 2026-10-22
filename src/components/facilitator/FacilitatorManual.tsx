@@ -36,7 +36,7 @@ const manualSlides = [
         </ol>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Conceptos Fundamentales</h4>
          <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-yellow-400">Eficiencia de Política:</strong> Cada política tiene una eficiencia que decae con el tiempo (<Param>efficiencyDecayDuration</Param>) y se ve afectada por factores como la estabilidad política. Una política con 0% de eficiencia no tiene efecto.</li>
+            <li><strong className="text-yellow-400">Eficiencia de Política:</strong> Una política recién activada arranca de a poco (puesta en marcha, <Param>rampYears</Param>), se desgasta con el uso hacia un piso institucional (<Param>Eficiencia_Minima_Politicas</Param>, desgaste <Param>fatigueYears</Param>) y se recupera si descansa (<Param>Recuperacion_Politicas_Anios</Param>).</li>
             <li><strong className="text-yellow-400">Bloqueo de Política:</strong> Una vez activada, una política no puede desactivarse por <Param>{POLICY_LOCK_IN_DURATION}</Param> años.</li>
          </ul>
       </div>
@@ -46,17 +46,17 @@ const manualSlides = [
     title: "Políticas e Instrumentos",
     content: (
         <div>
-            <p className="mb-4">Las políticas son las principales palancas de cambio. Cada una tiene un <Param>costFactor</Param>, <Param>initialEfficiency</Param>, y un <Param>efficiencyDecayDuration</Param> único.</p>
+            <p className="mb-4">Las políticas son las principales palancas de cambio. Cada una tiene su costo a esfuerzo pleno (fracción del PBI; hoy la escala transitoria <Param>costShareBridge</Param>, que la fase 44 reemplaza por <Param>costShare</Param>), su puesta en marcha (<Param>rampYears</Param>) y su desgaste (<Param>fatigueYears</Param>), en <Param>PARAMS_V2</Param>.</p>
             <h4 className="font-semibold mt-4 mb-2 text-blue-300">Listado de Políticas</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 {Object.values(INITIAL_POLICIES).map(p => <div key={p.id}>- {p.name}</div>)}
             </div>
              <h4 className="font-semibold mt-4 mb-2 text-blue-300">Instrumentos (Nivel 2+)</h4>
-            <p className="text-sm">A partir del Nivel 2, la eficiencia de una política se calcula como:</p>
+            <p className="text-sm">Cada instrumento pesa distinto en cada canal (suelo, producción, social), con rendimientos decrecientes:</p>
             <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-                <p><Param>Eficiencia Final</Param> = <Param>Eficiencia Base Actual</Param> * (<Param>Esfuerzo Total de Instrumentos</Param> / 100)</p>
+                <p><Param>Canal</Param> = <Param>Eficiencia Base</Param> · Σ μ·(1 − e^(−esfuerzo/40)) / Σ μ·(1 − e^(−25/40))</p>
             </div>
-            <p className="text-sm">Esto permite un control granular sobre el impacto de la política. Un esfuerzo del 0% en los instrumentos anula el efecto de la política, aunque siga activa.</p>
+            <p className="text-sm">El reparto parejo (25 % por instrumento, el único posible en el Nivel 1) da el efecto completo en todos los canales; concentrar refuerza un canal y debilita los demás. Un esfuerzo del 0 % anula el efecto, aunque la política siga activa. El costo es κ · PBI · (0,3 + 0,7 · esfuerzo total / 100).</p>
         </div>
     )
   },

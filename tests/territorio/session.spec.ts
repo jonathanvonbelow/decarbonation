@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../src/constants';
-import { getPolicyEfficiency, PRODUCTIVE_PARCELS, productiveCount } from '../../src/sim';
+import { fatigueFactor, getPolicyEfficiency, PRODUCTIVE_PARCELS, productiveCount } from '../../src/sim';
 import { LandUseType, Policy } from '../../src/types';
 import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS } from '../../src/territorio/situations';
 import {
@@ -63,7 +63,10 @@ describe('Territorio session', () => {
     expect(p.isActive).toBe(true);
     expect(p.totalInstrumentEffortApplied).toBe(100);
     expect(Object.values(p.instruments!).reduce((sum, i) => sum + i.effortPercentage, 0)).toBe(100);
-    expect(getPolicyEfficiency(p, 2)).toBeGreaterThan(0);
+    // Model 2.0 (phase 36): 0 on activation (starting up), > 0 after the first month.
+    expect(getPolicyEfficiency(p, 2)).toBe(0);
+    const later = govern(r.session, 1).game.policies[Policy.NaturalConservation];
+    expect(getPolicyEfficiency(later, 2)).toBeGreaterThan(0);
   });
 
   it('keeps the 3-level game rules: at most 5 active policies, 5-year lock-in', () => {
@@ -234,7 +237,9 @@ describe('model 1.1 in Territorio', () => {
     s = togglePolicy(s, Policy.IntensiveAgriculture).session;
     const p = s.game.policies[Policy.IntensiveAgriculture];
     expect(p.currentEfficiency).toBeCloseTo(before, 10);
-    expect(p.previousEfficiencyForNotification).toBeCloseTo(before, 10);
+    // Phase 36: the fatigue warning keeps the policy's own wear (fatigue clock untouched by the toggle).
+    expect(p.previousFatigueFactor).toBeCloseTo(fatigueFactor(p), 10);
+    expect(p.previousFatigueFactor).toBeLessThan(1);
   });
 
   it('T-12: a situation that cuts CO2 by 5 % cuts the next month by about 5 %', () => {

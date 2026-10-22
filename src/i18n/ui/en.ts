@@ -35,12 +35,15 @@ export const UI_EN: UIShape = {
   },
   policyToggle: {
     currentEfficiency: 'Current Efficiency:',
-    efficiencyNote: 'Efficiency falls with the time the policy has been active; re-activating it does not renew it.',
+    efficiencyNote: 'It starts slowly, wears with use towards an institutional floor and recovers if you let it rest.',
+    starting: 'Starting up ({pct}%)',
+    worn: 'Worn',
+    wornTitle: 'It lost more than half of its push to wear; resting lets it recover.',
     lockedUntil: '🔒 Locked until year {year}.',
     efficiencyTitle: 'Efficiency: {value}%',
   },
   instruments: {
-    hintsNote: 'Indicative: in model 1.1 the effect is computed at policy level; only Renewables and Capture have their own effect on CO₂.',
+    hintsNote: 'Each instrument weighs differently on land, production and society, with diminishing returns: an even split gives the full effect; concentrating strengthens one channel and weakens the others. Cost follows total effort. In this development version the indicators read the production channel; Renewables and Capture also act directly on CO₂.',
   },
   routes: {
     panelTitle: 'Win routes',
@@ -223,7 +226,7 @@ export const UI_EN: UIShape = {
       biodiversity: "The country's ecosystem health. Rises with conservation and agroecology; falls with intensive land use.",
       co2EqEmissionsPerCapita: 'Greenhouse gas emissions per person. Lower is better — one of the central goals of the session.',
       foodSecurity: "Availability and access to food for the population. Depends on land use and economic security.",
-      economicSecurity: "Economic stability and employment. Responds slowly to policy — its efficiency decay is one of the hardest challenges in the session.",
+      economicSecurity: "Economic stability and employment. Responds slowly to policy: the policies that push it take time to start up and wear with use, one of the hardest challenges in the session.",
       socialWellbeing: 'Quality of life and social cohesion. Drops when political pressures (agricultural, environmental, social) stay high.',
       politicalStability: 'Governance and political collapse risk. Drops when social wellbeing or economic security are low, or pressures are highly polarized.',
     },

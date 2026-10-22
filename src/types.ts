@@ -25,19 +25,17 @@ export interface PolicyState {
   name: string;
   isActive: boolean;
   description: string;
-  costFactor: number;
-  stellaName?: string;
-  initialEfficiency?: number;
-  efficiencyDecayDuration?: number;
+  /** Base efficiency η (ramp × fatigue, 0-1) the engine computed on the last step; 0 while inactive (phase 36). */
   currentEfficiency?: number;
   instruments?: Record<string, PolicyInstrument>; // Keyed by instrument ID
   totalInstrumentEffortApplied?: number; // Sum of effortPercentages of its instruments (0-100)
   activationYear?: number; // Año en que la política fue activada
-  previousEfficiencyForNotification?: number; // Internal tracking for efficiency drop notification
+  /** Fatigue factor e^(−T/δ) at the last check: the "half of its push" warning fires on the crossing below 0.5 (phase 36). */
+  previousFatigueFactor?: number;
   /**
-   * Model 2.0 policy clocks (phase 35 declares them, phase 36 uses them; they replace the
+   * Model 2.0 policy clocks (src/sim/v2/policies.ts `tickPolicyClocks`, phase 36; they replace the
    * Tiempo_Activacion_* stocks and efficiencyDecayDuration). Years since the last activation (0 when
-   * inactive) and accumulated active years, which decay while the policy rests.
+   * inactive) and accumulated active years, which decay with Recuperacion_Politicas_Anios while resting.
    */
   rampTime?: number;
   fatigueTime?: number;
@@ -69,16 +67,6 @@ export enum LandUseType {
 
 
 export interface StellaStocks {
-  Conteo_Agric_Intens: number;
-  Conteo_Agroecologica: number;
-  Conteo_Agua: number;
-  Conteo_Ambiental_Flex: number;
-  Conteo_Bienes_Natu: number;
-  Conteo_Carbono_Neut: number;
-  Conteo_Export_Agric: number;
-  Conteo_Ganaderia_Sost: number;
-  Conteo_Inver_Extran: number;
-  Conteo_Subsidios: number;
   MEAN_colapso: number;
 
   Poblacion_Total: number;
@@ -104,16 +92,6 @@ export interface StellaStocks {
   Desactivar_Nivel_2: number;
   Desactivar_Nivel_3: number;
 
-  Tiempo_Activacion_Políticas_Agrícolas_Intensivas: number;
-  Tiempo_Activacion_Políticas_Agroecológicas: number;
-  Tiempo_Activacion_Políticas_de_Carbono_Neutralidad: number;
-  Tiempo_Activacion_Políticas_de_Conservación_de_los_Bienes_Naturales: number;
-  Tiempo_Activacion_Políticas_de_Exportaciones_Agrícolas: number;
-  Tiempo_Activacion_Políticas_de_Ganadería_Sostenible: number;
-  Tiempo_Activacion_Políticas_de_Gestión_Sostenible_del_Recurso_Hídrico: number;
-  Tiempo_Activacion_Políticas_de_Inversión_Extranjera: number;
-  Tiempo_Activacion_Políticas_de_Normativas_Ambientales_Flexibles: number;
-  Tiempo_Activacion_Políticas_de_Subsidios_Energéticos: number;
 
   Conflicto_social: number;
   Conteo_Chatgpt: number;
@@ -413,7 +391,7 @@ export interface InitialIndicatorOverrides {
 export interface ControlParams {
   // Model 1.1 (phase 34, N-08): the 70 keys no engine path read (Duracion_Efecto_*, Ponderacion_*,
   // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
-  // were deleted. Real policy durations live in INITIAL_POLICIES (efficiencyDecayDuration).
+  // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: number;
   Referencia_Max_CO2_per_Capita_Puntaje: number;
   Umbral_polarizacion: number;

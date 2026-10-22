@@ -18,6 +18,7 @@ import { getPolicyName, getInstrumentName } from '../legacyContent/gameData';
 import { ANCHORS, type AnchorId } from '../components/decarbonito/anchors';
 import type { DnApi } from '../components/decarbonito/DecarboNitoProvider';
 import { MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, CONTROL_PARAMS } from '../constants';
+import { policyStatus } from '../sim/v2/policies';
 
 export type ActionKind = 'read' | 'navigate' | 'mutate' | 'advance';
 
@@ -86,12 +87,15 @@ const listPolicies: ActionDef = {
   execute: ({ onlyActive }, { state, locale }) => {
     const rows = (Object.values(state.policies) as PolicyState[])
       .filter((p) => !onlyActive || p.isActive)
-      .map((p) => ({
+      .map((p) => ({ p, st: p.isActive ? policyStatus(p) : undefined }))
+      .map(({ p, st }) => ({
         id: p.id,
         name: policyName(state, p.id, locale),
         isActive: p.isActive,
-        efficiencyPct: state.currentLevel >= 2 && p.isActive && p.currentEfficiency !== undefined
-          ? Math.round(p.currentEfficiency * 100) : undefined,
+        efficiencyPct: p.isActive && p.currentEfficiency !== undefined ? Math.round(p.currentEfficiency * 100) : undefined,
+        // Model 2.0 (phase 36): start-up and wear states.
+        startingUp: st?.starting,
+        worn: st?.worn,
         instruments: p.instruments ? Object.keys(p.instruments) : undefined,
       }));
     return { ok: true, data: { policies: rows, activeCount: countActive(state), max: MAX_ACTIVE_POLICIES }, message: '' };

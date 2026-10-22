@@ -22,7 +22,7 @@
  */
 import { CONTROL_PARAMS } from '../constants';
 import { getPolicyName } from '../legacyContent/gameData';
-import { MONTHS_PER_YEAR, publicUseCost, PUBLIC_USES } from '../sim';
+import { MONTHS_PER_YEAR, policyStatus, publicUseCost, PUBLIC_USES } from '../sim';
 import type { ControlParams, PolicyInstrument, PolicyState } from '../types';
 import { LandUseType } from '../types';
 import type { Language } from '../hooks/useLanguage';
@@ -272,7 +272,8 @@ export function territorioContext(s: Session, locale: Language = 'es'): string {
     const instruments = p.instruments
       ? (Object.values(p.instruments) as PolicyInstrument[]).filter((x) => x.effortPercentage > 0).map((x) => `${x.name} ${x.effortPercentage}%`).join(', ')
       : '';
-    L.push(`- ${getPolicyName(p.id, locale)} (eficiencia ${((p.currentEfficiency ?? 1) * 100).toFixed(0)}%${instruments ? `; esfuerzo: ${instruments}` : ''})`);
+    const st = policyStatus(p);
+    L.push(`- ${getPolicyName(p.id, locale)} (eficiencia ${((p.currentEfficiency ?? 0) * 100).toFixed(0)}%${st.starting ? `, en marcha ${(st.ramp * 100).toFixed(0)}%` : ''}${st.worn ? ', desgastada' : ''}${instruments ? `; esfuerzo: ${instruments}` : ''})`);
   });
   L.push('');
 

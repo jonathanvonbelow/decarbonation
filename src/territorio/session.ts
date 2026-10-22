@@ -17,7 +17,7 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, efficiencyFromCounter, evaluateGameOver,
+  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
   evenEffort, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
   type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
@@ -378,7 +378,7 @@ export interface ActionResult {
 
 const clonePolicies = (s: Session) => JSON.parse(JSON.stringify(s.game.policies)) as Record<Policy, PolicyState>;
 
-export function togglePolicy(s: Session, policyId: Policy): ActionResult {
+export function togglePolicy(s: Session, policyId: Policy, CP: ControlParams = CONTROL_PARAMS): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
   const policies = clonePolicies(s);
   const p = policies[policyId];
@@ -387,11 +387,11 @@ export function togglePolicy(s: Session, policyId: Policy): ActionResult {
     const active = (Object.values(policies) as PolicyState[]).filter((x) => x.isActive).length;
     if (active >= MAX_ACTIVE_POLICIES) return { session: s, error: 'max-active', detail: { max: MAX_ACTIVE_POLICIES } };
     p.isActive = true;
-    // Model 1.1 (phase 34, T-06): re-activating does not restore a worn policy; it resumes where
-    // its active-time counter left it, and the 40 % warning is not re-armed.
-    p.currentEfficiency = efficiencyFromCounter(p, s.game.stellaSpecificState);
+    // Model 2.0 (phase 36, T-06): the shown efficiency is the one the clocks give (0 on activation:
+    // it is starting up); re-activating never restores a worn policy, and the fatigue warning keeps its wear.
+    p.currentEfficiency = baseEfficiency(p, CP);
     activatedAt = { ...s.policyActivatedAt, [policyId]: s.monthIndex };
-    p.previousEfficiencyForNotification = p.currentEfficiency;
+    p.previousFatigueFactor = fatigueFactor(p);
     evenEffort(p);
   } else {
     // Lock-in counts months, not calendar years: a policy switched on in December used to be

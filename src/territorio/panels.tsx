@@ -9,7 +9,8 @@ import { useT, type TranslationKey } from '../i18n';
 import { evaluateTerritorio, leadingRouteId } from './routes';
 import { artRoute, newsArtUrl, themeForNews, themeForSituationNews } from './newsArt';
 import { portraitUrl, type PortraitActor } from './sprites';
-import { canDeclare, lotFor, parcelAt, publicUseCost, PUBLIC_USES, isProductive, regionAt, type PublicUse } from '../sim';
+import { canDeclare, lotFor, parcelAt, policyCostOf, policyStatus, publicUseCost, PUBLIC_USES, isProductive, regionAt, type PublicUse } from '../sim';
+import { costShareOf, PID_OF } from '../sim/v2/policies';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
 import type { Pact, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -42,7 +43,7 @@ export function SideSheet({ panel, onClose, children }: { panel: PanelId; onClos
 
 /**
  * Policy families, in the shape the Grok fusion proposed (combinacion/vAlRAn1GjcMwOEjO-grok-workspace):
- * green and extractive families side by side, filterable, each card carrying its cost, its decay,
+ * green and extractive families side by side, filterable, each card carrying its cost, its start-up and wear,
  * the trade-off it forces and the instruments underneath. What it shows is this model's data:
  * efficiency and effort come from PolicyState, names and descriptions from legacyContent/gameData.
  */
@@ -120,6 +121,10 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
         const used = instruments.reduce((sum, i) => sum + i.effortPercentage, 0);
         const yearsActive = p.isActive && p.activationYear !== undefined ? session.game.year - p.activationYear : 0;
         const expanded = open === id;
+        // Model 2.0 (phase 36): cost by effort (share of GDP; at full effort while inactive) and the
+        // start-up / wear states of the policy clocks.
+        const status = policyStatus(p);
+        const costPct = (p.isActive ? policyCostOf(p, 1) : costShareOf(PID_OF[id])) * 100;
         return (
           <div key={id} className={`rounded-md border p-3 ${p.isActive ? 'border-chlorophyll/50 bg-basalt-800' : 'border-basalt-700'}`}>
             <div className="flex items-start gap-2">
@@ -130,8 +135,9 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
                 <span className="min-w-0">
                   <span className="block text-[14px] leading-tight text-bone">{getPolicyName(id, locale)}</span>
                   <span className="tnum block text-[11px] text-ash-dim">
-                    {fill(c.policies.cost, { pct: fmt.pct(p.costFactor * 100, 1) })}
+                    {fill(p.isActive ? c.policies.cost : c.policies.costFull, { pct: fmt.pct(costPct, 1) })}
                     {p.isActive && ` · ${fill(c.policies.efficiency, { pct: fmt.pct((p.currentEfficiency ?? 0) * 100, 0) })}`}
+                    {status.starting && ` · ${fill(c.policies.starting, { pct: fmt.pct(status.ramp * 100, 0) })}`}
                     {p.isActive && yearsActive > 0 && ` · ${fill(c.policies.years, { n: yearsActive })}`}
                   </span>
                 </span>
@@ -143,9 +149,10 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
 
             {p.isActive && (
               <span className="mt-2 block h-1 overflow-hidden rounded-full bg-basalt-700">
-                <span className="block h-full rounded-full bg-chlorophyll" style={{ width: `${Math.max(0, Math.min(100, (p.currentEfficiency ?? 0) * 100))}%` }} />
+                <span className={`block h-full rounded-full ${status.worn ? 'bg-ochre' : 'bg-chlorophyll'}`} style={{ width: `${Math.max(0, Math.min(100, (p.currentEfficiency ?? 0) * 100))}%` }} />
               </span>
             )}
+            {status.worn && <p className="mt-1 text-[11px] leading-snug text-ochre">{c.policies.worn}</p>}
 
             {expanded && (
               <div className="mt-2 space-y-2">

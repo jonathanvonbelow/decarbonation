@@ -12,6 +12,7 @@ calibración.**
 | `math.ts` | `sigmoid`, `logit`, `target100`, `relax` (discretización exacta), `sLow`/`sHigh`, `phiEffort`, `toLogitDelta` |
 | `params.ts` | `PARAMS_V2`: tablas del modelo (copia fiel de `P` del prototipo), `PID` (códigos cortos → enum `Policy`) |
 | `anchors.ts` | `computeAnchors` / `createModelState`: anclas del estado inicial de cada nivel (`GameState.model`) |
+| `policies.ts` | fase 36: `tickPolicyClocks`, `baseEfficiency`, `channelStrength`, `computeEfficiencies` (η base + canales `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost` (por esfuerzo), `policyStatus` ("en marcha" / "desgastada" para la UI) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
 `stepYear` (`src/sim/index.ts`) es `advance(…, dt = 1)`; `stepMonth` (`src/sim/monthly.ts`) es
@@ -40,7 +41,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | Fase | Paso de `advance` / módulo | Estado |
 |---|---|---|
 | 35 | estructura, `math`, `params`, `anchors`, `advance` con funciones 1.1, golden test apagado | hecho |
-| 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `costShare`) | pendiente |
+| 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44) |
 | 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | pendiente |
 | 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`) | pendiente |
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`) | pendiente |
@@ -48,7 +49,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 41 | F por balance oferta/demanda (`food`, `foodPerCapita0`) | pendiente |
 | 42 | presiones en logit, ancladas (`pressure`) | pendiente |
 | 43 | pactos como desplazamiento de objetivo (`pacts`) | pendiente |
-| 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`) | pendiente |
+| 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge` | pendiente |
 | 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
 | 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
 
@@ -72,3 +73,10 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 ## Recortes
 
 Ninguno en la fase 35.
+
+Fase 36: el costo de las políticas usa la fórmula por esfuerzo de la spec (`κ·Y·(0,3 + 0,7·ē)`) pero con la escala
+1.1 (`PARAMS_V2.costShareBridge`, los viejos `costFactor`) en lugar de κ (`costShare`): κ está calibrado contra el
+gasto público base de la fase 44, que todavía no existe; con κ el tesoro nunca aprieta y `sim:check -- --quick` pierde
+C3 (`buy_everything` de Territorio y `green` de N1 ganan todas las rutas). La fase 44 cambia `costShareOf` a κ.
+Los submodelos 1.1 leen la eficiencia por `getPolicyEfficiency` = `eff[pid].prod`; cada fase 37–45 pasa su submodelo
+a su canal (`land`, `social`, `elec`/`other`/`tax`).

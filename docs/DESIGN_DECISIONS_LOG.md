@@ -2112,3 +2112,91 @@ spec; ver desvíos).
 
 **Deudas.** La corrida en seco de `anchors.ts` duplica la matriz de la fase 37: cuando exista, `computeAnchors` debe
 llamarla (el test de anclas contra el prototipo lo protege). `golden.v2.spec.ts` se enciende en la fase 46.
+
+## 2026-10-22 — v6 fase 36: políticas — puesta en marcha, fatiga e instrumentos
+
+**Qué se hizo** (`mejora-general/files/36_politicas_eficiencia_instrumentos.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/policies.ts` (port de `base_eta`, `channel`, `compute_eta`, `policy_cost` y del bloque de relojes de
+  `step()` del prototipo): `tickPolicyClocks` (τ y T; en reposo τ = 0 y T·e^(−dt/ρ)), `rampFactor`, `fatigueFactor`,
+  `baseEfficiency`, `channelStrength`, `prodEfficiency`, `efficiencyOf`, `computeEfficiencies` (η base + `eta` uniforme
+  del prototipo + `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost`/`policyCostOf` (por esfuerzo,
+  30 % fijo), `policyStatus` (estados de UI), `PID_OF`.
+- `PARAMS_V2`: `INSTRUMENT_CHANNELS` (alias `instruments`; tabla de la spec §2, `ids` en el orden de
+  `INITIAL_POLICY_INSTRUMENTS`) y `costShareBridge` (ver desvíos).
+- `advance()`: paso 2 (relojes) antes del sorteo de eventos, como el prototipo; paso 4 (`computeEfficiencies`, guarda η en
+  `currentEfficiency`) donde estaba el decaimiento 1.1; costo de políticas por esfuerzo; `AdvanceResult.efficiencies`.
+  `getPolicyEfficiency` = `eff[pid].prod` (misma función `prodEfficiency`) para los submodelos 1.1.
+- Borrados: `costFactor`, `initialEfficiency`, `efficiencyDecayDuration`, `stellaName` de las políticas;
+  `Tiempo_Activacion_*` y `Conteo_*` de `StellaStocks` (se conserva `Conteo_Chatgpt`, que no es de políticas);
+  `updatePolicyEfficiency`, `decayedEfficiency`, `efficiencyFromCounter`, `computeTotalPolicyCost`.
+  `previousEfficiencyForNotification` → `previousFatigueFactor`.
+- Aviso nuevo (`checkEfficiencyWarning`): una vez por cruce del factor de desgaste por debajo de 0,5, un aviso por
+  política. UI: "En marcha (NN %)" (rampa < 0,9) y "Desgastada" en `PolicyToggle` (todos los niveles; antes la
+  eficiencia solo se veía desde N2) y en el panel de políticas de Territorio (más costo por esfuerzo); textos es/en en
+  `src/i18n/ui` y `src/i18n/territorio`; pistas de instrumentos actualizadas.
+- Consumidores actualizados: `App.tsx` y `territorio/session.ts` (al activar, η de los relojes: 0 = arrancando; T-06),
+  `EquationsManual` (tabla κ y λ/δ, fórmula 2.0), `descriptions.ts`, `FacilitatorManual`, contexto de Gemini
+  (`geminiService`, `advisorRules`: eficiencia en todos los niveles + estados), `uiActionRegistry` (`startingUp`,
+  `worn`), `docentes-ecuaciones.html` y `docentes-diapositivas.html` (eficiencia 2.0; P-1 marcado como corregido en
+  2.0), arnés (`runNiveles.ts`, `simulate.ts`).
+- Tests: `tests/sim/policies.v2.spec.ts` (§4 completo + comparación numérica con el prototipo: CN 20/40/40/0 y AS
+  parejo en N2, 10 años activos, 5 en reposo, 3 reactivada, a 1e-10; monotonía INV-12 con fast-check; ids de
+  instrumentos; aviso una sola vez; mensual = anual). INV-15 pasa a "toda política tiene λ, δ y costo". `model11.spec`
+  §1 usa la curva 2.0, "N1 ignora el esfuerzo" pasa a "el reparto parejo da la eficiencia base", §6
+  (`efficiencyFromCounter`) se retira. `core.spec.ts`: las trayectorias de referencia 1.1 se regeneran con `advance`
+  de esta fase (pin de regresión del motor 2.0-dev; la fase cambia ecuaciones a propósito).
+
+**Desvíos y discrepancias** (filas de la fase 36 en `docs/v6-spec-vs-motor.md`).
+- *Escala del costo*: la spec dice que el costo sale de `PARAMS_V2.costShare` (κ, 0,2–1,2 % del PBI). κ está calibrado
+  contra el gasto público base de la fase 44, que la economía 1.1 no tiene: con κ las políticas cuestan ~5 veces menos,
+  el tesoro deja de apretar y `sim:check --quick` da C3 PASS → FAIL (`buy_everything` de Territorio gana todas las
+  rutas 80 %, `green` de N1 70 %) y C4 0,6 → 1,0 (verificado). Se aplica la fórmula por esfuerzo de la spec con la
+  escala 1.1 (`costShareBridge` = los viejos `costFactor`) a través de `costShareOf`; la fase 44 la cambia a κ y borra
+  el puente. Anotado también en `src/sim/v2/README.md` (Recortes).
+- *Canales vs prototipo*: `modelo_v2.py` calcula `eta[j]` con relevancia uniforme; las relevancias por canal son de la
+  spec. Se implementan las de la spec y se expone además `eff.eta` (uniforme). Con reparto parejo son iguales; el arnés
+  solo concentra CN, cuyo `land`/`prod` (en blanco en la spec) se toma uniforme = `eta["CN"]` del prototipo, así que el
+  golden no se ve afectado. Las fases 37–45 que lean un canal deciden si el prototipo pasa a canales.
+- *Nivel 1*: el prototipo no tiene excepción por nivel (aplica el vector de esfuerzo en cualquier nivel). El juego no
+  tiene panel en N1 y `evenEffort` reparte 25/25/25/25 al activar ⇒ χ = 1 y ē = 1 en N1; `computeEfficiencies` no
+  distingue niveles. El arnés ya forzaba el reparto parejo en N1 (fase 33).
+- *Aviso*: la spec dice "avisa una vez"; se avisa una vez por cruce (una política que se recupera en reposo y vuelve a
+  desgastarse vuelve a avisar), y uno por política si cruzan varias el mismo paso.
+- *Eficiencia visible en N1*: antes `PolicyToggle` la mostraba solo desde N2; ahora en todos los niveles, porque la
+  puesta en marcha también existe en N1.
+- `tickPolicyClocks` trata ρ ≤ 0 como recuperación instantánea (el facilitador podría escribir 0).
+- La fase cierra N-01/T-02 residual, N-02/P-2, N-07/P-1, T-06 y P-3 (fórmula; escala pendiente de 44).
+
+**Verificación.** `npx tsc --noEmit`, `npm test` (29 archivos, 294 tests), `npm run build`, `npm run i18n:audit`
+limpios. `npm run sim:check -- --quick` (sale 0) contra la fase 35:
+
+| Criterio | 35 (quick) | 36 (quick) |
+|---|---|---|
+| C1 do_nothing nunca gana | FAIL 0,100 | FAIL 0,100 |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,000 (N2 conservation 30 → 90 %) |
+| C3 ninguna gana todas | PASS 0,200 | PASS 0,200 |
+| C4 atajos cerrados | FAIL 0,600 | FAIL 0,600 |
+| C5 la estrategia decide | FAIL 3 | FAIL 3 |
+| C6 recorrido ≥ 15 | FAIL 0,341 | FAIL 0,911 (mejora) |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 1,529 | FAIL 1,790 |
+
+C9 empeora por diseño: las políticas conservan más eficiencia (piso 0,35) y mueven más el suelo, y la integración
+Euler mensual de 1.1 (`toward`) se aparta más del paso anual (peor c: `green` año 10, Δ 0,18 t). Lo resuelve la fase
+46 (`relax`). No se corrió el arnés completo ni `--update-latest` (la fase no lo pide).
+E2E con navegador (dev server con `GEMINI_API_KEY` de relleno): `/play?demo=1` N1, activar Políticas Agroecológicas →
+"En marcha (0 %)"; simular un año → "En marcha (49 %)"; sin errores de consola. `/territorio`: activar Agroecológicas,
+avanzar un mes → "Costo 4,0 % del PBI · Eficiencia 5 % · En marcha (5 %)".
+
+**Revisión de código** (aplicada): `getPolicyEfficiency` y `eff.prod` comparten `prodEfficiency`; INV-15 verifica
+también la escala que cobra el motor (`costShareOf`); manual del facilitador, cabecera de `INITIAL_POLICIES` y manual
+de ecuaciones nombran la escala puente; el manual de ecuaciones ya no presenta η_min y ρ por defecto como "en vivo";
+`togglePolicy` de Territorio recibe `CP`; guarda de ρ ≤ 0; `policyStatus` una sola vez por fila en `uiActionRegistry`.
+No aplicadas: pasar `eff` como argumento a los submodelos 1.1 (cada fase 37–45 los reescribe y lee su canal de `eff`);
+los fragmentos "en marcha"/"desgastada" del contexto de Gemini y del asesor de Territorio quedan en español como el
+resto de ese contexto (preexistente); el prop `currentLevel` de `PolicyToggle` y los parámetros `_level` quedan por
+firma.
+
+**Deudas.** Escala del costo (44). Los submodelos 1.1 leen solo el canal `prod` (y CN sus instrumentos de renovables y
+captura directamente en `carbon.ts`); `land`, `social`, `elec`/`other`/`tax` todavía no tienen lector (37–45).

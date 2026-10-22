@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  calculateBiodiversityChange, createInitialState, efficiencyFromCounter, evenEffort, getPolicyEfficiency,
+  calculateBiodiversityChange, createInitialState, evenEffort, getPolicyEfficiency,
   stepMonth, stepYear,
 } from '../../src/sim';
 import { ALL_RANDOM_EVENTS, CONTROL_PARAMS, INITIAL_PACTS } from '../../src/constants';
@@ -20,9 +20,12 @@ const run = (state: GameState, years: number): GameState => {
 const clonePolicy = (p: PolicyState): PolicyState => JSON.parse(JSON.stringify(p));
 
 describe('model 1.1 §1: Carbon Neutrality decays (N-01, T-02)', () => {
-  it('CN active 10 years without events ends at e^(-10/20) = 0.607 efficiency', () => {
+  // Phase 36 replaced the 1.1 curve e^(-t/20) with the 2.0 one; CN still wears like every other policy:
+  // (1 − e^(−10/2.5)) · (0.35 + 0.65 · e^(−10/25)) = 0.772.
+  it('CN active 10 years without events wears like the others (2.0 curve)', () => {
     const s = run(withActivePolicies(freshState(1), [Policy.CarbonNeutrality]), 10);
-    expect(Math.abs(s.policies[Policy.CarbonNeutrality].currentEfficiency! - Math.exp(-10 / 20))).toBeLessThan(0.01);
+    const expected = (1 - Math.exp(-10 / 2.5)) * (0.35 + 0.65 * Math.exp(-10 / 25));
+    expect(s.policies[Policy.CarbonNeutrality].currentEfficiency!).toBeCloseTo(expected, 10);
   });
 });
 
@@ -49,12 +52,14 @@ describe('model 1.1 §2: even effort on activation (N-02)', () => {
     expect(withCn).toBeLessThan(nothing);
   });
 
-  it('level 1 efficiency ignores effort, so evenEffort changes nothing else there', () => {
+  // Phase 36: effort counts in every level; the even split of level 1 gives χ = 1, so level 1 plays
+  // at the base efficiency.
+  it('the even split gives level 1 exactly the base efficiency', () => {
     const p = clonePolicy(freshState(1).policies[Policy.Agroecological]);
     p.isActive = true;
-    const before = getPolicyEfficiency(p, 1);
+    p.currentEfficiency = 0.8;
     evenEffort(p);
-    expect(getPolicyEfficiency(p, 1)).toBe(before);
+    expect(getPolicyEfficiency(p, 1)).toBeCloseTo(0.8, 12);
   });
 });
 
@@ -101,19 +106,8 @@ describe('model 1.1 §5: drought reads the level area (N-09, T-08)', () => {
   });
 });
 
-describe('model 1.1 §6: re-activation does not restore efficiency (T-06)', () => {
-  it('efficiencyFromCounter reads the accumulated active time', () => {
-    const s = run(withActivePolicies(freshState(1), [Policy.IntensiveAgriculture]), 3);
-    const p = s.policies[Policy.IntensiveAgriculture];
-    expect(efficiencyFromCounter(p, s.stellaSpecificState)).toBeCloseTo(p.currentEfficiency!, 10);
-    expect(efficiencyFromCounter(p, s.stellaSpecificState)).toBeCloseTo(Math.exp(-3 / 5), 10);
-  });
-
-  it('a never-activated policy is at its initial efficiency', () => {
-    const s = freshState(1);
-    expect(efficiencyFromCounter(s.policies[Policy.NaturalConservation], s.stellaSpecificState)).toBe(1);
-  });
-});
+// §6 (T-06, efficiencyFromCounter) was retired in phase 36: the 2.0 clocks replace the counter and
+// re-activation is covered by tests/sim/policies.v2.spec.ts ("re-activation keeps the wear").
 
 describe('model 1.1 §8: deferred effects decided outside the step (T-12)', () => {
   it('stepMonth applies extraDeferred after recomputing CO2', () => {

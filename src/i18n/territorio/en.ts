@@ -196,6 +196,7 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
   },
   policies: {
     cost: 'Cost {pct} of GDP',
+    costFull: 'Cost up to {pct} of GDP',
     years: '{n} years active',
     tradeoff: 'Trade-off',
     filters: { all: 'All', green: 'Green', extractive: 'Extractive', active: 'Active' },
@@ -217,9 +218,11 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
     active: 'Active',
     lockedUntil: 'In force until {year}',
     efficiency: 'Efficiency {pct}',
+    starting: 'Starting up ({pct})',
+    worn: 'Worn: resting lets it recover',
     instrumentsLocked: 'From {year} you will be able to split effort among its instruments. For now it is split evenly.',
     effortTitle: 'Effort per instrument',
-    hintsNote: 'Indicative: in model 1.1 the effect is computed at policy level; only Renewables and Capture have their own effect on CO₂.',
+    hintsNote: 'Each instrument weighs differently on land, production and society, with diminishing returns: an even split gives the full effect; concentrating strengthens one channel and weakens the others. Cost follows total effort. In this development version the indicators read the production channel; Renewables and Capture also act directly on CO₂.',
   },
   finance: {
     reserves: 'Treasury reserves',

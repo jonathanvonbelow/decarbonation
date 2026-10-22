@@ -45,17 +45,100 @@ export type LandCode = 'BNNP' | 'BNP' | 'CA' | 'CC' | 'PF' | 'PRG' | 'HUM' | 'RE
 export const AGRI_CODES = ['CC', 'CA', 'PRG', 'PF'] as const;
 export type AgriCode = typeof AGRI_CODES[number];
 
+/** 36 — label of an instrument for the just-transition index (phase 45). */
+export type InstrumentTag = 'support' | 'restriction' | 'neutral';
+
+/**
+ * 36 — relevance μ (1 high, 0.6 medium, 0.3 low) of each instrument on each channel, in the order of
+ * INITIAL_POLICY_INSTRUMENTS (`ids` repeats those keys; tests/sim/policies.v2.spec.ts fails if they drift).
+ * Channels: `land` (land-use flows, habitat, soil carbon), `prod` (yields, exports, economic security,
+ * agricultural rents), `social` (conflict, just transition, pressures); Carbon Neutrality also has
+ * `elec` / `other` / `tax` (renewable share, non-electric efficiency, carbon-tax revenue), which are the
+ * prototype's CN_RELEVANCE. Source: mejora-general/files/36 §2, criterio experto.
+ *
+ * Carbon Neutrality's `land` / `prod` are blank in the spec ("—"): they are uniform here, which is the
+ * prototype's generic channel (`channel(effort)` with relevance [1, 1, 1, 1]) — the value its `eta["CN"]`
+ * takes, so the 1.1 submodels that still read CN through `prod` match the prototype.
+ * Note: the prototype computes every policy's `eta` with that uniform relevance; the per-channel rows are
+ * the spec's. With an even split both give χ = 1 (docs/v6-spec-vs-motor.md, phase 36).
+ */
+export const INSTRUMENT_CHANNELS: Record<Pid, {
+  ids: string[]; land: number[]; prod: number[]; social: number[]; tag: InstrumentTag[];
+  elec?: number[]; other?: number[]; tax?: number[];
+}> = {
+  AS: {
+    ids: ['AS_Subsidios_Bioinsumos', 'AS_Capacitacion_Tecnicas', 'AS_Corredores_Biologicos', 'AS_Certificacion_Marketing'],
+    land: [0.3, 0.6, 1, 0.3], prod: [1, 0.6, 0.3, 0.6], social: [0.6, 1, 0.3, 1],
+    tag: ['support', 'support', 'support', 'support'],
+  },
+  CR: {
+    ids: ['CR_Expansion_Areas_Protegidas', 'CR_PSA_Bosques', 'CR_Control_Especies_Invasoras', 'CR_Fortalecimiento_Guardaparques'],
+    land: [1, 0.6, 0.6, 1], prod: [0.3, 0.3, 0.3, 0.3], social: [0.3, 1, 0.3, 0.3],
+    tag: ['restriction', 'support', 'neutral', 'restriction'],
+  },
+  GS: {
+    ids: ['GS_Sistemas_Silvopastoriles', 'GS_Manejo_Pasturas_Nativas', 'GS_Bancos_Forraje_Sequia', 'GS_Genetica_Eficiente_Bajas_Emisiones'],
+    land: [1, 0.6, 0.3, 0.3], prod: [0.6, 1, 0.6, 0.6], social: [0.6, 0.6, 1, 0.3],
+    tag: ['support', 'support', 'support', 'support'],
+  },
+  AGUA: {
+    ids: ['AGUA_Riego_Tecnificado_Eficiente', 'AGUA_Proteccion_Fuentes_Recarga', 'AGUA_Cosecha_Almacenamiento_Lluvia', 'AGUA_Tratamiento_Reuso_Aguas_Servidas'],
+    land: [0.3, 1, 0.3, 0.3], prod: [1, 0.3, 0.6, 0.6], social: [0.6, 0.3, 1, 0.6],
+    tag: ['support', 'restriction', 'support', 'support'],
+  },
+  CN: {
+    ids: ['C_Impuesto_Carbono_Sectorial', 'C_Fomento_Energias_Renovables_No_Convencionales', 'C_Eficiencia_Energetica_Industrial_Residencial', 'C_Investigacion_Desarrollo_Captura_Carbono'],
+    land: [1, 1, 1, 1], prod: [1, 1, 1, 1], social: [1, 0.3, 0.3, 0.3],
+    tag: ['restriction', 'support', 'support', 'neutral'],
+    elec: [0.6, 1, 0.3, 0], other: [0.6, 0.15, 1, 0.5], tax: [1, 0, 0, 0],
+  },
+  PAI: {
+    ids: ['PAI_Subsidios_Fertilizantes_Quimicos_Pesticidas', 'PAI_Infraestructura_Logistica_Agroindustrial', 'PAI_Creditos_Blandos_Maquinaria_Agricola', 'PAI_Desarrollo_Variedades_Alto_Rendimento_Transgenicos'],
+    land: [0.6, 1, 0.6, 0.3], prod: [1, 0.6, 0.6, 1], social: [0.3, 0.6, 0.3, 0.3],
+    tag: ['neutral', 'neutral', 'neutral', 'neutral'],
+  },
+  PEA: {
+    ids: ['PEA_Acuerdos_Comerciales_Apertura_Mercados', 'PEA_Subsidios_Logistica_Exportacion', 'PEA_Promocion_Marca_Pais_Productos_Agricolas', 'PEA_Flexibilizacion_Normas_Calidad_Exportacion'],
+    land: [0.6, 0.6, 0.3, 0.3], prod: [1, 0.6, 0.6, 0.6], social: [0.3, 0.3, 0.3, 0.6],
+    tag: ['neutral', 'neutral', 'neutral', 'neutral'],
+  },
+  PIE: {
+    ids: ['PIE_Incentivos_Fiscales_Zonas_Francas', 'PIE_Simplificacion_Tramites_Apertura_Empresas_Extranjeras', 'PIE_Garantias_Proteccion_Inversiones_Extranjeras', 'PIE_Promocion_Sectores_Estrategicos_Roadshows_Internacionales'],
+    land: [0.6, 0.3, 0.3, 0.3], prod: [1, 0.6, 0.6, 0.6], social: [0.3, 0.3, 0.3, 0.3],
+    tag: ['neutral', 'neutral', 'neutral', 'neutral'],
+  },
+  FRA: {
+    ids: ['FRA_Reduccion_Tiempos_Evaluacion_Impacto_Ambiental', 'FRA_Moratorias_Sanciones_Incumplimiento_Ambiental', 'FRA_Permisos_Rapidos_Uso_Recursos_Naturales', 'FRA_Consulta_Publica_Ambiental_No_Vinculante'],
+    land: [1, 0.6, 1, 0.3], prod: [0.6, 0.3, 0.6, 0.3], social: [0.6, 0.6, 0.3, 1],
+    tag: ['neutral', 'neutral', 'neutral', 'neutral'],
+  },
+  /** For Energy Subsidies the `land` channel carries fossil emissions (spec 36 §2). */
+  SE: {
+    ids: ['SE_Subsidios_Directos_Combustibles_Fosiles_Transporte', 'SE_Tarifas_Electricas_Subsidiadas_Industria_Pesada', 'SE_Incentivos_Exploracion_Explotacion_Hidrocarburos', 'SE_Congelamiento_Precios_Gas_GLP_Residencial'],
+    land: [1, 0.6, 1, 0.3], prod: [0.3, 1, 0.6, 0.3], social: [0.6, 0.3, 0.3, 1],
+    tag: ['neutral', 'neutral', 'neutral', 'neutral'],
+  },
+};
+
 export const PARAMS_V2 = {
   /** 36 — years to reach 63 % of full effect after activation. Criterio experto. */
   rampYears:   { AS: 1.5, CR: 2.5, GS: 1.5, AGUA: 2.0, CN: 2.5, PAI: 1.0, PEA: 0.5, PIE: 1.5, FRA: 0.5, SE: 0.5 },
   /** 36 — fatigue time constant (years of accumulated activity). Replaces efficiencyDecayDuration. Criterio experto. */
   fatigueYears: { AS: 15, CR: 25, GS: 12, AGUA: 20, CN: 25, PAI: 8, PEA: 10, PIE: 10, FRA: 6, SE: 5 },
-  /** 36/44 — annual cost at full effort, fraction of GDP. Rescaled from v1 costFactor once base spending exists. */
+  /** 36/44 — annual cost at full effort, fraction of GDP (prototype κ). Calibrated against base public spending (phase 44). */
   costShare:   { AS: 0.008, CR: 0.010, GS: 0.006, AGUA: 0.008, CN: 0.012, PAI: 0.006, PEA: 0.003, PIE: 0.005, FRA: 0.002, SE: 0.012 },
+  /**
+   * 36 → 44 — TRANSITIONAL cost at full effort, fraction of GDP: the 1.1 `costFactor` values (deleted from
+   * INITIAL_POLICIES), used by `costShareOf` until phase 44 adds base public spending and switches to
+   * `costShare`. The 1.1 economy has no base spending, so with κ the treasury would never bind. Phase 44 deletes it.
+   */
+  costShareBridge: { AS: 0.04, CR: 0.05, GS: 0.03, AGUA: 0.05, CN: 0.07, PAI: 0.02, PEA: 0.01, PIE: 0.02, FRA: 0.01, SE: 0.02 },
   /** 36 — share of the cost paid regardless of effort (dimensionless). Criterio experto. */
   costFixedShare: 0.3,
   /** 36 — effort scale of the diminishing returns (phiEffort), effort points 0-100. Criterio experto. */
   effortE0: 40,
+  /** 36 — instrument channels (alias of INSTRUMENT_CHANNELS, the spec's `PARAMS_V2.instruments`). */
+  instruments: INSTRUMENT_CHANNELS,
 
   /** 37 — land: base annual rates (fraction of the source area per year, v1 values) and the agricultural pool. */
   land: {

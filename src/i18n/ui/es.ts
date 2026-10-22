@@ -32,13 +32,17 @@ export const UI_ES = {
   },
   policyToggle: {
     currentEfficiency: 'Eficiencia Actual:',
-    efficiencyNote: 'La eficiencia baja con el tiempo que la política lleva activa; reactivarla no la renueva.',
+    efficiencyNote: 'Arranca de a poco, se desgasta con el uso hacia un piso institucional y se recupera si la dejás descansar.',
+    // Fase 36 (modelo 2.0): estados visibles de la eficiencia.
+    starting: 'En marcha ({pct} %)',
+    worn: 'Desgastada',
+    wornTitle: 'Perdió más de la mitad de su empuje por desgaste; si descansa, se recupera.',
     lockedUntil: '🔒 Bloqueada hasta el año {year}.',
     efficiencyTitle: 'Eficiencia: {value}%',
   },
   instruments: {
-    // Fase 34 (modelo 1.1, N-08): aviso bajo las pistas de instrumentos hasta que la fase 36 las vuelva reales.
-    hintsNote: 'Orientativo: en el modelo 1.1 el efecto se calcula a nivel de política; solo Renovables y Captura tienen un efecto propio sobre el CO₂.',
+    // Fase 36 (modelo 2.0): los instrumentos actúan por canales (src/sim/v2/policies.ts).
+    hintsNote: 'Cada instrumento pesa distinto sobre suelo, producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo, concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. En esta versión en desarrollo los indicadores leen el canal de producción; Renovables y Captura además actúan directo sobre el CO₂.',
   },
   routes: {
     panelTitle: 'Rutas de victoria',
@@ -221,7 +225,7 @@ export const UI_ES = {
       biodiversity: 'Salud de los ecosistemas del país. Sube con conservación y agroecología; baja con uso intensivo del suelo.',
       co2EqEmissionsPerCapita: 'Emisiones de gases de efecto invernadero por persona. Cuanto más bajo, mejor — es uno de los objetivos centrales del juego.',
       foodSecurity: 'Disponibilidad y acceso a alimentos de la población. Depende del uso del suelo y de la seguridad económica.',
-      economicSecurity: 'Estabilidad económica y empleo. Responde lento a las políticas — su decaimiento de eficiencia es uno de los desafíos más duros del juego.',
+      economicSecurity: 'Estabilidad económica y empleo. Responde lento a las políticas: las que la empujan tardan en ponerse en marcha y se desgastan con el uso, uno de los desafíos más duros del juego.',
       socialWellbeing: 'Calidad de vida y cohesión social. Cae cuando las presiones políticas (agrícola, ambientalista, social) se mantienen altas.',
       politicalStability: 'Gobernabilidad y riesgo de colapso político. Baja cuando el bienestar social o la seguridad económica son bajos, o las presiones están muy polarizadas.',
     },

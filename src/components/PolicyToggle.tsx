@@ -4,6 +4,7 @@ import Tooltip from './common/Tooltip';
 import { useT } from '../i18n';
 import { getPolicyName } from '../legacyContent/gameData';
 import { ANCHORS, useAnchor } from './decarbonito/anchors';
+import { policyStatus } from '../sim/v2/policies';
 
 interface PolicyToggleProps {
   policy: PolicyState;
@@ -40,11 +41,13 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   };
 
   const efficiencyPercentage = policy.currentEfficiency !== undefined ? (policy.currentEfficiency * 100).toFixed(0) : null;
+  // Model 2.0 (phase 36): start-up ramp and wear, shown in every level.
+  const status = policyStatus(policy);
   const displayName = getPolicyName(policy.id, locale) || policy.name;
   const rowRef = useAnchor<HTMLDivElement>(ANCHORS.policyRow(policy.id), displayName);
 
   let baseTooltip: React.ReactNode;
-  if (currentLevel >= 2 && policy.isActive && efficiencyPercentage !== null) {
+  if (policy.isActive && efficiencyPercentage !== null) {
     baseTooltip = (
       <>
         <p className="mb-2">{policy.description}</p>
@@ -88,11 +91,17 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
           <Tooltip content={tooltipContent}>
             <span>
               {displayName}
-              {currentLevel >= 2 && policy.isActive && policy.currentEfficiency !== undefined && (
+              {policy.isActive && policy.currentEfficiency !== undefined && (
                 <span
                   title={t('policyToggle.efficiencyTitle', { value: (policy.currentEfficiency * 100).toFixed(0) })}
                   className={`inline-block w-3 h-3 rounded-full ml-2 ${getEfficiencyColor(policy.currentEfficiency)}`}
                 ></span>
+              )}
+              {status.starting && (
+                <span className="ml-2 text-xs text-ochre">{t('policyToggle.starting', { pct: (status.ramp * 100).toFixed(0) })}</span>
+              )}
+              {status.worn && (
+                <span className="ml-2 text-xs text-ochre" title={t('policyToggle.wornTitle')}>{t('policyToggle.worn')}</span>
               )}
               {isLockedForDeactivation ? <span className="ml-1">🔒</span> : ''}
             </span>

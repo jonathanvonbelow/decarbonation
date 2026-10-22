@@ -4,6 +4,7 @@ import { LEVEL_CONFIGS, GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS, GEMINI_TTS_VOICE_NA
 import { samplingFor } from './geminiConfig';
 import { Language } from '../hooks/useLanguage';
 import { getPolicyName, getIndicatorName } from '../legacyContent/gameData';
+import { policyStatus } from '../sim/v2/policies';
 
 // Suffix appended to the system instruction to enforce response language
 const LANGUAGE_INSTRUCTION: Record<Language, string> = {
@@ -122,9 +123,9 @@ const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTAN
         activePolicies.forEach(p => {
             const pName = getPolicyName(p.id, language) || p.name;
             context += `- ${pName}`;
-            if (currentLevel >= 2) {
-                context += ` (Eficiencia: ${(p.currentEfficiency! * 100).toFixed(0)}%, Esfuerzo Instr.: ${p.totalInstrumentEffortApplied || 0}%)`;
-            }
+            // Model 2.0 (phase 36): base efficiency, start-up / wear state and effort, in every level.
+            const st = policyStatus(p);
+            context += ` (Eficiencia: ${((p.currentEfficiency ?? 0) * 100).toFixed(0)}%${st.starting ? `, en marcha ${(st.ramp * 100).toFixed(0)}%` : ''}${st.worn ? ', desgastada (se recupera si descansa)' : ''}, Esfuerzo Instr.: ${p.totalInstrumentEffortApplied || 0}%)`;
             context += `\n`;
         });
         context += `\n`;

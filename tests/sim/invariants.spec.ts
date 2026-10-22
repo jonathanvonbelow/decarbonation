@@ -12,9 +12,10 @@
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { makeRng, stepYear } from '../../src/sim';
+import { costShareOf, makeRng, PID_OF, stepYear } from '../../src/sim';
+import { PARAMS_V2 } from '../../src/sim/v2/params';
 import { Policy, type LandUseType } from '../../src/types';
-import { INDICATOR_IMPACT_WEIGHTS, INITIAL_PACTS, INITIAL_POLICIES, INITIAL_STELLA_STOCKS, TOTAL_LAND_AREA } from '../../src/constants';
+import { INDICATOR_IMPACT_WEIGHTS, INITIAL_PACTS, INITIAL_POLICIES, TOTAL_LAND_AREA } from '../../src/constants';
 import type { Pact, PactImpulses, PolicyState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
@@ -167,12 +168,16 @@ describe('sim invariants', () => {
   });
 
   // Model 1.1 (phase 34, N-01/T-02): Carbon Neutrality's stellaName was commented out, so it never decayed.
-  it('INV-15: every decaying policy has a stellaName and a matching activation counter', () => {
+  // Model 2.0 (phase 36): every policy reads its ramp, fatigue and cost from PARAMS_V2 by id, so no policy
+  // can silently skip the clocks; this checks every policy has all three.
+  it('INV-15: every policy has a ramp, a fatigue and a cost in PARAMS_V2', () => {
     (Object.values(INITIAL_POLICIES) as PolicyState[]).forEach((p) => {
-      if ((p.efficiencyDecayDuration ?? 0) > 0) {
-        expect(p.stellaName, p.id).toBeTruthy();
-        expect(`Tiempo_Activacion_${p.stellaName}` in INITIAL_STELLA_STOCKS, p.id).toBe(true);
-      }
+      const pid = PID_OF[p.id];
+      expect(pid, p.id).toBeTruthy();
+      expect(PARAMS_V2.rampYears[pid], p.id).toBeGreaterThan(0);
+      expect(PARAMS_V2.fatigueYears[pid], p.id).toBeGreaterThan(0);
+      expect(PARAMS_V2.costShare[pid], p.id).toBeGreaterThan(0);
+      expect(costShareOf(pid), p.id).toBeGreaterThan(0); // the scale the engine charges (bridge until phase 44)
     });
   });
 

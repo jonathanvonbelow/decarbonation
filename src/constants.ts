@@ -90,69 +90,71 @@ export const INITIAL_POLICY_INSTRUMENTS: Record<Policy, Record<string, PolicyIns
 };
 
 
+/**
+ * Model 2.0 (phase 36): a policy's ramp, fatigue and cost come from PARAMS_V2 (rampYears, fatigueYears,
+ * and the cost scale of `costShareOf` — costShareBridge until phase 44, then costShare; src/sim/v2/params.ts); `currentEfficiency` stores the base efficiency the engine computed on
+ * the last step (0 while inactive). costFactor / initialEfficiency / efficiencyDecayDuration / stellaName
+ * and the Tiempo_Activacion_* / Conteo_* stocks were deleted (src/sim/v2/policies.ts).
+ */
 export const INITIAL_POLICIES: Record<Policy, PolicyState> = {
   [Policy.Agroecological]: {
     id: Policy.Agroecological, name: "Políticas Agroecológicas", isActive: false,
-    description: "Fomenta prácticas agrícolas sostenibles, mejorando la biodiversidad y la salud del suelo.", costFactor: 0.04, stellaName: "Políticas_Agroecológicas",
-    initialEfficiency: 1, efficiencyDecayDuration: 10, currentEfficiency: 1,
+    description: "Fomenta prácticas agrícolas sostenibles, mejorando la biodiversidad y la salud del suelo.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.Agroecological])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.NaturalConservation]: {
     id: Policy.NaturalConservation, name: "Conservación de Bienes Naturales", isActive: false,
-    description: "Protege ecosistemas clave, crucial para la biodiversidad y la captura de carbono.", costFactor: 0.05, stellaName: "Políticas_de_Conservación_de_los_Bienes_Naturales",
-    initialEfficiency: 1, efficiencyDecayDuration: 15, currentEfficiency: 1,
+    description: "Protege ecosistemas clave, crucial para la biodiversidad y la captura de carbono.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.NaturalConservation])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.SustainableLivestock]: {
     id: Policy.SustainableLivestock, name: "Ganadería Sostenible", isActive: false,
-    description: "Promueve métodos de pastoreo y manejo que reducen emisiones y mejoran el uso del suelo.", costFactor: 0.03, stellaName: "Políticas_de_Ganadería_Sostenible",
-    initialEfficiency: 1, efficiencyDecayDuration: 8, currentEfficiency: 1,
+    description: "Promueve métodos de pastoreo y manejo que reducen emisiones y mejoran el uso del suelo.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.SustainableLivestock])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.SustainableWaterManagement]: {
     id: Policy.SustainableWaterManagement, name: "Gestión Sostenible del Agua", isActive: false,
-    description: "Asegura el uso eficiente y la conservación del agua, vital para la agricultura y el bienestar social.", costFactor: 0.05, stellaName: "Políticas_de_Gestión_Sostenible_del_Recurso_Hídrico",
-    initialEfficiency: 1, efficiencyDecayDuration: 12, currentEfficiency: 1,
+    description: "Asegura el uso eficiente y la conservación del agua, vital para la agricultura y el bienestar social.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.SustainableWaterManagement])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.CarbonNeutrality]: {
     id: Policy.CarbonNeutrality, name: "Neutralidad de Carbono", isActive: false,
     description: "Implementa medidas amplias para reducir emisiones netas (renovables, impuestos al carbono).",
-    costFactor: 0.07, // carbon neutrality is ambitious and expensive: teaches the fiscal trade-off
-    // Model 1.1 (phase 34, N-01/T-02): stellaName used to sit inside the comment above, so CN never
-    // counted its active years and never lost efficiency.
-    stellaName: "Políticas_de_Carbono_Neutralidad",
-    initialEfficiency: 1, efficiencyDecayDuration: 20, currentEfficiency: 1,
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.CarbonNeutrality])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.IntensiveAgriculture]: {
     id: Policy.IntensiveAgriculture, name: "Agricultura Intensiva", isActive: false,
-    description: "Busca maximizar la producción agrícola a corto plazo, con posibles costos ambientales.", costFactor: 0.02, stellaName: "Políticas_Agrícolas_Intensivas",
-    initialEfficiency: 1, efficiencyDecayDuration: 5, currentEfficiency: 1,
+    description: "Busca maximizar la producción agrícola a corto plazo, con posibles costos ambientales.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.IntensiveAgriculture])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.AgriculturalExports]: {
     id: Policy.AgriculturalExports, name: "Exportaciones Agrícolas", isActive: false,
-    description: "Fomenta la venta de productos agrícolas al exterior, mejorando la balanza comercial.", costFactor: 0.01, stellaName: "Políticas_de_Exportaciones_Agrícolas",
-    initialEfficiency: 1, efficiencyDecayDuration: 6, currentEfficiency: 1,
+    description: "Fomenta la venta de productos agrícolas al exterior, mejorando la balanza comercial.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.AgriculturalExports])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.ForeignInvestment]: {
     id: Policy.ForeignInvestment, name: "Inversión Extranjera", isActive: false,
-    description: "Atrae capital extranjero para el desarrollo industrial, pudiendo aumentar el PBI.", costFactor: 0.02, stellaName: "Políticas_de_Inversión_Extranjera",
-    initialEfficiency: 1, efficiencyDecayDuration: 7, currentEfficiency: 1,
+    description: "Atrae capital extranjero para el desarrollo industrial, pudiendo aumentar el PBI.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.ForeignInvestment])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.FlexibleEnvironmentalRegulations]: {
     id: Policy.FlexibleEnvironmentalRegulations, name: "Normativas Ambientales Flexibles", isActive: false,
-    description: "Reduce regulaciones ambientales para estimular actividad económica, con riesgos ambientales.", costFactor: 0.01, stellaName: "Políticas_de_Normativas_Ambientales_Flexibles",
-    initialEfficiency: 1, efficiencyDecayDuration: 4, currentEfficiency: 1,
+    description: "Reduce regulaciones ambientales para estimular actividad económica, con riesgos ambientales.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.FlexibleEnvironmentalRegulations])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
   [Policy.EnergySubsidies]: {
     id: Policy.EnergySubsidies, name: "Subsidios Energéticos", isActive: false,
-    description: "Reduce el costo de la energía (a menudo fósil), impactando finanzas y balance de carbono.", costFactor: 0.02, stellaName: "Políticas_de_Subsidios_Energéticos",
-    initialEfficiency: 1, efficiencyDecayDuration: 3, currentEfficiency: 1,
+    description: "Reduce el costo de la energía (a menudo fósil), impactando finanzas y balance de carbono.",
+    currentEfficiency: 0, rampTime: 0, fatigueTime: 0,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.EnergySubsidies])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
 };
@@ -240,9 +242,7 @@ export const LEVEL_3_TOTAL_LAND_AREA = Object.values(LEVEL_3_INITIAL_LAND_USES).
 
 
 export const INITIAL_STELLA_STOCKS: StellaStocks = {
-  Conteo_Agric_Intens: 0, Conteo_Agroecologica: 0, Conteo_Agua: 0, Conteo_Ambiental_Flex: 0,
-  Conteo_Bienes_Natu: 0, Conteo_Carbono_Neut: 0, Conteo_Export_Agric: 0, Conteo_Ganaderia_Sost: 0,
-  Conteo_Inver_Extran: 0, Conteo_Subsidios: 0, MEAN_colapso: 0,
+  MEAN_colapso: 0,
   Poblacion_Total: 10000000,
   PP_AGRICOLA: 30, PP_AMBIENTALISTA: 30, PP_SOCIAL: 30,
   // Nivel 1 arranca en 5 (antes 0), como el prototipo (LEVELS[1].Pc = 5): con 0 el logit del colapso
@@ -257,11 +257,6 @@ export const INITIAL_STELLA_STOCKS: StellaStocks = {
   Cumplimiento_Nivel_1: 0, Cumplimiento_Nivel_2: 0, Cumplimiento_Nivel_3: 0,
   Nivel_1_Active: true, Nivel_2_Active: false, Nivel_3_Active: false,
   Desactivar_Nivel_1: 0, Desactivar_Nivel_2: 0, Desactivar_Nivel_3: 0,
-  Tiempo_Activacion_Políticas_Agrícolas_Intensivas: 0, Tiempo_Activacion_Políticas_Agroecológicas: 0,
-  Tiempo_Activacion_Políticas_de_Carbono_Neutralidad: 0, Tiempo_Activacion_Políticas_de_Conservación_de_los_Bienes_Naturales: 0,
-  Tiempo_Activacion_Políticas_de_Exportaciones_Agrícolas: 0, Tiempo_Activacion_Políticas_de_Ganadería_Sostenible: 0,
-  Tiempo_Activacion_Políticas_de_Gestión_Sostenible_del_Recurso_Hídrico: 0, Tiempo_Activacion_Políticas_de_Inversión_Extranjera: 0,
-  Tiempo_Activacion_Políticas_de_Normativas_Ambientales_Flexibles: 0, Tiempo_Activacion_Políticas_de_Subsidios_Energéticos: 0,
   Conflicto_social: 5,
   Conteo_Chatgpt: 0,
 };
@@ -382,7 +377,7 @@ export const INITIAL_PACTS: Record<string, Pact> = {
 export const CONTROL_PARAMS: ControlParams = {
   // Model 1.1 (phase 34, N-08): the 70 keys no engine path read (Duracion_Efecto_*, Ponderacion_*,
   // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
-  // were deleted. Real policy durations live in INITIAL_POLICIES (efficiencyDecayDuration).
+  // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: 2035,
   Referencia_Max_CO2_per_Capita_Puntaje: 12,  // Adjusted ceiling — keeps scoring meaningful with lower starting emissions
   Umbral_polarizacion: 70,
