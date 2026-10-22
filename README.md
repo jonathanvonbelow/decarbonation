@@ -107,7 +107,14 @@ npm run dev
 
 # 4. Build de producción
 npm run build
+
+# 5. Balance del modelo (arnés completo, ambos juegos; escribe reports/balance-<versión>.md)
+npm run sim:check              # 40 semillas (3 niveles) / 20 (Territorio)
+npm run sim:check -- --quick   # 10 / 5 semillas, para cada fase
 ```
+
+`npm run sim` y `npm run sim:territorio` siguen disponibles como atajos rápidos (una o tres semillas); el arnés de
+referencia es `npm run sim:check` (`scripts/sim-check.ts`, `scripts/harness/`).
 
 ---
 

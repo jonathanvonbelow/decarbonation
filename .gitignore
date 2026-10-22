@@ -29,3 +29,6 @@ dist-ssr
 # v6 / fase 32: material de referencia del modelo 2.0 (se regenera)
 scripts/reference/situations.json
 __pycache__/
+
+# v6 / fase 33: el reporte rápido de sim:check se regenera en cada fase (no se versiona)
+reports/balance-*-quick.*

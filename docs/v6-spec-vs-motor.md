@@ -21,7 +21,12 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 32 | `feedbackService` no usa `warnedOnce`: un 4xx da `'rejected'` y la respuesta se pierde | El reintento sin `model_version` va en la rama `rejected` (una vez), también en `flushFeedbackQueue` | Resuelta (fase 32) |
 | 32 | La carpeta del paquete se llama `referencia/`, no `reference/` | Se copia a `scripts/reference/` | Resuelta (fase 32) |
 | 32 | La spec solo pide degradación en el cuestionario; sin migrar, `createGameSession` perdería la fila de la partida | Reintento único sin `model_version` también en `createGameSession` y `logPrediction` | Resuelta (fase 32) |
-| 33 | `simulate-territorio.ts` tiene 7 estrategias distintas de las 8 canónicas | El arnés nuevo usa las del prototipo; los scripts viejos quedan intactos | Pendiente |
+| 33 | `simulate-territorio.ts` tiene 7 estrategias distintas de las 8 canónicas | El arnés nuevo usa las del prototipo; los scripts viejos quedan intactos | Resuelta (fase 33) |
+| 33 | El prototipo paga pactos, lotes y situaciones con `pay()` (puede endeudarse hasta D/Y 0,6); la app solo con reservas | El arnés usa la API real (gana el código); explica por qué `buy_everything` no quiebra en 1.0 | Documentada (fase 33) |
+| 33/38/49 | La ruta de innovación de Territorio mide `carbonTechEffort` = (renovables + captura)/2 ≥ 25; la estrategia canónica pone CN = 20/40/40/0, así que da 20 y nunca cumple la ruta | Decidir en 38/49 si cambia la condición o el vector | Pendiente (encontrada en fase 33) |
+| 33/43 | El tratado de biodiversidad suma +5 de B por año (efecto aditivo): `conservation` termina con B = 100 en N2, N3 y Territorio | Lo reemplaza el modelo de pactos de la fase 43 | Pendiente (encontrada en fase 33) |
+| 33/34 | `togglePolicy` de `App.tsx` no reparte esfuerzo al activar: en N1 (sin panel) Carbono Neutralidad corre con esfuerzo 0 | El arnés usa reparto parejo (33 §3.1); lo corrige la fase 34 §3.2 | Pendiente (encontrada en fase 33) |
+| 33 | Línea base 1.0: C1 falla en N3 (do_nothing cumple producción en 3/40) y C2 falla también en los 3 niveles (N2: 0 % en las tres), además de lo que esperaba 33 §6 | Ver `reports/balance-1.0.md` | Documentada (fase 33) |
 | 34 | El test `facilitatorParams` fallaría con claves reales: deuda en N1/N2, 4 claves fiscales, `Ano_Activacion_Prestamo`, `Max_Additional_Tax_Rate` | Usar nivel 3 con impuesto > 0, o una lista explícita de claves solo-UI; además `App.tsx:358,1130,1139` pasa a leer el CP vivo | Pendiente |
 | 34 | T-06: el reset de eficiencia dura un solo paso | El arreglo apunta a la UI y al re-armado del aviso del 40 % | Pendiente |
 | 34 | El arreglo de la sequía quita el +0,02 en N2 (150/600 = 0,25, no es > 0,25) | Documentar | Pendiente |

@@ -1889,3 +1889,70 @@ recalibración de Territorio (fases 47 y 49), anotado en `docs/v6-spec-vs-motor.
 el cliente tolera la columna faltante). (2) `git push origin model-v1.0`.
 
 **Verificación.** `npx tsc --noEmit` limpio, `npm test`, `npm run build`, `npm run i18n:audit` en verde; `npm run sim` idéntico.
+
+## 2026-10-22 — v6 fase 33: arnés completo y `npm run sim:check`
+
+**Qué se hizo.**
+- `scripts/harness/`: `strategies.ts` (las 8 estrategias de cada juego, mismos ids y definiciones que `STRATEGIES` y
+  `TERR_STRATEGIES` de `scripts/reference/modelo_v2.py`, escritas con los códigos cortos del prototipo y traducidas con
+  `POLICY_BY_CODE`/`PACT_BY_CODE`), `runNiveles.ts` (`stepYear`, 30 años por nivel; además la medición anual–mensual con
+  `stepMonth`), `runTerritorio.ts` (360 meses con la API real de `session.ts`), `randomPlayers.ts` (jugadores sintéticos,
+  semillas `10000 + i`) y `metrics.ts` (Wilson, cuantiles, recorridos, criterios C1–C9, comparación y código de salida).
+- `scripts/sim-check.ts` + `npm run sim:check` / `sim:check:quick`. Flags: `--quick` (10/5 semillas, 50 jugadores),
+  `--report-only` (nunca falla), `--update-latest` (copia el JSON a `reports/balance-latest.json`).
+- Línea base: `npm run sim:check -- --report-only --update-latest` → `reports/balance-1.0.{md,json}` y
+  `reports/balance-latest.json` (≈ 160 s con 40/20 semillas y 150 jugadores por nivel; `--quick` ≈ 40 s).
+- `tests/harness/metrics.spec.ts` (Wilson, cuantiles, agregación, criterios, regresiones y código de salida). El arnés
+  completo no corre en `npm test`; `scripts/simulate*.ts` quedan intactos y el README apunta al arnés nuevo.
+
+**Desvíos (gana el código).**
+- *Acciones del jugador como en la app, no como en el prototipo.* Pactos, lotes y situaciones se pagan solo con reservas
+  (`togglePact`, `declareUse`, `decideSituation`); el `pay()` del prototipo puede endeudarse hasta D/Y = 0,6. Los pactos en
+  3 niveles se unen como `togglePact` de `App.tsx` (desde `unlockYear`, `costToJoin` fijo), no por entry × PBI.
+- *Semillas.* Estrategias: 1…N; eventos con `makeRng(seed, año)` (3 niveles) y la RNG propia de la sesión (Territorio).
+- *C3* cuenta conservación + producción + innovación (no equilibrio, que en N3 es "todo a la vez" por diseño).
+- *C2* mide la ruta cumplida (con pisos), no la otorgada (que es la de mayor multiplicador).
+- *`--quick`* sale con 1 solo si un criterio que pasaba en `balance-latest.json` falla ahora (33 §5); la corrida completa
+  sale con 1 ante cualquier FAIL. Para que la comparación sea pareja, las semillas rápidas son un prefijo de las completas
+  y la corrida completa guarda también `quickCriteria` (lo que daría `--quick`): `--quick` compara contra eso y no
+  confunde ruido de pocas semillas con una regresión. `--update-latest` se ignora con `--quick`. El reporte rápido
+  (`balance-<v>-quick.*`) va a `.gitignore`.
+- *Revisión de código* (aplicada): estrategia faltante = FAIL en C1/C2/C4 (antes pasaba en silencio); los dos cambios de
+  una misma decisión del jugador sintético no se deshacen entre sí; `ControlParams` llega a todas las acciones de
+  Territorio (salvo `createSession`, que no lo recibe); D/Y no finito se escribe como texto en el JSON. `quantile` queda
+  sin interpolar, tal como la escribe 33 §4.
+- *Valor escalar por criterio* para poder comparar reportes: C1/C3/C4 = peor tasa, C2 = peor tasa dirigida, C5 = casos
+  dentro de (30, 70) %, C6 = menor recorrido, C7 = máx |x − 33 %|, C8 = quiebras no permitidas, C9 = máx(|Δ|/umbral).
+- *C9* se mide ya (N2, do_nothing/green/extractive, sin eventos) pero queda SKIP en 1.x: peor |Δ| = 0,69 en W y 0,15 t en c.
+- 🟧 de 33 §7 (agregar `sim:check:quick` al CI): no hay workflow en el repo; queda sin agregar.
+
+**Línea base 1.0** (40 semillas por estrategia y nivel; 20 en Territorio):
+
+| Criterio | Estado | Medido |
+|---|---|---|
+| C1 do_nothing nunca gana | FAIL | N1 0 %, N2 0 %, **N3 7,5 %** (ruta producción), Territorio 0 % |
+| C2 dirigida gana su ruta | FAIL | N1 cons 100 / prod 22,5 / inno 100; **N2 0 / 0 / 0**; N3 100 / 12,5 / 100; Territorio 95 / 35 / **0** |
+| C3 ninguna gana todas | PASS | máx. N1 conservation 22,5 % |
+| C4 atajos cerrados | FAIL | N3 tech_tax 10 %; Territorio cheap_production 35 %, extractive 30 % |
+| C5 la estrategia decide | FAIL | N2 balanced 47,5 %; Territorio production 35 %, innovation 60 %, cheap_production 35 % |
+| C6 recorrido ≥ 15 | FAIL | N1: B 8,0, F 10,2, **E 0,4**, W 12,8; N3 F 12,3 (N2 y Territorio pasan) |
+| C7 banda de predicción | FAIL | "sin cambio" B 100 % en los 3 niveles, E 86–100 %, c 24–61 % |
+| C8 sin quiebras espurias | PASS | ninguna quiebra (inalcanzable); Territorio do_nothing 20/20 y buy_everything 11/20 terminan por desgaste sostenido |
+| C9 anual–mensual | SKIP | informativo (modelo 1.x) |
+
+Reproduce lo esperado por la auditoría (C1 casi, C2/C5 fallan en Territorio, C6 falla por E inmóvil en N1, C7 ≈ 100 %
+en B, C8 pasa porque la quiebra es inalcanzable) con dos diferencias: C1 falla en N3 (do_nothing cumple la ruta de
+producción en 3/40 semillas) y C2 falla también en los 3 niveles (N2: ninguna dirigida cumple su ruta).
+
+**Discrepancias nuevas** (en `docs/v6-spec-vs-motor.md`).
+- La innovación de Territorio con CN = 20/40/40/0 no puede cumplir su ruta en 1.0: `carbonTechEffort` promedia
+  renovables y **captura** ((40 + 0)/2 = 20 < 25). Gana la producción en su lugar (60 %).
+- `buy_everything` no quiebra en Territorio 1.0 (declara ~5 lotes: sin reservas `declareUse` rechaza y no hay deuda); el
+  prototipo quiebra en 100 % porque `pay()` financia con deuda. El 1.0 lo frena por desgaste sostenido (11/20).
+- El tratado de biodiversidad suma +5 de B por año (efecto aditivo de `effects`): `conservation` termina con B = 100 en
+  N2, N3 y Territorio. Para la fase 43 (pactos).
+- En 3 niveles, `togglePolicy` de `App.tsx` no reparte el esfuerzo al activar: en N1 (sin panel) Carbono Neutralidad corre
+  con esfuerzo 0. El arnés usa reparto parejo como pide 33 §3.1 / 34 §3.2; lo corrige la fase 34.
+
+**Verificación.** `npx tsc --noEmit` limpio; `npm test` (24 archivos, 216 tests, 11 nuevos); `npm run build`; `npm run i18n:audit`;
+`npm run sim:check -- --quick` corre y escribe el reporte. No toca `src/` ni ecuaciones (sin fila en `audit-equations.md`).
