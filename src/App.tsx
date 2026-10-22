@@ -16,13 +16,13 @@ import SurveyPost from './components/surveys/SurveyPost';
 import FacilitatorPanel from './components/facilitator/FacilitatorPanel';
 import GameSummaryPanel from './components/game/GameSummaryPanel';
 // FIX: Added NumericStellaKeys and NumericIndicatorKeys to imports from types.ts to ensure proper type checking for dynamic property access.
-import { GameState, Policy, HistoricalDataPoint, LandUseType, LandUse, StellaStocks, PolicyState, LevelConfig, Pact, ChatMessage, PolicyInstrument, RandomEvent, RandomEventEffect, ControlParams, InitialIndicatorOverrides, ChatMessageEmphasisType, InstrumentImpactHints, NumericStellaKeys, NumericIndicatorKeys, Indicators } from './types';
+import { GameState, Policy, HistoricalDataPoint, LandUseType, LandUse, PolicyState, LevelConfig, Pact, ChatMessage, PolicyInstrument, RandomEvent, RandomEventEffect, ControlParams, InitialIndicatorOverrides, ChatMessageEmphasisType, InstrumentImpactHints, NumericStellaKeys, NumericIndicatorKeys } from './types';
 import {
   INITIAL_YEAR, SIMULATION_YEARS_PER_ROUND,
   YEARS_PER_LEVEL,
   INITIAL_POLICIES, INITIAL_INDICATORS, INITIAL_FINANCES, INITIAL_LAND_USES,
-  LEVEL_CONFIGS, MAX_LEVELS, INITIAL_STELLA_STOCKS, CONTROL_PARAMS, INITIAL_PACTS, TOTAL_LAND_AREA,
-  INDICATOR_IMPACT_WEIGHTS, API_KEY_ERROR_MESSAGE, GEMINI_MODEL_TEXT, ALL_RANDOM_EVENTS,
+  LEVEL_CONFIGS, MAX_LEVELS, INITIAL_STELLA_STOCKS, CONTROL_PARAMS, TOTAL_LAND_AREA,
+  API_KEY_ERROR_MESSAGE, GEMINI_MODEL_TEXT, ALL_RANDOM_EVENTS,
   LEVEL_2_INITIAL_LAND_USES, LEVEL_2_INITIAL_STELLA_OVERRIDES, LEVEL_2_INITIAL_INDICATOR_OVERRIDES,
   LEVEL_3_INITIAL_LAND_USES, LEVEL_3_INITIAL_STELLA_OVERRIDES, LEVEL_3_INITIAL_INDICATOR_OVERRIDES,
   POLICY_LOCK_IN_DURATION, MAX_ACTIVE_POLICIES, INSTRUMENT_IMPACT_HINTS
@@ -39,7 +39,7 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogDrawer from './components/GameLogDrawer';
-import { stepYear, createInitialState, evaluateLevel } from './sim';
+import { stepYear, createInitialState, evaluateLevel, efficiencyFromCounter, evenEffort, restorePactFunctions } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -88,274 +88,15 @@ type DesactivarKeyStrings = `Desactivar_Nivel_${LevelNumber}`;
 type NivelActiveKeyStrings = `Nivel_${LevelNumber}_Active`;
 
 
-const getPolicyByStellaName = (stellaName: string, policies: Record<Policy, PolicyState>): PolicyState | undefined => {
-  return Object.values(policies).find(p => p.stellaName === stellaName);
-};
-const isPolicyActiveByStellaName = (stellaName: string, policies: Record<Policy, PolicyState>): boolean => {
-  const policy = getPolicyByStellaName(stellaName, policies);
-  return policy ? policy.isActive : false;
-};
+// Model 1.1 (phase 34): the pre-extraction copies of the engine's indicator functions that lived
+// here (calculate*Change, getPolicyEfficiency, …) had no callers since stepYear took over; deleted.
+// The engine is src/sim/.
 
-const getPolicyEfficiency = (policy: PolicyState | undefined, currentLevel: number): number => {
-    if (!policy || !policy.isActive) return 0;
-    
-    const baseEfficiency = policy.currentEfficiency || 0;
-    
-    if (currentLevel < 2 || !policy.instruments) {
-        return baseEfficiency;
-    }
-    
-    const totalInstrumentEffort = policy.totalInstrumentEffortApplied || 0;
-    return baseEfficiency * (totalInstrumentEffort / 100);
-};
-
-
-const calculateBiodiversityChange = (policies: Record<Policy, PolicyState>, landUses: Record<LandUseType, LandUse>, currentBiodiversity: number, currentLevel: number): number => {
-    let policyImpact = 0;
-    const bioWeights = INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES;
-
-    Object.values(Policy).forEach(pKey => {
-        const policy = policies[pKey as Policy];
-        if (bioWeights[pKey as Policy] && policy) {
-            policyImpact += getPolicyEfficiency(policy, currentLevel) * bioWeights[pKey as Policy];
-        }
-    });
-    
-    if (getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) > 0 && 
-        getPolicyEfficiency(policies[Policy.NaturalConservation], currentLevel) > 0) {
-        policyImpact += bioWeights.Sinergia_AS_CR_Bio_Factor;
-    }
-    if (getPolicyEfficiency(policies[Policy.IntensiveAgriculture], currentLevel) > 0 && 
-        getPolicyEfficiency(policies[Policy.FlexibleEnvironmentalRegulations], currentLevel) > 0) {
-        policyImpact += bioWeights.Sinergia_Neg_PAI_FRA_Bio_Factor;
-    }
-
-    let landUseImpact = 0;
-    const luBioWeights = INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE;
-    // FIX: Explicitly typed 'lu' to LandUse to resolve type inference issues with Object.values.
-    const currentTotalLandArea = Object.values(landUses).reduce((sum, lu: LandUse) => sum + lu.area, 0);
-
-    if (currentTotalLandArea > 0) {
-        landUseImpact += (landUses[LandUseType.UnprotectedNativeForest].area / currentTotalLandArea) * luBioWeights[LandUseType.UnprotectedNativeForest];
-        landUseImpact += (landUses[LandUseType.ProtectedNativeForest].area / currentTotalLandArea) * luBioWeights[LandUseType.ProtectedNativeForest];
-        landUseImpact += (landUses[LandUseType.AgroecologicalCrops].area / currentTotalLandArea) * luBioWeights[LandUseType.AgroecologicalCrops];
-        landUseImpact += (landUses[LandUseType.ConventionalCrops].area / currentTotalLandArea) * luBioWeights[LandUseType.ConventionalCrops];
-        landUseImpact += (landUses[LandUseType.ForestPlantations].area / currentTotalLandArea) * luBioWeights[LandUseType.ForestPlantations];
-        landUseImpact += (landUses[LandUseType.GrasslandsPastures].area / currentTotalLandArea) * luBioWeights[LandUseType.GrasslandsPastures];
-    }
-    
-    const change = (policyImpact * CONTROL_PARAMS.Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso) +
-                   (landUseImpact * CONTROL_PARAMS.Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso);
-    
-    const maxChange = 5; 
-    const actualChange = Math.max(-maxChange, Math.min(maxChange, change * 1.5)); 
-    return currentBiodiversity + actualChange;
-};
-
-const calculateFoodSecurityChange = (policies: Record<Policy, PolicyState>, landUses: Record<LandUseType, LandUse>, indicators: Indicators, currentLevel: number): number => {
-    let policyImpact = 0;
-    const fsWeights = INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES;
-    Object.values(Policy).forEach(pKey => {
-      const policy = policies[pKey as Policy];
-      if (fsWeights[pKey as Policy] && policy) {
-        policyImpact += getPolicyEfficiency(policy, currentLevel) * fsWeights[pKey as Policy];
-      }
-    });
-    if (getPolicyEfficiency(policies[Policy.SustainableLivestock], currentLevel) > 0 && 
-        getPolicyEfficiency(policies[Policy.Agroecological], currentLevel) > 0) {
-        policyImpact += fsWeights.Sinergia_GS_AS_SA_Factor;
-    }
-
-    let landUseImpact = 0;
-    const luFsWeights = INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE;
-    // FIX: Explicitly typed 'lu' to LandUse to resolve type inference issues with Object.values.
-    const currentTotalLandArea = Object.values(landUses).reduce((sum, lu: LandUse) => sum + lu.area, 0);
-    if (currentTotalLandArea > 0) {
-        Object.values(LandUseType).forEach(luKey => {
-         if (luFsWeights[luKey as LandUseType]) {
-           landUseImpact += (landUses[luKey as LandUseType].area / currentTotalLandArea) * luFsWeights[luKey as LandUseType];
-         }
-       });
-    }
-
-
-    const biodiversityEffect = indicators.biodiversity * INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.BIODIVERSITY_IMPACT_ON_FOOD_SECURITY;
-    const economicSecurityEffect = indicators.economicSecurity * INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY;
-    
-    const change = (policyImpact * CONTROL_PARAMS.Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso) +
-                   (landUseImpact * CONTROL_PARAMS.Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso) +
-                   (biodiversityEffect * CONTROL_PARAMS.Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso) +
-                   economicSecurityEffect;
-
-    const maxChange = 4;
-    const actualChange = Math.max(-maxChange, Math.min(maxChange, change * 0.1));
-    return indicators.foodSecurity + actualChange;
-};
-
-const calculateEconomicSecurityChange = (policies: Record<Policy, PolicyState>, landUses: Record<LandUseType, LandUse>, indicators: Indicators, currentLevel: number, additionalTaxPressurePercentage: number): number => {
-    let policyImpact = 0;
-    const esWeights = INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.POLICIES;
-     Object.values(Policy).forEach(pKey => {
-      const policy = policies[pKey as Policy];
-      if (esWeights[pKey as Policy] && policy) {
-        policyImpact += getPolicyEfficiency(policy, currentLevel) * esWeights[pKey as Policy];
-      }
-    });
-
-    let landUseImpact = 0;
-    const luEsWeights = INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.LAND_USE;
-    // FIX: Explicitly typed 'lu' to LandUse to resolve type inference issues with Object.values.
-    const currentTotalLandArea = Object.values(landUses).reduce((sum, lu: LandUse) => sum + lu.area, 0);
-    if (currentTotalLandArea > 0) {
-        Object.values(LandUseType).forEach(luKey => {
-         if (luEsWeights[luKey as LandUseType]) {
-           landUseImpact += (landUses[luKey as LandUseType].area / currentTotalLandArea) * luEsWeights[luKey as LandUseType];
-         }
-       });
-    }
-
-    
-    const biodiversityEffect = indicators.biodiversity * INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.BIODIVERSITY_IMPACT_ON_ECONOMIC_SECURITY;
-    let volatilityEffect = 0;
-    if (indicators.foodSecurity < 20) {
-        volatilityEffect = (20 - indicators.foodSecurity) * INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.VOLATILITY_FACTOR;
-    }
-
-    let fiscalPressureImpact = 0;
-    if (currentLevel === 3 && additionalTaxPressurePercentage > 0) {
-        fiscalPressureImpact = (additionalTaxPressurePercentage) * CONTROL_PARAMS.EcoSec_Reduction_Factor_Per_Tax_Point;
-    }
-
-    const change = (policyImpact * CONTROL_PARAMS.Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso) +
-                   (landUseImpact * CONTROL_PARAMS.Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso) +
-                   (biodiversityEffect * CONTROL_PARAMS.Impacto_Biodiversidad_en_SE_Peso) +
-                   volatilityEffect - fiscalPressureImpact; 
-    
-    const maxChange = 4; 
-    const actualChangeNonFiscal = Math.max(-maxChange, Math.min(maxChange, change * 0.1));
-    
-    return indicators.economicSecurity + actualChangeNonFiscal; 
-};
-
-
-const calculateSocialConflictChange = (policies: Record<Policy, PolicyState>, landUses: Record<LandUseType, LandUse>, stellaState: StellaStocks, indicators: Indicators, currentLevel: number, additionalTaxPressurePercentage: number): number => {
-    let incrementoConflicto = 0;
-    const conflictFactors = INDICATOR_IMPACT_WEIGHTS.SOCIAL_WELLBEING.CONFLICT_INCREMENT_FACTORS;
-    // FIX: Explicitly typed 'lu' to LandUse to resolve type inference issues with Object.values.
-    const currentTotalLandArea = Object.values(landUses).reduce((sum, lu: LandUse) => sum + lu.area, 0);
-
-
-    if (stellaState.PBI_Real > 0 && (stellaState.Deuda / stellaState.PBI_Real) > conflictFactors.DEBT_PBI_THRESHOLD) {
-        incrementoConflicto += conflictFactors.DEBT_PBI_IMPACT;
-    }
-    const flexRegsPolicy = policies[Policy.FlexibleEnvironmentalRegulations];
-    if (flexRegsPolicy) {
-      incrementoConflicto += getPolicyEfficiency(flexRegsPolicy, currentLevel) * conflictFactors.POLICY_FLEX_REGS_IMPACT;
-    }
-    
-    const energySubPolicy = policies[Policy.EnergySubsidies];
-    if (energySubPolicy && stellaState.Reservas_del_Tesoro < (stellaState.PBI_Real * conflictFactors.LOW_RESERVES_THRESHOLD_FACTOR)) {
-        incrementoConflicto += getPolicyEfficiency(energySubPolicy, currentLevel) * conflictFactors.POLICY_ENERGY_SUBSIDIES_LOW_RESERVES_IMPACT;
-    }
-
-    if(indicators.foodSecurity < conflictFactors.LOW_FOOD_SECURITY_THRESHOLD) {
-        incrementoConflicto += conflictFactors.LOW_FOOD_SECURITY_IMPACT;
-    }
-    if(indicators.economicSecurity < conflictFactors.LOW_ECONOMIC_SECURITY_THRESHOLD) {
-        incrementoConflicto += conflictFactors.LOW_ECONOMIC_SECURITY_IMPACT;
-    }
-
-    const intensiveAgPolicy = policies[Policy.IntensiveAgriculture];
-    if (intensiveAgPolicy) {
-        incrementoConflicto += getPolicyEfficiency(intensiveAgPolicy, currentLevel) * conflictFactors.POLICY_INTENSIVE_AGRICULTURE_IMPACT;
-    }
-    const foreignInvPolicy = policies[Policy.ForeignInvestment];
-    if (foreignInvPolicy) {
-      incrementoConflicto += getPolicyEfficiency(foreignInvPolicy, currentLevel) * conflictFactors.POLICY_FOREIGN_INVESTMENT_IMPACT;
-    }
-    if (flexRegsPolicy) { 
-        incrementoConflicto += getPolicyEfficiency(flexRegsPolicy, currentLevel) * conflictFactors.POLICY_ENV_NORMS_FLEX_IMPACT;
-    }
-    
-    if (currentTotalLandArea > 0) {
-        incrementoConflicto += (landUses[LandUseType.ConventionalCrops].area / currentTotalLandArea) * conflictFactors.LAND_USE_CC_IMPACT * 100;
-        incrementoConflicto += (landUses[LandUseType.ForestPlantations].area / currentTotalLandArea) * conflictFactors.LAND_USE_PF_IMPACT * 100;
-    }
-
-
-    if (currentLevel === 3 && additionalTaxPressurePercentage > 0) {
-        incrementoConflicto += (additionalTaxPressurePercentage) * CONTROL_PARAMS.SocialConflict_Increase_Factor_Per_Tax_Point;
-    }
-
-    // --- LÓGICA DE "APROBACIÓN VERDE" ---
-    let reduccionConflictoVerde = 0;
-    const carbonPolicy = policies[Policy.CarbonNeutrality];
-    if (carbonPolicy && getPolicyEfficiency(carbonPolicy, currentLevel) > 0.5) { // Umbral reducido
-        reduccionConflictoVerde += 0.8; // Efecto aumentado
-    }
-    const conservationPolicy = policies[Policy.NaturalConservation];
-    if (conservationPolicy && getPolicyEfficiency(conservationPolicy, currentLevel) > 0.5) { // Umbral reducido
-        reduccionConflictoVerde += 0.8; // Efecto aumentado
-    }
-    const waterPolicy = policies[Policy.SustainableWaterManagement];
-     if (waterPolicy && getPolicyEfficiency(waterPolicy, currentLevel) > 0.4) { // Umbral reducido
-        reduccionConflictoVerde += 0.4; // Efecto aumentado
-    }
-    // --- FIN DE LA NUEVA LÓGICA ---
-
-    const disipacionConflicto = stellaState.Conflicto_social * CONTROL_PARAMS.Tasa_disipacion_social;
-    const change = incrementoConflicto - disipacionConflicto - reduccionConflictoVerde;
-    return stellaState.Conflicto_social + change;
-};
-
-
-const calculatePoliticalCollapseChange = (stellaState: StellaStocks, indicators: Indicators): number => {
-    let incrementoColapso = 0;
-    const collapseFactors = INDICATOR_IMPACT_WEIGHTS.POLITICAL_STABILITY.COLLAPSE_INCREMENT_FACTORS;
-
-    if (indicators.socialWellbeing < collapseFactors.LOW_SOCIAL_WELLBEING_THRESHOLD) {
-        incrementoColapso += collapseFactors.LOW_SOCIAL_WELLBEING_IMPACT;
-    }
-    if (indicators.economicSecurity < collapseFactors.LOW_ECONOMIC_SECURITY_THRESHOLD) {
-        incrementoColapso += collapseFactors.LOW_ECONOMIC_SECURITY_IMPACT;
-    }
-    if (stellaState.PBI_Real > 0 && stellaState.Reservas_del_Tesoro < (stellaState.PBI_Real * collapseFactors.NEGATIVE_RESERVES_THRESHOLD_FACTOR)) {
-        incrementoColapso += collapseFactors.NEGATIVE_RESERVES_IMPACT;
-    }
-
-    const pressures = [stellaState.PP_AGRICOLA, stellaState.PP_AMBIENTALISTA, stellaState.PP_SOCIAL];
-    const maxPressure = Math.max(...pressures);
-    const minPressure = Math.min(...pressures);
-    const polarizationValue = maxPressure - minPressure;
-
-    if (polarizationValue > CONTROL_PARAMS.Umbral_polarizacion) {
-         incrementoColapso += collapseFactors.HIGH_POLARIZATION_IMPACT;
-    }
-
-    if (stellaState.PP_AGRICOLA > collapseFactors.PP_AGRICOLA_THRESHOLD) {
-        incrementoColapso += (stellaState.PP_AGRICOLA - collapseFactors.PP_AGRICOLA_THRESHOLD) * collapseFactors.PP_AGRICOLA_IMPACT;
-    }
-    if (stellaState.PP_AMBIENTALISTA > collapseFactors.PP_AMBIENTALISTA_THRESHOLD) {
-        incrementoColapso += (stellaState.PP_AMBIENTALISTA - collapseFactors.PP_AMBIENTALISTA_THRESHOLD) * collapseFactors.PP_AMBIENTALISTA_IMPACT;
-    }
-    if (stellaState.PP_SOCIAL > collapseFactors.PP_SOCIAL_THRESHOLD) {
-        incrementoColapso += (stellaState.PP_SOCIAL - collapseFactors.PP_SOCIAL_THRESHOLD) * collapseFactors.PP_SOCIAL_IMPACT;
-    }
-
-    const decrementoColapso = INDICATOR_IMPACT_WEIGHTS.POLITICAL_STABILITY.COLLAPSE_DECREMENT_BASE;
-    
-    let newColapsoPolitico = stellaState.Colapso_politico;
-    newColapsoPolitico += incrementoColapso;
-    newColapsoPolitico -= decrementoColapso;
-
-    return Math.max(0, Math.min(100, newColapsoPolitico));
-};
-
-const generateScoreTooltipText = (gs: GameState): string => {
+const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
     const { currentLevel, indicators, stellaSpecificState, activeLevelConfig } = gs;
     let text = `El Puntaje General (0-1000) refleja tu desempeño. Para el Nivel ${currentLevel}, se calcula así:\n\n`;
 
-    const carbonScoreComponentRaw = 100 - (indicators.co2EqEmissionsPerCapita / CONTROL_PARAMS.Referencia_Max_CO2_per_Capita_Puntaje) * 100;
+    const carbonScoreComponentRaw = 100 - (indicators.co2EqEmissionsPerCapita / CP.Referencia_Max_CO2_per_Capita_Puntaje) * 100;
     const carbonScoreComponent = Math.max(0, Math.min(100, carbonScoreComponentRaw));
 
     if (currentLevel === 1) {
@@ -365,7 +106,7 @@ const generateScoreTooltipText = (gs: GameState): string => {
         const econScoreComponent = Math.max(0, Math.min(100, indicators.economicSecurity));
         text += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}% (Peso: ${(scoreWeightBiodiversityL1 * 100).toFixed(0)}%)\n`;
         text += `- Componente de Carbono: ${carbonScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightCarbonL1 * 100).toFixed(0)}%)\n`;
-        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab. Ref. máx. para puntaje: ${CONTROL_PARAMS.Referencia_Max_CO2_per_Capita_Puntaje} t/hab)\n`;
+        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab. Ref. máx. para puntaje: ${CP.Referencia_Max_CO2_per_Capita_Puntaje} t/hab)\n`;
         text += `- Seguridad Económica: ${econScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightEconL1 * 100).toFixed(0)}%)\n`;
         text += `  (Un mínimo de viabilidad fiscal es necesario para sostener la transición ecológica)\n`;
     } else if (currentLevel === 2) {
@@ -1057,8 +798,13 @@ export const App = () => {
           return prev;
         }
         policyToggled.isActive = true;
-        policyToggled.currentEfficiency = policyToggled.initialEfficiency || 1;
-        policyToggled.previousEfficiencyForNotification = policyToggled.currentEfficiency; 
+        // Model 1.1 (phase 34): resume from the active-time counter instead of restoring full
+        // efficiency (T-06; the engine recomputed it from the counter on the next year anyway, so
+        // the reset only re-armed the 40 % warning), and split effort evenly across instruments
+        // (N-02: level 1 has no instrument panel, so Carbon Neutrality's CO2 channels ran at 0).
+        policyToggled.currentEfficiency = efficiencyFromCounter(policyToggled, prev.stellaSpecificState);
+        policyToggled.previousEfficiencyForNotification = policyToggled.currentEfficiency;
+        evenEffort(policyToggled);
         logEvent(`Política '${policyToggled.name}' seleccionada. Se activará en la próxima simulación.`);
         
         return { ...prev, policies: newPolicies };
@@ -1127,7 +873,7 @@ export const App = () => {
             logEvent("La presión fiscal adicional solo está disponible en el Nivel 3.");
             return prev;
         }
-        const validatedPressure = Math.max(0, Math.min(CONTROL_PARAMS.Max_Additional_Tax_Rate_Percentage, newPressure));
+        const validatedPressure = Math.max(0, Math.min(controlParamsRef.current.Max_Additional_Tax_Rate_Percentage, newPressure));
         logEvent(`Presión Fiscal Adicional ajustada a ${validatedPressure}%.`);
         return { ...prev, additionalTaxPressurePercentage: validatedPressure };
     });
@@ -1136,8 +882,10 @@ export const App = () => {
 
   const requestLoan = useCallback((amount: number) => {
     setGameState(prev => {
-      if (prev.currentLevel < 3 && prev.year < CONTROL_PARAMS.Ano_Activacion_Prestamo) {
-        const message = `Los préstamos no están disponibles hasta el Nivel 3 o el año ${CONTROL_PARAMS.Ano_Activacion_Prestamo}.`;
+      // Live facilitator value (phase 34): the static CONTROL_PARAMS ignored a panel override.
+      const loanYear = controlParamsRef.current.Ano_Activacion_Prestamo;
+      if (prev.currentLevel < 3 && prev.year < loanYear) {
+        const message = `Los préstamos no están disponibles hasta el Nivel 3 o el año ${loanYear}.`;
         logEvent(message);
         addToast(message, 'info');
         return prev;
@@ -1315,14 +1063,8 @@ export const App = () => {
     if (tempGameState.activeLevelConfig) {
         tempGameState.activeLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === tempGameState.currentLevel);
     }
-    // FIX: Restore pact functions lost during JSON serialization to prevent runtime crashes.
-    if (tempGameState.pacts) {
-        Object.keys(tempGameState.pacts).forEach(pactId => {
-            if (INITIAL_PACTS[pactId] && typeof INITIAL_PACTS[pactId].effects === 'function') {
-                tempGameState.pacts[pactId].effects = INITIAL_PACTS[pactId].effects;
-            }
-        });
-    }
+    // Restore pact functions lost during JSON serialization to prevent runtime crashes.
+    if (tempGameState.pacts) restorePactFunctions(tempGameState.pacts);
 
 
     let concludedLevelInfoForUpdate: GameState['lastConcludedLevelInfo'] = null;
@@ -1522,7 +1264,7 @@ export const App = () => {
         headerSuffix={gameState.activeLevelConfig?.headerSuffix}
         gameOver={!!gameState.gameOverReason}
         setCurrentLevelManually={setCurrentLevelManually}
-        scoreTooltipText={generateScoreTooltipText(gameState)}
+        scoreTooltipText={generateScoreTooltipText(gameState, controlParams)}
         scoreColorClass={getDynamicScoreColorClass(gameState.indicators.generalScore, gameState.activeLevelConfig)}
         onShowTutorial={handleShowTutorial}
         onShowFacilitatorManual={handleToggleFacilitatorManual}

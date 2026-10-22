@@ -14,7 +14,8 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { makeRng, stepYear } from '../../src/sim';
 import { Policy, type LandUseType } from '../../src/types';
-import { TOTAL_LAND_AREA } from '../../src/constants';
+import { INDICATOR_IMPACT_WEIGHTS, INITIAL_PACTS, INITIAL_POLICIES, INITIAL_STELLA_STOCKS, TOTAL_LAND_AREA } from '../../src/constants';
+import type { Pact, PactImpulses, PolicyState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
 const ALL_POLICY_IDS = Object.values(Policy);
@@ -66,6 +67,9 @@ describe('sim invariants', () => {
   // candidate item L-1 ("¿Toda tasa A→B resta de A exactamente lo que suma a B?") — the random
   // events' land-use effects need the same audit as the core transitions, out of scope for the
   // phase-2 extraction itself. Logged in docs/DESIGN_DECISIONS_LOG.md.
+  // Model 1.1 (phase 34, N-09/T-08): the severe drought is the documented case — the area it takes
+  // from CC and CA still has no destination in 1.1 (phase 37's fallow resolves it); its chance now
+  // reads the level's own total area instead of level 1's fixed 500 kHa.
   it('INV-01: total land area is conserved (±0.01 kHa) on the deterministic transition core', () => {
     fc.assert(
       fc.property(
@@ -160,5 +164,37 @@ describe('sim invariants', () => {
   it('INV-13: no game-over condition triggers on year 0 of a fresh game', () => {
     const state = freshState(1);
     expect(state.gameOverReason).toBeNull();
+  });
+
+  // Model 1.1 (phase 34, N-01/T-02): Carbon Neutrality's stellaName was commented out, so it never decayed.
+  it('INV-15: every decaying policy has a stellaName and a matching activation counter', () => {
+    (Object.values(INITIAL_POLICIES) as PolicyState[]).forEach((p) => {
+      if ((p.efficiencyDecayDuration ?? 0) > 0) {
+        expect(p.stellaName, p.id).toBeTruthy();
+        expect(`Tiempo_Activacion_${p.stellaName}` in INITIAL_STELLA_STOCKS, p.id).toBe(true);
+      }
+    });
+  });
+
+  // Model 1.1 (phase 34, N-03/T-03): a pact is at most as strong as the strongest policy on the same indicator.
+  it('INV-16: no pact impulse exceeds the largest policy weight on the same indicator', () => {
+    const groups: Record<keyof PactImpulses, Record<string, number>> = {
+      biodiversity: INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES as unknown as Record<string, number>,
+      foodSecurity: INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES as unknown as Record<string, number>,
+      economicSecurity: INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.POLICIES as unknown as Record<string, number>,
+    };
+    const policyIds = new Set<string>(ALL_POLICY_IDS);
+    (Object.keys(groups) as (keyof PactImpulses)[]).forEach((key) => {
+      const weights = Object.entries(groups[key]).filter(([id]) => policyIds.has(id)).map(([, w]) => Math.abs(w));
+      const maxWeight = Math.max(...weights);
+      (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
+        expect(Math.abs(pact.impulses?.[key] ?? 0), `${pact.id}.${key}`).toBeLessThanOrEqual(maxWeight);
+      });
+    });
+    // And no pact writes B, F or E as a level any more.
+    (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
+      const out = pact.effects(freshState(2).indicators, freshState(2).stellaSpecificState).indicators ?? {};
+      ['biodiversity', 'foodSecurity', 'economicSecurity'].forEach((k) => expect(k in out, `${pact.id}.${k}`).toBe(false));
+    });
   });
 });

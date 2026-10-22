@@ -2,12 +2,21 @@
  * Biodiversity, food security, economic security and social-conflict deltas.
  * Ported verbatim from src/App.tsx (module-scope pure functions, unchanged since they were
  * already outside the React component) as part of the phase-2 extraction
- * (mejora-general/files/16_auditoria_ecuaciones.md). No formula changed.
+ * (mejora-general/files/16_auditoria_ecuaciones.md). Model 1.1 (phase 34) adds the pacts' impulses.
  */
-import type { ControlParams, Indicators, LandUse, PolicyState, StellaStocks } from '../types';
+import type { ControlParams, Indicators, LandUse, Pact, PactImpulses, PolicyState, StellaStocks } from '../types';
 import { LandUseType, Policy } from '../types';
 import { INDICATOR_IMPACT_WEIGHTS } from '../constants';
 import { getPolicyEfficiency } from './policies';
+
+/**
+ * Sum of the active pacts' impulses on one indicator (model 1.1, phase 34, N-03/T-03). It enters the
+ * indicator function's policy impact before the weighting, like one more policy at efficiency 1.
+ */
+export function pactImpulse(pacts: Record<string, Pact> | undefined, key: keyof PactImpulses): number {
+  if (!pacts) return 0;
+  return (Object.values(pacts) as Pact[]).reduce((sum, p) => sum + (p.isActive ? p.impulses?.[key] ?? 0 : 0), 0);
+}
 
 export function calculateBiodiversityChange(
   policies: Record<Policy, PolicyState>,
@@ -15,8 +24,9 @@ export function calculateBiodiversityChange(
   currentBiodiversity: number,
   currentLevel: number,
   CP: ControlParams,
+  pacts?: Record<string, Pact>,
 ): number {
-  let policyImpact = 0;
+  let policyImpact = pactImpulse(pacts, 'biodiversity');
   const bioWeights = INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES;
 
   (Object.keys(policies) as Policy[]).forEach((pKey) => {
@@ -67,8 +77,9 @@ export function calculateFoodSecurityChange(
   indicators: Indicators,
   currentLevel: number,
   CP: ControlParams,
+  pacts?: Record<string, Pact>,
 ): number {
-  let policyImpact = 0;
+  let policyImpact = pactImpulse(pacts, 'foodSecurity');
   const fsWeights = INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES;
   (Object.keys(policies) as Policy[]).forEach((pKey) => {
     const policy = policies[pKey];
@@ -121,8 +132,9 @@ export function calculateEconomicSecurityChange(
   additionalTaxPressurePercentage: number,
   CP: ControlParams,
   fiscalTermsActive: boolean = currentLevel === 3,
+  pacts?: Record<string, Pact>,
 ): number {
-  let policyImpact = 0;
+  let policyImpact = pactImpulse(pacts, 'economicSecurity');
   const esWeights = INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.POLICIES;
   (Object.keys(policies) as Policy[]).forEach((pKey) => {
     const policy = policies[pKey];

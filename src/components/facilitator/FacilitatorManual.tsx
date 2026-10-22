@@ -92,12 +92,11 @@ const manualSlides = [
             <li><strong className="text-cyan-400">Total Secuestrado</strong>: Suma de <Code>(Área de Uso de Suelo * Tasa de Secuestro)</Code> para todos los usos.</li>
             <li><strong className="text-red-400">Total Emitido</strong>: Suma de <Code>(Área de Uso de Suelo * Tasa de Emisión)</Code> para todos los usos.</li>
         </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Modificadores y Sinergias:</h4>
-        <p className="text-sm">El resultado se ajusta por sinergias y antagonismos entre políticas activas.</p>
+        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Modificadores:</h4>
+        <p className="text-sm">El balance no tiene sinergias ni antagonismos entre políticas: solo estos modificadores.</p>
         <ul className="list-disc list-inside space-y-2 text-sm mt-2">
-            <li><strong>Sinergia Conservación + Carbono:</strong> Si ambas políticas están activas, el secuestro se multiplica por <Code>(1 + {CONTROL_PARAMS.Peso_Sin_CR_C_Carbono_Stella})</Code>.</li>
-            <li><strong>Antagonismo Carbono + Subsidios:</strong> Si ambas políticas están activas, las emisiones aumentan en un factor de <Code>{CONTROL_PARAMS.Peso_Ant_C_SE_Carbono_Stella}</Code>.</li>
-            <li><strong>Instrumentos (Nivel 2+):</strong> Instrumentos como 'Fomento a Renovables' o 'I+D en CAC' modifican directamente las emisiones o el secuestro, aplicando factores como <Code>Factor_Reduccion_Emisiones_Renovables_PCN</Code>.</li>
+            <li><strong>Instrumentos de Neutralidad de Carbono:</strong> 'Fomento a Renovables' reduce las emisiones en <Code>{CONTROL_PARAMS.Factor_Reduccion_Emisiones_Renovables_PCN} × esfuerzo</Code> y 'I+D en CAC' suma <Code>{CONTROL_PARAMS.Factor_Aumento_Secuestro_CAC_PCN} × esfuerzo</Code> al secuestro. Al activar una política el esfuerzo se reparte en partes iguales entre sus instrumentos, también en el Nivel 1.</li>
+            <li><strong>Subsidios Energéticos y Agricultura Intensiva:</strong> multiplican las emisiones por <Code>(1 + {CONTROL_PARAMS.Factor_Aumento_Emisiones_Fosiles_PSE} × eficiencia)</Code> y <Code>(1 + {CONTROL_PARAMS.Factor_Aumento_Emisiones_AgroIntensivo_PPAI} × eficiencia)</Code>.</li>
         </ul>
       </div>
     )
@@ -127,13 +126,13 @@ const manualSlides = [
         <p className="mb-2">A partir del Nivel 2, la presión política (0-100) de tres grupos clave se simula con un modelo de <strong className="text-yellow-400">Impulso vs. Disipación</strong>.</p>
          <div className="bg-slate-800 p-4 rounded font-mono text-sm space-y-2">
             <p>1. <strong className="text-yellow-400">Calcular Impulso:</strong> Suma de todos los factores de influencia (efectos de políticas e indicadores desalineados con los umbrales).</p>
-            <p>2. <strong className="text-yellow-400">Calcular Fuerza de Disipación:</strong> La presión existente decae naturalmente. <br/>   <span className="text-cyan-400">FuerzaDisipacion</span> = <span className="text-cyan-400">PresionActual</span> * <span className="text-cyan-400">Tasa_disipacion_...</span></p>
+            <p>2. <strong className="text-yellow-400">Calcular Fuerza de Disipación:</strong> La presión existente decae naturalmente. <br/>   <span className="text-cyan-400">FuerzaDisipacion</span> = <span className="text-cyan-400">PresionActual</span> * <span className="text-cyan-400">0,10</span> (agrícola y ambientalista, fija en todos los niveles) o <span className="text-cyan-400">Tasa_disipacion_social</span> = {CONTROL_PARAMS.Tasa_disipacion_social} (social)</p>
             <p>3. <strong className="text-yellow-400">Calcular Cambio Neto:</strong> El cambio es la diferencia lineal, limitada entre 0 y 100.<br/>   <span className="text-cyan-400">NuevaPresion</span> = <span className="text-cyan-400">PresionActual</span> + <span className="text-cyan-400">Impulso</span> - <span className="text-cyan-400">FuerzaDisipacion</span></p>
          </div>
          <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Factores de Presión Agrícola</h4>
           <ul className="list-disc list-inside space-y-2 text-sm">
-              <li><strong className="text-red-400">Aumenta Impulso (más presión):</strong> Indicadores de Seg. Económica y Alimentaria por debajo de sus umbrales (<Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegEconomica}%</Param> y <Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegAlimentaria}%</Param>). Políticas percibidas como desfavorables, ej. <Code>P-AS</Code> (Factor: <Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PAS}</Param>).</li>
-              <li><strong className="text-green-400">Reduce Impulso (menos presión):</strong> Políticas percibidas como favorables, ej. <Code>P-PAI</Code> (Factor: <Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPAI}</Param>) y <Code>P-PEA</Code> (Factor: <Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPEA}</Param>).</li>
+              <li><strong className="text-red-400">Aumenta Impulso (más presión):</strong> Indicadores de Seg. Económica y Alimentaria por debajo de sus umbrales (<Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegEconomica}%</Param> y <Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegAlimentaria}%</Param>).</li>
+              <li><strong className="text-green-400">Reduce Impulso (menos presión):</strong> Las políticas que benefician al productor, todas con factor negativo: <Code>P-PAI</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPAI}</Param>), <Code>P-PEA</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPEA}</Param>), <Code>P-AS</Code> agroecológica (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PAS}</Param>) y <Code>P-GS</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PGS}</Param>).</li>
           </ul>
       </div>
     )

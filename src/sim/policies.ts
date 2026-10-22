@@ -12,7 +12,9 @@ import { getPolicyName } from '../legacyContent/gameData';
  * Effective efficiency of a policy this year: its base (decayed) efficiency, scaled down by
  * the share of instrument effort actually assigned to it from level 2 onward. A policy active
  * with zero effort assigned to its instruments contributes nothing — this is deliberate (see
- * P-2 in docs/audit-equations.md) and is explained to the player in the tutorial (file 18).
+ * P-2 in docs/audit-equations.md) and is explained to the player in the tutorial (file 18). Since
+ * model 1.1 (phase 34, N-02) activation pre-splits effort evenly (`evenEffort`), so this only bites
+ * when the player moves every slider to 0.
  */
 export function getPolicyEfficiency(policy: PolicyState | undefined, currentLevel: number): number {
   if (!policy || !policy.isActive) return 0;
@@ -55,11 +57,19 @@ export function updatePolicyEfficiency(
     }
 
     if (p.isActive && p.efficiencyDecayDuration && p.efficiencyDecayDuration > 0 && p.initialEfficiency) {
-      const yearsActive = (stellaState as any)[tiempoActivacionKey] || 0;
-      const newEfficiency = p.initialEfficiency * Math.exp(-yearsActive / p.efficiencyDecayDuration);
-      p.currentEfficiency = Math.max(0, newEfficiency);
+      p.currentEfficiency = decayedEfficiency(p, (stellaState as any)[tiempoActivacionKey] || 0);
     }
   });
+}
+
+/**
+ * The decay curve `initialEfficiency * e^(-yearsActive / efficiencyDecayDuration)`, floored at 0. Shared by
+ * the engine (`updatePolicyEfficiency`) and the activation handlers (`efficiencyFromCounter`) so the
+ * efficiency shown on re-activation is the one the engine computes.
+ */
+export function decayedEfficiency(policy: PolicyState, yearsActive: number): number {
+  if (!policy.efficiencyDecayDuration || policy.efficiencyDecayDuration <= 0 || !policy.initialEfficiency) return policy.initialEfficiency ?? 1;
+  return Math.max(0, policy.initialEfficiency * Math.exp(-yearsActive / policy.efficiencyDecayDuration));
 }
 
 /** Total annual fiscal cost of every active policy: `costFactor * PBI_Real`, summed. */
@@ -96,4 +106,34 @@ export function checkEfficiencyWarning(policies: Record<Policy, PolicyState>, la
     return warningMessage;
   }
   return null;
+}
+
+/**
+ * Even split of 100 % effort across a policy's instruments; the remainder goes to the first one
+ * (mutates `policy`). Used on activation by both games (model 1.1, phase 34, N-02): level 1 has no
+ * instrument panel, so Carbon Neutrality's instrument channels (renewables, capture) used to run at
+ * effort 0 there. From level 2 the player can redistribute afterwards. Level 1's policy efficiency
+ * ignores effort (`getPolicyEfficiency`), so nothing else changes for the other policies.
+ */
+export function evenEffort(policy: PolicyState): void {
+  if (!policy.instruments) return;
+  const ids = Object.keys(policy.instruments);
+  if (ids.length === 0) return;
+  const share = Math.floor(100 / ids.length);
+  ids.forEach((id, i) => {
+    policy.instruments![id].effortPercentage = i === 0 ? 100 - share * (ids.length - 1) : share;
+  });
+  policy.totalInstrumentEffortApplied = 100;
+}
+
+/**
+ * Efficiency a policy has right now given its accumulated active time — the value the engine's own
+ * decay curve gives, with no reset on re-activation (model 1.1, phase 34, T-06). The engine always
+ * recomputed it from the counter on the next step, so the old reset to `initialEfficiency` only
+ * showed the player a full-efficiency policy for one step and re-armed the 40 % warning.
+ */
+export function efficiencyFromCounter(policy: PolicyState, stella: StellaStocks): number {
+  if (!policy.stellaName) return policy.initialEfficiency ?? 1;
+  const years = ((stella as unknown as Record<string, number>)[`Tiempo_Activacion_${policy.stellaName}`]) ?? 0;
+  return decayedEfficiency(policy, years);
 }

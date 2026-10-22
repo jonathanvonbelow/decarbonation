@@ -17,8 +17,8 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, evaluateGameOver, makeRng,
-  MONTHS_PER_YEAR, stepMonth, syncTerritory,
+  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, efficiencyFromCounter, evaluateGameOver,
+  evenEffort, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
   type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -92,6 +92,11 @@ export interface Session {
   landTally: Record<string, number>;
   /** Consecutive months each sustained-breach condition has been failing (see `BREACHES`). */
   breach: Record<string, number>;
+  /**
+   * Effects of decided or expired situations on indicators the month recomputes (CO2, stability,
+   * money, pressures). Handed to the next `stepMonth` as `extraDeferred`, then emptied (phase 34, T-12).
+   */
+  pendingDeferred: DeferredAdjustment[];
 }
 
 export interface Unlocks {
@@ -174,6 +179,7 @@ export function createSession(seed: number): Session {
     borrowed: { year: game.year, amount: 0 },
     landTally: {},
     breach: {},
+    pendingDeferred: [],
   };
 }
 
@@ -222,7 +228,9 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
     fiscalTermsActive: before.finance,
     publicUseUpkeep: true,
+    extraDeferred: s.pendingDeferred ?? [],
   });
+  const pendingDeferred: DeferredAdjustment[] = [];
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
   const monthIndex = s.monthIndex + 1;
 
@@ -247,7 +255,10 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     if (def) {
       const fallback = defaultOption(def);
       const applied = resolveSituation(game, item.defId, fallback.id, CP, language);
-      if (applied.ok) game = applied.state;
+      if (applied.ok) {
+        game = applied.state;
+        pendingDeferred.push(...applied.deferred);
+      }
       situationNews.push({
         ...stamp, id: `${item.id}-expired`, kind: 'situation', tone: 'bad',
         key: 'situation.expired', values: { situation: item.defId, option: fallback.id },
@@ -286,6 +297,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     wearTotal: s.wearTotal + wornTotal,
     expiredCount,
     lastEvent: r.event,
+    pendingDeferred,
   };
 
   const land = tallyLand(s.landTally, changes, territory.kHaPerParcel);
@@ -342,6 +354,7 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
     session: {
       ...s,
       game: applied.state,
+      pendingDeferred: [...(s.pendingDeferred ?? []), ...applied.deferred],
       open: s.open.filter((o) => o.id !== openId),
       resolvedCount: s.resolvedCount + 1,
       news: pushNews(s.news, [news]),
@@ -374,15 +387,12 @@ export function togglePolicy(s: Session, policyId: Policy): ActionResult {
     const active = (Object.values(policies) as PolicyState[]).filter((x) => x.isActive).length;
     if (active >= MAX_ACTIVE_POLICIES) return { session: s, error: 'max-active', detail: { max: MAX_ACTIVE_POLICIES } };
     p.isActive = true;
-    p.currentEfficiency = p.initialEfficiency || 1;
+    // Model 1.1 (phase 34, T-06): re-activating does not restore a worn policy; it resumes where
+    // its active-time counter left it, and the 40 % warning is not re-armed.
+    p.currentEfficiency = efficiencyFromCounter(p, s.game.stellaSpecificState);
     activatedAt = { ...s.policyActivatedAt, [policyId]: s.monthIndex };
     p.previousEfficiencyForNotification = p.currentEfficiency;
-    if (p.instruments) {
-      const ids = Object.keys(p.instruments);
-      const share = ids.length > 0 ? Math.floor(100 / ids.length) : 0;
-      ids.forEach((id, i) => { p.instruments![id].effortPercentage = i === 0 ? 100 - share * (ids.length - 1) : share; });
-      p.totalInstrumentEffortApplied = ids.length > 0 ? 100 : 0;
-    }
+    evenEffort(p);
   } else {
     // Lock-in counts months, not calendar years: a policy switched on in December used to be
     // free to drop after barely four years.

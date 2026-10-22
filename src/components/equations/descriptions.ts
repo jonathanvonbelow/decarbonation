@@ -80,8 +80,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
 
   // Equation Section Titles
   EQUATION_TITLE_POLICY_EFFICIENCY: {
-    es: "La fórmula que determina cuán efectiva es una política en un año determinado. Disminuye con el tiempo y se ve afectada por el entorno político.",
-    en: "The formula that determines how effective a policy is in a given year. It decreases over time and is affected by the political environment.",
+    es: "La fórmula que determina cuán efectiva es una política en un año determinado. Disminuye con el tiempo que lleva activa (decaimiento exponencial); desde el Nivel 2 se escala por el esfuerzo asignado a sus instrumentos.",
+    en: "The formula that determines how effective a policy is in a given year. It decreases with the time it has been active (exponential decay); from Level 2 it is scaled by the effort assigned to its instruments.",
   },
   EQUATION_TITLE_CARBON_BALANCE: {
     es: "La ecuación central para el cambio climático. Calcula la diferencia neta entre el carbono capturado por los ecosistemas y el carbono emitido por las actividades humanas anualmente.",
@@ -92,8 +92,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The generic formula for how socio-environmental indicators like Biodiversity are calculated. They are a weighted sum of the effects of policies and land uses.",
   },
   EQUATION_TITLE_POLITICAL_PRESSURE: {
-    es: "Modela cómo aumenta o disminuye el descontento de los grupos de interés. Utiliza una curva 'S' para un comportamiento más realista, donde el cambio es más rápido en niveles intermedios de presión.",
-    en: "Models how discontent among interest groups rises or falls. It uses an 'S' curve for more realistic behavior, where change is fastest at intermediate pressure levels.",
+    es: "Modela cómo aumenta o disminuye el descontento de los grupos de interés: cada año la presión suma un impulso lineal (políticas e indicadores bajo su umbral) y pierde una fracción fija de sí misma (disipación), con límites 0 y 100.",
+    en: "Models how discontent among interest groups rises or falls: each year the pressure adds a linear impulse (policies and indicators below their threshold) and loses a fixed share of itself (dissipation), bounded to 0 and 100.",
   },
   EQUATION_TITLE_ECONOMY: {
     es: "Fórmulas que gobiernan la macroeconomía de la nación, incluyendo el crecimiento del PBI y el balance de las finanzas públicas.",
@@ -109,17 +109,9 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   },
 
   // CONTROL_PARAMS descriptions
-  Max_Emisiones_Referencia_Anual: {
-    es: "Valor máximo de referencia para las emisiones anuales, utilizado en cálculos de normalización internos. No limita las emisiones reales.",
-    en: "Maximum reference value for annual emissions, used in internal normalization calculations. It does not cap real emissions.",
-  },
   Ano_Activacion_Prestamo: {
     es: "El primer año del juego en que la opción de solicitar préstamos se vuelve disponible para el jugador (generalmente en Nivel 3).",
     en: "The first game year in which the option to request loans becomes available to the player (usually in Level 3).",
-  },
-  Max_Abs_Total_Carbon_Ref: {
-    es: "Valor de referencia para el balance de carbono, usado para calcular el componente de carbono en el Puntaje General. Un balance igual a este valor (positivo o negativo) daría 100% o 0% en ese componente.",
-    en: "Reference value for the carbon balance, used to calculate the carbon component of the General Score. A balance equal to this value (positive or negative) would give 100% or 0% on that component.",
   },
   Umbral_polarizacion: {
     es: "El nivel de diferencia entre la presión política más alta y la más baja que, al ser superado, comienza a contribuir negativamente a la Estabilidad Política.",
@@ -144,46 +136,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Pago_deuda_anual_Nivel_3: {
     es: "Porcentaje del capital de la deuda total que se paga anualmente en el Nivel 3.",
     en: "Percentage of total debt principal paid annually in Level 3.",
-  },
-  Duracion_Efecto_Al: {
-    es: "Duración del efecto para la política de Conservación de Bienes Naturales (CR, no Al).",
-    en: "Effect duration for the Natural Assets Conservation policy (CR, not Al).",
-  },
-  Duracion_Efecto_CBN: {
-    es: "Duración del efecto para la política de Conservación de Bienes Naturales (CR, no CBN).",
-    en: "Effect duration for the Natural Assets Conservation policy (CR, not CBN).",
-  },
-  Duracion_Efecto_CN: {
-    es: "Duración del efecto para la política de Carbono Neutralidad.",
-    en: "Effect duration for the Carbon Neutrality policy.",
-  },
-  Duracion_Efecto_EA: {
-    es: "Duración del efecto para la política de Exportaciones Agrícolas.",
-    en: "Effect duration for the Agricultural Exports policy.",
-  },
-  Duracion_Efecto_GRH: {
-    es: "Duración del efecto para la política de Gestión del Recurso Hídrico.",
-    en: "Effect duration for the Water Resource Management policy.",
-  },
-  Duracion_Efecto_GS: {
-    es: "Duración del efecto para la política de Ganadería Sostenible.",
-    en: "Effect duration for the Sustainable Livestock policy.",
-  },
-  Duracion_Efecto_IE: {
-    es: "Duración del efecto para la política de Inversión Extranjera.",
-    en: "Effect duration for the Foreign Investment policy.",
-  },
-  Duracion_Efecto_NAF: {
-    es: "Duración del efecto para la política de Normativas Ambientales Flexibles.",
-    en: "Effect duration for the Flexible Environmental Regulations policy.",
-  },
-  Duracion_Efecto_PA: {
-    es: "Duración del efecto para la política de Políticas Agroecológicas (AS, no PA).",
-    en: "Effect duration for the Agro-ecological Policies (AS, not PA).",
-  },
-  Duracion_Efecto_SE: {
-    es: "Duración del efecto para la política de Subsidios Energéticos.",
-    en: "Effect duration for the Energy Subsidies policy.",
   },
   Tasa_disipacion_social: {
     es: "Tasa a la que el 'Conflicto Social' disminuye naturalmente cada año si no hay nuevos factores que lo aumenten.",
@@ -232,14 +184,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Impacto_Biodiversidad_en_SE_Peso: {
     es: "Peso relativo del impacto directo de la Biodiversidad sobre la Seguridad Económica.",
     en: "Relative weight of Biodiversity's direct impact on Economic Security.",
-  },
-  Peso_Ant_C_SE_Carbono_Stella: {
-    es: "Factor multiplicador del impacto negativo sobre las emisiones de carbono cuando las políticas de 'Neutralidad de Carbono' y 'Subsidios Energéticos' están activas simultáneamente.",
-    en: "Multiplier on the negative impact on carbon emissions when the 'Carbon Neutrality' and 'Energy Subsidies' policies are both active at once.",
-  },
-  Peso_Sin_CR_C_Carbono_Stella: {
-    es: "Factor multiplicador del impacto positivo sobre el secuestro de carbono cuando las políticas de 'Conservación' y 'Neutralidad de Carbono' están activas simultáneamente.",
-    en: "Multiplier on the positive impact on carbon sequestration when the 'Conservation' and 'Carbon Neutrality' policies are both active at once.",
   },
   Tasa_de_BNNP_a_BNP_Base: {
     es: "Tasa de conversión anual base de Bosque Nativo No Protegido a Bosque Nativo Protegido.",

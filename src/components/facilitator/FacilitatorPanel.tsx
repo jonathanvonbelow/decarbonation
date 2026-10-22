@@ -1,32 +1,13 @@
 import React from 'react';
 import { ControlParams } from '../../types';
 import { useLanguageContext } from '../../contexts/LanguageContext';
+import { PARAM_GROUPS_EN, PARAM_GROUPS_ES, type NumericParamKey } from './paramGroups';
 
 interface FacilitatorPanelProps {
   controlParams: ControlParams;
   onChange: (params: ControlParams) => void;
   onClose: () => void;
 }
-
-type NumericParamKey = {
-  [K in keyof ControlParams]: ControlParams[K] extends number ? K : never;
-}[keyof ControlParams];
-
-const PARAM_GROUPS_ES: { label: string; keys: NumericParamKey[] }[] = [
-  { label: 'Crecimiento y población', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Emisiones y carbono', keys: ['Max_Emisiones_Referencia_Anual', 'Referencia_Max_CO2_per_Capita_Puntaje', 'FACTOR_C_A_CO2EQ', 'CO2_EMISSIONS_SCALING_FACTOR'] },
-  { label: 'Presiones políticas — disipación', keys: ['Tasa_disipacion_social', 'Tasa_disipacion_agricola_Nivel_1', 'Tasa_disipacion_agricola_Nivel_2', 'Tasa_disipacion_agricola_Nivel_3', 'Tasa_disipacion_ambientalista_Nivel_1', 'Tasa_disipacion_ambientalista_Nivel_2', 'Tasa_disipacion_ambientalista_Nivel_3'] },
-  { label: 'Presupuesto y deuda', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Monto_del_Prestamo_Unico', 'Ano_Activacion_Prestamo'] },
-  { label: 'Presión fiscal (Nivel 3)', keys: ['Max_Additional_Tax_Rate_Percentage', 'EcoSec_Reduction_Factor_Per_Tax_Point', 'SocialConflict_Increase_Factor_Per_Tax_Point', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
-];
-
-const PARAM_GROUPS_EN: { label: string; keys: NumericParamKey[] }[] = [
-  { label: 'Growth & Population', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Emissions & Carbon', keys: ['Max_Emisiones_Referencia_Anual', 'Referencia_Max_CO2_per_Capita_Puntaje', 'FACTOR_C_A_CO2EQ', 'CO2_EMISSIONS_SCALING_FACTOR'] },
-  { label: 'Political Pressures — Dissipation', keys: ['Tasa_disipacion_social', 'Tasa_disipacion_agricola_Nivel_1', 'Tasa_disipacion_agricola_Nivel_2', 'Tasa_disipacion_agricola_Nivel_3', 'Tasa_disipacion_ambientalista_Nivel_1', 'Tasa_disipacion_ambientalista_Nivel_2', 'Tasa_disipacion_ambientalista_Nivel_3'] },
-  { label: 'Budget & Debt', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Monto_del_Prestamo_Unico', 'Ano_Activacion_Prestamo'] },
-  { label: 'Fiscal Pressure (Level 3)', keys: ['Max_Additional_Tax_Rate_Percentage', 'EcoSec_Reduction_Factor_Per_Tax_Point', 'SocialConflict_Increase_Factor_Per_Tax_Point', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
-];
 
 const T = {
   es: { title: 'Panel del Facilitador', closeLabel: 'Cerrar panel', warning: 'Atención: los cambios aquí afectan la simulación en tiempo real. Usar solo con fines de facilitación de talleres.', closeBtn: 'Cerrar' },

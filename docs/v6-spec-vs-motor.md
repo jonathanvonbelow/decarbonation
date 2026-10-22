@@ -24,13 +24,13 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 33 | `simulate-territorio.ts` tiene 7 estrategias distintas de las 8 canónicas | El arnés nuevo usa las del prototipo; los scripts viejos quedan intactos | Resuelta (fase 33) |
 | 33 | El prototipo paga pactos, lotes y situaciones con `pay()` (puede endeudarse hasta D/Y 0,6); la app solo con reservas | El arnés usa la API real (gana el código); explica por qué `buy_everything` no quiebra en 1.0 | Documentada (fase 33) |
 | 33/38/49 | La ruta de innovación de Territorio mide `carbonTechEffort` = (renovables + captura)/2 ≥ 25; la estrategia canónica pone CN = 20/40/40/0, así que da 20 y nunca cumple la ruta | Decidir en 38/49 si cambia la condición o el vector | Pendiente (encontrada en fase 33) |
-| 33/43 | El tratado de biodiversidad suma +5 de B por año (efecto aditivo): `conservation` termina con B = 100 en N2, N3 y Territorio | Lo reemplaza el modelo de pactos de la fase 43 | Pendiente (encontrada en fase 33) |
-| 33/34 | `togglePolicy` de `App.tsx` no reparte esfuerzo al activar: en N1 (sin panel) Carbono Neutralidad corre con esfuerzo 0 | El arnés usa reparto parejo (33 §3.1); lo corrige la fase 34 §3.2 | Pendiente (encontrada en fase 33) |
+| 33/43 | El tratado de biodiversidad suma +5 de B por año (efecto aditivo): `conservation` termina con B = 100 en N2, N3 y Territorio | Lo reemplaza el modelo de pactos de la fase 43 | Mitigada (fase 34: impulso +0,40 en B, conservation ya no llega a 100); el modelo final es el de la fase 43 |
+| 33/34 | `togglePolicy` de `App.tsx` no reparte esfuerzo al activar: en N1 (sin panel) Carbono Neutralidad corre con esfuerzo 0 | El arnés usa reparto parejo (33 §3.1); lo corrige la fase 34 §3.2 | Resuelta (fase 34, `evenEffort`) |
 | 33 | Línea base 1.0: C1 falla en N3 (do_nothing cumple producción en 3/40) y C2 falla también en los 3 niveles (N2: 0 % en las tres), además de lo que esperaba 33 §6 | Ver `reports/balance-1.0.md` | Documentada (fase 33) |
-| 34 | El test `facilitatorParams` fallaría con claves reales: deuda en N1/N2, 4 claves fiscales, `Ano_Activacion_Prestamo`, `Max_Additional_Tax_Rate` | Usar nivel 3 con impuesto > 0, o una lista explícita de claves solo-UI; además `App.tsx:358,1130,1139` pasa a leer el CP vivo | Pendiente |
-| 34 | T-06: el reset de eficiencia dura un solo paso | El arreglo apunta a la UI y al re-armado del aviso del 40 % | Pendiente |
-| 34 | El arreglo de la sequía quita el +0,02 en N2 (150/600 = 0,25, no es > 0,25) | Documentar | Pendiente |
-| 34 | Hay copias muertas del motor en `App.tsx:99-352` y `EquationsManual.tsx` referencia parámetros que se borran | Borrar las copias y limpiar el manual | Pendiente |
+| 34 | El test `facilitatorParams` fallaría con claves reales: deuda en N1/N2, 4 claves fiscales, `Ano_Activacion_Prestamo`, `Max_Additional_Tax_Rate` | Usar nivel 3 con impuesto > 0, o una lista explícita de claves solo-UI; además `App.tsx:358,1130,1139` pasa a leer el CP vivo | Resuelta (fase 34): deuda N1/N2 con préstamo en su nivel, fiscales en N3 con 10 pp, `UI_ONLY_PARAM_KEYS`; App lee el CP vivo |
+| 34 | T-06: el reset de eficiencia dura un solo paso | El arreglo apunta a la UI y al re-armado del aviso del 40 % | Resuelta (fase 34, `efficiencyFromCounter`) |
+| 34 | El arreglo de la sequía quita el +0,02 en N2 (150/600 = 0,25, no es > 0,25) | Documentar | Documentada (fase 34) |
+| 34 | Hay copias muertas del motor en `App.tsx:99-352` y `EquationsManual.tsx` referencia parámetros que se borran | Borrar las copias y limpiar el manual | Resuelta (fase 34) |
 | 37 | La spec netea solo el pool; el prototipo netea todos los pares (c₀ depende de eso) | Seguir el prototipo y corregir el texto | Pendiente |
 | 37 | Las situaciones usan pares ±; la regla "positivo sale de FAL" depende del orden | Pares = transferencia directa origen→destino; FAL solo para efectos sueltos | Resuelta en el prototipo (fase 32); pendiente en TS |
 | 37 | El parámetro `Tasa_de_RES_a_BNNP_Base` en realidad va a BNP | Renombrar o comentar | Pendiente |
@@ -38,7 +38,7 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 40 | Territorio usa `neighbors8`; K pide 4-conexo | 4-conexo según la spec | Pendiente |
 | 43 | Costo anual de pactos 30/50/100 → 0,002/0,004/0,008·PBI: baja sin decirlo | Documentar | Pendiente |
 | 43 | Las claves `treaty`/`accord`/`tech` del prototipo no son las del código (`biodiversityTreaty`/…) | `PARAMS_V2.pacts` usa las del código | Pendiente |
-| 43 | `restorePactFunctions` no existe; la restauración está inline en 3 lugares | La crea la fase 34 y la borra la 43 | Pendiente |
+| 43 | `restorePactFunctions` no existe; la restauración está inline en 3 lugares | La crea la fase 34 y la borra la 43 | Creada (fase 34); la borra la 43 |
 | 44 | `breach += dt` quiebra en el mes 25, no en el 24 (1/12 × 24 ≈ 1,9999…) | Prototipo: tolerancia `breach ≥ 2 − 1e-9` (vale para cualquier `dt`); TS: misma tolerancia o pasos enteros | Resuelta en el prototipo (fase 32); pendiente en TS |
 | 44 | Préstamo habilitado en N1/N2 desde 2035 (`App.tsx:1139`) | Documentar | Pendiente |
 | 44/47 | El `declare()` del prototipo cobra dos veces, y cobra aunque no haya área | Corregir el prototipo y recalcular las tasas de Territorio | Resuelta en el prototipo (fase 32); tasas nuevas en el log de la fase 32 |
@@ -51,3 +51,9 @@ cifras de las fases 38–43. Antes de la fase 32 no existía ninguno de los entr
 | 48 | El prototipo no genera bandas, Brier ni regret | Las bandas se generan con el arnés TS | Pendiente |
 | 49 | `Referencia_Max_CO2_per_Capita_Puntaje` también se usa en `App.tsx:358,368` y `FacilitatorPanel` | Limpiarlo ahí también | Pendiente |
 | 50 | Términos de búsqueda: "40.000" da falso positivo; falta `docentes-consignas.html` | Ajustar la búsqueda | Pendiente |
+| 34 | `evenEffort` en todos los niveles cambia N2/N3: antes una política recién activada tenía esfuerzo 0 hasta mover los sliders (P-2) | Se sigue la spec; el aviso "sin esfuerzo" queda para cuando el jugador baja todo a 0 | Documentada (fase 34) |
+| 34 | `INSTRUMENT_IMPACT_HINTS` no se muestra en ningún panel (Dashboard recibe la prop y no la usa) | El aviso 1.1 va bajo el subtítulo del panel de instrumentos y en Territorio bajo "Esfuerzo por instrumento" | Documentada (fase 34); la fase 36 vuelve reales las pistas |
+| 34/46 | T-12: ninguna situación del catálogo tiene efectos sobre indicadores derivados; un diferido sobre `treasuryReserves`/`pp*` solo toca la copia en `indicators` (igual que los eventos) | Mecanismo listo y probado con una situación sintética; lo reemplaza la fase 46 | Documentada (fase 34) |
+| 34/47 | `cond.publicNature` con solo lo declarado: la spec espera ≈ 7 %, el arnés da `conservation` 4,7–8,9 % | Umbral 4,5 % (margen 0,2 pp) | Documentada (fase 34); revisar en 47/49 |
+| 34/50 | `PlayerManual.tsx` describe una sinergia Conservación + Ganadería que el motor no tiene | Fuera del alcance de 34 | Pendiente (fase 50) |
+| 34 | El dev server sin `.env.local` queda en blanco: `new GoogleGenAI` sin clave lanza al importar `geminiService.ts` | Preexistente; fuera del modelo | Pendiente (encontrada en fase 34) |

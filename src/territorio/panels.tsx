@@ -158,6 +158,7 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
                   instrumentsOpen ? (
                     <div className="space-y-3 pt-1">
                       <p className="label-eyebrow !text-[10px]">{c.policies.effortTitle}</p>
+                      <p className="text-[11px] leading-snug text-ash-dim">{c.policies.hintsNote}</p>
                       {instruments.map((inst) => (
                         <div key={inst.id}>
                           <EffortSlider

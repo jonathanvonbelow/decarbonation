@@ -220,6 +220,7 @@ export const TERRITORIO_ES = {
     efficiency: 'Eficiencia {pct}',
     instrumentsLocked: 'Desde {year} vas a poder repartir el esfuerzo entre sus instrumentos. Por ahora se reparte en partes iguales.',
     effortTitle: 'Esfuerzo por instrumento',
+    hintsNote: 'Orientativo: en el modelo 1.1 el efecto se calcula a nivel de política; solo Renovables y Captura tienen un efecto propio sobre el CO₂.',
   },
   finance: {
     reserves: 'Reservas del tesoro',

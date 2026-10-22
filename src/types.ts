@@ -112,6 +112,16 @@ export interface StellaStocks {
   Conteo_Chatgpt: number;
 }
 
+/**
+ * Model 1.1 (phase 34, N-03/T-03): what a pact adds to the policy-impact sum of each indicator
+ * function, like one more policy at efficiency 1. Replaces effects() writing `B + 5` every year.
+ */
+export interface PactImpulses {
+  biodiversity?: number;
+  foodSecurity?: number;
+  economicSecurity?: number;
+}
+
 export interface Pact {
   id: string;
   name: string;
@@ -131,6 +141,8 @@ export interface Pact {
   costToJoin?: number;
   annualCost?: number;
   unlockYear?: number;
+  /** Effects on B, F, E, summed into the indicator functions' policy impact (see PactImpulses). */
+  impulses?: PactImpulses;
 }
 
 // Helper to filter keys of an object to only those that point to a 'number' type value.
@@ -221,6 +233,12 @@ export interface GameState {
   // player moved" from this baseline, not distance from zero — added in phase 5
   // (mejora-general/files/17_multiples_vias_victoria.md).
   levelBaseline: Indicators;
+  /**
+   * kHa of protected native forest the player declared (or that matured from public restoration).
+   * Territorio only (phase 34, T-07): the protected forest the model creates on its own does not count
+   * as a public decision.
+   */
+  declaredProtectedArea?: number;
   _pendingLevelIntroTrigger: number | null; // Added for managing level intro display
 }
 
@@ -317,59 +335,22 @@ export interface InitialIndicatorOverrides {
 
 // Added for Political Pressure calculation refinements
 export interface ControlParams {
-  Factor_sensibilidad_Indicador_eficiencia: number;
-  Max_Emisiones_Referencia_Anual: number;
+  // Model 1.1 (phase 34, N-08): the 70 keys no engine path read (Duracion_Efecto_*, Ponderacion_*,
+  // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
+  // were deleted. Real policy durations live in INITIAL_POLICIES (efficiencyDecayDuration).
   Ano_Activacion_Prestamo: number;
-  Monto_del_Prestamo_Unico: number;
   Referencia_Max_CO2_per_Capita_Puntaje: number;
   Umbral_polarizacion: number;
   Tasa_Impositiva_General_Sobre_PBI: number;
   Tasa_Base_Crecimiento_PBI: number;
   Tasa_Crecimiento_Poblacional_Base: number;
   FACTOR_C_A_CO2EQ: number;
-  Tasa_Transicion_Emisiones_Base: number;
-  Punto_Saturacion_Emisiones: number;
 
   Pago_deuda_anual_Nivel_1: number;
   Pago_deuda_anual_Nivel_2: number;
   Pago_deuda_anual_Nivel_3: number;
 
-  Amplificacion_mediatica_social_Nivel_1: number;
-  Amplificacion_mediatica_social_Nivel_2: number;
-  Amplificacion_mediatica_social_Nivel_3: number;
-
-  Duracion_Efecto_Al: number; Duracion_Efecto_CBN: number; Duracion_Efecto_CN: number;
-  Duracion_Efecto_EA: number; Duracion_Efecto_GRH: number; Duracion_Efecto_GS: number;
-  Duracion_Efecto_IE: number; Duracion_Efecto_NAF: number; Duracion_Efecto_PA: number;
-  Duracion_Efecto_SE: number;
-
-  Factor_Impulso_Presion_Agricola: number;
-  Factor_Impulso_Presion_Ambientalista: number;
-  Factor_Impulso_Presion_Social: number;
-
   Tasa_disipacion_social: number;
-  Tasa_disipacion_agricola_Nivel_1: number; Tasa_disipacion_agricola_Nivel_2: number; Tasa_disipacion_agricola_Nivel_3: number;
-  Tasa_disipacion_ambientalista_Nivel_1: number; Tasa_disipacion_ambientalista_Nivel_2: number; Tasa_disipacion_ambientalista_Nivel_3: number;
-
-  Peso_Influencia_Presiones_CP: number;
-  Peso_Factor_Polarizacion_CP: number;
-  Peso_Agricola_Colapso: number;
-  Peso_Ambientalista_Colapso: number;
-  Peso_Social_Colapso: number;
-
-  Ponderacion_CO2_Nivel_1: number; Ponderacion_CO2_Nivel_2: number; Ponderacion_CO2_Nivel_3: number;
-  Ponderacion_Externalidades_Nivel_1: number; Ponderacion_Externalidades_Nivel_2: number; Ponderacion_Externalidades_Nivel_3: number;
-  Ponderacion_Usos_coberturas_Nivel_1: number; Ponderacion_Usos_coberturas_Nivel_2: number; Ponderacion_Usos_coberturas_Nivel_3: number;
-
-  Peso_Biodiversidad_Ext: number;
-  Peso_Seguridad_Alimentaria_Ext: number;
-  Peso_Seguridad_Economica_Ext: number;
-  Peso_Bienestar_Social_Ext: number;
-
-  Peso_BNNP_Nivel_1: number; Peso_BNP_Nivel_1: number; Peso_CA_Nivel_1: number;
-  Peso_CC_Nivel_1: number; Peso_PF_Nivel_1: number; Peso_PRG_Nivel_1: number;
-
-  Umbral_Influencia_Agricola_Nivel_1: number; Umbral_Influencia_Agricola_Nivel_2: number; Umbral_Influencia_Agricola_Nivel_3: number;
 
   Tasa_de_interes_Nivel_1: number;
   Tasa_de_interes_Nivel_2: number;
@@ -382,23 +363,6 @@ export interface ControlParams {
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: number;
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: number;
   Impacto_Biodiversidad_en_SE_Peso: number;
-  Factor_Impacto_Politicas_y_Presiones_en_Bienestar_Peso: number;
-  Factor_Impacto_Usos_en_Bienestar_Peso: number; 
-  Impacto_Submodulos_en_Bienestar_Peso: number; 
-  Impacto_Sinergias_Antagonismos_Bienestar_Peso: number; 
-  Punto_Inflexion_SA_Biodiversidad: number;
-  Punto_Inflexion_SE_Biodiversidad: number;
-  Punto_Inflexion_BS_Biodiversidad: number;
-  Punto_Inflexion_BS_SA: number;
-  Punto_Inflexion_BS_SE: number;
-  Capacidad_Maxima_SA_Impacto_Biodiversidad: number;
-  Capacidad_Maxima_SA_Impacto_SE: number;
-  Capacidad_Maxima_BS_Impacto_Biodiversidad: number; 
-  Capacidad_Maxima_BS_Impacto_SA: number; 
-  Capacidad_Maxima_BS_Impacto_SE: number; 
-
-  Peso_Ant_C_SE_Carbono_Stella: number;
-  Peso_Sin_CR_C_Carbono_Stella: number;
 
   Tasa_de_BNNP_a_BNP_Base: number;
   Tasa_de_BNNP_a_CA_Base: number;
@@ -434,22 +398,20 @@ export interface ControlParams {
   Umbral_PP_Agricola_SegEconomica: number;
   Sensibilidad_PP_Agricola_SegAlimentaria: number; 
   Umbral_PP_Agricola_SegAlimentaria: number;
-  
+
   Sensibilidad_PP_Ambiental_Biodiversidad: number;
   Umbral_PP_Ambiental_Biodiversidad: number;
   Sensibilidad_PP_Ambiental_CO2PerCapita: number;
   Umbral_PP_Ambiental_CO2PerCapita: number;
-  
+
   Sensibilidad_PP_Social_BienestarSocial: number;
   Umbral_PP_Social_BienestarSocial: number;
-
 
   // Direct Carbon Impact Factors for Specific Policy Instruments
   Factor_Reduccion_Emisiones_Renovables_PCN: number;
   Factor_Aumento_Secuestro_CAC_PCN: number;
   Factor_Aumento_Emisiones_Fosiles_PSE: number;
   Factor_Aumento_Emisiones_AgroIntensivo_PPAI: number;
-
 
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: number; // e.g., 20 for 20%

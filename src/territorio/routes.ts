@@ -13,7 +13,7 @@
  */
 import type { GameState } from '../types';
 import { LandUseType, Policy } from '../types';
-import { evaluateRoute, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
+import { declaredProtectedOf, evaluateRoute, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
 
 const totalArea = (s: GameState) => (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
 
@@ -21,9 +21,13 @@ const totalArea = (s: GameState) => (Object.values(s.landUses) as { area: number
 const nativeForestPct = (s: GameState) =>
   ((s.landUses[LandUseType.UnprotectedNativeForest].area + s.landUses[LandUseType.ProtectedNativeForest].area) / totalArea(s)) * 100;
 
-/** Everything the state put under public protection or restoration, as a share of the territory. */
+/**
+ * Everything the state put under public protection or restoration, as a share of the territory.
+ * Model 1.1 (phase 34, T-07): only the protected forest the player declared (plus what public
+ * restoration matured into), not the initial 20 kHa nor what the base protection flow adds alone.
+ */
 export const publicNaturePct = (s: GameState) =>
-  ((s.landUses[LandUseType.ProtectedNativeForest].area + s.landUses[LandUseType.PublicWetland].area
+  ((declaredProtectedOf(s) + s.landUses[LandUseType.PublicWetland].area
     + s.landUses[LandUseType.RestorationForest].area) / totalArea(s)) * 100;
 
 const energyParkPct = (s: GameState) => (s.landUses[LandUseType.EnergyPark].area / totalArea(s)) * 100;
@@ -68,7 +72,10 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
     conditions: [
       { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 45.5, dir: 'min' },
       { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-      { labelKey: 'cond.publicNature', read: publicNaturePct, target: 12, dir: 'min' },
+      // Model 1.1 (phase 34, T-07): 12 → 4.5 once only the declared forest counts. With the arnés
+      // (20 seeds) the conservation strategy ends at 4.7–8.9 % and do_nothing at 0 %; the spec
+      // expected ≈ 7 %, but 7 would leave conservation at 9/20 (docs/DESIGN_DECISIONS_LOG.md).
+      { labelKey: 'cond.publicNature', read: publicNaturePct, target: 4.5, dir: 'min' },
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6, dir: 'max' },
     ],
   },

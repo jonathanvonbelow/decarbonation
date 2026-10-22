@@ -1,0 +1,4222 @@
+{
+  "modelVersion": "1.1",
+  "modelVersionByGame": {
+    "niveles": "1.1",
+    "territorio": "1.1"
+  },
+  "generatedAt": "2026-10-22T21:09:51.974Z",
+  "mode": "full",
+  "seeds": {
+    "niveles": 40,
+    "territorio": 20,
+    "randomPlayers": 150
+  },
+  "thresholds": {
+    "targetedMin": 0.7,
+    "allRoutesMax": 0.5,
+    "shortcutMax": 0.05,
+    "undecidedBand": [
+      0.3,
+      0.7
+    ],
+    "rangeMin": 15,
+    "flatBand": [
+      0.3,
+      0.36
+    ],
+    "indicatorDeltaMax": 1,
+    "co2DeltaMax": 0.1
+  },
+  "criteria": [
+    {
+      "key": "C1_do_nothing_never_wins",
+      "status": "FAIL",
+      "value": 0.075,
+      "better": "lower",
+      "threshold": "= 0 % en cada nivel y en Territorio",
+      "detail": [
+        "N1: 0.0 %",
+        "N2: 0.0 %",
+        "N3: 7.5 %",
+        "Territorio: 0.0 %"
+      ]
+    },
+    {
+      "key": "C2_targeted_wins",
+      "status": "FAIL",
+      "value": 0,
+      "better": "higher",
+      "threshold": "≥ 70.0 %",
+      "detail": [
+        "N1 conservation→conservation: 100.0 %",
+        "N1 production→production: 22.5 % ✗",
+        "N1 innovation→innovation: 100.0 %",
+        "N2 conservation→conservation: 37.5 % ✗",
+        "N2 production→production: 0.0 % ✗",
+        "N2 innovation→innovation: 0.0 % ✗",
+        "N3 conservation→conservation: 100.0 %",
+        "N3 production→production: 12.5 % ✗",
+        "N3 innovation→innovation: 100.0 %",
+        "Territorio conservation→conservation: 95.0 %",
+        "Territorio production→production: 35.0 % ✗",
+        "Territorio innovation→innovation: 0.0 % ✗"
+      ]
+    },
+    {
+      "key": "C3_no_strategy_wins_all",
+      "status": "PASS",
+      "value": 0.225,
+      "better": "lower",
+      "threshold": "≤ 50.0 % por estrategia",
+      "detail": [
+        "N1 conservation: 22.5 %",
+        "N3 conservation: 7.5 %"
+      ]
+    },
+    {
+      "key": "C4_shortcuts_closed",
+      "status": "FAIL",
+      "value": 0.35,
+      "better": "lower",
+      "threshold": "≤ 5.0 %",
+      "detail": [
+        "N1 tech_tax: 0.0 %",
+        "N1 extractive: 0.0 %",
+        "N2 tech_tax: 0.0 %",
+        "N2 extractive: 0.0 %",
+        "N3 tech_tax: 10.0 % ✗",
+        "N3 extractive: 0.0 %",
+        "Territorio settle_only: 0.0 %",
+        "Territorio cheap_production: 35.0 % ✗",
+        "Territorio extractive: 30.0 % ✗",
+        "Territorio buy_everything: 0.0 %"
+      ]
+    },
+    {
+      "key": "C5_strategy_decides",
+      "status": "FAIL",
+      "value": 5,
+      "better": "lower",
+      "threshold": "ninguna tasa de victoria en (30.0 %, 70.0 %); valor = casos dentro",
+      "detail": [
+        "N2 conservation: 37.5 % ✗",
+        "N2 balanced: 40.0 % ✗",
+        "Territorio production: 35.0 % ✗",
+        "Territorio innovation: 60.0 % ✗",
+        "Territorio cheap_production: 35.0 % ✗"
+      ]
+    },
+    {
+      "key": "C6_indicator_range",
+      "status": "FAIL",
+      "value": 0.34063488846351575,
+      "better": "higher",
+      "threshold": "≥ 15 puntos en B, F, E, W",
+      "detail": [
+        "N1 B: 7.7 (extractive → green) ✗",
+        "N1 F: 10.2 (tech_tax → green) ✗",
+        "N1 E: 0.3 (tech_tax → extractive) ✗",
+        "N1 W: 5.7 (extractive → green) ✗",
+        "N2 B: 10.2 (extractive → conservation) ✗",
+        "N2 F: 20.9 (extractive → green)",
+        "N2 E: 8.7 (extractive → innovation) ✗",
+        "N2 W: 28.1 (extractive → green)",
+        "N3 B: 9.8 (extractive → conservation) ✗",
+        "N3 F: 12.2 (extractive → green) ✗",
+        "N3 E: 8.2 (extractive → innovation) ✗",
+        "N3 W: 21.3 (extractive → green)",
+        "Territorio B: 15.9 (do_nothing → conservation)",
+        "Territorio F: 25.8 (do_nothing → conservation)",
+        "Territorio E: 10.4 (do_nothing → production) ✗",
+        "Territorio W: 60.3 (do_nothing → conservation)"
+      ]
+    },
+    {
+      "key": "C7_prediction_band",
+      "status": "FAIL",
+      "value": 0.6699999999999999,
+      "better": "lower",
+      "threshold": "\"sin cambio\" entre 30.0 % y 36.0 %; valor = máx |x − 33 %|",
+      "detail": [
+        "N1 B: 100.0 % ✗",
+        "N1 E: 100.0 % ✗",
+        "N1 c: 61.5 % ✗",
+        "N2 B: 100.0 % ✗",
+        "N2 E: 86.5 % ✗",
+        "N2 c: 23.7 % ✗",
+        "N3 B: 100.0 % ✗",
+        "N3 E: 86.1 % ✗",
+        "N3 c: 48.7 % ✗"
+      ]
+    },
+    {
+      "key": "C8_no_spurious_collapse",
+      "status": "PASS",
+      "value": 0,
+      "better": "lower",
+      "threshold": "ninguna quiebra salvo buy_everything (Territorio); valor = quiebras no permitidas",
+      "detail": []
+    },
+    {
+      "key": "C9_annual_monthly",
+      "status": "SKIP",
+      "value": 1.52933295277494,
+      "better": "lower",
+      "threshold": "|Δ| ≤ 1 en indicadores y ≤ 0.1 t en c (N2, sin eventos, años 10 y 30); valor = máx(|Δ|/umbral); solo modelo 2.x",
+      "detail": [
+        "peor W: green año 30, anual 21.57 vs mensual 22.27 (Δ 0.71)",
+        "peor c: green año 30, anual 8.57 vs mensual 8.42 (Δ -0.15)",
+        "modelo 1.x: informativo, el criterio aplica desde el modelo 2.0 (fase 35)"
+      ]
+    }
+  ],
+  "quickCriteria": [
+    {
+      "key": "C1_do_nothing_never_wins",
+      "status": "FAIL",
+      "value": 0.1,
+      "better": "lower",
+      "threshold": "= 0 % en cada nivel y en Territorio",
+      "detail": [
+        "N1: 0.0 %",
+        "N2: 0.0 %",
+        "N3: 10.0 %",
+        "Territorio: 0.0 %"
+      ]
+    },
+    {
+      "key": "C2_targeted_wins",
+      "status": "FAIL",
+      "value": 0,
+      "better": "higher",
+      "threshold": "≥ 70.0 %",
+      "detail": [
+        "N1 conservation→conservation: 100.0 %",
+        "N1 production→production: 20.0 % ✗",
+        "N1 innovation→innovation: 100.0 %",
+        "N2 conservation→conservation: 30.0 % ✗",
+        "N2 production→production: 0.0 % ✗",
+        "N2 innovation→innovation: 0.0 % ✗",
+        "N3 conservation→conservation: 100.0 %",
+        "N3 production→production: 20.0 % ✗",
+        "N3 innovation→innovation: 100.0 %",
+        "Territorio conservation→conservation: 100.0 %",
+        "Territorio production→production: 60.0 % ✗",
+        "Territorio innovation→innovation: 0.0 % ✗"
+      ]
+    },
+    {
+      "key": "C3_no_strategy_wins_all",
+      "status": "PASS",
+      "value": 0.2,
+      "better": "lower",
+      "threshold": "≤ 50.0 % por estrategia",
+      "detail": [
+        "N1 conservation: 20.0 %",
+        "N3 conservation: 20.0 %"
+      ]
+    },
+    {
+      "key": "C4_shortcuts_closed",
+      "status": "FAIL",
+      "value": 0.6,
+      "better": "lower",
+      "threshold": "≤ 5.0 %",
+      "detail": [
+        "N1 tech_tax: 0.0 %",
+        "N1 extractive: 0.0 %",
+        "N2 tech_tax: 0.0 %",
+        "N2 extractive: 0.0 %",
+        "N3 tech_tax: 20.0 % ✗",
+        "N3 extractive: 0.0 %",
+        "Territorio settle_only: 0.0 %",
+        "Territorio cheap_production: 40.0 % ✗",
+        "Territorio extractive: 60.0 % ✗",
+        "Territorio buy_everything: 0.0 %"
+      ]
+    },
+    {
+      "key": "C5_strategy_decides",
+      "status": "FAIL",
+      "value": 3,
+      "better": "lower",
+      "threshold": "ninguna tasa de victoria en (30.0 %, 70.0 %); valor = casos dentro",
+      "detail": [
+        "Territorio production: 60.0 % ✗",
+        "Territorio cheap_production: 40.0 % ✗",
+        "Territorio extractive: 60.0 % ✗"
+      ]
+    },
+    {
+      "key": "C6_indicator_range",
+      "status": "FAIL",
+      "value": 0.34065539449690263,
+      "better": "higher",
+      "threshold": "≥ 15 puntos en B, F, E, W",
+      "detail": [
+        "N1 B: 7.7 (extractive → green) ✗",
+        "N1 F: 13.6 (tech_tax → green) ✗",
+        "N1 E: 0.3 (tech_tax → extractive) ✗",
+        "N1 W: 7.0 (extractive → green) ✗",
+        "N2 B: 10.2 (extractive → conservation) ✗",
+        "N2 F: 22.4 (extractive → green)",
+        "N2 E: 8.3 (extractive → innovation) ✗",
+        "N2 W: 37.4 (extractive → green)",
+        "N3 B: 9.8 (extractive → conservation) ✗",
+        "N3 F: 10.7 (balanced → green) ✗",
+        "N3 E: 8.3 (extractive → innovation) ✗",
+        "N3 W: 30.2 (extractive → green)",
+        "Territorio B: 15.9 (do_nothing → conservation)",
+        "Territorio F: 29.5 (do_nothing → conservation)",
+        "Territorio E: 16.1 (do_nothing → extractive)",
+        "Territorio W: 69.7 (do_nothing → extractive)"
+      ]
+    },
+    {
+      "key": "C7_prediction_band",
+      "status": "FAIL",
+      "value": 0.6699999999999999,
+      "better": "lower",
+      "threshold": "\"sin cambio\" entre 30.0 % y 36.0 %; valor = máx |x − 33 %|",
+      "detail": [
+        "N1 B: 100.0 % ✗",
+        "N1 E: 100.0 % ✗",
+        "N1 c: 60.0 % ✗",
+        "N2 B: 100.0 % ✗",
+        "N2 E: 85.1 % ✗",
+        "N2 c: 23.0 % ✗",
+        "N3 B: 100.0 % ✗",
+        "N3 E: 86.7 % ✗",
+        "N3 c: 46.1 % ✗"
+      ]
+    },
+    {
+      "key": "C8_no_spurious_collapse",
+      "status": "PASS",
+      "value": 0,
+      "better": "lower",
+      "threshold": "ninguna quiebra salvo buy_everything (Territorio); valor = quiebras no permitidas",
+      "detail": []
+    },
+    {
+      "key": "C9_annual_monthly",
+      "status": "SKIP",
+      "value": 1.52933295277494,
+      "better": "lower",
+      "threshold": "|Δ| ≤ 1 en indicadores y ≤ 0.1 t en c (N2, sin eventos, años 10 y 30); valor = máx(|Δ|/umbral); solo modelo 2.x",
+      "detail": [
+        "peor W: green año 30, anual 21.57 vs mensual 22.27 (Δ 0.71)",
+        "peor c: green año 30, anual 8.57 vs mensual 8.42 (Δ -0.15)",
+        "modelo 1.x: informativo, el criterio aplica desde el modelo 2.0 (fase 35)"
+      ]
+    }
+  ],
+  "comparedWith": {
+    "modelVersion": "1.0",
+    "mode": "full",
+    "generatedAt": "2026-10-22T16:09:28.103Z"
+  },
+  "changes": [
+    {
+      "key": "C1_do_nothing_never_wins",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 0.075,
+      "valueAfter": 0.075,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C2_targeted_wins",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 0,
+      "valueAfter": 0,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C3_no_strategy_wins_all",
+      "before": "PASS",
+      "after": "PASS",
+      "valueBefore": 0.225,
+      "valueAfter": 0.225,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C4_shortcuts_closed",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 0.35,
+      "valueAfter": 0.35,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C5_strategy_decides",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 4,
+      "valueAfter": 5,
+      "change": "worsened",
+      "regressed": false
+    },
+    {
+      "key": "C6_indicator_range",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 0.3888639317871103,
+      "valueAfter": 0.34063488846351575,
+      "change": "worsened",
+      "regressed": false
+    },
+    {
+      "key": "C7_prediction_band",
+      "before": "FAIL",
+      "after": "FAIL",
+      "valueBefore": 0.6699999999999999,
+      "valueAfter": 0.6699999999999999,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C8_no_spurious_collapse",
+      "before": "PASS",
+      "after": "PASS",
+      "valueBefore": 0,
+      "valueAfter": 0,
+      "change": "same",
+      "regressed": false
+    },
+    {
+      "key": "C9_annual_monthly",
+      "before": "SKIP",
+      "after": "SKIP",
+      "valueBefore": 1.52933295277494,
+      "valueAfter": 1.52933295277494,
+      "change": "same",
+      "regressed": false
+    }
+  ],
+  "scopes": [
+    {
+      "scope": "N1",
+      "game": "niveles",
+      "level": 1,
+      "routeIds": [
+        "conservation",
+        "production",
+        "innovation"
+      ],
+      "stats": [
+        {
+          "strategy": "do_nothing",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 38.90123769693291,
+              "p50": 38.90896426590514,
+              "p90": 38.9140849670436
+            },
+            "F": {
+              "p10": 24.570402431132255,
+              "p50": 31.58570752560642,
+              "p90": 36.777923460720736
+            },
+            "E": {
+              "p10": 25.062691996113355,
+              "p50": 25.062813513532898,
+              "p90": 25.06299972214732
+            },
+            "W": {
+              "p10": 16.061888866070376,
+              "p50": 19.20396397037308,
+              "p90": 22.237665444653445
+            },
+            "St": {
+              "p10": 88.66503442328454,
+              "p50": 89.85666104315584,
+              "p90": 91.86894633159272
+            },
+            "c": {
+              "p10": 7.222971687972626,
+              "p50": 7.367236308112472,
+              "p90": 7.670996534206262
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 360.1089534238284,
+              "p50": 367.0076838875104,
+              "p90": 372.61294136166777
+            }
+          }
+        },
+        {
+          "strategy": "green",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.9710751081976,
+              "p50": 43.97391470772723,
+              "p90": 43.98469713823437
+            },
+            "F": {
+              "p10": 31.71994534321904,
+              "p50": 41.7617300392774,
+              "p90": 47.945025446111
+            },
+            "E": {
+              "p10": 25.028019655199294,
+              "p50": 25.028161813791197,
+              "p90": 25.028185272662775
+            },
+            "W": {
+              "p10": 21.701144286525818,
+              "p50": 24.801677351810298,
+              "p90": 61.00320387579784
+            },
+            "St": {
+              "p10": 87.38116533063665,
+              "p50": 88.12547919490909,
+              "p90": 92.49346431601448
+            },
+            "c": {
+              "p10": 3.0473848846023803,
+              "p50": 3.1044453982888354,
+              "p90": 3.15250287660483
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 545.2077204691035,
+              "p50": 547.1250161870555,
+              "p90": 549.7775013344477
+            }
+          }
+        },
+        {
+          "strategy": "extractive",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 36.225785339484,
+              "p50": 36.22983336619126,
+              "p90": 36.23583976334184
+            },
+            "F": {
+              "p10": 24.626873494403235,
+              "p50": 31.649203464081058,
+              "p90": 36.85798860587138
+            },
+            "E": {
+              "p10": 25.354140554284474,
+              "p50": 25.354247195320006,
+              "p90": 25.354413496766913
+            },
+            "W": {
+              "p10": 15.96065049495347,
+              "p50": 19.102862253082932,
+              "p90": 22.13657811712112
+            },
+            "St": {
+              "p10": 90.87394192300846,
+              "p50": 91.84955837244692,
+              "p90": 93.126649143594
+            },
+            "c": {
+              "p10": 8.930583366373815,
+              "p50": 9.104606252784858,
+              "p90": 9.479757294031723
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 282.11356001619583,
+              "p50": 291.60137496999437,
+              "p90": 298.4632717973982
+            }
+          }
+        },
+        {
+          "strategy": "production",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 9,
+              "n": 40,
+              "rate": 0.225,
+              "ci": [
+                0.12315953254678531,
+                0.3750339640409305
+              ]
+            },
+            "innovation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            }
+          },
+          "achieved": {
+            "innovation": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.876438207088825,
+              "p50": 39.88167563776808,
+              "p90": 39.88889232803805
+            },
+            "F": {
+              "p10": 25.03885922833958,
+              "p50": 32.815327711625066,
+              "p90": 47.62057464951447
+            },
+            "E": {
+              "p10": 25.329105446415404,
+              "p50": 25.329188076040953,
+              "p90": 25.329322321827718
+            },
+            "W": {
+              "p10": 16.248214417238955,
+              "p50": 20.162203599292383,
+              "p90": 47.352180039004615
+            },
+            "St": {
+              "p10": 90.95172371903573,
+              "p50": 92.14961809299926,
+              "p90": 96.60109073947093
+            },
+            "c": {
+              "p10": 5.28139268025933,
+              "p50": 5.35475746234792,
+              "p90": 5.50450156954912
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 443.18390478184983,
+              "p50": 446.77624418141187,
+              "p90": 449.6338692705879
+            }
+          }
+        },
+        {
+          "strategy": "innovation",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 9,
+              "n": 40,
+              "rate": 0.225,
+              "ci": [
+                0.12315953254678531,
+                0.3750339640409305
+              ]
+            },
+            "innovation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            }
+          },
+          "achieved": {
+            "innovation": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.96585856236688,
+              "p50": 39.97109599304618,
+              "p90": 39.978312683316126
+            },
+            "F": {
+              "p10": 24.93757059427522,
+              "p50": 32.71450399838845,
+              "p90": 47.47038662385077
+            },
+            "E": {
+              "p10": 25.16704178237723,
+              "p50": 25.167124412002792,
+              "p90": 25.167258657789557
+            },
+            "W": {
+              "p10": 17.51205527751027,
+              "p50": 21.426044459563713,
+              "p90": 48.61602089927593
+            },
+            "St": {
+              "p10": 90.32281115233819,
+              "p50": 91.13499752241066,
+              "p90": 95.57430192644203
+            },
+            "c": {
+              "p10": 4.7920738041825155,
+              "p50": 4.86245905207805,
+              "p90": 5.005865279109234
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 461.89008713575515,
+              "p50": 465.3513109925466,
+              "p90": 468.09504862352304
+            }
+          }
+        },
+        {
+          "strategy": "conservation",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "production": {
+              "k": 9,
+              "n": 40,
+              "rate": 0.225,
+              "ci": [
+                0.12315953254678531,
+                0.3750339640409305
+              ]
+            },
+            "innovation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            }
+          },
+          "achieved": {
+            "innovation": 40
+          },
+          "allRoutes": {
+            "k": 9,
+            "n": 40,
+            "rate": 0.225,
+            "ci": [
+              0.12315953254678531,
+              0.3750339640409305
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.80711000384662,
+              "p50": 43.82372595615717,
+              "p90": 43.833345661982
+            },
+            "F": {
+              "p10": 24.994983551306287,
+              "p50": 32.7728910638464,
+              "p90": 47.55940777473838
+            },
+            "E": {
+              "p10": 25.093985401230672,
+              "p50": 25.09413223257824,
+              "p90": 25.09437324583249
+            },
+            "W": {
+              "p10": 17.108203802394158,
+              "p50": 21.022258391118896,
+              "p90": 48.21181851718259
+            },
+            "St": {
+              "p10": 90.45029367081136,
+              "p50": 91.56225093877835,
+              "p90": 95.74697796041147
+            },
+            "c": {
+              "p10": 3.4432494996444865,
+              "p50": 3.5080417061979974,
+              "p90": 3.6405599836317744
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 528.2642830720629,
+              "p50": 531.3892482522938,
+              "p90": 533.9322162912908
+            }
+          }
+        },
+        {
+          "strategy": "balanced",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.69369481885385,
+              "p50": 43.710310771164366,
+              "p90": 43.71993047698924
+            },
+            "F": {
+              "p10": 24.87583027180532,
+              "p50": 32.651520742351494,
+              "p90": 47.374962102321525
+            },
+            "E": {
+              "p10": 25.23510000140075,
+              "p50": 25.235246832748317,
+              "p90": 25.235487846002574
+            },
+            "W": {
+              "p10": 18.344731386108094,
+              "p50": 22.258785974832833,
+              "p90": 49.44834610089653
+            },
+            "St": {
+              "p10": 87.76251685055696,
+              "p50": 88.61793427504493,
+              "p90": 92.39195513638793
+            },
+            "c": {
+              "p10": 2.9636140522444765,
+              "p50": 3.0256900175610686,
+              "p90": 3.15250287660483
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 546.2202953831634,
+              "p50": 549.2352775600748,
+              "p90": 551.6758868775914
+            }
+          }
+        },
+        {
+          "strategy": "tech_tax",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.12852067743152,
+              "p50": 39.13624724640372,
+              "p90": 39.141367947542186
+            },
+            "F": {
+              "p10": 24.569972220408232,
+              "p50": 31.585252174198693,
+              "p90": 36.77740143429261
+            },
+            "E": {
+              "p10": 25.01349078943695,
+              "p50": 25.01361230685649,
+              "p90": 25.01379851547092
+            },
+            "W": {
+              "p10": 17.325729726341677,
+              "p50": 20.467804830644397,
+              "p90": 23.501506304924746
+            },
+            "St": {
+              "p10": 89.3943561961952,
+              "p50": 90.04345732561849,
+              "p90": 91.3066107425578
+            },
+            "c": {
+              "p10": 6.710592780716406,
+              "p50": 6.851255670478955,
+              "p90": 7.1473329120408975
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 380.454212767723,
+              "p50": 387.1912930820315,
+              "p90": 392.6585372945558
+            }
+          }
+        }
+      ],
+      "range": {
+        "B": {
+          "range": 7.744081341535974,
+          "min": "extractive",
+          "max": "green"
+        },
+        "F": {
+          "range": 10.17647786507871,
+          "min": "tech_tax",
+          "max": "green"
+        },
+        "E": {
+          "range": 0.34063488846351575,
+          "min": "tech_tax",
+          "max": "extractive"
+        },
+        "W": {
+          "range": 5.698815098727366,
+          "min": "extractive",
+          "max": "green"
+        }
+      }
+    },
+    {
+      "scope": "N2",
+      "game": "niveles",
+      "level": 2,
+      "routeIds": [
+        "conservation",
+        "production",
+        "innovation"
+      ],
+      "stats": [
+        {
+          "strategy": "do_nothing",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 38.073043719043916,
+              "p50": 38.10521918536386,
+              "p90": 38.129592635606535
+            },
+            "F": {
+              "p10": 24.743718001249306,
+              "p50": 32.57941339605151,
+              "p90": 43.685276940831
+            },
+            "E": {
+              "p10": 24.18593129580005,
+              "p50": 28.274691804467523,
+              "p90": 36.36519135699325
+            },
+            "W": {
+              "p10": 12.569488713325356,
+              "p50": 16.30379439346656,
+              "p90": 45.491012170091985
+            },
+            "St": {
+              "p10": 59.75278091795446,
+              "p50": 61.110775335667725,
+              "p90": 67.5920101997398
+            },
+            "c": {
+              "p10": 12.902674288651372,
+              "p50": 13.370782034795042,
+              "p90": 13.899324776398998
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 203.91950654189475,
+              "p50": 222.9029582683222,
+              "p90": 352.6314085266833
+            }
+          }
+        },
+        {
+          "strategy": "green",
+          "n": 40,
+          "win": {
+            "k": 33,
+            "n": 40,
+            "rate": 0.825,
+            "ci": [
+              0.6804970794560756,
+              0.9125469700311694
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 33,
+              "n": 40,
+              "rate": 0.825,
+              "ci": [
+                0.6804970794560756,
+                0.9125469700311694
+              ]
+            },
+            "production": {
+              "k": 17,
+              "n": 40,
+              "rate": 0.425,
+              "ci": [
+                0.2850916852481588,
+                0.5780519956394001
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "conservation": 33,
+            "none": 7
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 42.91917582491936,
+              "p50": 42.922511898587416,
+              "p90": 42.940416288642055
+            },
+            "F": {
+              "p10": 35.197631547520274,
+              "p50": 47.15843965359305,
+              "p90": 63.14576895754552
+            },
+            "E": {
+              "p10": 26.760725076619764,
+              "p50": 31.06936387910251,
+              "p90": 39.9669569853376
+            },
+            "W": {
+              "p10": 19.011726127714866,
+              "p50": 43.929242293205384,
+              "p90": 66.00073887643757
+            },
+            "St": {
+              "p10": 59.30958232854585,
+              "p50": 61.71000000000005,
+              "p90": 64.00000000000011
+            },
+            "c": {
+              "p10": 8.28955708614121,
+              "p50": 8.43478332480654,
+              "p90": 8.573319331023905
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 390.5678894981371,
+              "p50": 520.6475071120435,
+              "p90": 575.8520010365737
+            }
+          }
+        },
+        {
+          "strategy": "extractive",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 35.569756447768135,
+              "p50": 35.60500127539154,
+              "p90": 35.63871663052619
+            },
+            "F": {
+              "p10": 19.300474465164438,
+              "p50": 26.22080860181437,
+              "p90": 37.02778819280035
+            },
+            "E": {
+              "p10": 19.85539691932269,
+              "p50": 24.171037302132326,
+              "p90": 32.91405280754149
+            },
+            "W": {
+              "p10": 10.891550010906798,
+              "p50": 15.784749468817381,
+              "p90": 22.925763735973433
+            },
+            "St": {
+              "p10": 55.759693404568644,
+              "p50": 56.303242955675685,
+              "p90": 60.944269484408736
+            },
+            "c": {
+              "p10": 14.078964968216745,
+              "p50": 14.581450630666737,
+              "p90": 15.130634089841795
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 161.83652386222374,
+              "p50": 176.17177012253887,
+              "p90": 250.1244350872942
+            }
+          }
+        },
+        {
+          "strategy": "production",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.176974549911854,
+              "p50": 39.18826161226656,
+              "p90": 39.198786036567896
+            },
+            "F": {
+              "p10": 23.987110380602797,
+              "p50": 34.8742866412426,
+              "p90": 50.48042957279855
+            },
+            "E": {
+              "p10": 21.70235445125291,
+              "p50": 26.744355554916282,
+              "p90": 35.620786487299284
+            },
+            "W": {
+              "p10": 12.893587923431767,
+              "p50": 18.234616362908426,
+              "p90": 58.573616940966204
+            },
+            "St": {
+              "p10": 60.20954210289678,
+              "p50": 61.98304864803995,
+              "p90": 68.20000000000005
+            },
+            "c": {
+              "p10": 10.236617216451132,
+              "p50": 10.388613807443122,
+              "p90": 10.6962553429502
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 267.5105382866922,
+              "p50": 294.96771207453594,
+              "p90": 452.6506867066722
+            }
+          }
+        },
+        {
+          "strategy": "innovation",
+          "n": 40,
+          "win": {
+            "k": 10,
+            "n": 40,
+            "rate": 0.25,
+            "ci": [
+              0.14186967895549518,
+              0.40194259066970106
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 10,
+              "n": 40,
+              "rate": 0.25,
+              "ci": [
+                0.14186967895549518,
+                0.40194259066970106
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 30,
+            "production": 10
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.26639490518995,
+              "p50": 39.277681967544666,
+              "p90": 39.28820639184601
+            },
+            "F": {
+              "p10": 23.93750906118318,
+              "p50": 38.71828641341912,
+              "p90": 57.092682199332735
+            },
+            "E": {
+              "p10": 26.664820067204804,
+              "p50": 32.86834264318982,
+              "p90": 44.17683933621259
+            },
+            "W": {
+              "p10": 15.220534786165516,
+              "p50": 19.498457223179727,
+              "p90": 61.81046976534531
+            },
+            "St": {
+              "p10": 63.366854306317926,
+              "p50": 66.12376651510887,
+              "p90": 71.20000000000005
+            },
+            "c": {
+              "p10": 8.371950562919094,
+              "p50": 8.49646206786004,
+              "p90": 8.748160125433403
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 334.4115043441266,
+              "p50": 386.75961505849074,
+              "p90": 554.710296698104
+            }
+          }
+        },
+        {
+          "strategy": "conservation",
+          "n": 40,
+          "win": {
+            "k": 15,
+            "n": 40,
+            "rate": 0.375,
+            "ci": [
+              0.24222773535791722,
+              0.529678399454681
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 15,
+              "n": 40,
+              "rate": 0.375,
+              "ci": [
+                0.24222773535791722,
+                0.529678399454681
+              ]
+            },
+            "production": {
+              "k": 5,
+              "n": 40,
+              "rate": 0.125,
+              "ci": [
+                0.05459419773541283,
+                0.26112420670238146
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 25,
+            "conservation": 15
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 45.779574519118555,
+              "p50": 45.80760284955631,
+              "p90": 45.8250812547979
+            },
+            "F": {
+              "p10": 26.03504426788075,
+              "p50": 40.57451978279403,
+              "p90": 57.86794747567263
+            },
+            "E": {
+              "p10": 25.664125459944565,
+              "p50": 30.01848388402773,
+              "p90": 36.32524559493154
+            },
+            "W": {
+              "p10": 14.57392749541306,
+              "p50": 19.093490571659657,
+              "p90": 61.40515777690664
+            },
+            "St": {
+              "p10": 60.439382185159715,
+              "p50": 62.763155161680494,
+              "p90": 68.20000000000005
+            },
+            "c": {
+              "p10": 8.22111433237415,
+              "p50": 8.36138799378374,
+              "p90": 8.647921113394151
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 346.85848774434993,
+              "p50": 387.7258263222427,
+              "p90": 559.1920644904219
+            }
+          }
+        },
+        {
+          "strategy": "balanced",
+          "n": 40,
+          "win": {
+            "k": 16,
+            "n": 40,
+            "rate": 0.4,
+            "ci": [
+              0.2634811061240136,
+              0.5540438017260649
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 16,
+              "n": 40,
+              "rate": 0.4,
+              "ci": [
+                0.2634811061240136,
+                0.5540438017260649
+              ]
+            },
+            "production": {
+              "k": 7,
+              "n": 40,
+              "rate": 0.175,
+              "ci": [
+                0.08745302996883067,
+                0.3195029205439244
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 24,
+            "conservation": 16
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 42.64205624100143,
+              "p50": 42.666962305766624,
+              "p90": 42.68383588362655
+            },
+            "F": {
+              "p10": 23.853382556668326,
+              "p50": 35.77907417560462,
+              "p90": 50.50468177753576
+            },
+            "E": {
+              "p10": 21.858056250881415,
+              "p50": 29.36716519894579,
+              "p90": 42.02100747175204
+            },
+            "W": {
+              "p10": 15.80846644493461,
+              "p50": 19.913466456593284,
+              "p90": 62.15370343628231
+            },
+            "St": {
+              "p10": 57.310263408038466,
+              "p50": 59.51894518300496,
+              "p90": 64.30000000000011
+            },
+            "c": {
+              "p10": 8.144981635835327,
+              "p50": 8.286131803954142,
+              "p90": 8.573319331023905
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 348.0310707247081,
+              "p50": 391.01121502163517,
+              "p90": 546.8540761220307
+            }
+          }
+        },
+        {
+          "strategy": "tech_tax",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 38.300326699542524,
+              "p50": 38.33250216586243,
+              "p90": 38.35687561610512
+            },
+            "F": {
+              "p10": 24.743301954118323,
+              "p50": 32.578954443532155,
+              "p90": 43.69531415950646
+            },
+            "E": {
+              "p10": 25.40798655956156,
+              "p50": 29.715032527472992,
+              "p90": 39.37023773931953
+            },
+            "W": {
+              "p10": 13.833329573596671,
+              "p50": 17.66598074025252,
+              "p90": 49.45688952104835
+            },
+            "St": {
+              "p10": 59.82509556797721,
+              "p50": 62.551219151571765,
+              "p90": 67.75000000000004
+            },
+            "c": {
+              "p10": 12.902674288651372,
+              "p50": 13.370782034795042,
+              "p90": 13.899324776398998
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 238.40458725238994,
+              "p50": 259.5365623781182,
+              "p90": 410.0880051762235
+            }
+          }
+        }
+      ],
+      "range": {
+        "B": {
+          "range": 10.202601574164774,
+          "min": "extractive",
+          "max": "conservation"
+        },
+        "F": {
+          "range": 20.93763105177868,
+          "min": "extractive",
+          "max": "green"
+        },
+        "E": {
+          "range": 8.697305341057493,
+          "min": "extractive",
+          "max": "innovation"
+        },
+        "W": {
+          "range": 28.144492824388003,
+          "min": "extractive",
+          "max": "green"
+        }
+      }
+    },
+    {
+      "scope": "N3",
+      "game": "niveles",
+      "level": 3,
+      "routeIds": [
+        "conservation",
+        "production",
+        "innovation",
+        "equilibrium"
+      ],
+      "stats": [
+        {
+          "strategy": "do_nothing",
+          "n": 40,
+          "win": {
+            "k": 3,
+            "n": 40,
+            "rate": 0.075,
+            "ci": [
+              0.02583555677185823,
+              0.19864530159097524
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 3,
+              "n": 40,
+              "rate": 0.075,
+              "ci": [
+                0.02583555677185823,
+                0.19864530159097524
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 37,
+            "production": 3
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.43415665195819,
+              "p50": 39.442497903059,
+              "p90": 39.45245950385789
+            },
+            "F": {
+              "p10": 28.0382100809705,
+              "p50": 35.91552843424178,
+              "p90": 47.4882096579691
+            },
+            "E": {
+              "p10": 14.25714455265476,
+              "p50": 21.29428006084871,
+              "p90": 30.060655421510045
+            },
+            "W": {
+              "p10": 4.064045254493564,
+              "p50": 10.645602369824047,
+              "p90": 37.65797337026594
+            },
+            "St": {
+              "p10": 58.99282851663609,
+              "p50": 60.37184312034669,
+              "p90": 64.83954528966973
+            },
+            "c": {
+              "p10": 8.300144125181617,
+              "p50": 8.572883447330884,
+              "p90": 8.718235947462901
+            },
+            "DY": {
+              "p10": 0.009618329898469516,
+              "p50": 0.010422340402550271,
+              "p90": 0.011615259499696993
+            },
+            "score": {
+              "p10": 420.2600382706612,
+              "p50": 456.5569103940448,
+              "p90": 536.8841951218194
+            }
+          }
+        },
+        {
+          "strategy": "green",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "production": {
+              "k": 7,
+              "n": 40,
+              "rate": 0.175,
+              "ci": [
+                0.08745302996883067,
+                0.3195029205439244
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 2,
+              "n": 40,
+              "rate": 0.05,
+              "ci": [
+                0.013820377146101093,
+                0.165041708179252
+              ]
+            }
+          },
+          "achieved": {
+            "conservation": 38,
+            "equilibrium": 2
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.943826260198,
+              "p50": 43.943826260198,
+              "p90": 43.951581461454126
+            },
+            "F": {
+              "p10": 33.2064959155957,
+              "p50": 46.935580119275194,
+              "p90": 54.155035721800104
+            },
+            "E": {
+              "p10": 15.378269855038958,
+              "p50": 24.241652758813334,
+              "p90": 34.156683598763344
+            },
+            "W": {
+              "p10": 12.75983410144751,
+              "p50": 29.793003340944693,
+              "p90": 56.78585008035501
+            },
+            "St": {
+              "p10": 56.408866341805926,
+              "p50": 59.46337572739859,
+              "p90": 63.850000000000115
+            },
+            "c": {
+              "p10": 4.757729347358796,
+              "p50": 4.866406601159908,
+              "p90": 4.866406601159908
+            },
+            "DY": {
+              "p10": 0.009436319229588382,
+              "p50": 0.010092969126786193,
+              "p90": 0.011336829542288802
+            },
+            "score": {
+              "p10": 519.0379788599749,
+              "p50": 588.0386766767053,
+              "p90": 685.580282965105
+            }
+          }
+        },
+        {
+          "strategy": "extractive",
+          "n": 40,
+          "win": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 40
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 37.02085788510646,
+              "p50": 37.027662886591735,
+              "p90": 37.03720825504106
+            },
+            "F": {
+              "p10": 26.81941445288758,
+              "p50": 34.686317044330394,
+              "p90": 41.926210741147415
+            },
+            "E": {
+              "p10": 13.452578203985293,
+              "p50": 17.615017357560482,
+              "p90": 28.012973629257168
+            },
+            "W": {
+              "p10": 1.8747804818137297,
+              "p50": 8.47858229660713,
+              "p90": 16.37826214703253
+            },
+            "St": {
+              "p10": 57.522465973908076,
+              "p50": 58.58340713785113,
+              "p90": 59.63759644670741
+            },
+            "c": {
+              "p10": 9.51744704310329,
+              "p50": 9.685437804225591,
+              "p90": 9.847659246414223
+            },
+            "DY": {
+              "p10": 0.008940938563446035,
+              "p50": 0.00969168996143421,
+              "p90": 0.010509857624497061
+            },
+            "score": {
+              "p10": 410.4914332298674,
+              "p50": 439.32623903897013,
+              "p90": 488.0973558740453
+            }
+          }
+        },
+        {
+          "strategy": "production",
+          "n": 40,
+          "win": {
+            "k": 5,
+            "n": 40,
+            "rate": 0.125,
+            "ci": [
+              0.05459419773541283,
+              0.26112420670238146
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 5,
+              "n": 40,
+              "rate": 0.125,
+              "ci": [
+                0.05459419773541283,
+                0.26112420670238146
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 35,
+            "production": 5
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 40.35240657792259,
+              "p50": 40.352976560995074,
+              "p90": 40.35412311917377
+            },
+            "F": {
+              "p10": 29.520839539907918,
+              "p50": 38.20672229172056,
+              "p90": 50.461997775388355
+            },
+            "E": {
+              "p10": 17.09174763774352,
+              "p50": 23.25828200606749,
+              "p90": 31.455740525394095
+            },
+            "W": {
+              "p10": 8.34217999718922,
+              "p50": 15.574826205046762,
+              "p90": 45.214728195979085
+            },
+            "St": {
+              "p10": 58.935748903684015,
+              "p50": 60.21998449629987,
+              "p90": 65.54477233795166
+            },
+            "c": {
+              "p10": 6.4210185687089165,
+              "p50": 6.5045969830355,
+              "p90": 6.562856074126
+            },
+            "DY": {
+              "p10": 0.008714405278457339,
+              "p50": 0.0092664699839556,
+              "p90": 0.010243109969052974
+            },
+            "score": {
+              "p10": 500.1017061522844,
+              "p50": 545.4624481854036,
+              "p90": 639.9962552735419
+            }
+          }
+        },
+        {
+          "strategy": "innovation",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 10,
+              "n": 40,
+              "rate": 0.25,
+              "ci": [
+                0.14186967895549518,
+                0.40194259066970106
+              ]
+            },
+            "innovation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "equilibrium": {
+              "k": 3,
+              "n": 40,
+              "rate": 0.075,
+              "ci": [
+                0.02583555677185823,
+                0.19864530159097524
+              ]
+            }
+          },
+          "achieved": {
+            "innovation": 37,
+            "equilibrium": 3
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 40.441826933200666,
+              "p50": 40.44236573825312,
+              "p90": 40.44354347445182
+            },
+            "F": {
+              "p10": 30.549388488927274,
+              "p50": 38.17636081547538,
+              "p90": 49.800670850500445
+            },
+            "E": {
+              "p10": 16.522479286119083,
+              "p50": 25.818672509494686,
+              "p90": 34.84192178441639
+            },
+            "W": {
+              "p10": 8.282619526990715,
+              "p50": 15.83196181883369,
+              "p90": 54.815541079192066
+            },
+            "St": {
+              "p10": 62.23613395235589,
+              "p50": 64.77362274741819,
+              "p90": 69.71823284528364
+            },
+            "c": {
+              "p10": 5.156606163149346,
+              "p50": 5.221660134210194,
+              "p90": 5.269662413236875
+            },
+            "DY": {
+              "p10": 0.008648634092175464,
+              "p50": 0.009291454049109018,
+              "p90": 0.010422791414691449
+            },
+            "score": {
+              "p10": 516.0024101362955,
+              "p50": 568.4672712070258,
+              "p90": 702.7319970581646
+            }
+          }
+        },
+        {
+          "strategy": "conservation",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "production": {
+              "k": 3,
+              "n": 40,
+              "rate": 0.075,
+              "ci": [
+                0.02583555677185823,
+                0.19864530159097524
+              ]
+            },
+            "innovation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "equilibrium": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci": [
+                0.004426717407794919,
+                0.1288165948800778
+              ]
+            }
+          },
+          "achieved": {
+            "innovation": 39,
+            "equilibrium": 1
+          },
+          "allRoutes": {
+            "k": 3,
+            "n": 40,
+            "rate": 0.075,
+            "ci": [
+              0.02583555677185823,
+              0.19864530159097524
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 46.77349386653837,
+              "p50": 46.78171821151113,
+              "p90": 46.789673772674284
+            },
+            "F": {
+              "p10": 29.659080800313262,
+              "p50": 40.88983534833133,
+              "p90": 49.84664523999092
+            },
+            "E": {
+              "p10": 14.714843724385227,
+              "p50": 21.70289872585826,
+              "p90": 31.12146034652619
+            },
+            "W": {
+              "p10": 6.14922039424799,
+              "p50": 13.331902439468308,
+              "p90": 43.266587828063024
+            },
+            "St": {
+              "p10": 59.06834835986781,
+              "p50": 61.11858493623245,
+              "p90": 65.8000000000001
+            },
+            "c": {
+              "p10": 4.844920668421202,
+              "p50": 4.950422351130594,
+              "p90": 5.012428523300243
+            },
+            "DY": {
+              "p10": 0.009580019522424757,
+              "p50": 0.010383662289999335,
+              "p90": 0.011392075006048188
+            },
+            "score": {
+              "p10": 501.3302670076027,
+              "p50": 555.6188092451209,
+              "p90": 641.958207236572
+            }
+          }
+        },
+        {
+          "strategy": "balanced",
+          "n": 40,
+          "win": {
+            "k": 40,
+            "n": 40,
+            "rate": 1,
+            "ci": [
+              0.9123754607496077,
+              1
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 40,
+              "n": 40,
+              "rate": 1,
+              "ci": [
+                0.9123754607496077,
+                1
+              ]
+            },
+            "production": {
+              "k": 8,
+              "n": 40,
+              "rate": 0.2,
+              "ci": [
+                0.10499864973166873,
+                0.34757607381856676
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci": [
+                0.004426717407794919,
+                0.1288165948800778
+              ]
+            }
+          },
+          "achieved": {
+            "conservation": 39,
+            "equilibrium": 1
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.66470573033816,
+              "p50": 43.669987705694474,
+              "p90": 43.67483335564689
+            },
+            "F": {
+              "p10": 30.57109643195571,
+              "p50": 36.726849251229915,
+              "p90": 49.79592622505051
+            },
+            "E": {
+              "p10": 17.47757165747956,
+              "p50": 25.51677241341128,
+              "p90": 34.86256352057952
+            },
+            "W": {
+              "p10": 11.125581204604387,
+              "p50": 17.55371428077332,
+              "p90": 54.56460330485046
+            },
+            "St": {
+              "p10": 56.531096520511056,
+              "p50": 58.97683877249911,
+              "p90": 62.20000000000009
+            },
+            "c": {
+              "p10": 4.745111198364347,
+              "p50": 4.8136504171057135,
+              "p90": 4.866406601159908
+            },
+            "DY": {
+              "p10": 0.008586877396333575,
+              "p50": 0.009115233207790447,
+              "p90": 0.01009625986925467
+            },
+            "score": {
+              "p10": 532.8241966560538,
+              "p50": 581.5513793069863,
+              "p90": 714.3906533227712
+            }
+          }
+        },
+        {
+          "strategy": "tech_tax",
+          "n": 40,
+          "win": {
+            "k": 4,
+            "n": 40,
+            "rate": 0.1,
+            "ci": [
+              0.03957888759557486,
+              0.230520743804739
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "production": {
+              "k": 4,
+              "n": 40,
+              "rate": 0.1,
+              "ci": [
+                0.03957888759557486,
+                0.230520743804739
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            },
+            "equilibrium": {
+              "k": 0,
+              "n": 40,
+              "rate": 0,
+              "ci": [
+                0,
+                0.08762453925039232
+              ]
+            }
+          },
+          "achieved": {
+            "none": 36,
+            "production": 4
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 40,
+            "rate": 0,
+            "ci": [
+              0,
+              0.08762453925039232
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 39.6614396324568,
+              "p50": 39.6701219054474,
+              "p90": 39.67917249430357
+            },
+            "F": {
+              "p10": 28.008707504881617,
+              "p50": 36.520057598596196,
+              "p90": 46.78951722883067
+            },
+            "E": {
+              "p10": 15.931616940437353,
+              "p50": 24.094643475184583,
+              "p90": 32.141619334242705
+            },
+            "W": {
+              "p10": 5.935396389396587,
+              "p50": 12.791536092693889,
+              "p90": 41.506223833272635
+            },
+            "St": {
+              "p10": 58.32862569527327,
+              "p50": 59.970853249773754,
+              "p90": 63.479584505201274
+            },
+            "c": {
+              "p10": 8.315125100469233,
+              "p50": 8.572883447330884,
+              "p90": 8.718235947462901
+            },
+            "DY": {
+              "p10": 0.00953422235592731,
+              "p50": 0.01008922173725892,
+              "p90": 0.011392075006048188
+            },
+            "score": {
+              "p10": 448.2490901347918,
+              "p50": 496.0845130861108,
+              "p90": 554.0831476480936
+            }
+          }
+        }
+      ],
+      "range": {
+        "B": {
+          "range": 9.754055324919392,
+          "min": "extractive",
+          "max": "conservation"
+        },
+        "F": {
+          "range": 12.2492630749448,
+          "min": "extractive",
+          "max": "green"
+        },
+        "E": {
+          "range": 8.203655151934203,
+          "min": "extractive",
+          "max": "innovation"
+        },
+        "W": {
+          "range": 21.314421044337564,
+          "min": "extractive",
+          "max": "green"
+        }
+      }
+    },
+    {
+      "scope": "Territorio",
+      "game": "territorio",
+      "level": 0,
+      "routeIds": [
+        "conservation",
+        "production",
+        "innovation"
+      ],
+      "stats": [
+        {
+          "strategy": "do_nothing",
+          "n": 20,
+          "win": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "none": 20
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2032.4166666666667,
+            "p50": 2033.6666666666667,
+            "p90": 2037
+          },
+          "losses": {
+            "sustained": 20
+          },
+          "final": {
+            "B": {
+              "p10": 34.53919471759013,
+              "p50": 36.801043880841796,
+              "p90": 39.3887236534566
+            },
+            "F": {
+              "p10": 24.533729239401108,
+              "p50": 32.617088670613526,
+              "p90": 36.64906912725804
+            },
+            "E": {
+              "p10": 24.693678968287976,
+              "p50": 27.056027357452813,
+              "p90": 31.519732149204344
+            },
+            "W": {
+              "p10": 0.2459878414892671,
+              "p50": 4.045534979615752,
+              "p90": 8.956991418269538
+            },
+            "St": {
+              "p10": 57.18395703138542,
+              "p50": 62.06153419484091,
+              "p90": 67.29393349546098
+            },
+            "c": {
+              "p10": 15.838333525577625,
+              "p50": 16.893984795487608,
+              "p90": 17.849757918993667
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 175.7769110355614,
+              "p50": 216.1302215095625,
+              "p90": 244.76169560606408
+            }
+          }
+        },
+        {
+          "strategy": "conservation",
+          "n": 20,
+          "win": {
+            "k": 19,
+            "n": 20,
+            "rate": 0.95,
+            "ci": [
+              0.7638641064874331,
+              0.9911187805671267
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 19,
+              "n": 20,
+              "rate": 0.95,
+              "ci": [
+                0.7638641064874331,
+                0.9911187805671267
+              ]
+            },
+            "production": {
+              "k": 9,
+              "n": 20,
+              "rate": 0.45,
+              "ci": [
+                0.25819502085709295,
+                0.6579179916924003
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "conservation": 19,
+            "none": 1
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 49.22426226596023,
+              "p50": 52.658605403593334,
+              "p90": 57.1595454243279
+            },
+            "F": {
+              "p10": 47.24434350451851,
+              "p50": 58.388871210786824,
+              "p90": 65.07988676461513
+            },
+            "E": {
+              "p10": 29.972588234317545,
+              "p50": 36.54937307650316,
+              "p90": 49.230115257508906
+            },
+            "W": {
+              "p10": 47.47604412220788,
+              "p50": 64.38711594156337,
+              "p90": 78.4630908718747
+            },
+            "St": {
+              "p10": 67.70012145636129,
+              "p50": 71.44000000000008,
+              "p90": 75.5708333333335
+            },
+            "c": {
+              "p10": 0.7208715137348263,
+              "p50": 2.3788102191766023,
+              "p90": 4.311022660056133
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.006608789371028616,
+              "p90": 0.021537900612334696
+            },
+            "score": {
+              "p10": 643.2207434890489,
+              "p50": 684.7494321358631,
+              "p90": 749.1413607017882
+            }
+          }
+        },
+        {
+          "strategy": "production",
+          "n": 20,
+          "win": {
+            "k": 7,
+            "n": 20,
+            "rate": 0.35,
+            "ci": [
+              0.1811895478679446,
+              0.5671494897805353
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 7,
+              "n": 20,
+              "rate": 0.35,
+              "ci": [
+                0.1811895478679446,
+                0.5671494897805353
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "production": 7,
+            "none": 13
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 42.73493755140999,
+              "p50": 46.10196095475284,
+              "p90": 49.53424917775965
+            },
+            "F": {
+              "p10": 36.79037935291528,
+              "p50": 47.78316726471086,
+              "p90": 61.889140965293535
+            },
+            "E": {
+              "p10": 28.381924656962582,
+              "p50": 37.49901777824028,
+              "p90": 44.589137777750835
+            },
+            "W": {
+              "p10": 28.93291155919897,
+              "p50": 45.65497127392097,
+              "p90": 69.54231088665624
+            },
+            "St": {
+              "p10": 66.40782913477338,
+              "p50": 71.15682229498849,
+              "p90": 78.69965453847013
+            },
+            "c": {
+              "p10": 7.097321595134358,
+              "p50": 9.469937504921289,
+              "p90": 11.225077876053621
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.002358863393934353,
+              "p90": 0.029757203302648905
+            },
+            "score": {
+              "p10": 388.2960273487209,
+              "p50": 489.9061153322059,
+              "p90": 567.4606942860862
+            }
+          }
+        },
+        {
+          "strategy": "innovation",
+          "n": 20,
+          "win": {
+            "k": 12,
+            "n": 20,
+            "rate": 0.6,
+            "ci": [
+              0.38657794231520604,
+              0.7811960325858073
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 1,
+              "n": 20,
+              "rate": 0.05,
+              "ci": [
+                0.008881219432873143,
+                0.23613589351256678
+              ]
+            },
+            "production": {
+              "k": 11,
+              "n": 20,
+              "rate": 0.55,
+              "ci": [
+                0.34208200830759966,
+                0.741804979142907
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "production": 11,
+            "none": 8,
+            "conservation": 1
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.25750103468338,
+              "p50": 46.71295542907192,
+              "p90": 50.94905451125986
+            },
+            "F": {
+              "p10": 37.82175056260339,
+              "p50": 50.29561915566398,
+              "p90": 61.00517857838269
+            },
+            "E": {
+              "p10": 31.25629603075116,
+              "p50": 37.312478196973544,
+              "p90": 53.73662751609838
+            },
+            "W": {
+              "p10": 34.916066896567,
+              "p50": 54.22645893350853,
+              "p90": 80.78890152695647
+            },
+            "St": {
+              "p10": 68.03000000000051,
+              "p50": 71.09912255147059,
+              "p90": 75.77916666666658
+            },
+            "c": {
+              "p10": 2.4902947974379828,
+              "p50": 4.616797299445817,
+              "p90": 6.293754959422475
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.004766527349663046,
+              "p90": 0.031566967886995374
+            },
+            "score": {
+              "p10": 572.7019451262361,
+              "p50": 606.9247741353194,
+              "p90": 700.5086598394371
+            }
+          }
+        },
+        {
+          "strategy": "settle_only",
+          "n": 20,
+          "win": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "none": 20
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 44.296911818786235,
+              "p50": 46.2023762377456,
+              "p90": 50.9862919718781
+            },
+            "F": {
+              "p10": 41.09985928476137,
+              "p50": 48.994394302227064,
+              "p90": 60.4046288969726
+            },
+            "E": {
+              "p10": 31.38653807816016,
+              "p50": 37.009154044985834,
+              "p90": 47.89617633941583
+            },
+            "W": {
+              "p10": 31.54352127728167,
+              "p50": 59.59483131532295,
+              "p90": 73.11508072745383
+            },
+            "St": {
+              "p10": 67.11926647687582,
+              "p50": 70.94352886815598,
+              "p90": 77.70000000000036
+            },
+            "c": {
+              "p10": 7.151930718300323,
+              "p50": 8.756445633516469,
+              "p90": 10.370923759978211
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.00527198778961094,
+              "p90": 0.027686811353790065
+            },
+            "score": {
+              "p10": 455.73278630171126,
+              "p50": 537.6958259402842,
+              "p90": 589.2734728392595
+            }
+          }
+        },
+        {
+          "strategy": "cheap_production",
+          "n": 20,
+          "win": {
+            "k": 7,
+            "n": 20,
+            "rate": 0.35,
+            "ci": [
+              0.1811895478679446,
+              0.5671494897805353
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 7,
+              "n": 20,
+              "rate": 0.35,
+              "ci": [
+                0.1811895478679446,
+                0.5671494897805353
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "production": 7,
+            "none": 13
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 43.4046268300346,
+              "p50": 47.286186066978864,
+              "p90": 52.11351432334742
+            },
+            "F": {
+              "p10": 37.983240889525426,
+              "p50": 47.17380450422733,
+              "p90": 59.65966406079766
+            },
+            "E": {
+              "p10": 28.580791862841515,
+              "p50": 35.624638122127095,
+              "p90": 41.5767056170169
+            },
+            "W": {
+              "p10": 33.654250642226,
+              "p50": 54.400966881143574,
+              "p90": 72.36561794766743
+            },
+            "St": {
+              "p10": 68.50902673347187,
+              "p50": 71.2625000000005,
+              "p90": 78.00000000000045
+            },
+            "c": {
+              "p10": 4.145751361655777,
+              "p50": 8.293875280874001,
+              "p90": 10.61441049752375
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.005118535576481895,
+              "p90": 0.03398812167931244
+            },
+            "score": {
+              "p10": 447.20259221493495,
+              "p50": 534.2268068936241,
+              "p90": 584.0779615208028
+            }
+          }
+        },
+        {
+          "strategy": "extractive",
+          "n": 20,
+          "win": {
+            "k": 6,
+            "n": 20,
+            "rate": 0.3,
+            "ci": [
+              0.14547527396899385,
+              0.5189767762289793
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 6,
+              "n": 20,
+              "rate": 0.3,
+              "ci": [
+                0.14547527396899385,
+                0.5189767762289793
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "production": 6,
+            "none": 14
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2054,
+            "p50": 2054,
+            "p90": 2054
+          },
+          "losses": {},
+          "final": {
+            "B": {
+              "p10": 42.65021110830604,
+              "p50": 44.93321056721342,
+              "p90": 48.89812020005083
+            },
+            "F": {
+              "p10": 39.22339378637101,
+              "p50": 48.30583787125754,
+              "p90": 65.11577055412903
+            },
+            "E": {
+              "p10": 25.440467139992435,
+              "p50": 34.498628934908986,
+              "p90": 45.09149941360604
+            },
+            "W": {
+              "p10": 33.17413934132094,
+              "p50": 52.42737946520525,
+              "p90": 73.07930273443641
+            },
+            "St": {
+              "p10": 67.5276823195635,
+              "p50": 69.70280970395346,
+              "p90": 77.18986090109678
+            },
+            "c": {
+              "p10": 7.516253358203526,
+              "p50": 10.015725930910698,
+              "p90": 11.444416640308622
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0.0026040468848001976,
+              "p90": 0.022205135898989963
+            },
+            "score": {
+              "p10": 397.03082239978414,
+              "p50": 471.7378784977043,
+              "p90": 567.5775033306446
+            }
+          }
+        },
+        {
+          "strategy": "buy_everything",
+          "n": 20,
+          "win": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "routeMet": {
+            "conservation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "production": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            },
+            "innovation": {
+              "k": 0,
+              "n": 20,
+              "rate": 0,
+              "ci": [
+                0,
+                0.1611301254949332
+              ]
+            }
+          },
+          "achieved": {
+            "none": 20
+          },
+          "allRoutes": {
+            "k": 0,
+            "n": 20,
+            "rate": 0,
+            "ci": [
+              0,
+              0.1611301254949332
+            ]
+          },
+          "endYear": {
+            "p10": 2043.25,
+            "p50": 2048.4166666666665,
+            "p90": 2054
+          },
+          "losses": {
+            "sustained": 15
+          },
+          "final": {
+            "B": {
+              "p10": 41.6812127473346,
+              "p50": 42.83633545813161,
+              "p90": 44.06158961068935
+            },
+            "F": {
+              "p10": 27.765482114826888,
+              "p50": 35.46425175904909,
+              "p90": 45.816994114786496
+            },
+            "E": {
+              "p10": 26.762483235415893,
+              "p50": 32.95237534801874,
+              "p90": 40.289937686984544
+            },
+            "W": {
+              "p10": 5.209202208947019,
+              "p50": 8.187011574867256,
+              "p90": 25.77054648405742
+            },
+            "St": {
+              "p10": 58.54078431996661,
+              "p50": 62.19314447105994,
+              "p90": 64.78319732813384
+            },
+            "c": {
+              "p10": 7.225794182438868,
+              "p50": 7.601375848804229,
+              "p90": 9.04910461046567
+            },
+            "DY": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "score": {
+              "p10": 348.31040541099617,
+              "p50": 376.87376590431745,
+              "p90": 443.1053638558811
+            }
+          }
+        }
+      ],
+      "range": {
+        "B": {
+          "range": 15.857561522751539,
+          "min": "do_nothing",
+          "max": "conservation"
+        },
+        "F": {
+          "range": 25.771782540173298,
+          "min": "do_nothing",
+          "max": "conservation"
+        },
+        "E": {
+          "range": 10.442990420787467,
+          "min": "do_nothing",
+          "max": "production"
+        },
+        "W": {
+          "range": 60.341580961947614,
+          "min": "do_nothing",
+          "max": "conservation"
+        }
+      }
+    }
+  ],
+  "predictionBand": [
+    {
+      "scope": "N1",
+      "B": 1,
+      "E": 1,
+      "c": 0.6146666666666667,
+      "years": 4500
+    },
+    {
+      "scope": "N2",
+      "B": 1,
+      "E": 0.8648888888888889,
+      "c": 0.2368888888888889,
+      "years": 4500
+    },
+    {
+      "scope": "N3",
+      "B": 1,
+      "E": 0.8613333333333333,
+      "c": 0.48688888888888887,
+      "years": 4500
+    }
+  ],
+  "consistency": {
+    "applies": false,
+    "maxIndicatorDelta": 0.7087627027548677,
+    "maxCo2Delta": 0.152933295277494,
+    "detail": [
+      "peor W: green año 30, anual 21.57 vs mensual 22.27 (Δ 0.71)",
+      "peor c: green año 30, anual 8.57 vs mensual 8.42 (Δ -0.15)",
+      "modelo 1.x: informativo, el criterio aplica desde el modelo 2.0 (fase 35)"
+    ],
+    "rows": [
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "B",
+        "annual": 39.330527884648205,
+        "monthly": 39.32976443309076,
+        "delta": -0.000763451557446615
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "F",
+        "annual": 40.32698149596956,
+        "monthly": 40.32689101073113,
+        "delta": -0.00009048523843091516
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "E",
+        "annual": 30.021545390268155,
+        "monthly": 30.021544983503976,
+        "delta": -4.0676417967233647e-7
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "W",
+        "annual": 33.415849576900015,
+        "monthly": 34.102766112205416,
+        "delta": 0.6869165353054001
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "St",
+        "annual": 68.5,
+        "monthly": 68.60000000000016,
+        "delta": 0.10000000000016485
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 10,
+        "key": "c",
+        "annual": 16.325314409454847,
+        "monthly": 16.311420803954537,
+        "delta": -0.013893605500310713
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "B",
+        "annual": 38.07063404365451,
+        "monthly": 38.068023690008935,
+        "delta": -0.002610353645572161
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "F",
+        "annual": 40.98562376071916,
+        "monthly": 40.98536812537935,
+        "delta": -0.00025563533980488273
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "E",
+        "annual": 30.064477414228662,
+        "monthly": 30.064477343303395,
+        "delta": -7.092526743690541e-8
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "W",
+        "annual": 19.034082774393312,
+        "monthly": 19.35936057975094,
+        "delta": 0.3252778053576293
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "St",
+        "annual": 62.776316242658574,
+        "monthly": 63.08634218027082,
+        "delta": 0.3100259376122452
+      },
+      {
+        "strategy": "do_nothing",
+        "year": 30,
+        "key": "c",
+        "annual": 13.899324776398998,
+        "monthly": 13.873179022838377,
+        "delta": -0.026145753560621543
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "B",
+        "annual": 41.42630996414652,
+        "monthly": 41.465989831135296,
+        "delta": 0.039679866988777235
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "F",
+        "annual": 40.38270217604083,
+        "monthly": 40.38558704476108,
+        "delta": 0.002884868720251177
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "E",
+        "annual": 30.010312536573405,
+        "monthly": 30.01057167777671,
+        "delta": 0.0002591412033048357
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "W",
+        "annual": 46.99626670501853,
+        "monthly": 47.331890087681224,
+        "delta": 0.3356233826626962
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "St",
+        "annual": 68.19999999999999,
+        "monthly": 68.28750000000018,
+        "delta": 0.08750000000019043
+      },
+      {
+        "strategy": "green",
+        "year": 10,
+        "key": "c",
+        "annual": 11.791880308710619,
+        "monthly": 11.66105274397422,
+        "delta": -0.13082756473639812
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "B",
+        "annual": 42.91917582491936,
+        "monthly": 43.01214771064087,
+        "delta": 0.09297188572151072
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "F",
+        "annual": 41.05301986064833,
+        "monthly": 41.05663720560056,
+        "delta": 0.0036173449522323153
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "E",
+        "annual": 30.030892416224948,
+        "monthly": 30.030852659613846,
+        "delta": -0.00003975661110189321
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "W",
+        "annual": 21.565083525754773,
+        "monthly": 22.27384622850964,
+        "delta": 0.7087627027548677
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "St",
+        "annual": 60.50795417174102,
+        "monthly": 60.72077302454753,
+        "delta": 0.2128188528065138
+      },
+      {
+        "strategy": "green",
+        "year": 30,
+        "key": "c",
+        "annual": 8.573319331023905,
+        "monthly": 8.42038603574641,
+        "delta": -0.152933295277494
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "B",
+        "annual": 38.08294453789308,
+        "monthly": 38.00219781640803,
+        "delta": -0.08074672148504902
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "F",
+        "annual": 40.37250933912645,
+        "monthly": 40.376797194832456,
+        "delta": 0.0042878557060035405
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "E",
+        "annual": 30.25819679948878,
+        "monthly": 30.278367024431766,
+        "delta": 0.020170224942987147
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "W",
+        "annual": 33.02744444378857,
+        "monthly": 33.68308405781559,
+        "delta": 0.6556396140270238
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "St",
+        "annual": 66.677713404272,
+        "monthly": 66.69120673406866,
+        "delta": 0.013493329796659737
+      },
+      {
+        "strategy": "extractive",
+        "year": 10,
+        "key": "c",
+        "annual": 18.880127817158282,
+        "monthly": 19.010587805372257,
+        "delta": 0.13045998821397475
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "B",
+        "annual": 35.561502975588205,
+        "monthly": 35.44931842119532,
+        "delta": -0.11218455439288277
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "F",
+        "annual": 41.050190909242566,
+        "monthly": 41.05599503363856,
+        "delta": 0.005804124395993426
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "E",
+        "annual": 30.355075748055366,
+        "monthly": 30.37946755877382,
+        "delta": 0.02439181071845198
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "W",
+        "annual": 18.937464347313806,
+        "monthly": 19.24937509917558,
+        "delta": 0.31191075186177386
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "St",
+        "annual": 57.74363488764501,
+        "monthly": 57.78481303698875,
+        "delta": 0.04117814934374309
+      },
+      {
+        "strategy": "extractive",
+        "year": 30,
+        "key": "c",
+        "annual": 15.421581255097163,
+        "monthly": 15.506435263565358,
+        "delta": 0.08485400846819502
+      }
+    ]
+  },
+  "durationSeconds": 153
+}

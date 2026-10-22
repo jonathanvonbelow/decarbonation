@@ -35,9 +35,12 @@ export const UI_EN: UIShape = {
   },
   policyToggle: {
     currentEfficiency: 'Current Efficiency:',
-    efficiencyNote: 'Efficiency varies over time and political factors.',
+    efficiencyNote: 'Efficiency falls with the time the policy has been active; re-activating it does not renew it.',
     lockedUntil: '🔒 Locked until year {year}.',
     efficiencyTitle: 'Efficiency: {value}%',
+  },
+  instruments: {
+    hintsNote: 'Indicative: in model 1.1 the effect is computed at policy level; only Renewables and Capture have their own effect on CO₂.',
   },
   routes: {
     panelTitle: 'Win routes',
@@ -100,7 +103,7 @@ export const UI_EN: UIShape = {
     treasury: 'Treasury reserves',
     treasuryPct: 'Treasury reserves (% of GDP)',
     productivePolicy: 'A productive policy in force',
-    publicNature: 'Territory under public conservation use',
+    publicNature: 'Territory declared under public conservation use',
     energyPark: 'Territory with public energy park',
   },
   dn: {

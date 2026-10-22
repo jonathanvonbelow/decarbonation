@@ -219,6 +219,7 @@ export const TERRITORIO_EN: typeof TERRITORIO_ES = {
     efficiency: 'Efficiency {pct}',
     instrumentsLocked: 'From {year} you will be able to split effort among its instruments. For now it is split evenly.',
     effortTitle: 'Effort per instrument',
+    hintsNote: 'Indicative: in model 1.1 the effect is computed at policy level; only Renewables and Capture have their own effect on CO₂.',
   },
   finance: {
     reserves: 'Treasury reserves',

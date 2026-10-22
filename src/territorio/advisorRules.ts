@@ -261,7 +261,7 @@ export function territorioContext(s: Session, locale: Language = 'es'): string {
     if (lu.area <= 0) return;
     L.push(`- ${k}: ${Math.round(lu.area)} kHa (${((lu.area / area) * 100).toFixed(1)}%)`);
   });
-  L.push(`- Naturaleza bajo protección pública (protegido + humedal + restauración): ${publicNaturePct(g).toFixed(1)}%`);
+  L.push(`- Naturaleza bajo protección pública (protegido declarado + humedal + restauración): ${publicNaturePct(g).toFixed(1)}%`);
   L.push(`- Parcelas declaradas por el jugador: ${s.declaredCount}`);
   L.push('');
 

@@ -30,73 +30,8 @@ const Th: React.FC<{ children: React.ReactNode; tooltipText?: string }> = ({ chi
     </th>
 );
 
-const OBSOLETE_PARAMS = new Set([
-    'Factor_sensibilidad_Indicador_eficiencia',
-    'Monto_del_Prestamo_Unico',
-    'Amplificacion_mediatica_social_Nivel_1',
-    'Amplificacion_mediatica_social_Nivel_2',
-    'Amplificacion_mediatica_social_Nivel_3',
-    'Factor_Impulso_Presion_Agricola',
-    'Factor_Impulso_Presion_Ambientalista',
-    'Factor_Impulso_Presion_Social',
-    'Tasa_disipacion_agricola_Nivel_1',
-    'Tasa_disipacion_agricola_Nivel_2',
-    'Tasa_disipacion_agricola_Nivel_3',
-    'Tasa_disipacion_ambientalista_Nivel_1',
-    'Tasa_disipacion_ambientalista_Nivel_2',
-    'Tasa_disipacion_ambientalista_Nivel_3',
-    'Peso_Influencia_Presiones_CP',
-    'Peso_Factor_Polarizacion_CP',
-    'Peso_Agricola_Colapso',
-    'Peso_Ambientalista_Colapso',
-    'Peso_Social_Colapso',
-    'Ponderacion_CO2_Nivel_1',
-    'Ponderacion_CO2_Nivel_2',
-    'Ponderacion_CO2_Nivel_3',
-    'Ponderacion_Externalidades_Nivel_1',
-    'Ponderacion_Externalidades_Nivel_2',
-    'Ponderacion_Externalidades_Nivel_3',
-    'Ponderacion_Usos_coberturas_Nivel_1',
-    'Ponderacion_Usos_coberturas_Nivel_2',
-    'Ponderacion_Usos_coberturas_Nivel_3',
-    'Peso_Biodiversidad_Ext',
-    'Peso_Seguridad_Alimentaria_Ext',
-    'Peso_Seguridad_Economica_Ext',
-    'Peso_Bienestar_Social_Ext',
-    'Peso_BNNP_Nivel_1',
-    'Peso_BNP_Nivel_1',
-    'Peso_CA_Nivel_1',
-    'Peso_CC_Nivel_1',
-    'Peso_PF_Nivel_1',
-    'Peso_PRG_Nivel_1',
-    'Umbral_Influencia_Agricola_Nivel_1',
-    'Umbral_Influencia_Agricola_Nivel_2',
-    'Umbral_Influencia_Agricola_Nivel_3',
-    'Factor_Impacto_Politicas_y_Presiones_en_Bienestar_Peso',
-    'Factor_Impacto_Usos_en_Bienestar_Peso',
-    'Impacto_Submodulos_en_Bienestar_Peso',
-    'Impacto_Sinergias_Antagonismos_Bienestar_Peso',
-    'Punto_Inflexion_SA_Biodiversidad',
-    'Punto_Inflexion_SE_Biodiversidad',
-    'Punto_Inflexion_BS_Biodiversidad',
-    'Punto_Inflexion_BS_SA',
-    'Punto_Inflexion_BS_SE',
-    'Capacidad_Maxima_SA_Impacto_Biodiversidad',
-    'Capacidad_Maxima_SA_Impacto_SE',
-    'Capacidad_Maxima_BS_Impacto_Biodiversidad',
-    'Capacidad_Maxima_BS_Impacto_SA',
-    'Capacidad_Maxima_BS_Impacto_SE',
-    'Duracion_Efecto_Al', 
-    'Duracion_Efecto_CBN', 
-    'Duracion_Efecto_CN',
-    'Duracion_Efecto_EA', 
-    'Duracion_Efecto_GRH', 
-    'Duracion_Efecto_GS',
-    'Duracion_Efecto_IE', 
-    'Duracion_Efecto_NAF', 
-    'Duracion_Efecto_PA',
-    'Duracion_Efecto_SE',
-]);
+// Model 1.1 (phase 34): the OBSOLETE_PARAMS filter is gone with the 70 dead keys it hid; every
+// CONTROL_PARAMS entry shown here is read by the model or by the UI.
 
 
 // Main Component
@@ -130,7 +65,6 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
 
   const controlParamsData = useMemo(() => {
     return Object.entries(CONTROL_PARAMS)
-      .filter(([key]) => !OBSOLETE_PARAMS.has(key))
       .map(([key, value]) => ({ key, value: String(value) }))
       .filter(item => item.key.toLowerCase().includes(filter.toLowerCase()));
   }, [filter]);

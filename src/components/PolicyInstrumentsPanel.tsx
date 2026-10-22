@@ -5,6 +5,7 @@ import Tooltip from './common/Tooltip';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getPolicyName, getInstrumentName } from '../legacyContent/gameData';
 import { ANCHORS, useAnchor } from './decarbonito/anchors';
+import { tFor } from '../i18n';
 
 interface PolicyInstrumentsPanelProps {
   activePolicies: PolicyState[];
@@ -77,7 +78,8 @@ const PolicyInstrumentsPanel: React.FC<PolicyInstrumentsPanelProps> = ({
   return (
     <div ref={panelRef} className="bg-custom-light-gray p-6 rounded-lg shadow-xl mt-6">
       <h3 className="text-xl font-semibold mb-4 text-custom-accent">{t.title(currentLevel)}</h3>
-      <p className="text-sm text-gray-400 mb-4">{t.subtitle}</p>
+      <p className="text-sm text-gray-400 mb-2">{t.subtitle}</p>
+      <p className="text-xs text-gray-500 mb-4">{tFor(language, 'instruments.hintsNote')}</p>
       <div className="space-y-6">
         {activePolicies.map((policy) => {
           const displayPolicyName = getPolicyName(policy.id, language) || policy.name;

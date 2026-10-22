@@ -32,9 +32,13 @@ export const UI_ES = {
   },
   policyToggle: {
     currentEfficiency: 'Eficiencia Actual:',
-    efficiencyNote: 'La eficiencia varía con el tiempo y factores políticos.',
+    efficiencyNote: 'La eficiencia baja con el tiempo que la política lleva activa; reactivarla no la renueva.',
     lockedUntil: '🔒 Bloqueada hasta el año {year}.',
     efficiencyTitle: 'Eficiencia: {value}%',
+  },
+  instruments: {
+    // Fase 34 (modelo 1.1, N-08): aviso bajo las pistas de instrumentos hasta que la fase 36 las vuelva reales.
+    hintsNote: 'Orientativo: en el modelo 1.1 el efecto se calcula a nivel de política; solo Renovables y Captura tienen un efecto propio sobre el CO₂.',
   },
   routes: {
     panelTitle: 'Rutas de victoria',
@@ -97,7 +101,7 @@ export const UI_ES = {
     treasury: 'Reservas del tesoro',
     treasuryPct: 'Reservas del tesoro (% del PBI)',
     productivePolicy: 'Una política productiva activa',
-    publicNature: 'Territorio bajo uso público de conservación',
+    publicNature: 'Territorio declarado bajo uso público de conservación',
     energyPark: 'Territorio con parque energético público',
   },
   dn: {

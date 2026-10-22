@@ -17,6 +17,21 @@
  *             then re-applied to the recomputed value. No re-evaluation, no double counting.
  */
 import type { Indicators, Pact, StellaStocks } from '../types';
+import { INITIAL_PACTS } from '../constants';
+
+/**
+ * Puts back the `effects` functions a JSON round-trip strips from cloned pacts (mutates `pacts`).
+ * Used by `stepYear`, `stepMonth` and `createInitialState` (model 1.1, phase 34, N-14): before, the
+ * three restorations were inline and `createInitialState` had none, so a level could start with
+ * pacts whose `effects` was missing. Phase 43 replaces pact functions with data and removes this.
+ */
+export function restorePactFunctions<T extends Record<string, Pact>>(pacts: T): T {
+  Object.keys(pacts).forEach((pactId) => {
+    const original = INITIAL_PACTS[pactId];
+    if (original && typeof original.effects === 'function') pacts[pactId].effects = original.effects;
+  });
+  return pacts;
+}
 
 /** Indicator keys recomputed after pact/event effects run, and therefore applied again at the end. */
 export const DERIVED_INDICATORS = [

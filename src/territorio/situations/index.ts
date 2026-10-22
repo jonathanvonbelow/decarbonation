@@ -8,7 +8,7 @@
  * Pure functions over plain values, so the rules are testable without a browser.
  */
 import type { ControlParams, GameState, Indicators, RandomEventEffect, StellaStocks } from '../../types';
-import { applyRandomEventEffects, applyDeferredAdjustments, type DeferredAdjustment, type Rng } from '../../sim';
+import { applyRandomEventEffects, type DeferredAdjustment, type Rng } from '../../sim';
 import { CLIMATE_SITUATIONS } from './climate';
 import { ECONOMY_SITUATIONS } from './economy';
 import { PRODUCTION_SITUATIONS } from './production';
@@ -172,9 +172,9 @@ export function resolveSituation(
   applyRandomEventEffects(
     scaleEffects(option.effects), next.indicators, next.stellaSpecificState, next.landUses, logs, language, deferred,
   );
-  // Effects on indicators the month recomputes anyway can be applied now: the next step will
-  // recompute them from the state this already moved. The rest are handed back to the caller.
-  applyDeferredAdjustments(next.indicators, deferred);
+  // Effects on indicators the next month recomputes from scratch (CO2, stability, money, pressures)
+  // are NOT applied here: they would be erased by that recomputation (phase 34, T-12). They go back
+  // to the caller, which queues them in `Session.pendingDeferred` for the next `stepMonth`.
   next.indicators.treasuryReserves = next.stellaSpecificState.Reservas_del_Tesoro;
   next.indicators.socialWellbeing = Math.max(0, Math.min(100, 100 - next.stellaSpecificState.Conflicto_social));
   next.indicators.ppAgricola = next.stellaSpecificState.PP_AGRICOLA;

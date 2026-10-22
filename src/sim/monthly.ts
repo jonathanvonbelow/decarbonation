@@ -26,7 +26,7 @@
  *
  * `stepYear` itself is untouched by this module.
  */
-import { ALL_RANDOM_EVENTS, CONTROL_PARAMS, INITIAL_PACTS } from '../constants';
+import { ALL_RANDOM_EVENTS, CONTROL_PARAMS } from '../constants';
 import type { ControlParams, GameState, Indicators, Pact, PolicyState, RandomEvent, StellaStocks } from '../types';
 import { LandUseType } from '../types';
 import type { Language } from '../hooks/useLanguage';
@@ -35,7 +35,7 @@ import { computeCarbonBalance } from './carbon';
 import { computeTotalPactCost, updateEconomy } from './economy';
 import { applyRandomEventEffects } from './events';
 import { evaluateGameOver } from './gameOver';
-import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, type DeferredAdjustment } from './deferred';
+import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from './deferred';
 import {
   calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
   calculatePoliticalCollapseChange, calculateSocialConflictChange,
@@ -68,6 +68,11 @@ export interface MonthlyOptions {
    * stays the exact monthly discretisation of `stepYear` for everything the 3-level game runs.
    */
   publicUseUpkeep?: boolean;
+  /**
+   * Deferred effects decided outside the step (Territorio situations, phase 34 T-12): applied at
+   * step 11.5 together with this month's event, after the recomputation that would erase them.
+   */
+  extraDeferred?: DeferredAdjustment[];
 }
 
 export interface StepMonthResult {
@@ -127,6 +132,11 @@ export function rollMonthlyEvent(
   return { event: null, logs, chatMessage: null };
 }
 
+/** Protected forest the player declared, never more than the protected forest that exists. */
+export function declaredProtectedOf(state: GameState): number {
+  return Math.min(state.declaredProtectedArea ?? 0, state.landUses[LandUseType.ProtectedNativeForest].area);
+}
+
 function areasOf(state: GameState): Record<LandUseType, number> {
   const out = {} as Record<LandUseType, number>;
   (Object.values(LandUseType) as LandUseType[]).forEach((k) => { out[k] = state.landUses[k].area; });
@@ -147,11 +157,7 @@ export function stepMonth(
   options: MonthlyOptions = {},
 ): StepMonthResult {
   const next: GameState = JSON.parse(JSON.stringify(state));
-  Object.keys(next.pacts).forEach((pactId) => {
-    if (INITIAL_PACTS[pactId] && typeof INITIAL_PACTS[pactId].effects === 'function') {
-      next.pacts[pactId].effects = INITIAL_PACTS[pactId].effects;
-    }
-  });
+  restorePactFunctions(next.pacts);
 
   const logs: string[] = [];
   const chatMessages: StepYearChatMessage[] = [];
@@ -242,6 +248,13 @@ export function stepMonth(
   (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
     next.landUses[k].area = Math.max(0, toward(next.landUses[k].area, annualLandUses[k].area));
   });
+  // Public restoration that matures into protected forest stays public (model 1.1, phase 34, T-07).
+  // Kept within the protected forest that exists, so forest lost to an event is not later refilled
+  // by model-created protection counting as declared (code review, phase 34).
+  if (annual.RES_to_BNP > 0) next.declaredProtectedArea = (next.declaredProtectedArea ?? 0) + annual.RES_to_BNP * DT;
+  if (next.declaredProtectedArea !== undefined) {
+    next.declaredProtectedArea = Math.min(next.declaredProtectedArea, next.landUses[LandUseType.ProtectedNativeForest].area);
+  }
 
   // 7. Public finances: 1/12 of the annual flows. The loan is handled apart, credited in full.
   let upkeep = 0;
@@ -250,8 +263,9 @@ export function stepMonth(
   stella.Reservas_del_Tesoro = toward(stella.Reservas_del_Tesoro, econ.stella.Reservas_del_Tesoro);
   stella.Deuda = Math.max(0, toward(stella.Deuda, econ.stella.Deuda));
   if (options.publicUseUpkeep) {
-    // What the state protects, it also maintains: park rangers, nurseries, works, operation.
-    const publicArea = next.landUses[LandUseType.ProtectedNativeForest].area
+    // What the state protects, it also maintains: park rangers, nurseries, works, operation. Only
+    // the forest the state declared (model 1.1, T-07), not the protection the model adds on its own.
+    const publicArea = declaredProtectedOf(next)
       + next.landUses[LandUseType.PublicWetland].area
       + next.landUses[LandUseType.RestorationForest].area
       + next.landUses[LandUseType.EnergyPark].area;
@@ -271,15 +285,15 @@ export function stepMonth(
   // 8. Indicators, in stepYear's order (each reads the ones already updated this month).
   next.indicators.biodiversity = toward(
     next.indicators.biodiversity,
-    calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP),
+    calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP, next.pacts),
   );
   next.indicators.foodSecurity = toward(
     next.indicators.foodSecurity,
-    calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP),
+    calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts),
   );
   next.indicators.economicSecurity = toward(
     next.indicators.economicSecurity,
-    calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, tax, CP, fiscalTermsActive),
+    calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, tax, CP, fiscalTermsActive, next.pacts),
   );
   stella.Conflicto_social = toward(
     stella.Conflicto_social,
@@ -323,6 +337,7 @@ export function stepMonth(
     if (isDerivedIndicator(k as string)) next.indicators[k] = toward(beforePacts[k], next.indicators[k]);
   });
   applyDeferredAdjustments(next.indicators, deferred);
+  if (options.extraDeferred?.length) applyDeferredAdjustments(next.indicators, options.extraDeferred);
 
   // 12. Score.
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);

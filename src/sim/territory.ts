@@ -713,6 +713,9 @@ export function declarePublicUse(
   const next: GameState = {
     ...state,
     landUses,
+    // Model 1.1 (phase 34, T-07): the forest the player protects is counted apart from the
+    // protection the model's own flows add, for the public-nature route and the upkeep.
+    ...(use === 'protected' ? { declaredProtectedArea: (state.declaredProtectedArea ?? 0) + kHa * cells.length } : {}),
     stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves, PP_AGRICOLA: pressure },
     indicators: { ...state.indicators, treasuryReserves: reserves, ppAgricola: pressure },
   };

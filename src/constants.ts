@@ -117,7 +117,11 @@ export const INITIAL_POLICIES: Record<Policy, PolicyState> = {
   },
   [Policy.CarbonNeutrality]: {
     id: Policy.CarbonNeutrality, name: "Neutralidad de Carbono", isActive: false,
-    description: "Implementa medidas amplias para reducir emisiones netas (renovables, impuestos al carbono).", costFactor: 0.07,  // Increased: carbon neutrality is ambitions and expensive — teaches fiscal tradeoff stellaName: "Políticas_de_Carbono_Neutralidad",
+    description: "Implementa medidas amplias para reducir emisiones netas (renovables, impuestos al carbono).",
+    costFactor: 0.07, // carbon neutrality is ambitious and expensive: teaches the fiscal trade-off
+    // Model 1.1 (phase 34, N-01/T-02): stellaName used to sit inside the comment above, so CN never
+    // counted its active years and never lost efficiency.
+    stellaName: "Políticas_de_Carbono_Neutralidad",
     initialEfficiency: 1, efficiencyDecayDuration: 20, currentEfficiency: 1,
     instruments: JSON.parse(JSON.stringify(INITIAL_POLICY_INSTRUMENTS[Policy.CarbonNeutrality])), totalInstrumentEffortApplied: 0, activationYear: undefined,
   },
@@ -326,10 +330,12 @@ export const INITIAL_PACTS: Record<string, Pact> = {
       indicators: {
         co2EqEmissionsPerCapita: (indicators.co2EqEmissionsPerCapita || 0) * 0.95, // 5% reduction
         politicalStability: (indicators.politicalStability || 0) + 3,
-        economicSecurity: (indicators.economicSecurity || 0) - 2,
       },
       stellaStocks: {}
-    })
+    }),
+    // Model 1.1 (phase 34, N-03/T-03): the −2 E per year that used to sit in effects() above.
+    // Criterio experto: CN weighs −0,05 on E; an international commitment costs a bit more.
+    impulses: { economicSecurity: -0.10 },
   },
   biodiversityTreaty: {
     id: 'biodiversityTreaty', name: "Tratado de Preservación de la Biodiversidad",
@@ -339,16 +345,16 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     costToJoin: 300,
     annualCost: 30,
     effects: (indicators, stellaStocks) => ({
-      indicators: {
-        biodiversity: (indicators.biodiversity || 0) + 5,
-        economicSecurity: (indicators.economicSecurity || 0) - 1,
-      },
       stellaStocks: {},
       landUseChangeFactors: {
         tasa_BNNP_a_BNP: 1.5, // Aumenta la tasa de protección de bosque en un 50%
         tasa_BNNP_a_CC: 0.5, // Reduce la tasa de deforestación para cultivos convencionales en un 50%
       }
-    })
+    }),
+    // Model 1.1 (phase 34, N-03/T-03): replaces +5 B and −1 E per year, applied as a level jump in
+    // effects() (B went 40 → 100 in 13 years). Criterio experto: as strong as Conservation (+0,50 on B),
+    // not stronger.
+    impulses: { biodiversity: 0.40, economicSecurity: -0.05 },
   },
   techTransferInitiative: {
     id: 'techTransferInitiative', name: "Iniciativa de Transferencia Tecnológica",
@@ -360,68 +366,33 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     effects: (indicators, stellaStocks) => ({
       indicators: {
         co2EqEmissionsPerCapita: (indicators.co2EqEmissionsPerCapita || 0) * 0.9, // 10% reduction
-        economicSecurity: (indicators.economicSecurity || 0) + 2,
       },
       stellaStocks: {}
-    })
+    }),
+    // Model 1.1 (phase 34, N-03/T-03): replaces +2 E per year. Criterio experto: half of Foreign
+    // Investment's +0,30 on E.
+    impulses: { economicSecurity: 0.15 },
   }
 };
 
 
 export const CONTROL_PARAMS: ControlParams = {
-  Factor_sensibilidad_Indicador_eficiencia: 0,
-  Max_Emisiones_Referencia_Anual: 10000,
+  // Model 1.1 (phase 34, N-08): the 70 keys no engine path read (Duracion_Efecto_*, Ponderacion_*,
+  // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
+  // were deleted. Real policy durations live in INITIAL_POLICIES (efficiencyDecayDuration).
   Ano_Activacion_Prestamo: 2035,
-  Monto_del_Prestamo_Unico: 5000000,
   Referencia_Max_CO2_per_Capita_Puntaje: 12,  // Adjusted ceiling — keeps scoring meaningful with lower starting emissions
   Umbral_polarizacion: 70,
   Tasa_Impositiva_General_Sobre_PBI: 0.15,
   Tasa_Base_Crecimiento_PBI: 0.02,
   Tasa_Crecimiento_Poblacional_Base: 0.008,
   FACTOR_C_A_CO2EQ: 3.67,
-  Tasa_Transicion_Emisiones_Base: 0.2,
-  Punto_Saturacion_Emisiones: 2.0,
 
   Pago_deuda_anual_Nivel_1: 0.15,
   Pago_deuda_anual_Nivel_2: 0.12,
   Pago_deuda_anual_Nivel_3: 0.1,
 
-  Amplificacion_mediatica_social_Nivel_1: 0.02,
-  Amplificacion_mediatica_social_Nivel_2: 0.03,
-  Amplificacion_mediatica_social_Nivel_3: 0.04,
-
-  Duracion_Efecto_Al: 5, Duracion_Efecto_CBN: 15, Duracion_Efecto_CN: 20,
-  Duracion_Efecto_EA: 6, Duracion_Efecto_GRH: 12, Duracion_Efecto_GS: 8,
-  Duracion_Efecto_IE: 7, Duracion_Efecto_NAF: 4, Duracion_Efecto_PA: 10,
-  Duracion_Efecto_SE: 3,
-
-  Factor_Impulso_Presion_Agricola: 5,
-  Factor_Impulso_Presion_Ambientalista: 3,
-  Factor_Impulso_Presion_Social: 4,
-
   Tasa_disipacion_social: 0.09, // Ajustado de 0.07 para aumentar más la resiliencia social
-  Tasa_disipacion_agricola_Nivel_1: 0.13, Tasa_disipacion_agricola_Nivel_2: 0.09, Tasa_disipacion_agricola_Nivel_3: 0.06,
-  Tasa_disipacion_ambientalista_Nivel_1: 0.08, Tasa_disipacion_ambientalista_Nivel_2: 0.06, Tasa_disipacion_ambientalista_Nivel_3: 0.04,
-
-  Peso_Influencia_Presiones_CP: 0.30,
-  Peso_Factor_Polarizacion_CP: 0.70,
-  Peso_Agricola_Colapso: 0.4,
-  Peso_Ambientalista_Colapso: 0.2,
-  Peso_Social_Colapso: 0.4,
-
-  Ponderacion_CO2_Nivel_1: 0.4, Ponderacion_CO2_Nivel_2: 0.35, Ponderacion_CO2_Nivel_3: 0.33,
-  Ponderacion_Externalidades_Nivel_1: 0.4, Ponderacion_Externalidades_Nivel_2: 0.35, Ponderacion_Externalidades_Nivel_3: 0.33,
-  Ponderacion_Usos_coberturas_Nivel_1: 0.2, Ponderacion_Usos_coberturas_Nivel_2: 0.3, Ponderacion_Usos_coberturas_Nivel_3: 0.34,
-
-  Peso_Biodiversidad_Ext: 0.25,
-  Peso_Seguridad_Alimentaria_Ext: 0.25,
-  Peso_Seguridad_Economica_Ext: 0.25,
-  Peso_Bienestar_Social_Ext: 0.25,
-
-  Peso_BNNP_Nivel_1: 0.1, Peso_BNP_Nivel_1: 0.25, Peso_CA_Nivel_1: 0.05,
-  Peso_CC_Nivel_1: -0.15, Peso_PF_Nivel_1: -0.1, Peso_PRG_Nivel_1: -0.05,
-
-  Umbral_Influencia_Agricola_Nivel_1: 0.5, Umbral_Influencia_Agricola_Nivel_2: 0.7, Umbral_Influencia_Agricola_Nivel_3: 0.9,
 
   Tasa_de_interes_Nivel_1: 0.025, Tasa_de_interes_Nivel_2: 0.035, Tasa_de_interes_Nivel_3: 0.045,
   Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso: 0.2,
@@ -432,23 +403,6 @@ export const CONTROL_PARAMS: ControlParams = {
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: 0.65,
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: 0.30,
   Impacto_Biodiversidad_en_SE_Peso: 0.05,
-  Factor_Impacto_Politicas_y_Presiones_en_Bienestar_Peso: 0.60,
-  Factor_Impacto_Usos_en_Bienestar_Peso: 0.40,
-  Impacto_Submodulos_en_Bienestar_Peso: 0.25,
-  Impacto_Sinergias_Antagonismos_Bienestar_Peso: 0.05,
-  Punto_Inflexion_SA_Biodiversidad: 60,
-  Punto_Inflexion_SE_Biodiversidad: 70,
-  Punto_Inflexion_BS_Biodiversidad: 70,
-  Punto_Inflexion_BS_SA: 85,
-  Punto_Inflexion_BS_SE: 80,
-  Capacidad_Maxima_SA_Impacto_Biodiversidad: 100,
-  Capacidad_Maxima_SA_Impacto_SE: 60,
-  Capacidad_Maxima_BS_Impacto_Biodiversidad: 0,
-  Capacidad_Maxima_BS_Impacto_SA: 60,
-  Capacidad_Maxima_BS_Impacto_SE: 80,
-
-  Peso_Ant_C_SE_Carbono_Stella: 0.1,
-  Peso_Sin_CR_C_Carbono_Stella: 0.1,
 
   Tasa_de_BNNP_a_BNP_Base: 0.008,
   Tasa_de_BNNP_a_CA_Base: 0.002,
@@ -487,15 +441,15 @@ export const CONTROL_PARAMS: ControlParams = {
   Umbral_PP_Agricola_SegEconomica: 50,
   Sensibilidad_PP_Agricola_SegAlimentaria: 0.2,  // Reduced sensitivity — less punishing
   Umbral_PP_Agricola_SegAlimentaria: 50,          // Lower threshold — only triggers at truly critical food security
-  
+
   Sensibilidad_PP_Ambiental_Biodiversidad: 0.35,
   Umbral_PP_Ambiental_Biodiversidad: 45,
   Sensibilidad_PP_Ambiental_CO2PerCapita: 0.6,
   Umbral_PP_Ambiental_CO2PerCapita: 8,
-  
+
   Sensibilidad_PP_Social_BienestarSocial: 0.4,
   Umbral_PP_Social_BienestarSocial: 50,
-  
+
   // Direct Carbon Impact Factors for Specific Policy Instruments - REBALANCED v3
   Factor_Reduccion_Emisiones_Renovables_PCN: 0.05,
   Factor_Aumento_Secuestro_CAC_PCN: 100,
@@ -673,7 +627,9 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
     triggerChance: (gs) => {
       let chance = 0.03;
       if (!gs.policies[Policy.SustainableWaterManagement].isActive) chance += 0.04;
-      if (gs.landUses[LandUseType.ConventionalCrops].area / TOTAL_LAND_AREA > 0.25) chance += 0.02;
+      // Model 1.1 (phase 34, N-09/T-08): share of the level's own area, not of level 1's fixed 500 kHa.
+      const total = (Object.values(gs.landUses) as LandUse[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
+      if (gs.landUses[LandUseType.ConventionalCrops].area / total > 0.25) chance += 0.02;
       return chance;
     },
     effects: (gs) => [

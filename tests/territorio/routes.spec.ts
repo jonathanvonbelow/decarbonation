@@ -41,3 +41,22 @@ describe('Territorio win routes', () => {
     unique.forEach((own) => expect(own.length).toBeGreaterThan(0));
   });
 });
+
+// Model 1.1 (phase 34, T-07): the protected forest the model creates on its own is not a public decision.
+describe('declared protected area', () => {
+  const totalOf = (g: { landUses: Record<string, { area: number }> }) =>
+    (Object.values(g.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0);
+
+  it('the initial protected forest does not count as public nature; declaring it does', () => {
+    const s = createSession(5);
+    expect(s.game.landUses[LandUseType.ProtectedNativeForest].area).toBeGreaterThan(0);
+    expect(publicNaturePct(s.game)).toBe(0);
+    expect(publicNaturePct({ ...s.game, declaredProtectedArea: 10 })).toBeCloseTo((10 / totalOf(s.game)) * 100, 6);
+  });
+
+  it('never counts more declared forest than the protected forest that exists', () => {
+    const s = createSession(5);
+    const bnp = s.game.landUses[LandUseType.ProtectedNativeForest].area;
+    expect(publicNaturePct({ ...s.game, declaredProtectedArea: bnp + 500 })).toBeCloseTo((bnp / totalOf(s.game)) * 100, 6);
+  });
+});

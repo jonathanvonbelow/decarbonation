@@ -41,6 +41,9 @@ const IGNORED = [
 // away" from real hardcoded copy. Kept in this list (not moved to IGNORED) so that distinction --
 // and which lines are the one real intentional exception -- stays documented, not silently lost.
 const CAPA_B_C_VERIFIED_BILINGUAL = [
+  // v6/34: the facilitator panel's parameter groups moved out of FacilitatorPanel.tsx so a test can
+  // read them; the file carries PARAM_GROUPS_ES and PARAM_GROUPS_EN side by side.
+  'src/components/facilitator/paramGroups.ts',
   // v5/29: Territorio's advisor builds its Gemini context in Spanish on purpose (Capa C: prompts to
   // the model may stay in Spanish), and the sustained-collapse reasons in session.ts are compared as
   // strings in screens.tsx, like the engine's gameOverReason (see CLAUDE.md). Both were already

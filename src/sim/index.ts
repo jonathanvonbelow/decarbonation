@@ -39,7 +39,7 @@ import { rollEvent } from './events';
 import { computeScore } from './score';
 import { buildTrace, type SimTrace } from './trace';
 import { evaluateGameOver } from './gameOver';
-import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, type DeferredAdjustment } from './deferred';
+import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from './deferred';
 import type { Language } from '../hooks/useLanguage';
 import { getPolicyName } from '../legacyContent/gameData';
 
@@ -89,11 +89,7 @@ export interface StepYearResult {
  */
 export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): StepYearResult {
   const next: GameState = JSON.parse(JSON.stringify(state));
-  Object.keys(next.pacts).forEach((pactId) => {
-    if (INITIAL_PACTS[pactId] && typeof INITIAL_PACTS[pactId].effects === 'function') {
-      next.pacts[pactId].effects = INITIAL_PACTS[pactId].effects;
-    }
-  });
+  restorePactFunctions(next.pacts);
 
   const logs: string[] = [];
   const chatMessages: StepYearChatMessage[] = [];
@@ -144,6 +140,7 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
 
   // 5. Pact effects on indicators/stella stocks, and the land-use change-factor multipliers they
   //    contribute (both read from the same `pact.effects(...)` call per active pact, as before).
+  //    Since model 1.1 no pact writes B, F or E here: those are `impulses`, summed in step 8.
   let landUseChangeFactors: LandUseChangeFactors = { ...DEFAULT_LAND_USE_CHANGE_FACTORS };
   (Object.values(next.pacts) as Pact[]).forEach((pact) => {
     if (!pact.isActive) return;
@@ -183,9 +180,10 @@ export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL
   }
 
   // 8. Indicator calculations.
-  next.indicators.biodiversity = calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP);
-  next.indicators.foodSecurity = calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP);
-  next.indicators.economicSecurity = calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, additionalTaxPressurePercentage, CP);
+  //    Active pacts enter through `impulses`, inside each function's policy impact (model 1.1, N-03).
+  next.indicators.biodiversity = calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP, next.pacts);
+  next.indicators.foodSecurity = calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts);
+  next.indicators.economicSecurity = calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, additionalTaxPressurePercentage, CP, undefined, next.pacts);
   next.stellaSpecificState.Conflicto_social = calculateSocialConflictChange(next.policies, next.landUses, next.stellaSpecificState, next.indicators, currentLevel, additionalTaxPressurePercentage, CP);
   next.indicators.socialWellbeing = 100 - next.stellaSpecificState.Conflicto_social;
   next.stellaSpecificState.Colapso_politico = calculatePoliticalCollapseChange(next.stellaSpecificState, next.indicators, CP);
@@ -268,12 +266,9 @@ export interface LevelInitializationResult {
  * pre-extraction src/App.tsx — used whenever the game resets to a level's starting conditions
  * (starting the next level after a win, jumping to a level manually, retrying after a loss).
  *
- * Note (docs/audit-equations.md candidate CORREGIR item): `JSON.parse(JSON.stringify(INITIAL_PACTS))`
- * strips the `effects` functions from the cloned pacts, same as in `stepYear`'s own clone above.
- * The original code restores them defensively inside `runSimulationRound` on the *next* simulated
- * year, meaning a level that ends without ever simulating another year could carry pacts with a
- * missing `effects` function. Preserved as-is per the "extract, freeze, then fix" order of
- * operations — flagged for the equations audit, not silently patched here.
+ * `JSON.parse(JSON.stringify(INITIAL_PACTS))` strips the pacts' `effects` functions; since model 1.1
+ * (phase 34, N-14) they are restored right here with `restorePactFunctions`, so a level never starts
+ * with pacts that cannot be evaluated.
  */
 export function createInitialState(levelNumber: number, CP: ControlParams = CONTROL_PARAMS): LevelInitializationResult {
   const newLevelConfig = LEVEL_CONFIGS.find((lc) => lc.levelNumber === levelNumber);
@@ -342,7 +337,7 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
       landUses: newLandUses,
       indicators: newIndicators,
       stellaSpecificState: newStellaState,
-      pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)),
+      pacts: restorePactFunctions(JSON.parse(JSON.stringify(INITIAL_PACTS)) as Record<string, Pact>),
       activeLevelConfig: newLevelConfig,
       yearsSimulatedInCurrentLevel: 0,
       level3EventsTriggeredCount: 0,

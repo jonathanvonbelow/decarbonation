@@ -1956,3 +1956,73 @@ producción en 3/40 semillas) y C2 falla también en los 3 niveles (N2: ninguna 
 
 **Verificación.** `npx tsc --noEmit` limpio; `npm test` (24 archivos, 216 tests, 11 nuevos); `npm run build`; `npm run i18n:audit`;
 `npm run sim:check -- --quick` corre y escribe el reporte. No toca `src/` ni ecuaciones (sin fila en `audit-equations.md`).
+
+## 2026-10-22 — v6 fase 34: correcciones del modelo 1.1
+
+**Qué se hizo** (`mejora-general/files/34_correcciones_modelo_1_1.md`; detalle por ID en `docs/audit-equations.md`,
+sección "Modelo 1.1"). `MODEL_VERSION = '1.1'`, tag local `model-v1.1`.
+- §1 `stellaName` de CN fuera del comentario (INV-15). §2 `evenEffort()` en `src/sim/policies.ts`, usado al activar en
+  `App.tsx` y `territorio/session.ts`. §3 `PactImpulses`/`Pact.impulses` + `pactImpulse()`; `pacts` llega como último
+  parámetro opcional de `calculateBiodiversity/FoodSecurity/EconomicSecurityChange` desde `stepYear` y `stepMonth` (INV-16).
+  §4 `restorePactFunctions()` en `deferred.ts` reemplaza las tres restauraciones inline y se usa en `createInitialState`.
+  §5 sequía con el área del estado. §6 `efficiencyFromCounter()` (sobre `decayedEfficiency()`, la curva que también usa el
+  motor). §7 `GameState.declaredProtectedArea` (lotes protegidos + RES→BNP en `stepMonth`, acotado al BNP existente);
+  `publicNaturePct` y el mantenimiento lo usan. §8 `resolveSituation` ya no aplica los diferidos;
+  `Session.pendingDeferred` → `stepMonth(options.extraDeferred)`. §9 panel (claves en `paramGroups.ts`), manual del
+  facilitador, `EquationsManual` (sin `OBSOLETE_PARAMS`), `descriptions.ts`, hoja docente, aviso bajo las pistas de
+  instrumentos (es/en en `src/i18n/ui` y `src/i18n/territorio`), 70 claves muertas fuera de `CONTROL_PARAMS`/`ControlParams`.
+- Se borraron las copias muertas del motor en `App.tsx` (≈ 260 líneas: `calculate*Change`, `getPolicyEfficiency`,
+  `getPolicyByStellaName`) y sus imports; `App.tsx` lee el CP vivo en el tooltip del puntaje, el tope del impuesto y el año
+  del préstamo.
+- Tests: `tests/sim/model11.spec.ts`, `tests/sim/facilitatorParams.spec.ts`, INV-15/16 en `invariants.spec.ts`, T-06/T-12
+  en `tests/territorio/session.spec.ts`, área declarada en `tests/territorio/routes.spec.ts`. Ningún test existente esperaba
+  cifras 1.0 que cambiaran (los de `tests/sim/` miden invariantes y direcciones); solo `version.spec` pidió la fila 1.1.
+
+**Desvíos y discrepancias (gana el código).**
+- *facilitatorParams* tal como lo escribe la spec fallaría: `Pago_deuda`/`Tasa_de_interes` de N1/N2 solo cuentan con deuda
+  (0 al inicio de cada nivel) → escenario en su nivel con un préstamo en el año 1; las 4 claves por punto de impuesto solo
+  con impuesto → N3 con 10 pp; `Ano_Activacion_Prestamo` y `Max_Additional_Tax_Rate_Percentage` son solo de UI
+  (`UI_ONLY_PARAM_KEYS`) y se prueban contra `unlocks`/`setTaxPressure` de Territorio.
+- *T-06*: el reset de eficiencia al reactivar duraba un solo paso (el motor recalcula desde el contador), así que el cambio
+  no mueve trayectorias; arregla lo que ve el jugador y que el aviso del 40 % se volvía a armar.
+- *Sequía*: en N2 desaparece el +0,02 al inicio (150/600 = 0,25, no > 0,25; antes 150/500 = 0,30).
+- *Esfuerzo parejo en N2/N3*: la spec pide `evenEffort` en todos los niveles; antes, en N2+, una política recién activada
+  tenía esfuerzo 0 (eficiencia efectiva 0) hasta mover los sliders (P-2). El consejo "sin esfuerzo" y el bloqueo de
+  `runSimulationRound` siguen, pero solo se disparan si el jugador baja todo a 0. El arnés ya usaba reparto parejo.
+- *Pistas de instrumentos*: `INSTRUMENT_IMPACT_HINTS` no se muestra en ningún panel (Dashboard recibe la prop y no la usa);
+  el aviso va bajo el subtítulo del panel de instrumentos (3 niveles) y bajo "Esfuerzo por instrumento" (Territorio).
+- *T-12*: ninguna situación del catálogo actual tiene efectos sobre indicadores derivados (solo B/F/E y `stella.*`): hoy no
+  mueve nada en el juego. Además, igual que en los eventos, un diferido sobre `treasuryReserves`/`pp*` toca la copia en
+  `indicators` y el mes siguiente se resincroniza desde Stella (deuda conocida; la fase 46 borra `deferred`).
+- *cond.publicNature* 12 → **4,5** % (🟧 de la spec: "≈ 7 %"). Con el arnés (20 semillas) `conservation` termina en
+  4,7–8,9 % de naturaleza pública declarada y `do_nothing` en 0 %; con 7 % conservación cumpliría en ≈ 9/20. Margen chico
+  (0,2 pp en la peor semilla): revisar en 47/49. Etiqueta: "Territorio *declarado* bajo uso público de conservación".
+  Tabla docente regenerada con `npx tsx scripts/routes-table-html.ts`.
+- `Max_Abs_Total_Carbon_Ref` (descripción huérfana en `descriptions.ts`, sin clave en CP) también se borró.
+- `PlayerManual.tsx` describe una sinergia Conservación + Ganadería que el motor no tiene (las reales: AS+CR en B, GS+AS
+  en F, PAI+FRA negativa en B). Fuera del alcance de 34: queda para la fase 50.
+- E2E: el dev server del worktree sin `.env.local` queda en blanco (`new GoogleGenAI` sin clave al importar
+  `geminiService.ts`, preexistente); se verificó con un `GEMINI_API_KEY` de relleno.
+- Revisión de código (aplicada): fila 1.1 en audit-equations, curva de decaimiento compartida (`decayedEfficiency`),
+  `declaredProtectedArea` acotado al BNP en cada mes, imports muertos de `App.tsx`. No aplicadas: unificar el cálculo de
+  área total (lo hace la fase 37 con el barbecho) y fusionar `PARAM_GROUPS_ES/EN` (lo cubre un test).
+
+**Balance 1.0 → 1.1** (`npm run sim:check` completo, `reports/balance-1.1.md`):
+
+| Criterio | 1.0 | 1.1 | Qué cambió |
+|---|---|---|---|
+| C1 do_nothing nunca gana | FAIL 0,075 | FAIL 0,075 | igual (N3 7,5 %) |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,000 | N2 conservación 0 → 37,5 %; el resto igual (Territorio conservación 95 % tras recalibrar) |
+| C3 ninguna gana todas | PASS 0,225 | PASS 0,225 | N3 conservation pasa a ganar las tres rutas en 7,5 % (bajo el 50 %) |
+| C4 atajos cerrados | FAIL 0,350 | FAIL 0,350 | igual |
+| C5 la estrategia decide | FAIL 3 | FAIL 5 | empeora: N2 conservation (37,5 %) entra en la franja 30–70 %; N2 balanced 47,5 → 40 % |
+| C6 recorrido ≥ 15 | FAIL 0,389 | FAIL 0,341 | empeora: sin el +5 B/año del tratado, el recorrido de B cae de ≈ 64 a ≈ 10 en N2/N3 (16 en Territorio) y el de E de ≈ 25 a ≈ 9 (10 en Territorio); N1 W 12,8 → 5,7 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 | igual |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | igual |
+| C9 anual–mensual | SKIP | SKIP | igual (informativo en 1.x) |
+
+Lectura: lo esperado por la spec. Se cierran los atajos de los pactos (casi todo el "recorrido" de B y E en N2/N3 era el
+tratado y los saltos de E) y CN decae. Ninguna estrategia dirigida bajó más de 20 puntos respecto de 1.0, así que no se tocó
+ningún umbral de rutas del juego de 3 niveles (§10). C5 y C6 los atacan las fases 36–43.
+
+**Pendiente para el equipo.** Aplicar `supabase/model_version_migration.sql` y empujar los tags `model-v1.0` y `model-v1.1`.
