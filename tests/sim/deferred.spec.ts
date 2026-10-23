@@ -20,7 +20,9 @@ describe('deferred pact and event effects', () => {
   // Phase 38: the 1.1 pacts cut CO2 by a flat −5 % / −10 % after the recomputation; in the physical carbon
   // they shift the renewables / efficiency targets (PARAMS_V2.pacts.*.renewables / efficiency), which the
   // energy state follows with inertia (k = 0.15 per year): after one year s = 0.15·Δs*, u = 0.15·Δu*.
-  it('the Global Carbon Accord shifts renewables and efficiency, and raises political stability by 3', () => {
+  // Phase 39: its +3 of political stability (a level written after the recomputation) became a shift of the
+  // collapse target, PARAMS_V2.pacts.globalCarbonAccord.Pc = −0.15 logit, and its −0.10 on E a shift of E*.
+  it('the Global Carbon Accord shifts renewables and efficiency, and the targets of collapse and E', () => {
     const base = withActivePolicies(freshState(3), [Policy.IntensiveAgriculture]);
     const without = stepYear(base, noEventRng).next;
     const with_ = stepYear(withPact(base, 'globalCarbonAccord'), noEventRng).next;
@@ -28,7 +30,16 @@ describe('deferred pact and event effects', () => {
     expect(with_.model!.energy.renewableShare - without.model!.energy.renewableShare).toBeCloseTo(k * 0.05, 9);
     expect(with_.model!.energy.efficiency - without.model!.energy.efficiency).toBeCloseTo(k * 0.05, 9);
     expect(with_.indicators.co2EqEmissionsPerCapita).toBeLessThan(without.indicators.co2EqEmissionsPerCapita);
-    expect(with_.indicators.politicalStability).toBeCloseTo(without.indicators.politicalStability + 3, 6);
+    const lg = (x: number) => Math.log(x / (100 - x));
+    const t = (g: GameState) => g.model!.targets;
+    // E*: exactly the pact's shift (nothing else E reads differs in the first year).
+    expect(lg(t(with_).E!) - lg(t(without).E!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.E, 9);
+    // Pc*: the pact's shift plus what the lower E and W of this year add (spec 39 §4).
+    const r = PARAMS_V2.relaxation.Pc;
+    const viaE = r.econ * (without.indicators.economicSecurity - with_.indicators.economicSecurity) / r.econScale;
+    const viaW = r.wellbeing * (without.indicators.socialWellbeing - with_.indicators.socialWellbeing) / r.wellbeingScale;
+    expect(lg(t(with_).Pc!) - lg(t(without).Pc!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.Pc + viaE + viaW, 9);
+    expect(with_.indicators.politicalStability).toBeGreaterThan(without.indicators.politicalStability);
   });
 
   it('the Technology Transfer Initiative shifts renewables by 0.10 and efficiency by 0.05', () => {

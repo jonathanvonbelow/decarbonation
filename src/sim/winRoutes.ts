@@ -192,6 +192,9 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
   // the prototype's ROUTES3 values (scripts/reference/modelo_v2.py), anchored to c0 there; production of
   // levels 2 and 3, which ROUTES3 leaves without a carbon condition, keeps one at level 1's ratio
   // 6.5 / 5.95 ≈ 1.09·c0 (7.8 / 6.3). Level 3's equilibrium ceiling goes 2 → 4.5 (ROUTES3).
+  // Phase 39 (provisional, phase 49 recalibrates): economic security moves now (relaxation toward an anchored
+  // target), so the production floors of E calibrated for an E that never moved (25 / 32 / 30, two of them the
+  // starting value: `do_nothing` won N3 production in half the seeds) take the prototype's ROUTES3 values 36 / 40 / 36.
   // ─────────────────────────── LEVEL 1 ───────────────────────────
   // Thresholds calibrated against scripts/simulate.ts (7 strategies, seed 1) rather than picked
   // blind — see reports/routes-calibration.md and docs/DESIGN_DECISIONS_LOG.md. Real finding from
@@ -219,7 +222,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 25, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 40, dir: 'min' },
           { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 400, dir: 'min' },
@@ -261,7 +264,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 32, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 40, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
           { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 300, dir: 'min' },
@@ -301,7 +304,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 30, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
           { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.3, dir: 'max' },
           { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.1, dir: 'max' },

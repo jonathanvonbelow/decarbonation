@@ -195,7 +195,6 @@ describe('sim invariants', () => {
     const groups: Record<keyof PactImpulses, Record<string, number>> = {
       biodiversity: INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES as unknown as Record<string, number>,
       foodSecurity: INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES as unknown as Record<string, number>,
-      economicSecurity: INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.POLICIES as unknown as Record<string, number>,
     };
     const policyIds = new Set<string>(ALL_POLICY_IDS);
     (Object.keys(groups) as (keyof PactImpulses)[]).forEach((key) => {
@@ -205,10 +204,13 @@ describe('sim invariants', () => {
         expect(Math.abs(pact.impulses?.[key] ?? 0), `${pact.id}.${key}`).toBeLessThanOrEqual(maxWeight);
       });
     });
-    // And no pact writes B, F or E as a level any more.
+    // Phase 39: E is a logistic target; a pact's shift on it is at most the largest policy weight bE (logit units).
+    const maxBE = Math.max(...(Object.values(PARAMS_V2.bE) as number[]).map(Math.abs));
+    (Object.values(PARAMS_V2.pacts) as { E?: number }[]).forEach((p) => expect(Math.abs(p.E ?? 0)).toBeLessThanOrEqual(maxBE));
+    // And no pact writes B, F, E or political stability as a level any more.
     (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
       const out = pact.effects(freshState(2).indicators, freshState(2).stellaSpecificState).indicators ?? {};
-      ['biodiversity', 'foodSecurity', 'economicSecurity'].forEach((k) => expect(k in out, `${pact.id}.${k}`).toBe(false));
+      ['biodiversity', 'foodSecurity', 'economicSecurity', 'politicalStability'].forEach((k) => expect(k in out, `${pact.id}.${k}`).toBe(false));
     });
   });
 });

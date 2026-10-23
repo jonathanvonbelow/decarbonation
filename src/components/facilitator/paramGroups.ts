@@ -5,6 +5,8 @@
  * Model 1.1 (phase 34, N-08): removed the keys no engine path read — the per-level agricultural and
  * environmentalist dissipation rates (both pressures dissipate at a fixed 0,10), the annual emissions
  * reference and the one-off loan amount.
+ * Phase 39: the per-tax-point factors of E and conflict and the social dissipation left with the 1.1
+ * functions; the adjustment speeds of E, C and Pc (model 2.0) joined.
  */
 import type { ControlParams } from '../../types';
 
@@ -17,17 +19,19 @@ export interface ParamGroup { label: string; keys: NumericParamKey[] }
 export const PARAM_GROUPS_ES: ParamGroup[] = [
   { label: 'Crecimiento y población', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
   { label: 'Emisiones y carbono', keys: ['Referencia_Max_CO2_per_Capita_Puntaje'] },
-  { label: 'Presiones políticas — disipación', keys: ['Tasa_disipacion_social'] },
+  { label: 'Velocidad de ajuste de los indicadores', keys: ['Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso'] },
+  { label: 'Presiones políticas — disipación', keys: ['Tasa_disipacion_presion_social'] },
   { label: 'Presupuesto y deuda', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Ano_Activacion_Prestamo'] },
-  { label: 'Presión fiscal (Nivel 3)', keys: ['Max_Additional_Tax_Rate_Percentage', 'EcoSec_Reduction_Factor_Per_Tax_Point', 'SocialConflict_Increase_Factor_Per_Tax_Point', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
+  { label: 'Presión fiscal', keys: ['Max_Additional_Tax_Rate_Percentage', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
 ];
 
 export const PARAM_GROUPS_EN: ParamGroup[] = [
   { label: 'Growth & Population', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
   { label: 'Emissions & Carbon', keys: ['Referencia_Max_CO2_per_Capita_Puntaje'] },
-  { label: 'Political Pressures — Dissipation', keys: ['Tasa_disipacion_social'] },
+  { label: 'Indicator Adjustment Speed', keys: ['Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso'] },
+  { label: 'Political Pressures — Dissipation', keys: ['Tasa_disipacion_presion_social'] },
   { label: 'Budget & Debt', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Ano_Activacion_Prestamo'] },
-  { label: 'Fiscal Pressure (Level 3)', keys: ['Max_Additional_Tax_Rate_Percentage', 'EcoSec_Reduction_Factor_Per_Tax_Point', 'SocialConflict_Increase_Factor_Per_Tax_Point', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
+  { label: 'Fiscal Pressure', keys: ['Max_Additional_Tax_Rate_Percentage', 'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point'] },
 ];
 
 /**

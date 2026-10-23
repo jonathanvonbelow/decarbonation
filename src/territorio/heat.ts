@@ -4,12 +4,14 @@
  *   carbon       −flux of the use (PARAMS_V2.flux, tCO2e/ha/yr; phase 38): positive = sink
  *   biodiversity INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE
  *   food         INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE
- *   economy      INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.LAND_USE
+ *   economy      productive value of the use minus the territory's mean V (PARAMS_V2.productiveValue; V/V0 drives
+ *                economic security since phase 39): a use below the mean lowers E* when it grows
  * Normalised to [-1, 1] across the uses, positive = favourable for that indicator.
  */
 import { INDICATOR_IMPACT_WEIGHTS } from '../constants';
 import { LAND_USE_TYPES, type ParcelKind } from '../sim';
 import { PARAMS_V2, type LandCode } from '../sim/v2/params';
+import { productiveValue } from '../sim/v2/indicators';
 import type { LandUse } from '../types';
 import { LandUseType } from '../types';
 
@@ -27,7 +29,7 @@ export function rawCoefficient(mode: Exclude<HeatMode, 'none'>, lu: LandUseType,
     case 'food':
       return (INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE as Record<string, number>)[lu] ?? 0;
     case 'economy':
-      return (INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.LAND_USE as Record<string, number>)[lu] ?? 0;
+      return ((PARAMS_V2.productiveValue as Partial<Record<string, number>>)[lu] ?? 0) - productiveValue(landUses);
   }
 }
 

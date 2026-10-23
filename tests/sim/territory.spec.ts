@@ -117,15 +117,25 @@ describe('parcel quantisation', () => {
         expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(120);
         (Object.keys(counts) as (keyof typeof counts)[]).forEach((k) => expect(Math.abs(counts[k] - target[k])).toBeLessThan(1));
       }),
-      { numRuns: 100 },
+      { numRuns: 100, seed: 39 },
     );
   });
 });
 
 describe('syncTerritory (model → map)', () => {
   it('keeps every use within a few parcels of the model over a full game with events', () => {
-    // One parcel is 0.1 kHa: the map lags the model by less than a parcel per flow still
-    // accumulating, plus the hysteresis band. Every indicator reads the model's exact areas.
+    // One parcel is 0.1 kHa: the map lags the model by less than a parcel per flow still accumulating
+    // (`territory.pending`), plus the hysteresis band. Every indicator reads the model's exact areas.
+    // Phase 39: the old bound (|map − model| ≤ 3 parcels) predates the transition matrix of phase 37, which
+    // draws up to ~20 flow pairs (pool CC/CA/PRG/PF, fallow both ways, frontier) instead of a handful; a use
+    // touched by five or six pairs can lag 3.5–4.5 parcels with every pair under one parcel (failing cases
+    // [3, []] fallow 4.30, [991752, [GS]] PRG 3.45; their lag was exactly the in-flight area). The test now
+    // checks the stated invariant instead of a fixed number, and runs with a fixed seed plus those cases.
+    const kHa = (t: { pending: Record<string, number>; kHaPerParcel: number }, k: string, signed: boolean) =>
+      Object.entries(t.pending).reduce((sum, [key, v]) => {
+        const [from, to] = key.split('>');
+        return sum + (to === k ? v : 0) + (from === k ? (signed ? -v : v) : 0);
+      }, 0) / t.kHaPerParcel;
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 1_000_000 }),
@@ -135,15 +145,21 @@ describe('syncTerritory (model → map)', () => {
           const t0 = createTerritory(start.landUses, seed);
           const { state, territory } = runMonthsWithMap(start, t0, 360, (i) => makeRng(seed, i));
           expect(productiveCount(territory)).toBe(PRODUCTIVE_PARCELS);
+          // No flow holds a whole parcel undrawn.
+          Object.values(territory.pending).forEach((v) => expect(v / territory.kHaPerParcel).toBeLessThan(1 + 1e-9));
           const target = parcelTargets(state.landUses, PRODUCTIVE_PARCELS, territory.kHaPerParcel);
           (Object.keys(target) as (keyof typeof target)[]).forEach((k) => {
-            expect(Math.abs(kindsCount(territory, k) - target[k])).toBeLessThanOrEqual(3);
+            const lag = kindsCount(territory, k) - target[k];
+            // What is not in flight is inside the hysteresis band (1.2 parcels, src/sim/territory.ts) …
+            expect(Math.abs(lag + kHa(territory, k, true)), k).toBeLessThanOrEqual(1.2 + 1e-9);
+            // … so the map lags the model by at most the band plus what the flows touching this use carry.
+            expect(Math.abs(lag), k).toBeLessThanOrEqual(1.2 + kHa(territory, k, false) + 1e-9);
           });
           // Context parcels never change.
           t0.parcels.forEach((p, i) => { if (!isProductive(p.kind)) expect(territory.parcels[i].kind).toBe(p.kind); });
         },
       ),
-      { numRuns: 3 },
+      { numRuns: 3, seed: 39, examples: [[3, []], [991752, [Policy.SustainableLivestock]]] },
     );
   }, 60_000);
 
@@ -158,7 +174,7 @@ describe('syncTerritory (model → map)', () => {
           changes.forEach((c) => expect(MODEL_TRANSITIONS.has(`${c.from}>${c.to}`)).toBe(true));
         },
       ),
-      { numRuns: 3 },
+      { numRuns: 3, seed: 39 },
     );
   }, 60_000);
 

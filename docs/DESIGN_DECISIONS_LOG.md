@@ -2398,3 +2398,91 @@ de producción sobre c₀ (provisorio, 49), cambio de `carbonTechEffort` (decisi
 use within a few parcels…" usa semillas aleatorias de fast-check y falla ~2 de cada 5 corridas (p. ej. `[3, []]` → CA a
 3,06 parcelas del objetivo; `[991752, [GS]]` → PRG a 3,41; cota 3). Da lo mismo con el HEAD de la fase 37: no lo toca el
 carbono (el suelo no lee CO₂). Queda para revisar el retardo del mapa (37/47).
+
+## 2026-10-22 — v6 fase 39: indicadores por relajación (E, conflicto/W, colapso/St)
+
+**Qué se hizo** (`mejora-general/files/39_indicadores_por_relajacion.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/indicators.ts` (port de los bloques E, C y Pc de `indicators_step`): marco común `X* = 100·σ(ℓ_X0 + D_X)`
+  con `relax` exacto (`stepIndicator`, k acotado a [0, 1]); `impulseSum` / `capImpulses` (±0,6, `PARAMS_V2.relaxation.impulseCap`);
+  `pactShift` (E y Pc desde `PARAMS_V2.pacts`); `productiveValue` (también lo usan las anclas); `driveE` / `driveC` /
+  `drivePc`, `targetE` / `targetC` / `targetPc`; `updateRelaxedIndicators` = paso 8 E → C (W) → Pc (St) con k =
+  `CP.Velocidad_Ajuste_Seg_Economica` / `_Conflicto` / `_Colapso`; `model.targets` guarda E*, C*, Pc*. Canales: bE·η^prod,
+  η_CN^tax, conflicto y alivio verde por η^social. Coeficientes en línea del prototipo → `PARAMS_V2.relaxation`.
+- `advance()`: B y F siguen 1.1 + `toward` (40/41), presiones 1.1 después (42); orden B → F → E → C → Pc → presiones
+  conservado. Guarda en `model.fiscal.growth` la tasa anual de la economía 1.1 del paso (arranca en
+  `Tasa_Base_Crecimiento_PBI`) y, como puente hasta la 44, `model.fiscal.interestBurden` / `stress` = sHigh(intereses /
+  recaudación; 0,20, 0,04) del prototipo sobre los stocks 1.1. Un diferido sobre W/St se escribe también en su stock.
+- Se borran `calculateEconomicSecurityChange`, `calculateSocialConflictChange`, `calculatePoliticalCollapseChange`,
+  `INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY` / `SOCIAL_WELLBEING` / `POLITICAL_STABILITY`, `Umbral_polarizacion`,
+  `EcoSec_Reduction_Factor_Per_Tax_Point`, `SocialConflict_Increase_Factor_Per_Tax_Point`, los bonos verdes por umbral,
+  `AdvanceOptions.fiscalTermsActive` (τ entra siempre), `PactImpulses.economicSecurity` y el +3 de St del Acuerdo de
+  Carbono (ahora Pc −0,15 logit). `Tasa_disipacion_social` → `Tasa_disipacion_presion_social` (0,09, solo la presión
+  social 1.1 de `pressures.ts`, provisoria hasta la 42). N1 arranca con Pc = 5 (fase 35, verificado).
+- Consumidores: panel del facilitador (grupo nuevo con las tres velocidades; sin las claves borradas), descripciones,
+  manual del facilitador (sección estabilidad/conflicto reescrita), manual de ecuaciones (fórmulas de D_E, D_C, D_Pc),
+  capa "Economía" del mapa de Territorio (v_k − V actual: lo que está por debajo del valor productivo medio resta).
+- Rutas (provisorio, recalibra la 49): pisos de E de producción 25 / 32 / 30 → 36 / 40 / 36 (`ROUTES3`): calibrados
+  para un E inmóvil, dos eran E₀ y `do_nothing` N3 ganaba producción en 5/10 semillas.
+- Prototipo (bug, golden regenerado): el término de crisis alimentaria de E pasa a desvío, `−0,6·(s_low(F) − s_low(F₀))`
+  (antes −0,014 logit en F₀ = 35 sin políticas). `scripts/reference/indicators39_cases.py` → `indicators39_cases.json`
+  (24 casos, sin concentración/transición justa de la 45).
+- Tests: `tests/sim/indicators.v2.spec.ts` (ancla ±1e-9 en los 3 niveles; N1 Pc = 5; PIE η = 1 con +0,01 de g → E* 48,83;
+  continuidad de C* en F; τ en cualquier nivel; alivio verde proporcional; pactos; impulsos y tope; 12 meses = 1 año;
+  `advance` relaja k del camino; W/St dentro de (0, 100) con estrategia extrema; 24 casos del prototipo ±1e-9; φ y k
+  acotado). Actualizados: `core.spec` (trayectorias regeneradas), `deferred.spec` (Acuerdo como desplazamiento exacto de
+  E* y Pc*), `monthly.spec` (τ sin interruptor), `facilitatorParams.spec`, `invariants.spec` INV-16 (pactos E ≤ máx bE).
+- **Test inestable arreglado** (`territory.spec` "keeps every use within a few parcels…"): la causa no es el código sino la
+  cota fija de 3 parcelas, anterior a la matriz de la 37 (hasta ~21 pares de flujos dibujándose; un uso tocado por 5–6
+  pares queda 3,5–4,5 parcelas atrás con cada par < 1 parcela). Medido en los contraejemplos: fallow 4,30 y PRG 3,45 de
+  retraso, con retraso − área en tránsito = 0,00. El test verifica ahora el invariante (|retraso + tránsito| ≤ 1,2 de
+  histéresis; ningún par guarda una parcela entera; |retraso| ≤ 1,2 + lo que tocan los pares) con `seed: 39` y los dos
+  contraejemplos como `examples`; 40 corridas con semillas aleatorias pasan. Semilla fija también en los otros dos
+  fast-check del archivo.
+
+**Desvíos y discrepancias** (filas 39 de `docs/v6-spec-vs-motor.md`).
+- Spec §1 "+0,5 logit ≈ 9 puntos cerca de 25": exacto 25 → 35,5 (+10,5); §6 W del prototipo "≈ 21": extractiva 55,1 →
+  innovación 75,2 (≈ 20; con `tech_tax` 51,3, ≈ 24). Textos corregidos. El "+3,8 logit" de St 70 → 5 es exacto (3,79).
+- φ_fiscal: la spec lo deja en 0 hasta la 44; se porta ya la fórmula del prototipo sobre la deuda 1.1 (la revisión de
+  código señaló que sin él la deuda no tenía costo social ni político). Las reservas negativas (1.1 no financia el
+  déficit automáticamente) siguen sin costo hasta la 44; el −0,01·φ del crecimiento también queda para la 44.
+- g incluye PIE/PEA y −0,0002·τ además de bE y −0,04·τ: es la estructura del prototipo (y lo que pide el test de PIE).
+- **Transitorio hasta la 42**: D_C y D_Pc leen las presiones 1.1, que se saturan (extractiva: pa 0, pe 100, ps 100;
+  polarización 100 contra 10): `extractive` N2/N3 cae en colapso político (St ≤ 5) hacia el año 17–20 en 35/40 y 40/40
+  semillas (prototipo: St 55 / 47). Contradice la verificación §7 "ninguna estrategia termina en colapso político" hasta
+  que las presiones sean las ancladas en logit. `do_nothing` de Territorio ya perdía en la 38 (W < 10 sostenido); ahora
+  pierde por colapso político (16/20) o sostenido (4/20).
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la fase 38:
+
+| Criterio | 38 (quick) | 39 (quick) | 38 (completo) | 39 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | FAIL 0,100 | **PASS 0,000** | FAIL 0,075 | **PASS 0,000** |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,200 | FAIL 0,100 | FAIL 0,225 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | FAIL 3 | FAIL 2 | FAIL 2 | FAIL 2 |
+| C6 recorrido ≥ 15 | FAIL 0,911 | FAIL 11,577 | FAIL 0,911 | FAIL 11,580 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 | FAIL 0,670 | FAIL 0,670 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | PASS 0,710 | PASS 0,697 | PASS 0,710 | PASS 0,697 |
+
+C6 (completo): E pasa en todos (N1 23,1, N2 25,5, N3 24,3, Territorio 26,1; antes ≈ 9 y N1 0,4) y W también (N1 18,3, N2
+62,1, N3 58,4, Territorio 68,9); fallan B (≈ 12, fase 40) y F de N1/N3 (12,9 / 13,6, fase 41). C7: "sin cambio" de E baja de
+86–100 % a 56–67 %; el valor 0,670 es B al 100 % (40) y c (48). C2: producción N1 22,5 % (F ≥ 40, fase 41), N2 65 %,
+Territorio 30 %. C4: `tech_tax` N1 100 % (49); Territorio `cheap_production` 50 %, `extractive` 10 %, `buy_everything` 10 %.
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm test` (372 + 27 skipped del golden apagado), `npm run build`,
+`npm run i18n:audit` limpios. E2E con navegador (dev server :3139, `GEMINI_API_KEY` de relleno): `/play?demo=1` N2,
+Agricultura Intensiva activa, 2 años → E 30 → 32,8, W 57,2, St 69,0; `/territorio`, capa "Economía", Exportaciones
+Agrícolas, ×4 hasta 2025 → E 35,4, W 56,6, St 69,8. Sin errores de consola.
+
+**Revisión de código** (aplicada): φ fiscal como puente (ver arriba); k acotado a [0, 1] (un valor del facilitador > 1 daba
+NaN mensual); manual de ecuaciones con el término alimentario como desvío, φ y g₀ desde `CP`; `productiveValue` única
+(anclas incluidas); capa "Economía" centrada en V. No aplicadas: doble conteo de PIE/PEA/τ vía g (estructura del
+prototipo); un choque diferido que satura W/St deja el stock en 0/100 (solo el clamp de `applyDeferredAdjustments`; la
+relajación lo saca en el paso siguiente); la cota nueva del test de territorio (es el invariante que el mapa promete, y
+el test ahora además exige que ningún par acumule una parcela entera).
+
+**Deudas.** Presiones ancladas (42: colapso de `extractive`, umbral 8 t); B y F (40/41, C6); economía 2.0, reservas
+negativas y −0,01·φ en g (44); concentración y transición justa (45); desgaste de situaciones como impulsos (47); pisos de
+producción provisorios y C4 (49).

@@ -14,7 +14,9 @@
  * pool by anchored rents (src/sim/v2/land.ts), applied exactly with dt (no Euler `toward`), and event /
  * situation land effects become transfers (losses to fallow). Phase 38 replaces step 7 (carbon in physical
  * units, src/sim/v2/carbon.ts: energy with renewables/efficiency inertia, AFOLU flux, LUC from the realised
- * flows; cumulative emissions in `model`) and compounds population growth exactly. Each later phase replaces
+ * flows; cumulative emissions in `model`) and compounds population growth exactly. Phase 39 replaces the
+ * indicators E, C (W) and Pc (St) of step 8 with exact relaxation toward anchored logistic targets
+ * (src/sim/v2/indicators.ts); B, F and the pressures still use 1.1 + `toward`. Each later phase replaces
  * one step with its 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
@@ -37,8 +39,9 @@
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
- *  - the 1.1 stocks move by Euler `x + (F(x) − x)·dt` toward the value the annual equation gives
- *    (`toward`); with dt = 1 the annual value is taken as is, so stepYear is bit-identical (39–42, 46);
+ *  - the 1.1 stocks (B, F, pressures, money) move by Euler `x + (F(x) − x)·dt` toward the value the annual
+ *    equation gives (`toward`); with dt = 1 the annual value is taken as is (40–42, 44, 46); E, C, Pc relax
+ *    exactly since phase 39;
  *  - event roll: dt = 1 uses the yearly draw (`rollEvent`, at most one event, level-3 weighting),
  *    dt < 1 the monthly Bernoulli walk (`rollMonthlyEvent`) (46);
  *  - a requested loan: dt = 1 goes through `updateEconomy` (its 1.1 order), dt < 1 is credited whole
@@ -60,10 +63,8 @@ import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator
 import { computeTotalPactCost, updateEconomy } from '../economy';
 import { applyRandomEventEffects, rollEvent } from '../events';
 import { evaluateGameOver } from '../gameOver';
-import {
-  calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
-  calculatePoliticalCollapseChange, calculateSocialConflictChange,
-} from '../indicators';
+import { calculateBiodiversityChange, calculateFoodSecurityChange } from '../indicators';
+import { fiscalStressOf, interestBurdenOf, updateRelaxedIndicators } from './indicators';
 import {
   applyLandFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
   type TransitionFlow,
@@ -107,8 +108,6 @@ export interface AdvanceOptions {
   language?: Language;
   /** Month (0 = January) of `state.year` being simulated. Monthly step only (dt < 1); default 0. */
   month?: number;
-  /** Applies the additional-tax terms in economic security and social conflict. Default: level 3 only. */
-  fiscalTermsActive?: boolean;
   /** Event pool. Default: the model's `ALL_RANDOM_EVENTS`. */
   events?: RandomEvent[];
   /**
@@ -232,7 +231,6 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const currentYear = next.year;
   const currentLevel = next.currentLevel;
   const tax = next.additionalTaxPressurePercentage;
-  const fiscalTermsActive = opts.fiscalTermsActive ?? currentLevel === 3;
 
   // A state built before phase 35 has no 2.0 sub-state: anchor it here (the carbon of phase 38 needs it).
   if (!next.model) next.model = createModelState(next, CP);
@@ -343,6 +341,8 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   // 7. Public finances: the annual flows × dt. A requested loan: annual step inside updateEconomy (1.1
   //    order), monthly step credited whole after the flows.
   const loanInEconomy = annual ? next.loanRequestedThisRound : 0;
+  const gdpBefore = stella.PBI_Real;
+  const debtBefore = stella.Deuda;
   const econ = updateEconomy(stella, next.policies, currentLevel, tax, totalPolicyCost, totalPactCost, loanInEconomy, CP, language);
   if (annual) {
     // The old stepYear merge: every stock updateEconomy returns, as is.
@@ -352,6 +352,13 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     stella.Reservas_del_Tesoro = toward(stella.Reservas_del_Tesoro, econ.stella.Reservas_del_Tesoro, dt);
     stella.Deuda = Math.max(0, toward(stella.Deuda, econ.stella.Deuda, dt));
   }
+  // Annual GDP growth rate of this step (the 1.1 economy gives the annual value for both dt): the growth
+  // driver of E* (phase 39) until phase 44 ports the 2.0 economy.
+  model.fiscal.growth = gdpBefore > 0 ? econ.stella.PBI_Real / gdpBefore - 1 : CP.Tasa_Base_Crecimiento_PBI;
+  // Fiscal stress φ = sHigh(interest / tax revenue; 0.20, 0.04), the prototype's `economy_step` evaluated on the
+  // 1.1 stocks (bridge of phase 39 until phase 44 ports the 2.0 economy): the debt weighs on E, C and Pc.
+  model.fiscal.interestBurden = interestBurdenOf(debtBefore, gdpBefore, econ.stella.PBI_Real, tax, currentLevel, CP);
+  model.fiscal.stress = fiscalStressOf(model.fiscal.interestBurden);
   if (econ.loanProcessedLog) {
     logs.push(econ.loanProcessedLog);
     next.loanRequestedThisRound = 0;
@@ -388,8 +395,10 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   model.cumulativeEmissions += carbon.total * dt;
   next.indicators.co2EqEmissionsPerCapita = carbon.perCapita;
 
-  // 8. Indicators (each reads the ones already updated this step). Active pacts enter through
-  //    `impulses`, inside each function's policy impact (model 1.1, N-03).
+  // 8. Indicators B -> F -> E -> C (W) -> Pc (St), each reading the ones already updated this step. B and F
+  //    are still model 1.1 (phases 40/41; active pacts enter through `impulses`, N-03); E, C and Pc relax
+  //    exactly toward their anchored logistic targets (phase 39, src/sim/v2/indicators.ts), the pacts as
+  //    target shifts. The pressures (1.1 until phase 42) come after.
   next.indicators.biodiversity = toward(
     next.indicators.biodiversity,
     calculateBiodiversityChange(next.policies, next.landUses, next.indicators.biodiversity, currentLevel, CP, next.pacts),
@@ -400,19 +409,7 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts),
     dt,
   );
-  next.indicators.economicSecurity = toward(
-    next.indicators.economicSecurity,
-    calculateEconomicSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, tax, CP, fiscalTermsActive, next.pacts),
-    dt,
-  );
-  stella.Conflicto_social = toward(
-    stella.Conflicto_social,
-    calculateSocialConflictChange(next.policies, next.landUses, stella, next.indicators, currentLevel, tax, CP, fiscalTermsActive),
-    dt,
-  );
-  next.indicators.socialWellbeing = 100 - stella.Conflicto_social;
-  stella.Colapso_politico = toward(stella.Colapso_politico, calculatePoliticalCollapseChange(stella, next.indicators, CP), dt);
-  next.indicators.politicalStability = 100 - stella.Colapso_politico;
+  updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt);
 
   // 10. Sectoral political pressures (read the CO2/biodiversity values just updated): annual impulse × dt.
   const pressures = updatePressures(
@@ -448,6 +445,10 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   }
   applyDeferredAdjustments(next.indicators, deferred);
   if (opts.extraDeferred?.length) applyDeferredAdjustments(next.indicators, opts.extraDeferred);
+  // A shock to W or St is a level jump on its stock (phase 39): the next step relaxes it away instead of
+  // recomputing from a stock that never saw it.
+  stella.Conflicto_social = 100 - next.indicators.socialWellbeing;
+  stella.Colapso_politico = 100 - next.indicators.politicalStability;
 
   // 12. Score.
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);

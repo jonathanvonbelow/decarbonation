@@ -439,7 +439,9 @@ def indicators_step(s, dt, wear=None):
     fs = s.get("fiscal_stress", 0.0)
     dE = sum(P["bE"][j] * e[j] for j in POL) - 0.15 * s["eta_cn"]["tax"]
     dE += 0.25 * (s.get("g", P["g0"]) - P["g0"]) / 0.01 + 1.5 * (productive_value(s) / a["V0"] - 1)
-    dE += 0.15 * (s["B"] - a["B0"]) / 20 - 0.8 * (fs - 0.0) - 0.04 * s["tax"] - 0.6 * s_low(s["F"], 20, 4)
+    # v6/39 fix: the food-crisis term is a deviation from the start like every other driver (it was
+    # -0.6*s_low(F, 20, 4), which is -0.014 logit at F0 = 35, so E* != E0 with no policies: spec 39 §6 anchor).
+    dE += 0.15 * (s["B"] - a["B0"]) / 20 - 0.8 * (fs - 0.0) - 0.04 * s["tax"] - 0.6 * (s_low(s["F"], 20, 4) - s_low(a["F0"], 20, 4))
     dE += pact("E") + cap(impulses(s, "E"))
     s["E*"] = target(a["lE"], dE)
     s["E"] = relax(s["E"], s["E*"], k["E"], dt)

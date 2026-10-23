@@ -224,9 +224,7 @@ function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
 /** Advances one month. Only the end of the game stops it: situations never pause the clock. */
 export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): Session {
   if (s.outcome) return s;
-  const before = unlocks(s, CP);
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
-    fiscalTermsActive: before.finance,
     publicUseUpkeep: true,
     extraDeferred: s.pendingDeferred ?? [],
   });

@@ -142,16 +142,11 @@ describe('stepMonth', () => {
     expect(withLoan.stellaSpecificState.Reservas_del_Tesoro - withoutLoan.stellaSpecificState.Reservas_del_Tesoro).toBeCloseTo(1000, 6);
   });
 
-  it('fiscal-pressure terms apply only when switched on', () => {
-    const taxed = { ...freshState(2), additionalTaxPressurePercentage: 15 };
-    const off = runMonths(taxed, 12);
-    let on = taxed;
-    let month = 0;
-    for (let i = 0; i < 12; i++) {
-      const r = stepMonth(on, month, noEventRng, undefined, 'es', { fiscalTermsActive: true });
-      on = r.next;
-      month = r.month;
-    }
+  // Phase 39: the additional tax τ enters the targets of E (−0,04·τ) and C (+0,03·τ) in every level; the
+  // `fiscalTermsActive` switch (level 3 only by default) is gone.
+  it('additional tax lowers economic security and raises conflict on any level', () => {
+    const off = runMonths(freshState(2), 12);
+    const on = runMonths({ ...freshState(2), additionalTaxPressurePercentage: 15 }, 12);
     expect(on.indicators.economicSecurity).toBeLessThan(off.indicators.economicSecurity);
     expect(on.stellaSpecificState.Conflicto_social).toBeGreaterThan(off.stellaSpecificState.Conflicto_social);
   });

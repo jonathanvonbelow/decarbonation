@@ -69,7 +69,7 @@ export function updatePressures(
     ppSocialImpulse += (CP.Umbral_PP_Social_BienestarSocial - indicators.socialWellbeing) * CP.Sensibilidad_PP_Social_BienestarSocial;
   }
   ppSocialImpulse += additionalTaxPressurePercentage * CP.PPSocial_Increase_Factor_Per_Tax_Point;
-  let ppSocial = current.ppSocial + ppSocialImpulse - current.ppSocial * CP.Tasa_disipacion_social;
+  let ppSocial = current.ppSocial + ppSocialImpulse - current.ppSocial * CP.Tasa_disipacion_presion_social;
 
   ppAgricola = Math.max(0, Math.min(100, ppAgricola));
   ppAmbientalista = Math.max(0, Math.min(100, ppAmbientalista));

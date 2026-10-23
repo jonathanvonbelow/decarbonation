@@ -26,7 +26,8 @@ dinámica:    X(t+dt) = X* + (X(t) − X*) · (1 − k_X)^dt
 - Las decisiones con efecto duradero (pactos, situaciones) entran como desplazamientos de `D_X` (43, 47), con un
   tope `|Σ impulsos de situaciones| ≤ 0,6` unidades logit por indicador.
 
-Un desplazamiento de `D` en 0,5 unidades logit mueve X ≈ 12 puntos cerca de 50 y ≈ 9 puntos cerca de 25.
+Un desplazamiento de `D` en 0,5 unidades logit mueve X ≈ 12 puntos cerca de 50 y ≈ 10,5 puntos cerca de 25 (25 → 35,5;
+v6/39: decía "≈ 9").
 
 ## 2. Seguridad económica
 
@@ -111,7 +112,7 @@ export function targetE(s: GameState, eff: Record<Pid, PolicyEfficiency>, CP: Co
 - **Respuesta:** PIE a eficiencia 1 (con su efecto sobre el crecimiento, +0,01) sube E* de 30 a ≈ 48,8 (±1).
 - **Sin escalones:** C* es continua en F (sin saltos al cruzar 45).
 - **Rango (arnés, criterio C6):** con B y F todavía en 1.1, el recorrido de W entre estrategias extremas en N2 debe
-  ser ya ≥ 15 (prototipo completo: ≈ 21).
+  ser ya ≥ 15 (prototipo completo, año 30 sin eventos: extractiva 55,1 → innovación 75,2, ≈ 20; con `tech_tax`, 51,3, ≈ 24).
 
 ## 7. Verificación
 

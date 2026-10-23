@@ -256,8 +256,13 @@ FuerzaNormalización = (<Param>PuntoEquilibrio</Param> - <Param>PresiónActual</
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
             <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>
-            <Formula>ΔConflictoSocial = Σ(<Param>Factores de Descontento</Param>) - <Param>TasaDisipación</Param>
-ΔColapsoPolítico = Σ(<Param>Factores de Inestabilidad</Param>) - <Param>Tasa</Param></Formula>
+            <Formula>{`Objetivo:  X* = 100 · σ( logit(X₀/100) + D_X )       X ∈ {Seg. Económica, Conflicto, Colapso}
+Dinámica:  X ← X* + (X − X*) · (1 − k_X)^dt         (exacta: 12 pasos mensuales = 1 anual)
+D_E  = Σ bE·η^prod − 0,15·η_CN^imp + 0,25·(g − g₀)/0,01 + 1,5·(V/V₀ − 1) + 0,15·(B − B₀)/20 − 0,8·φ − 0,04·τ − 0,6·[s(F) − s(F₀)] + pactos
+D_C  = 0,6·(F₀ − F)/15 + 0,5·(E₀ − E)/15 + 0,4·(πe − πe₀)/20 + Σ c·η^social − Σ alivio·η^social + 2·Δa_CC + Δa_PF + 0,03·τ + 0,6·φ
+D_Pc = 0,9·(W₀ − W)/20 + 0,5·(E₀ − E)/20 + 0,8·φ + 0,5·(polarización − pol₀)/30 + 0,6·(π̄ − π̄₀)/20 + pactos
+Bienestar = 100 − Conflicto      Estabilidad = 100 − Colapso`}</Formula>
+            <p className="text-sm">Todo término es un desvío respecto del inicio del nivel o el efecto de una política activa: sin políticas y con el territorio quieto, nada se mueve. k = {CONTROL_PARAMS.Velocidad_Ajuste_Seg_Economica} / {CONTROL_PARAMS.Velocidad_Ajuste_Conflicto} / {CONTROL_PARAMS.Velocidad_Ajuste_Colapso} por año (E / C / Pc). τ es el impuesto adicional en puntos; g₀ = {CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI} es el crecimiento base; φ es el estrés fiscal (intereses / recaudación por encima de 0,20); s(F) = 1/(1 + e^((F − 20)/4)) mide una crisis alimentaria.</p>
         </div>
     </>
   );

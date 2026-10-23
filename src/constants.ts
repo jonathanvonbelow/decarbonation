@@ -331,14 +331,11 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     effects: (indicators, stellaStocks) => ({
       // Fase 38: el −5 % de CO2 de 1.1 pasa al carbono físico (PARAMS_V2.pacts.globalCarbonAccord.renewables /
       // efficiency suman 0,05 a s* y u*, src/sim/v2/carbon.ts).
-      indicators: {
-        politicalStability: (indicators.politicalStability || 0) + 3,
-      },
+      // Fase 39: el +3 de estabilidad política (aplicado después del recálculo, deferred.ts) pasa a un
+      // desplazamiento del objetivo del colapso, PARAMS_V2.pacts.globalCarbonAccord.Pc = −0,15 logit (≈ −3 puntos
+      // cerca de Pc = 30), y su −0,10 sobre E a PARAMS_V2.pacts.globalCarbonAccord.E (src/sim/v2/indicators.ts).
       stellaStocks: {}
     }),
-    // Model 1.1 (phase 34, N-03/T-03): the −2 E per year that used to sit in effects() above.
-    // Criterio experto: CN weighs −0,05 on E; an international commitment costs a bit more.
-    impulses: { economicSecurity: -0.10 },
   },
   biodiversityTreaty: {
     id: 'biodiversityTreaty', name: "Tratado de Preservación de la Biodiversidad",
@@ -357,7 +354,8 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     // Model 1.1 (phase 34, N-03/T-03): replaces +5 B and −1 E per year, applied as a level jump in
     // effects() (B went 40 → 100 in 13 years). Criterio experto: as strong as Conservation (+0,50 on B),
     // not stronger.
-    impulses: { biodiversity: 0.40, economicSecurity: -0.05 },
+    // Fase 39: el −0,05 sobre E es ahora PARAMS_V2.pacts.biodiversityTreaty.E (desplazamiento del objetivo).
+    impulses: { biodiversity: 0.40 },
   },
   techTransferInitiative: {
     id: 'techTransferInitiative', name: "Iniciativa de Transferencia Tecnológica",
@@ -371,9 +369,8 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     effects: () => ({
       stellaStocks: {}
     }),
-    // Model 1.1 (phase 34, N-03/T-03): replaces +2 E per year. Criterio experto: half of Foreign
-    // Investment's +0,30 on E.
-    impulses: { economicSecurity: 0.15 },
+    // Model 1.1 (phase 34) replaced +2 E per year with an impulse of 0,15; since phase 39 it is the target
+    // shift PARAMS_V2.pacts.techTransferInitiative.E = +0,15 logit (src/sim/v2/indicators.ts).
   }
 };
 
@@ -384,7 +381,6 @@ export const CONTROL_PARAMS: ControlParams = {
   // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: 2035,
   Referencia_Max_CO2_per_Capita_Puntaje: 12,  // Adjusted ceiling — keeps scoring meaningful with lower starting emissions
-  Umbral_polarizacion: 70,
   Tasa_Impositiva_General_Sobre_PBI: 0.15,
   Tasa_Base_Crecimiento_PBI: 0.02,
   Tasa_Crecimiento_Poblacional_Base: 0.008,
@@ -393,7 +389,9 @@ export const CONTROL_PARAMS: ControlParams = {
   Pago_deuda_anual_Nivel_2: 0.12,
   Pago_deuda_anual_Nivel_3: 0.1,
 
-  Tasa_disipacion_social: 0.09, // Ajustado de 0.07 para aumentar más la resiliencia social
+  // Fase 39: era Tasa_disipacion_social (0,09) y disipaba también el conflicto social, que ahora relaja hacia su
+  // objetivo con Velocidad_Ajuste_Conflicto. Queda sólo para la presión social 1.1 (pressures.ts) hasta la fase 42.
+  Tasa_disipacion_presion_social: 0.09, // fracción anual; provisorio (fase 42 lo borra)
 
   Tasa_de_interes_Nivel_1: 0.025, Tasa_de_interes_Nivel_2: 0.035, Tasa_de_interes_Nivel_3: 0.045,
   Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso: 0.2,
@@ -458,8 +456,9 @@ export const CONTROL_PARAMS: ControlParams = {
 
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: 20,
-  EcoSec_Reduction_Factor_Per_Tax_Point: 0.25,
-  SocialConflict_Increase_Factor_Per_Tax_Point: 0.08, // Ajustado de 0.15 para suavizar más el impacto
+  // Fase 39: EcoSec_Reduction_Factor_Per_Tax_Point (0,25) y SocialConflict_Increase_Factor_Per_Tax_Point (0,08)
+  // se borraron; el impuesto adicional τ entra en los objetivos de E (−0,04·τ) y de C (+0,03·τ) en todos los
+  // niveles (PARAMS_V2.relaxation).
   PBIGrowth_Reduction_Factor_Per_Tax_Point: 0.0002,
   PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
 
@@ -953,73 +952,9 @@ export const INDICATOR_IMPACT_WEIGHTS = {
     BIODIVERSITY_IMPACT_ON_FOOD_SECURITY: 0.005, // e.g., 0.5% FS change per 10 points of biodiversity
     ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY: 0.008, // e.g., 0.8% FS change per 10 points of econ security
   },
-  ECONOMIC_SECURITY: {
-    POLICIES: {
-      [Policy.Agroecological]: 0.05,
-      [Policy.NaturalConservation]: -0.02,
-      [Policy.SustainableLivestock]: 0.05,
-      [Policy.SustainableWaterManagement]: 0.01,
-      [Policy.CarbonNeutrality]: -0.05, // Can have initial costs
-      [Policy.IntensiveAgriculture]: 0.15,
-      [Policy.AgriculturalExports]: 0.25,
-      [Policy.ForeignInvestment]: 0.30,
-      [Policy.FlexibleEnvironmentalRegulations]: 0.10, // Short term boost
-      [Policy.EnergySubsidies]: 0.05, // Can lower costs for some industries
-    },
-    LAND_USE: {
-      [LandUseType.UnprotectedNativeForest]: 0.0,
-      [LandUseType.ProtectedNativeForest]: -0.05, // Opportunity cost
-      [LandUseType.AgroecologicalCrops]: 0.05,
-      [LandUseType.ConventionalCrops]: 0.1,
-      [LandUseType.ForestPlantations]: 0.08,
-      [LandUseType.GrasslandsPastures]: 0.05,
-      // Costo de oportunidad del suelo, salvo el parque energético: energía pública más barata y
-      // empleo de operación y mantenimiento.
-      [LandUseType.PublicWetland]: -0.02,
-      [LandUseType.RestorationForest]: -0.04,
-      [LandUseType.EnergyPark]: 0.12,
-      // Barbecho (fase 37): peso productivo 0 (no genera ingresos).
-      [LandUseType.Fallow]: 0,
-    },
-    BIODIVERSITY_IMPACT_ON_ECONOMIC_SECURITY: 0.002, // e.g. Eco-tourism, genetic resources
-    VOLATILITY_FACTOR: -0.01, // e.g. if food security is very low, econ security takes a hit
-  },
-  SOCIAL_WELLBEING: {
-    CONFLICT_INCREMENT_FACTORS: {
-        DEBT_PBI_THRESHOLD: 0.8, // 80% Debt/PBI
-        DEBT_PBI_IMPACT: 5, // points to conflict if threshold crossed
-        POLICY_FLEX_REGS_IMPACT: 0.05, // points to conflict per % policy efficiency
-        LOW_RESERVES_THRESHOLD_FACTOR: 0.05, // Treasury reserves < 5% of PBI
-        POLICY_ENERGY_SUBSIDIES_LOW_RESERVES_IMPACT: 0.04, // if reserves low, this policy adds conflict
-        LOW_FOOD_SECURITY_THRESHOLD: 45, // %
-        LOW_FOOD_SECURITY_IMPACT: 4, // points
-        LOW_ECONOMIC_SECURITY_THRESHOLD: 45, // %
-        LOW_ECONOMIC_SECURITY_IMPACT: 3.5, // points (used by Social and Political)
-        POLICY_INTENSIVE_AGRICULTURE_IMPACT: 0.04,
-        POLICY_FOREIGN_INVESTMENT_IMPACT: 0.03, // Can sometimes cause social displacement
-        POLICY_ENV_NORMS_FLEX_IMPACT: 0.06,
-        LAND_USE_CC_IMPACT: 0.0005, // per % area * 100 (so 0.05 per % area)
-        LAND_USE_PF_IMPACT: 0.0003, // per % area * 100 (so 0.03 per % area)
-    }
-  },
-  POLITICAL_STABILITY: {
-    COLLAPSE_INCREMENT_FACTORS: {
-        LOW_SOCIAL_WELLBEING_THRESHOLD: 45, // %
-        LOW_SOCIAL_WELLBEING_IMPACT: 0.15, // points to collapse
-        LOW_ECONOMIC_SECURITY_THRESHOLD: 40, // % 
-        LOW_ECONOMIC_SECURITY_IMPACT: 0.08, // points to collapse
-        NEGATIVE_RESERVES_THRESHOLD_FACTOR: -0.05, // Treasury reserves < -5% of PBI
-        NEGATIVE_RESERVES_IMPACT: 0.15,
-        HIGH_POLARIZATION_IMPACT: 0.12, // If polarization > Umbral_polarizacion
-        PP_AGRICOLA_THRESHOLD: 70, // %
-        PP_AGRICOLA_IMPACT: 0.005, // points to collapse per % above threshold
-        PP_AMBIENTALISTA_THRESHOLD: 70, // %
-        PP_AMBIENTALISTA_IMPACT: 0.004,
-        PP_SOCIAL_THRESHOLD: 70, // %
-        PP_SOCIAL_IMPACT: 0.006,
-    },
-    COLLAPSE_DECREMENT_BASE: 0.02,
-  }
+  // Fase 39: ECONOMIC_SECURITY, SOCIAL_WELLBEING y POLITICAL_STABILITY se borraron. Seguridad económica,
+  // conflicto social y colapso político relajan hacia objetivos logísticos anclados (src/sim/v2/indicators.ts;
+  // coeficientes en PARAMS_V2.bE / productiveValue / conflict / greenRelief / conflictWeights / relaxation).
 };
 
 export const INSTRUMENT_IMPACT_HINTS: InstrumentImpactHints = {

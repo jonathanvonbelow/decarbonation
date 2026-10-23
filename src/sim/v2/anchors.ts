@@ -18,6 +18,7 @@ import { logit } from './math';
 import { AGRI_CODES, PARAMS_V2, type LandCode } from './params';
 import { landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
 import { computeEmissions } from './carbon';
+import { productiveValue } from './indicators';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
@@ -70,8 +71,7 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
   const pop = CP.Poblacion_Inicial;
 
   const habitat0 = LAND_CODES.reduce((sum, k) => sum + PARAMS_V2.habitat[k] * A[k], 0) / total;
-  const pv = PARAMS_V2.productiveValue;
-  const productiveValue0 = (Object.keys(pv) as (keyof typeof pv)[]).reduce((sum, k) => sum + pv[k] * A[k], 0) / total;
+  const productiveValue0 = productiveValue(state.landUses);
   const agri = A.CC + A.CA + A.PRG + A.PF || 1;
   const y = PARAMS_V2.food.yield;
   // food_production at t = 0 with no policies and no yield shock, net of the starting export share.
@@ -127,7 +127,8 @@ export function createModelState(state: AnchorInput, CP: ControlParams): ModelSt
     energy: { renewableShare: 0, efficiency: 0 },
     emissions,
     cumulativeEmissions: 0,
-    fiscal: { growth: 0, primaryBalance: 0, interestBurden: 0, stress: 0, breachYears: 0, primaryHistory: [] },
+    // growth starts at the base rate: with no policies the growth driver of E* is 0 (phase 39).
+    fiscal: { growth: CP.Tasa_Base_Crecimiento_PBI, primaryBalance: 0, interestBurden: 0, stress: 0, breachYears: 0, primaryHistory: [] },
     impulses: [],
     productiveYears: 0,
     yieldShock: 0,

@@ -231,6 +231,51 @@ export const PARAMS_V2 = {
   greenRelief: { CN: 0.25, CR: 0.25, AGUA: 0.15 },
   conflictWeights: { food: 0.6, econ: 0.5, envPressure: 0.4, gini: 3.0, just: 0.6 },
 
+  /**
+   * 39 — the remaining drivers of the logistic targets of E, C and Pc (mejora-general/files/39 §2–4; the
+   * inline coefficients of `indicators_step` in scripts/reference/modelo_v2.py). Every weight is logit units
+   * per unit of its driver; every `scale` divides a deviation in points (0-100) or in GDP growth. Criterio
+   * experto (prototype values).
+   */
+  relaxation: {
+    /** Cap of |Σ situation impulses| on one indicator's target, logit units (spec 39 §1). */
+    impulseCap: 0.6,
+    E: {
+      /** −w·η_CN^tax: the carbon tax weighs on business. */
+      carbonTax: 0.15,
+      /** w·(g − g0)/scale: GDP growth over the base rate (scale = 1 pp of growth, fraction per year). */
+      growth: 0.25, growthScale: 0.01,
+      /** w·(V/V0 − 1): productive value of the land. */
+      landValue: 1.5,
+      /** w·(B − B0)/scale: ecosystem services. */
+      biodiversity: 0.15, biodiversityScale: 20,
+      /** −w·φ_fiscal (phase 44; φ = 0 until then) and −w·τ (additional tax, pp). */
+      fiscalStress: 0.8, tax: 0.04,
+      /** −w·sLow(F; mid, width): volatility of a food crisis (points). */
+      foodCrisis: 0.6, foodCrisisMid: 20, foodCrisisWidth: 4,
+    },
+    C: {
+      /** Scales of the deviations of F, E and of the environmentalist pressure (points); weights in conflictWeights. */
+      foodScale: 15, econScale: 15, envPressureScale: 20,
+      /** w·φ_fiscal·η_SE^social: subsidies the treasury can no longer pay. */
+      subsidyStress: 0.3,
+      /** w·(a_CC − a_CC0) + w·(a_PF − a_PF0): expansion of intensive uses (shares 0-1). */
+      shareCC: 2.0, sharePF: 1.0,
+      /** w·τ (pp) and w·φ_fiscal. */
+      tax: 0.03, fiscalStress: 0.6,
+    },
+    Pc: {
+      /** w·(W0 − W)/scale and w·(E0 − E)/scale (points). */
+      wellbeing: 0.9, wellbeingScale: 20, econ: 0.5, econScale: 20,
+      /** w·φ_fiscal. */
+      fiscalStress: 0.8,
+      /** w·(polarisation − pol0)/scale, polarisation = max π − min π (points). */
+      polarisation: 0.5, polarisationScale: 30,
+      /** w·(π̄ − π̄0)/scale, π̄ = mean of the three pressures (points). */
+      pressureMean: 0.6, pressureMeanScale: 20,
+    },
+  },
+
   /** 42 — pressures: v1 impulse factors (points per unit of efficiency), divided by phiScale in logit space. */
   pressure: {
     a: { AS: -2.0, GS: -1.5, PAI: -10.0, PEA: -6.0, CR: 3.0 },

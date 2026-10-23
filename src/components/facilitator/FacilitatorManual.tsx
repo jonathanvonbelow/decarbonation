@@ -128,7 +128,7 @@ const manualSlides = [
         <p className="mb-2">A partir del Nivel 2, la presión política (0-100) de tres grupos clave se simula con un modelo de <strong className="text-yellow-400">Impulso vs. Disipación</strong>.</p>
          <div className="bg-slate-800 p-4 rounded font-mono text-sm space-y-2">
             <p>1. <strong className="text-yellow-400">Calcular Impulso:</strong> Suma de todos los factores de influencia (efectos de políticas e indicadores desalineados con los umbrales).</p>
-            <p>2. <strong className="text-yellow-400">Calcular Fuerza de Disipación:</strong> La presión existente decae naturalmente. <br/>   <span className="text-cyan-400">FuerzaDisipacion</span> = <span className="text-cyan-400">PresionActual</span> * <span className="text-cyan-400">0,10</span> (agrícola y ambientalista, fija en todos los niveles) o <span className="text-cyan-400">Tasa_disipacion_social</span> = {CONTROL_PARAMS.Tasa_disipacion_social} (social)</p>
+            <p>2. <strong className="text-yellow-400">Calcular Fuerza de Disipación:</strong> La presión existente decae naturalmente. <br/>   <span className="text-cyan-400">FuerzaDisipacion</span> = <span className="text-cyan-400">PresionActual</span> * <span className="text-cyan-400">0,10</span> (agrícola y ambientalista, fija en todos los niveles) o <span className="text-cyan-400">Tasa_disipacion_presion_social</span> = {CONTROL_PARAMS.Tasa_disipacion_presion_social} (social)</p>
             <p>3. <strong className="text-yellow-400">Calcular Cambio Neto:</strong> El cambio es la diferencia lineal, limitada entre 0 y 100.<br/>   <span className="text-cyan-400">NuevaPresion</span> = <span className="text-cyan-400">PresionActual</span> + <span className="text-cyan-400">Impulso</span> - <span className="text-cyan-400">FuerzaDisipacion</span></p>
          </div>
          <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Factores de Presión Agrícola</h4>
@@ -167,24 +167,25 @@ const manualSlides = [
     content: (
       <div>
         <p className="mb-4">Estos dos indicadores clave reflejan la gobernabilidad de la nación y son cruciales para evitar el fin del juego.</p>
+        <p className="text-sm mb-2">Desde el modelo 2.0 (fase 39), Seguridad Económica, Conflicto Social y Colapso Político se mueven cada año una fracción fija del camino hacia un <strong>objetivo</strong>: <Code>X* = 100 · σ(logit(X₀) + D)</Code>. <Code>D</Code> suma desvíos respecto del estado inicial del nivel y efectos de políticas activas, así que sin políticas y con el territorio quieto nada se mueve. No hay umbrales en escalón.</p>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Conflicto Social (Inverso al Bienestar Social)</h4>
-        <p className="text-sm mb-2">Un valor de 0 a 100 que aumenta por factores de descontento. <Code>Bienestar Social = 100 - Conflicto Social</Code>.</p>
-        <p className="font-semibold text-xs text-red-400">Factores que aumentan el conflicto:</p>
+        <p className="text-sm mb-2"><Code>Bienestar Social = 100 - Conflicto Social</Code>. Se acerca a su objetivo un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Conflicto * 100)}%</Param> del camino por año.</p>
+        <p className="font-semibold text-xs text-red-400">Lo que sube el objetivo del conflicto:</p>
         <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Ratio Deuda/PBI &gt; <Param>{INDICATOR_IMPACT_WEIGHTS.SOCIAL_WELLBEING.CONFLICT_INCREMENT_FACTORS.DEBT_PBI_THRESHOLD * 100}%</Param></li>
-            <li>Seguridad Alimentaria &lt; <Param>{INDICATOR_IMPACT_WEIGHTS.SOCIAL_WELLBEING.CONFLICT_INCREMENT_FACTORS.LOW_FOOD_SECURITY_THRESHOLD}%</Param></li>
-            <li>Seguridad Económica &lt; <Param>{INDICATOR_IMPACT_WEIGHTS.SOCIAL_WELLBEING.CONFLICT_INCREMENT_FACTORS.LOW_ECONOMIC_SECURITY_THRESHOLD}%</Param></li>
-            <li>Políticas activas como <Code>P-FRA</Code> o <Code>P-PAI</Code>.</li>
-            <li>Presión fiscal adicional (Nivel 3).</li>
+            <li>Seguridad Alimentaria o Económica por debajo de su valor inicial (proporcional al deterioro).</li>
+            <li>Presión ambientalista por encima de su valor inicial.</li>
+            <li>Políticas activas como <Code>P-FRA</Code>, <Code>P-PAI</Code> o <Code>P-PIE</Code>; la expansión de cultivos convencionales y plantaciones.</li>
+            <li>Presión fiscal adicional (en cualquier nivel con impuesto adicional).</li>
+            <li>Lo alivian <Code>P-CN</Code>, <Code>P-CR</Code> y <Code>P-AGUA</Code>, en proporción a su eficiencia.</li>
         </ul>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Colapso Político (Inverso a la Estabilidad Política)</h4>
-        <p className="text-sm mb-2">Un valor de 0 a 100 que representa el riesgo de un colapso del gobierno. <Code>Estabilidad Política = 100 - Colapso Político</Code>.</p>
-        <p className="font-semibold text-xs text-red-400">Factores que aumentan el colapso:</p>
+        <p className="text-sm mb-2"><Code>Estabilidad Política = 100 - Colapso Político</Code>. Se acerca a su objetivo un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Colapso * 100)}%</Param> del camino por año.</p>
+        <p className="font-semibold text-xs text-red-400">Lo que sube el objetivo del colapso:</p>
          <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Bienestar Social &lt; <Param>{INDICATOR_IMPACT_WEIGHTS.POLITICAL_STABILITY.COLLAPSE_INCREMENT_FACTORS.LOW_SOCIAL_WELLBEING_THRESHOLD}%</Param></li>
-            <li>Reservas del Tesoro muy negativas.</li>
-            <li>Polarización política alta (gran diferencia entre presiones) &gt; <Param>{CONTROL_PARAMS.Umbral_polarizacion}</Param>.</li>
-            <li>Cualquier grupo de presión política individual por encima de <Param>{INDICATOR_IMPACT_WEIGHTS.POLITICAL_STABILITY.COLLAPSE_INCREMENT_FACTORS.PP_AGRICOLA_THRESHOLD}%</Param>.</li>
+            <li>Bienestar Social y Seguridad Económica por debajo de sus valores iniciales.</li>
+            <li>Más polarización (diferencia entre la presión más alta y la más baja) que al inicio.</li>
+            <li>Presión política media por encima de la inicial.</li>
+            <li>El Acuerdo Global de Carbono lo baja un poco mientras está vigente.</li>
         </ul>
       </div>
     )

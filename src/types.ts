@@ -101,13 +101,13 @@ export interface StellaStocks {
 }
 
 /**
- * Model 1.1 (phase 34, N-03/T-03): what a pact adds to the policy-impact sum of each indicator
- * function, like one more policy at efficiency 1. Replaces effects() writing `B + 5` every year.
+ * Model 1.1 (phase 34, N-03/T-03): what a pact adds to the policy-impact sum of the 1.1 indicator
+ * functions of B and F, like one more policy at efficiency 1. Replaces effects() writing `B + 5` every
+ * year. Economic security left in phase 39: the pacts shift its logistic target (PARAMS_V2.pacts.*.E).
  */
 export interface PactImpulses {
   biodiversity?: number;
   foodSecurity?: number;
-  economicSecurity?: number;
 }
 
 export interface Pact {
@@ -128,7 +128,7 @@ export interface Pact {
   costToJoin?: number;
   annualCost?: number;
   unlockYear?: number;
-  /** Effects on B, F, E, summed into the indicator functions' policy impact (see PactImpulses). */
+  /** Effects on B and F, summed into the 1.1 indicator functions' policy impact (see PactImpulses). */
   impulses?: PactImpulses;
 }
 
@@ -398,7 +398,6 @@ export interface ControlParams {
   // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: number;
   Referencia_Max_CO2_per_Capita_Puntaje: number;
-  Umbral_polarizacion: number;
   Tasa_Impositiva_General_Sobre_PBI: number;
   Tasa_Base_Crecimiento_PBI: number;
   Tasa_Crecimiento_Poblacional_Base: number;
@@ -407,7 +406,11 @@ export interface ControlParams {
   Pago_deuda_anual_Nivel_2: number;
   Pago_deuda_anual_Nivel_3: number;
 
-  Tasa_disipacion_social: number;
+  /**
+   * Annual dissipation of the 1.1 social pressure (PP_SOCIAL), provisional until phase 42 ports the pressures.
+   * Phase 39: the old `Tasa_disipacion_social`, which also dissipated social conflict (now `Velocidad_Ajuste_Conflicto`).
+   */
+  Tasa_disipacion_presion_social: number;
 
   Tasa_de_interes_Nivel_1: number;
   Tasa_de_interes_Nivel_2: number;
@@ -465,8 +468,6 @@ export interface ControlParams {
 
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: number; // e.g., 20 for 20%
-  EcoSec_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.25 points of EcoSec reduction per 1% additional tax
-  SocialConflict_Increase_Factor_Per_Tax_Point: number; // e.g., 0.3 points of Conflict increase per 1% additional tax
   PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
   PPSocial_Increase_Factor_Per_Tax_Point: number; // e.g., 0.4 points of Social Pressure increase per 1% additional tax
 

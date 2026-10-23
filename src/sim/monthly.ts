@@ -21,12 +21,12 @@
  *     year) several events can land in the same year. A triggered event applies its full effects:
  *     it is a shock, not a flow.
  *   - CO2eq per capita and the score are functions of the state, not stocks: recomputed monthly.
- *   - The fiscal-pressure terms that the 3-level game only applies on level 3 are switched by
- *     `options.fiscalTermsActive` (default: the original `currentLevel === 3` rule).
+ *   - (Until phase 39 the fiscal-pressure terms were switched by `options.fiscalTermsActive`; since then the
+ *     additional tax τ enters the targets of E and C in every level and game.)
  *
  * Since phase 35 (mejora-general/files/35_motor_v2_estructura.md) both bodies are one: `stepMonth` is
  * `advance(state, 1/12, …)` of src/sim/v2/core.ts plus the calendar it returns. The Euler `toward` of
- * the 1.1 stocks still lives there; phase 46 replaces it with the exact relaxation of model 2.0.
+ * the 1.1 stocks still lives there (E, C and Pc relax exactly since phase 39); phase 46 replaces the rest.
  */
 import { CONTROL_PARAMS } from '../constants';
 import type { ControlParams, GameState, RandomEvent } from '../types';
@@ -40,7 +40,7 @@ import { advance, MONTHLY_DT, type AdvanceOptions, type StepYearChatMessage } fr
 export { MONTHS_PER_YEAR, declaredProtectedOf, monthlyTriggerChance, rollMonthlyEvent } from './v2/core';
 
 /** Options of the monthly step (the monthly subset of `AdvanceOptions`). */
-export type MonthlyOptions = Pick<AdvanceOptions, 'fiscalTermsActive' | 'events' | 'publicUseUpkeep' | 'extraDeferred'>;
+export type MonthlyOptions = Pick<AdvanceOptions, 'events' | 'publicUseUpkeep' | 'extraDeferred'>;
 
 export interface StepMonthResult {
   next: GameState;

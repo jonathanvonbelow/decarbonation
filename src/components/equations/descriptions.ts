@@ -113,10 +113,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "El primer año del juego en que la opción de solicitar préstamos se vuelve disponible para el jugador (generalmente en Nivel 3).",
     en: "The first game year in which the option to request loans becomes available to the player (usually in Level 3).",
   },
-  Umbral_polarizacion: {
-    es: "El nivel de diferencia entre la presión política más alta y la más baja que, al ser superado, comienza a contribuir negativamente a la Estabilidad Política.",
-    en: "The gap between the highest and lowest political pressure that, once exceeded, starts contributing negatively to Political Stability.",
-  },
   Tasa_Impositiva_General_Sobre_PBI: {
     es: "La tasa impositiva base que se aplica sobre el PBI para calcular los ingresos del gobierno.",
     en: "The base tax rate applied to GDP to calculate government revenue.",
@@ -137,9 +133,21 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Porcentaje del capital de la deuda total que se paga anualmente en el Nivel 3.",
     en: "Percentage of total debt principal paid annually in Level 3.",
   },
-  Tasa_disipacion_social: {
-    es: "Tasa a la que el 'Conflicto Social' disminuye naturalmente cada año si no hay nuevos factores que lo aumenten.",
-    en: "The rate at which 'Social Conflict' naturally decreases each year absent new factors increasing it.",
+  Tasa_disipacion_presion_social: {
+    es: "Fracción de la Presión Social que se disipa cada año (provisoria: las presiones pasan al modelo 2.0 en una fase posterior).",
+    en: "Share of the Social Pressure that dissipates each year (provisional: the pressures move to model 2.0 in a later phase).",
+  },
+  Velocidad_Ajuste_Seg_Economica: {
+    es: "Fracción anual del camino que la Seguridad Económica recorre hacia su objetivo (0,30: tarda unos 3 años en recorrer dos tercios).",
+    en: "Annual share of the way Economic Security moves toward its target (0.30: about 3 years to cover two thirds).",
+  },
+  Velocidad_Ajuste_Conflicto: {
+    es: "Fracción anual del camino que el Conflicto Social (100 − Bienestar) recorre hacia su objetivo.",
+    en: "Annual share of the way Social Conflict (100 − Wellbeing) moves toward its target.",
+  },
+  Velocidad_Ajuste_Colapso: {
+    es: "Fracción anual del camino que el Colapso Político (100 − Estabilidad) recorre hacia su objetivo.",
+    en: "Annual share of the way Political Collapse (100 − Stability) moves toward its target.",
   },
   Tasa_de_interes_Nivel_1: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 1.",
@@ -328,14 +336,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Max_Additional_Tax_Rate_Percentage: {
     es: "La tasa impositiva adicional máxima que el jugador puede aplicar en el Nivel 3.",
     en: "The maximum additional tax rate the player can apply in Level 3.",
-  },
-  EcoSec_Reduction_Factor_Per_Tax_Point: {
-    es: "Puntos de reducción en la Seguridad Económica por cada punto porcentual de impuesto adicional aplicado.",
-    en: "Points of Economic Security reduction per percentage point of additional tax applied.",
-  },
-  SocialConflict_Increase_Factor_Per_Tax_Point: {
-    es: "Puntos de aumento en el Conflicto Social por cada punto porcentual de impuesto adicional aplicado.",
-    en: "Points of Social Conflict increase per percentage point of additional tax applied.",
   },
   PBIGrowth_Reduction_Factor_Per_Tax_Point: {
     es: "Reducción en la tasa de crecimiento del PBI por cada punto porcentual de impuesto adicional aplicado.",

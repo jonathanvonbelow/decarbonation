@@ -25,7 +25,6 @@ const BALANCED = [
   Policy.NaturalConservation, Policy.Agroecological, Policy.AgriculturalExports, Policy.CarbonNeutrality, Policy.ForeignInvestment,
 ];
 const FISCAL_KEYS = new Set<NumericParamKey>([
-  'EcoSec_Reduction_Factor_Per_Tax_Point', 'SocialConflict_Increase_Factor_Per_Tax_Point',
   'PBIGrowth_Reduction_Factor_Per_Tax_Point', 'PPSocial_Increase_Factor_Per_Tax_Point',
 ]);
 

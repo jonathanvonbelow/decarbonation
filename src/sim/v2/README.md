@@ -14,6 +14,7 @@ calibración.**
 | `anchors.ts` | `computeAnchors` / `createModelState`: anclas del estado inicial de cada nivel (`GameState.model`) |
 | `policies.ts` | fase 36: `tickPolicyClocks`, `baseEfficiency`, `channelStrength`, `computeEfficiencies` (η base + canales `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost` (por esfuerzo), `policyStatus` ("en marcha" / "desgastada" para la UI) |
 | `carbon.ts` | fase 38: `energyTargets` / `updateEnergyState` (s*, u*, inercia k = 0,15), `fluxOf`, `computeEmissions` (energía, AFOLU, LUC desde los flujos realizados ÷ dt, total y per cápita en tCO₂e), `budgetPath` / `carbonBudgetIndex` (B_t), `CO2_PER_C` = 44/12 |
+| `indicators.ts` | fase 39: marco común X* = 100·σ(ℓ₀ + D), `stepIndicator` (= `relax`), `impulseSum` / `capImpulses` (±0,6), `pactShift`, `productiveValue`, `driveE` / `driveC` / `drivePc`, `targetE` / `targetC` / `targetPc`, `updateRelaxedIndicators` (paso 8: E → C (W) → Pc (St)) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
@@ -46,7 +47,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44) |
 | 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | hecho (tasas base de frontera en `CONTROL_PARAMS`) |
 | 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `fluxPolicy`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`, crecimiento `(1 + g)^dt`) | hecho (topes de CO₂ de las rutas reescalados de forma provisoria hasta la 49) |
-| 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`) | pendiente |
+| 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`, `bE`, `productiveValue`, `conflict`, `greenRelief`, `conflictWeights`, `relaxation`) | hecho (presiones de D_C/D_Pc todavía 1.1 hasta la 42; φ_fiscal puente sobre la deuda 1.1 hasta la 44) |
 | 40 | B por especies-área (`habitat`, `zSAR`, `qB`) | pendiente |
 | 41 | F por balance oferta/demanda (`food`, `foodPerCapita0`) | pendiente |
 | 42 | presiones en logit, ancladas (`pressure`) | pendiente |
@@ -93,3 +94,17 @@ con reparto parejo). El paso de carbono va justo después de la economía (como 
 Los topes de CO₂ de las rutas (`winRoutes.ts`, `territorio/routes.ts`) se reescalaron de forma provisoria; los recalibra la
 fase 49. El umbral 8 t de la presión ambientalista por CO₂ (fase 42), el escrutinio `c > 12` (fase 46) y
 `RANGE.co2 = 15` de la predicción (fase 48) quedan en la escala vieja, anotados en el log.
+
+Fase 39: ningún recorte de la spec. El estrés fiscal φ se adelanta como puente (fórmula del prototipo sobre la deuda 1.1;
+la 44 lo reemplaza). Lo que todavía no existe vale 0 y lo agrega su fase: concentración y transición justa del conflicto (45), desgaste de situaciones (47); `model.impulses` se lee y se acota a
+±0,6 pero nada lo escribe antes de la 47. Desvíos: (1) el término de crisis alimentaria es un desvío respecto del inicio,
+`−0,6·[sLow(F) − sLow(F₀)]` — el prototipo restaba `0,6·sLow(F)` a secas (−0,014 logit en F₀ = 35, así que E* ≠ E₀ sin
+políticas); corregido también en el prototipo y regenerado `golden_v2.csv`. (2) El crecimiento g del impulsor de E es la
+tasa anual de la economía 1.1 de este paso (`model.fiscal.growth`, arranca en `Tasa_Base_Crecimiento_PBI`). (3) Los
+pactos desplazan E* y Pc* con `PARAMS_V2.pacts.*.E` / `.Pc`: el +3 de estabilidad del Acuerdo de Carbono y los
+`impulses.economicSecurity` de 1.1 se borraron (los `impulses` de B y F siguen hasta 40/41). (4) Un choque sobre W o St
+(diferido) se escribe también en su stock (`Conflicto_social` / `Colapso_politico`) para que la relajación lo disipe.
+(5) Los términos de presiones de D_C y D_Pc leen las presiones 1.1, que se saturan en 0/100 (polarización 100): con
+`extractive` N2/N3 el colapso político llega a St ≤ 5 hacia el año 19 (el prototipo, con presiones ancladas, termina en
+St 55 / 47). Transitorio hasta la fase 42.
+
