@@ -9,6 +9,7 @@ Prototipo de referencia del modelo 2.0 (Python, sin dependencias). No lo importa
 |---|---|
 | `modelo_v2.py` | Prototipo ejecutable de todas las ecuaciones del modelo 2.0 (Python 3.10+, sin dependencias). Fuente de los parámetros y de los resultados del paper técnico. |
 | `golden_v2.csv` | Valores de referencia sin eventos (3 niveles × do_nothing/green/extractive × años 1, 10, 30). Los usa `tests/sim/golden.v2.spec.ts` desde la fase 46. |
+| `finance44_cases.py` / `.json` | Casos de referencia de la fase 44 (`economy_step` y `pay()` del prototipo) para `tests/sim/finance.v2.spec.ts`. `python scripts/reference/finance44_cases.py > scripts/reference/finance44_cases.json` |
 | `export_situations.ts` | Exporta el catálogo de situaciones de Territorio a `situations.json` (con `whenExpr`, la traducción de cada `when`), que el prototipo necesita para su parte de Territorio. `situations.json` está en `.gitignore`. |
 
 ```bash

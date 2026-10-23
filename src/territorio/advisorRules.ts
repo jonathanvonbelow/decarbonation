@@ -22,7 +22,7 @@
  */
 import { CONTROL_PARAMS } from '../constants';
 import { getPolicyName } from '../legacyContent/gameData';
-import { MONTHS_PER_YEAR, policyStatus, publicUseCost, PUBLIC_USES } from '../sim';
+import { canPayPublicInvestment, MONTHS_PER_YEAR, policyStatus, publicUseCost, PUBLIC_USES } from '../sim';
 import type { ControlParams, PolicyInstrument, PolicyState } from '../types';
 import { LandUseType } from '../types';
 import type { Language } from '../hooks/useLanguage';
@@ -100,12 +100,15 @@ export function cueFor(prev: Session, next: Session, CP: ControlParams = CONTROL
     }
   }
 
-  // 2. Bankruptcy approaching: the model's own two conditions, before either is met.
-  if (stella.Reservas_del_Tesoro < 0 && stella.Deuda > stella.PBI_Real) {
+  // 2. Bankruptcy approaching (phase 44): debt above 80 % of GDP, or already inside the bankruptcy rule (D/Y > 1 with
+  //    interest > 20 % of revenue), before its 24 months run out.
+  const dy = stella.PBI_Real > 0 ? stella.Deuda / stella.PBI_Real : 0;
+  const fiscal = next.game.model?.fiscal;
+  if (dy > 0.8 || (fiscal?.breachYears ?? 0) > 0) {
     return {
       id: `danger-debt-${Math.floor(next.monthIndex / 12)}`,
       key: 'danger.debt',
-      values: { debt: Math.round(stella.Deuda), reserves: Math.round(stella.Reservas_del_Tesoro) },
+      values: { dy: Math.round(dy * 100), ci: Math.round((fiscal?.interestBurden ?? 0) * 100) },
       tone: 'critical', priority: 3, surface: 'bubble', repeatable: true,
       anchor: ANCHOR.finance,
     };
@@ -209,9 +212,10 @@ export function cueFor(prev: Session, next: Session, CP: ControlParams = CONTROL
     }
   }
 
-  // 11. Never declared a public use, with money in the bank: the one direct lever he can point at.
+  // 11. Never declared a public use, with fiscal room for a few lots (phase 44: free reserves, then debt while D/Y <= 0.6):
+  //     the one direct lever he can point at.
   const cheapest = Math.min(...PUBLIC_USES.map((u) => publicUseCost(u, CP)));
-  if (next.declaredCount === 0 && next.monthIndex >= MONTHS_PER_YEAR * 2 && stella.Reservas_del_Tesoro > cheapest * 3) {
+  if (next.declaredCount === 0 && next.monthIndex >= MONTHS_PER_YEAR * 2 && canPayPublicInvestment(next.game, cheapest * 3)) {
     return { id: 'idle-declare', key: 'idle.declare', values: { cost: Math.round(cheapest) }, tone: 'normal', priority: 1, surface: 'bubble', anchor: ANCHOR.tools };
   }
 
@@ -253,6 +257,11 @@ export function territorioContext(s: Session, locale: Language = 'es'): string {
   L.push('');
   L.push('**Finanzas:**');
   L.push(`- Reservas del tesoro: ${Math.round(stella.Reservas_del_Tesoro)} | Deuda: ${Math.round(stella.Deuda)} | PBI real: ${Math.round(stella.PBI_Real)}`);
+  if (g.model?.fiscal) {
+    const f = g.model.fiscal;
+    L.push(`- Deuda/PBI: ${(stella.PBI_Real > 0 ? (100 * stella.Deuda) / stella.PBI_Real : 0).toFixed(0)}% | Saldo primario: ${(stella.PBI_Real > 0 ? (100 * f.primaryBalance) / stella.PBI_Real : 0).toFixed(1)}% del PBI | Intereses/recaudación: ${(100 * f.interestBurden).toFixed(0)}% | Estrés fiscal: ${f.stress.toFixed(2)}`);
+    L.push('- Reglas: las reservas no bajan del 2% del PBI (el déficit se paga con deuda); pactos, usos públicos y opciones pagas se pagan con reservas libres y luego con deuda mientras no pase el 60% del PBI; quiebra con deuda > 100% del PBI e intereses > 20% de la recaudación durante 24 meses.');
+  }
   L.push(`- Presión fiscal adicional: ${g.additionalTaxPressurePercentage}%`);
   L.push('');
   L.push(`**Uso del suelo (total ${Math.round(area)} kHa):**`);

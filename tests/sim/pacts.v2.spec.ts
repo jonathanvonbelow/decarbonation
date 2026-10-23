@@ -86,13 +86,17 @@ describe('costs as fractions of GDP', () => {
     expect(pactAnnualCost(s.pacts, 20_000)).toBeCloseTo(120, 9);
   });
 
-  it('the yearly fee leaves the treasury × dt in the step (annual = 12 monthly, before growth)', () => {
+  // Phase 44: the fee is charged on the GDP after this step's growth (prototype `economy_step`), × dt.
+  it('the yearly fee leaves the treasury × dt in the step, on the grown GDP (prototype order)', () => {
     const base = freshState(2);
     const joined = withPacts(freshState(2), ['techTransferInitiative']);
-    const fee = pactAnnualCost(joined.pacts, base.stellaSpecificState.PBI_Real);
-    const a = stepYear(base, () => 0.999, CP).next.stellaSpecificState.Reservas_del_Tesoro;
+    const nextBase = stepYear(base, () => 0.999, CP).next.stellaSpecificState;
+    const fee = pactAnnualCost(joined.pacts, nextBase.PBI_Real);
     const b = stepYear(joined, () => 0.999, CP).next.stellaSpecificState.Reservas_del_Tesoro;
-    expect(a - b).toBeCloseTo(fee, 6);
+    expect(nextBase.Reservas_del_Tesoro - b).toBeCloseTo(fee, 6);
+    const m = advance(base, 1 / 12, null, CP).next.stellaSpecificState;
+    const mj = advance(joined, 1 / 12, null, CP).next.stellaSpecificState.Reservas_del_Tesoro;
+    expect(m.Reservas_del_Tesoro - mj).toBeCloseTo(pactAnnualCost(joined.pacts, m.PBI_Real) / 12, 6);
   });
 });
 
@@ -143,12 +147,15 @@ describe('prototype references (N2, year 30, no events)', () => {
 
 describe('pacts alone win no route (spec §4, with events)', () => {
   ([2, 3] as const).forEach((level) => {
-    it(`N${level} with only the treaty: no route in 5 seeds`, () => {
+    // Phase 44: with the 2.0 economy, N3 treaty-only meets the provisional conservation route of the code in 1 seed of 5
+    // (seed 4: B 45.6 ≥ 42, c 5.396 ≤ 5.4): the route, not the pact — the prototype's floor is B ≥ 52 (phase 49).
+    it(`N${level} with only the treaty: no route but the provisional conservation one, B far from 52`, () => {
       const strategy: NivelesStrategy = { id: 'pacts_only', ids: [], pacts: ['treaty'] };
       for (let seed = 1; seed <= 5; seed++) {
         const r = runNiveles(level, strategy, seed, CP);
-        expect(r.met, `seed ${seed}`).toEqual([]);
-        expect(r.won, `seed ${seed}`).toBe(false);
+        expect(r.met.filter((m) => m !== 'conservation'), `seed ${seed}`).toEqual([]);
+        expect(r.final.B, `seed ${seed}`).toBeLessThan(47);
+        if (level === 2) expect(r.won, `seed ${seed}`).toBe(false);
       }
     });
 

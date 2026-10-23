@@ -90,7 +90,7 @@ export const INITIAL_POLICY_INSTRUMENTS: Record<Policy, Record<string, PolicyIns
 
 /**
  * Model 2.0 (phase 36): a policy's ramp, fatigue and cost come from PARAMS_V2 (rampYears, fatigueYears,
- * and the cost scale of `costShareOf` — costShareBridge until phase 44, then costShare; src/sim/v2/params.ts); `currentEfficiency` stores the base efficiency the engine computed on
+ * and the cost scale κ of `costShareOf` — PARAMS_V2.costShare since phase 44; src/sim/v2/params.ts); `currentEfficiency` stores the base efficiency the engine computed on
  * the last step (0 while inactive). costFactor / initialEfficiency / efficiencyDecayDuration / stellaName
  * and the Tiempo_Activacion_* / Conteo_* stocks were deleted (src/sim/v2/policies.ts).
  */
@@ -382,7 +382,7 @@ export const CONTROL_PARAMS: ControlParams = {
   // Fase 39: EcoSec_Reduction_Factor_Per_Tax_Point (0,25) y SocialConflict_Increase_Factor_Per_Tax_Point (0,08)
   // se borraron; el impuesto adicional τ entra en los objetivos de E (−0,04·τ) y de C (+0,03·τ) en todos los
   // niveles (PARAMS_V2.relaxation).
-  PBIGrowth_Reduction_Factor_Per_Tax_Point: 0.0002,
+  // Fase 44: PBIGrowth_Reduction_Factor_Per_Tax_Point (0,0002) pasó a PARAMS_V2.finance.growthTaxDrag (spec 44 §2).
 
   // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Un lote declarado son 5 kHa (LOT_KHA,
   // 50 parcelas de 0,1 kHa del mapa; src/sim/territory.ts), así que proteger un lote
@@ -394,7 +394,8 @@ export const CONTROL_PARAMS: ControlParams = {
   Costo_Humedal_Publico_por_kHa: 45,
   Costo_Parque_Energetico_por_kHa: 80,
   // Vista previa Territorio: lo declarado se mantiene (guardaparques, vivero, obra, operación).
-  // Sólo lo lee stepMonth con `publicUseUpkeep`; el juego de 3 niveles nunca lo aplica.
+  // Sólo lo lee stepMonth con `publicUseUpkeep`; el juego de 3 niveles nunca lo aplica. Desde la fase 44 entra en el
+  // saldo primario (K de src/sim/v2/finance.ts), como en el prototipo (`upkeep = 0.8·(BNP declarado + HUM + RES + ENR)`).
   Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: 0.8,
   // (Impulso_PP_Agricola_por_kHa_Convertida, 0,08, se borró en la fase 42: sacar tierra de producción tensiona al
   // gremio a través del término 4,0·(a_prod,0 − a_prod) del objetivo de la presión agrícola.)
@@ -418,7 +419,7 @@ export const CONTROL_PARAMS: ControlParams = {
   Velocidad_Ajuste_Presiones: 0.35,       // k_pi (fase 42). Criterio experto
   Eficiencia_Minima_Politicas: 0.35,      // piso institucional de la eficiencia con fatiga, 0-1 (fase 36). Criterio experto
   Recuperacion_Politicas_Anios: 5,        // años; constante de recuperación del desgaste en reposo (fase 36). Criterio experto
-  // Gasto público base, fracción del PBI por año (fase 44). ATENCIÓN: es el parámetro más sensible del
+  // Gasto público base γ_N, fracción del PBI por año (fase 44; src/sim/v2/finance.ts, prototipo `gamma`). ATENCIÓN: es el parámetro más sensible del
   // modelo (paper técnico §9): +20 % deja a la cartera verde con −14 puntos de seguridad económica en N2.
   // No moverlo sin correr `npm run sim:check` completo.
   Gasto_Publico_Base_Nivel_1: 0.13,

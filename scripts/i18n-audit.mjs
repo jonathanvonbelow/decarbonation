@@ -65,7 +65,7 @@ const CAPA_B_C_VERIFIED_BILINGUAL = [
   // pattern-matched internally and sent to Gemini as context, where Capa C's own guidance says
   // Spanish is fine -- see that file's own comment just above where they're set.
   'src/components/equations/descriptions.ts',
-  'src/sim/economy.ts',
+  'src/sim/v2/finance.ts', // phase 44: the bilingual loan log moved here from src/sim/economy.ts (deleted)
   'src/sim/events.ts',
   'src/sim/index.ts',
   'src/sim/policies.ts',

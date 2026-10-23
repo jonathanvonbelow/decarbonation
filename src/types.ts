@@ -395,7 +395,7 @@ export interface ControlParams {
 
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: number; // e.g., 20 for 20%
-  PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
+  // PBIGrowth_Reduction_Factor_Per_Tax_Point: moved to PARAMS_V2.finance.growthTaxDrag (phase 44).
 
   // Territorio preview (mejora-general/files/21_fusion_ecosim.md §5): one-time costs, paid from
   // Reservas_del_Tesoro, of declaring each public use, per kHa.

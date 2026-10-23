@@ -11,7 +11,7 @@ import { logit, sigmoid } from '../../src/sim/v2/math';
 import { PARAMS_V2, PIDS, type Pid } from '../../src/sim/v2/params';
 import type { PolicyEfficiency } from '../../src/sim/v2/policies';
 import {
-  capImpulses, driveC, fiscalStressOf, impulseSum, interestBurdenOf, productiveValue, stepIndicator, targetC, targetE, targetPc,
+  capImpulses, driveC, impulseSum, productiveValue, stepIndicator, targetC, targetE, targetPc,
   updateRelaxedIndicators, type IndicatorState,
 } from '../../src/sim/v2/indicators';
 import { LandUseType, Policy, type GameState } from '../../src/types';
@@ -152,17 +152,7 @@ describe('exact relaxation', () => {
   });
 });
 
-describe('fiscal stress bridge and k bounds', () => {
-  it('φ = sHigh(interest / revenue; 0.20, 0.04) with the risk premium over D/Y = 0.6 (prototype economy_step)', () => {
-    // N3 start: D = 5000, Y = 12 000 → 12 240, i = 0.045, revenue 15 % of Y.
-    const b = interestBurdenOf(5000, 12000, 12240, 0, 3, CP);
-    expect(b).toBeCloseTo((0.045 * 5000) / (12240 * 0.15), 12);
-    expect(fiscalStressOf(b)).toBeCloseTo(1 / (1 + Math.exp(-(b - 0.2) / 0.04)), 12);
-    // D/Y = 1: premium 0.05·0.4 = 0.02.
-    expect(interestBurdenOf(10000, 10000, 10000, 0, 2, CP)).toBeCloseTo(((0.035 + 0.02) * 10000) / 1500, 12);
-    expect(fiscalStressOf(interestBurdenOf(0, 10000, 10200, 0, 2, CP))).toBe(0);
-  });
-
+describe('fiscal stress and k bounds (φ itself: tests/sim/finance.v2.spec.ts, phase 44)', () => {
   it('a heavier debt lowers E* and raises C* and Pc*', () => {
     const s = asModel(freshState(2));
     const none = eff({});

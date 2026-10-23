@@ -6,13 +6,15 @@
  * Player actions mirror what App.tsx lets a player do, not what the prototype does:
  *   - a policy is switched on like `togglePolicy` (isActive + its base efficiency from the clocks; at most
  *     MAX_ACTIVE_POLICIES), with instrument effort set like the instrument panel;
- *   - a pact is joined like `togglePact`: only once `year ≥ unlockYear`, paying entry·GDP (phase 43) from
- *     reserves and only if reserves cover it (the prototype's `play_level` debits entry·Y unconditionally: its
- *     reserves may go below zero, and its automatic financing turns that into debt);
+ *   - a pact is joined like `togglePact`: only once `year ≥ unlockYear`, paying entry·GDP (phase 43) as a public
+ *     investment (phase 44, `payPublicInvestment`: reserves above the floor, then debt while D/Y ≤ 0.6). The
+ *     prototype's `play_level` debits entry·Y from the reserves unconditionally and lets the next step's automatic
+ *     financing turn the shortfall into debt: the same money, except that it never refuses above D/Y = 0.6;
  *   - the level-3 extra tax is `additionalTaxPressurePercentage`.
  * Events are drawn with `makeRng(seed, year)`, so a (strategy, level, seed) run is reproducible.
  */
 import { pactEntryCost } from '../../src/sim/v2/pacts';
+import { payPublicInvestment } from '../../src/sim/v2/finance';
 import { CONTROL_PARAMS, INITIAL_YEAR, MAX_ACTIVE_POLICIES, YEARS_PER_LEVEL } from '../../src/constants';
 import { baseEfficiency, createInitialState, evaluateLevel, fatigueFactor, gameOverKind, makeRng, stepMonth, stepYear, type Rng } from '../../src/sim';
 import type { ControlParams, GameState, PolicyInstrument, PolicyState } from '../../src/types';
@@ -83,9 +85,11 @@ export function joinPacts(state: GameState, strategy: NivelesStrategy, level: nu
     const pact = state.pacts[PACT_BY_CODE[code]];
     if (!pact || pact.isActive || state.year < (pact.unlockYear ?? 0)) return;
     const cost = pactEntryCost(pact.id, state.stellaSpecificState.PBI_Real);
-    if (state.stellaSpecificState.Reservas_del_Tesoro < cost) return;
+    const paid = payPublicInvestment(state, cost);
+    if (!paid.ok) return;
     pact.isActive = true;
-    state.stellaSpecificState.Reservas_del_Tesoro -= cost;
+    state.stellaSpecificState = paid.state.stellaSpecificState;
+    state.indicators = paid.state.indicators;
   });
 }
 

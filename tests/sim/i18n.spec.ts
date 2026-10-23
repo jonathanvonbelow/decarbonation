@@ -6,7 +6,8 @@
  * src/sim/index.ts's own comment and docs/DESIGN_DECISIONS_LOG.md).
  */
 import { describe, expect, it } from 'vitest';
-import { stepYear, updateEconomy, checkEfficiencyWarning } from '../../src/sim';
+import { stepYear, checkEfficiencyWarning } from '../../src/sim';
+import { loanLog } from '../../src/sim/v2/finance';
 import { Policy } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 import { CONTROL_PARAMS } from '../../src/constants';
@@ -36,19 +37,20 @@ describe('stepYear language param', () => {
   });
 });
 
-describe('updateEconomy language param', () => {
+describe('loan log language (phase 44: the finance step of advance)', () => {
   it('translates the loan-processed log line', () => {
     const state = freshState(1);
-    const es = updateEconomy(state.stellaSpecificState, state.policies, 1, 0, 0, 0, 500, CONTROL_PARAMS, 'es');
-    const en = updateEconomy(state.stellaSpecificState, state.policies, 1, 0, 0, 0, 500, CONTROL_PARAMS, 'en');
-    expect(es.loanProcessedLog).toContain('Préstamo de 500');
-    expect(en.loanProcessedLog).toContain('Loan of 500');
+    state.loanRequestedThisRound = 500;
+    const es = stepYear(state, noEventRng, CONTROL_PARAMS, 'es');
+    const en = stepYear(state, noEventRng, CONTROL_PARAMS, 'en');
+    expect(es.logs.some((l) => l.includes('Préstamo de 500'))).toBe(true);
+    expect(en.logs.some((l) => l.includes('Loan of 500'))).toBe(true);
+    expect(loanLog(500, 'en')).toBe('Loan of 500 processed. Debt and Reserves updated.');
   });
 
-  it('returns null (no log) when no loan was requested, regardless of language', () => {
-    const state = freshState(1);
-    const en = updateEconomy(state.stellaSpecificState, state.policies, 1, 0, 0, 0, 0, CONTROL_PARAMS, 'en');
-    expect(en.loanProcessedLog).toBeNull();
+  it('logs nothing about a loan when none was requested, regardless of language', () => {
+    const { logs } = stepYear(freshState(1), noEventRng, CONTROL_PARAMS, 'en');
+    expect(logs.some((l) => l.includes('Loan of'))).toBe(false);
   });
 });
 

@@ -102,7 +102,7 @@ const SLIDES_ES = [
         <p className="mb-4">Tu nación juega en las grandes ligas. La gestión financiera es tan importante como la ambiental.</p>
         <ul className="list-none space-y-3 text-sm">
           <li><strong className="text-green-300 block">🤝 Pactos Internacionales:</strong> Analizá costos y beneficios a largo plazo antes de unirte.</li>
-          <li><strong className="text-yellow-300 block">💰 Préstamos:</strong> Inyección de capital rápida con costo a largo plazo. Ideal para inversión estratégica.</li>
+          <li><strong className="text-yellow-300 block">💰 Préstamos y deuda:</strong> El Estado ya gasta casi todo lo que recauda: con pocas políticas sobra un 2–2,5 % del PBI. Si gastás más, las reservas bajan hasta un piso (2 % del PBI) y el resto se paga solo con deuda; la deuda cobra intereses que suben si pasa el 60 % del PBI y, si los intereses se comen la recaudación, frenan la economía. Un préstamo (hasta 10 % del PBI por año) adelanta plata para invertir. Con deuda por encima del 100 % del PBI e intereses por encima del 20 % de la recaudación durante dos años, la nación quiebra.</li>
           <li><strong className="text-red-300 block">📊 Presión Fiscal Adicional:</strong> Aumenta ingresos pero reduce bienestar y crecimiento. Herramienta de doble filo.</li>
         </ul>
         <div className="mt-4 p-4 bg-gray-700 rounded-lg">
@@ -250,7 +250,7 @@ const SLIDES_EN = [
         <p className="mb-4">Your nation now plays in the big leagues. Financial management is as important as environmental management.</p>
         <ul className="list-none space-y-3 text-sm">
           <li><strong className="text-green-300 block">🤝 International Pacts:</strong> Analyze long-term costs and benefits before joining. Pacts grant passive annual effects on your indicators.</li>
-          <li><strong className="text-yellow-300 block">💰 Loans:</strong> Quick capital injection with long-term cost. Ideal for strategic investment, dangerous for covering recurring deficits.</li>
+          <li><strong className="text-yellow-300 block">💰 Loans and debt:</strong> The state already spends almost everything it collects: with few policies, 2–2.5 % of GDP is left over. Spend more and the reserves fall to a floor (2 % of GDP) and the rest is paid with debt automatically; debt charges interest that rises above 60 % of GDP and, once interest eats into revenue, slows the economy. A loan (up to 10 % of GDP a year) brings money forward to invest. With debt above 100 % of GDP and interest above 20 % of revenue for two years, the nation goes bankrupt.</li>
           <li><strong className="text-red-300 block">📊 Additional Tax Pressure:</strong> Increases annual income but reduces economic security, social wellbeing, and GDP growth. A double-edged tool.</li>
         </ul>
         <div className="mt-4 p-4 bg-gray-700 rounded-lg">

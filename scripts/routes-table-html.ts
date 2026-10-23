@@ -10,7 +10,7 @@ import { TERRITORIO_FLOORS, TERRITORIO_ROUTES } from '../src/territorio/routes';
 type Dict = Record<string, unknown>;
 const get = (dict: Dict, key: string): string =>
   key.split('.').reduce<unknown>((acc, part) => (acc as Dict | undefined)?.[part], dict) as string;
-const PCT = new Set(['cond.nativeForest', 'cond.publicNature', 'cond.energyPark', 'cond.treasuryPct']);
+const PCT = new Set(['cond.nativeForest', 'cond.publicNature', 'cond.energyPark', 'cond.treasuryPct', 'cond.primaryAvg']);
 
 function cond(c: { labelKey: string; target: number; dir: 'min' | 'max' }, dict: Dict): string {
   const label = get(dict, c.labelKey);

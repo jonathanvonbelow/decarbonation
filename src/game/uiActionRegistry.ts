@@ -12,6 +12,7 @@
  */
 import { z } from 'zod';
 import { pactEntryCost } from '../sim/v2/pacts';
+import { canPayPublicInvestment } from '../sim/v2/finance';
 import { Policy, type GameState, type PolicyInstrument, type PolicyState } from '../types';
 import { tFor } from '../i18n';
 import type { Locale } from '../i18n/types';
@@ -413,8 +414,9 @@ const togglePact: ActionDef = {
     if (!pact) return tFor(locale, 'agent.errors.unknownPact', { id: pactId });
     if (!pact.isActive && state.year < (pact.unlockYear || 0)) return tFor(locale, 'agent.errors.pactNotUnlocked', { name: pact.name, year: pact.unlockYear });
     const costToJoin = pactEntryCost(pactId, state.stellaSpecificState.PBI_Real);
-    if (!pact.isActive && costToJoin > 0 && state.stellaSpecificState.Reservas_del_Tesoro < costToJoin) {
-      return tFor(locale, 'agent.errors.insufficientFunds', { name: pact.name });
+    // Phase 44: same rule as App.tsx togglePact (public investment: free reserves, then debt while D/Y ≤ 0.6).
+    if (!pact.isActive && costToJoin > 0 && !canPayPublicInvestment(state, costToJoin)) {
+      return tFor(locale, 'agent.errors.noFiscalSpace', { name: pact.name });
     }
     return null;
   },

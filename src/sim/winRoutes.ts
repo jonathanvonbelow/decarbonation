@@ -166,7 +166,8 @@ const nativeForestPct = (s: GameState): number => {
   return (forest / total) * 100;
 };
 
-const debtToPbiRatio = (s: GameState): number =>
+/** D/Y; Infinity without GDP (a route bounded above fails). Shared with Territorio's routes (phase 44). */
+export const debtToPbiRatio = (s: Pick<GameState, 'stellaSpecificState'>): number =>
   s.stellaSpecificState.PBI_Real > 0 ? s.stellaSpecificState.Deuda / s.stellaSpecificState.PBI_Real : Infinity;
 
 const activePactsCount = (s: GameState): number => Object.values(s.pacts).filter((p) => p.isActive).length;
@@ -205,7 +206,9 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
     floors: [
       { labelKey: 'routes.floor.biodiversity', read: (s) => s.indicators.biodiversity, target: 20, dir: 'min' },
       { labelKey: 'routes.floor.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 15, dir: 'min' },
-      { labelKey: 'routes.floor.treasury', read: (s) => s.stellaSpecificState.Reservas_del_Tesoro, target: -200, dir: 'min' },
+      // Phase 44: reserves never go below 0.02·GDP any more (the deficit becomes debt), so the 1.1 floor "reserves ≥ −200"
+      // always held; replaced by the prototype's ROUTES3 N1 floor D/Y ≤ 0.8.
+      { labelKey: 'routes.floor.debtRatio', read: debtToPbiRatio, target: 0.8, dir: 'max' },
     ],
     routes: [
       {

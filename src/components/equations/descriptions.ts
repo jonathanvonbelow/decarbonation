@@ -158,8 +158,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "Annual share of the way the three sectoral pressures (agricultural, environmentalist, social) move toward their S-shaped target (0.35: about 3 years for two thirds).",
   },
   Tasa_de_interes_Nivel_1: {
-    es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 1.",
-    en: "Annual interest rate applied to total debt in Level 1.",
+    es: "Tasa de interés anual base sobre la deuda total en el Nivel 1. Desde la fase 44 se le suma una prima de riesgo de 0,05 por cada punto de deuda/PBI por encima de 0,6.",
+    en: "Base annual interest rate on total debt in Level 1. Since phase 44 a risk premium of 0.05 per point of debt/GDP above 0.6 is added.",
   },
   Tasa_de_interes_Nivel_2: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 2.",
@@ -168,6 +168,18 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Tasa_de_interes_Nivel_3: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 3.",
     en: "Annual interest rate applied to total debt in Level 3.",
+  },
+  Gasto_Publico_Base_Nivel_1: {
+    es: "Gasto público base del Nivel 1 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,13 deja 2 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
+    en: "Base public spending of Level 1 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.13 leaves 2 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
+  },
+  Gasto_Publico_Base_Nivel_2: {
+    es: "Gasto público base del Nivel 2 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,125 deja 2,5 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
+    en: "Base public spending of Level 2 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.125 leaves 2.5 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
+  },
+  Gasto_Publico_Base_Nivel_3: {
+    es: "Gasto público base del Nivel 3 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,125 deja 2,5 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
+    en: "Base public spending of Level 3 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.125 leaves 2.5 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
   },
   Tasa_de_BNNP_a_BNP_Base: {
     es: "Tasa de conversión anual base de Bosque Nativo No Protegido a Bosque Nativo Protegido.",
@@ -188,9 +200,5 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Max_Additional_Tax_Rate_Percentage: {
     es: "La tasa impositiva adicional máxima que el jugador puede aplicar en el Nivel 3.",
     en: "The maximum additional tax rate the player can apply in Level 3.",
-  },
-  PBIGrowth_Reduction_Factor_Per_Tax_Point: {
-    es: "Reducción en la tasa de crecimiento del PBI por cada punto porcentual de impuesto adicional aplicado.",
-    en: "Reduction in GDP growth rate per percentage point of additional tax applied.",
   },
 };

@@ -13,7 +13,7 @@
  */
 import type { GameState } from '../types';
 import { LandUseType, Policy } from '../types';
-import { carbonTechEffort, declaredProtectedOf, evaluateRoute, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
+import { carbonTechEffort, debtToPbiRatio, declaredProtectedOf, evaluateRoute, primaryBalanceAverage, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
 
 const totalArea = (s: GameState) => (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
 
@@ -32,9 +32,8 @@ export const publicNaturePct = (s: GameState) =>
 
 const energyParkPct = (s: GameState) => (s.landUses[LandUseType.EnergyPark].area / totalArea(s)) * 100;
 
-/** Treasury as a share of real GDP: money kept relative to the size of the economy. */
-const treasuryPctOfGdp = (s: GameState) =>
-  (s.stellaSpecificState.Reservas_del_Tesoro / Math.max(1, s.stellaSpecificState.PBI_Real)) * 100;
+/** Mean primary balance of the last 5 years, % of GDP (phase 44, `model.fiscal.primaryHistory`). */
+const primaryAvgPct = (s: GameState) => 100 * primaryBalanceAverage(s.model?.fiscal.primaryHistory ?? []);
 
 /** Any of the productive policy families actually switched on. */
 const productivePolicyActive = (s: GameState) => {
@@ -84,9 +83,12 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
       { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
       // Producing is a decision, not a leftover: some productive family has to be governing.
       { labelKey: 'cond.productivePolicy', read: productivePolicyActive, target: 1, dir: 'min' },
-      // Relative to the economy, not a fixed 1.000: with a treasury that grows with GDP, a fixed
-      // target was met by doing nothing at all (decisión del usuario, 2026-09-19).
-      { labelKey: 'cond.treasuryPct', read: treasuryPctOfGdp, target: 8, dir: 'min' },
+      // Phase 44: with base public spending the reserves sit near their floor (2 % of GDP) and the deficit becomes debt,
+      // so "reserves ≥ 8 % of GDP" became unreachable (production 30 % → 0 %). Replaced by the prototype's fiscal
+      // conditions of the route (TERR_ROUTES): a non-negative 5-year primary balance and D/Y ≤ 0.6. The rest of the
+      // route (F, E thresholds, productive years) is phase 49's recalibration.
+      { labelKey: 'cond.primaryAvg', read: primaryAvgPct, target: 0, dir: 'min' },
+      { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 0.6, dir: 'max' },
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
     ],
   },

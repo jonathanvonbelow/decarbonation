@@ -18,7 +18,8 @@
  * indicators E, C (W) and Pc (St) of step 8 with exact relaxation toward anchored logistic targets
  * (src/sim/v2/indicators.ts); phase 40 does the same for B (species-area, src/sim/v2/biodiversity.ts) and phase 41
  * for F (supply/demand balance, src/sim/v2/food.ts) and phase 42 for the three sectoral pressures (src/sim/v2/pressures.ts).
- * Each later phase replaces
+ * Phase 44 replaces step 6 (public finance with base spending, automatic debt, fiscal stress and bankruptcy,
+ * src/sim/v2/finance.ts; the 1.1 economy is gone). Each later phase replaces
  * one step with its 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
@@ -34,20 +35,18 @@
  *
  * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
  *  0 population (2.0 step 1, phase 38), 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event
- *  roll, 3 policy efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact
- *  costs (fraction of GDP, phase 43), 5 pact land factors (phase 43: pacts are data), 6 land use (2.0 step 5, phase 37), 7 finances, 7.5 carbon (2.0 step 7, phase 38;
+ *  roll, 3 policy efficiency per channel (2.0 step 4, phase 36), [4 costs: inside step 7 since phase 44], 5 pact land
+ *  factors (phase 43: pacts are data), 6 land use (2.0 step 5, phase 37), 7 public finance (2.0 step 6, phase 44), 7.5 carbon (2.0 step 7, phase 38;
  *  was step 9 of 1.1), 8 indicators B -> F -> E -> C -> Pc, 10 pressures, 11 sync + clamp, 11.5 deferred
  *  event effects, 12 score, 13 game over, 14 fatigue warning (phase 36).
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
- *  - the 1.1 stocks (money) move by Euler `x + (F(x) − x)·dt` toward the value the annual equation gives
- *    (`toward`); with dt = 1 the annual value is taken as is (44, 46); E, C, Pc relax exactly since phase 39,
- *    B since phase 40, F since phase 41, the pressures since phase 42;
+ *  - (gone in phase 44: the money stocks no longer move by the 1.1 Euler `toward`; public finance has one body for
+ *    every dt, src/sim/v2/finance.ts; E, C, Pc relax exactly since phase 39, B since 40, F since 41, pressures since 42);
  *  - event roll: dt = 1 uses the yearly draw (`rollEvent`, at most one event, level-3 weighting),
  *    dt < 1 the monthly Bernoulli walk (`rollMonthlyEvent`) (46);
- *  - a requested loan: dt = 1 goes through `updateEconomy` (its 1.1 order), dt < 1 is credited whole
- *    after the monthly flows (44);
+ *  - (gone in phase 44: a requested loan is credited whole by the finance step for every dt, before the reserve floor);
  *  - calendar: dt = 1 simulates year `state.year + 1` (the year advances first, the 1.1 convention);
  *    dt < 1 simulates month `opts.month` of `state.year` and advances the year after December (46).
  *
@@ -62,20 +61,20 @@ import { getEventDescription, getEventName, getPolicyName } from '../../legacyCo
 import { updateEnergyState, computeEmissions } from './carbon';
 import { createModelState } from './anchors';
 import { applyDeferredAdjustments, type DeferredAdjustment } from '../deferred';
-import { updateEconomy } from '../economy';
-import { pactAnnualCost, pactLandFactors } from './pacts';
+import { loanLog, stepFinance } from './finance';
+import { pactLandFactors } from './pacts';
 import { applyRandomEventEffects, rollEvent } from '../events';
 import { evaluateGameOver } from '../gameOver';
 import { updateBiodiversity, type Connectivity } from './biodiversity';
 import { updateFoodSecurity } from './food';
-import { fiscalStressOf, interestBurdenOf, updateRelaxedIndicators } from './indicators';
+import { updateRelaxedIndicators } from './indicators';
 import {
   applyLandFlows, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
   type TransitionFlow,
 } from './land';
 import { checkEfficiencyWarning } from '../policies';
 import { updatePressures } from './pressures';
-import { computeEfficiencies, policyCost, tickPolicyClocks, type PolicyEfficiency } from './policies';
+import { computeEfficiencies, tickPolicyClocks, type PolicyEfficiency } from './policies';
 import type { Pid } from './params';
 import type { Rng } from '../rng';
 import { computeScore } from '../score';
@@ -91,13 +90,6 @@ const NO_EVENTS: Rng = () => 0.999;
 
 /** Starting population of model 1.0/1.1 (before phase 38), only to re-anchor an old saved state. */
 const LEGACY_POPULATION = 10_000_000;
-
-/**
- * Model-1.1 move of a stock toward the value its annual equation gives: the annual value itself for
- * dt = 1 (bit-identical to the old stepYear), one Euler step of size dt otherwise (the old stepMonth).
- */
-const toward = (current: number, annualValue: number, dt: number): number =>
-  (dt === 1 ? annualValue : current + (annualValue - current) * dt);
 
 const clamp100 = (n: number): number => Math.max(0, Math.min(100, n));
 
@@ -244,7 +236,6 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   }
   const currentYear = next.year;
   const currentLevel = next.currentLevel;
-  const tax = next.additionalTaxPressurePercentage;
 
   // A state built before phase 35 has no 2.0 sub-state: anchor it here (the carbon of phase 38 needs it).
   if (!next.model) next.model = createModelState(next, CP);
@@ -299,10 +290,7 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const eff: Record<Pid, PolicyEfficiency> = computeEfficiencies(next.policies, currentLevel, CP);
   const stella: StellaStocks = next.stellaSpecificState;
 
-  // 4. Annual costs (policy + pacts), on PBI_Real before this step's growth (× dt in step 7). Policy
-  //    cost by effort, κ·Y·(0.3 + 0.7·ē) (phase 36); pacts annual·Y (phase 43, src/sim/v2/pacts.ts).
-  const totalPolicyCost = policyCost(next.policies, stella.PBI_Real);
-  const totalPactCost = pactAnnualCost(next.pacts, stella.PBI_Real);
+  // 4. (Phase 44: the policy and pact costs are tallied inside the finance step 7, src/sim/v2/finance.ts.)
 
   // 5. Pacts (phase 43): data, not functions. While active they shift the targets of B, E and Pc (step 8), the energy
   //    targets (step 7.5) and the frontier flows of the land matrix (here: protectFactor / deforestFactor).
@@ -324,50 +312,23 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     }
   }
 
-  // 7. Public finances: the annual flows × dt. A requested loan: annual step inside updateEconomy (1.1
-  //    order), monthly step credited whole after the flows.
-  const loanInEconomy = annual ? next.loanRequestedThisRound : 0;
-  const gdpBefore = stella.PBI_Real;
-  const debtBefore = stella.Deuda;
-  const econ = updateEconomy(stella, next.policies, currentLevel, tax, totalPolicyCost, totalPactCost, loanInEconomy, CP, language);
-  if (annual) {
-    // The old stepYear merge: every stock updateEconomy returns, as is.
-    Object.assign(stella, econ.stella);
-  } else {
-    stella.PBI_Real = toward(stella.PBI_Real, econ.stella.PBI_Real, dt);
-    stella.Reservas_del_Tesoro = toward(stella.Reservas_del_Tesoro, econ.stella.Reservas_del_Tesoro, dt);
-    stella.Deuda = Math.max(0, toward(stella.Deuda, econ.stella.Deuda, dt));
-  }
-  // Annual GDP growth rate of this step (the 1.1 economy gives the annual value for both dt): the growth
-  // driver of E* (phase 39) until phase 44 ports the 2.0 economy.
-  model.fiscal.growth = gdpBefore > 0 ? econ.stella.PBI_Real / gdpBefore - 1 : CP.Tasa_Base_Crecimiento_PBI;
-  // Fiscal stress φ = sHigh(interest / tax revenue; 0.20, 0.04), the prototype's `economy_step` evaluated on the
-  // 1.1 stocks (bridge of phase 39 until phase 44 ports the 2.0 economy): the debt weighs on E, C and Pc.
-  model.fiscal.interestBurden = interestBurdenOf(debtBefore, gdpBefore, econ.stella.PBI_Real, tax, currentLevel, CP);
-  model.fiscal.stress = fiscalStressOf(model.fiscal.interestBurden);
-  if (econ.loanProcessedLog) {
-    logs.push(econ.loanProcessedLog);
-    next.loanRequestedThisRound = 0;
-  }
+  // 7 (2.0 step 6). Public finances (phase 44, src/sim/v2/finance.ts): growth with the fiscal stress of the previous
+  //    step, revenue, base public spending γ_N·Y', policy costs (on the GDP before growth, as the prototype) + pact fees
+  //    (on Y') + upkeep of the public uses (Territorio: what the state protects it also maintains — only the forest the
+  //    state declared, T-07 — plus wetland, restoration and energy parks), interest with risk premium, amortisation, the
+  //    voluntary loan, and the reserve floor 0.02·Y' financed with automatic debt. Same body for every dt.
   let upkeep = 0;
+  let annualUpkeep = 0;
   if (opts.publicUseUpkeep) {
-    // What the state protects, it also maintains: only the forest the state declared (T-07).
     const publicArea = declaredProtectedOf(next)
       + next.landUses[LandUseType.PublicWetland].area
       + next.landUses[LandUseType.RestorationForest].area
       + next.landUses[LandUseType.EnergyPark].area;
-    upkeep = publicArea * CP.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual * dt;
-    stella.Reservas_del_Tesoro -= upkeep;
+    annualUpkeep = publicArea * CP.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual;
+    upkeep = annualUpkeep * dt;
   }
-  if (!annual && next.loanRequestedThisRound > 0) {
-    const loan = next.loanRequestedThisRound;
-    stella.Reservas_del_Tesoro += loan;
-    stella.Deuda += loan;
-    logs.push(language === 'en'
-      ? `Loan of ${loan.toFixed(0)} processed. Debt and Reserves updated.`
-      : `Préstamo de ${loan.toFixed(0)} procesado. Deuda y Reservas actualizadas.`);
-    next.loanRequestedThisRound = 0;
-  }
+  const fin = stepFinance(next as GameState & { model: typeof model }, eff, dt, CP, annualUpkeep);
+  if (fin.loan > 0) logs.push(loanLog(fin.loan, language));
 
   // 7.5 (2.0 step 7). Carbon in physical units (phase 38, src/sim/v2/carbon.ts): renewables and efficiency move
   //    toward their targets with inertia, then energy + AFOLU flux + LUC from this step's realised flows (÷ dt,

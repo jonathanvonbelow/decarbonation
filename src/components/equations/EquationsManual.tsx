@@ -266,10 +266,16 @@ Objetivo:  π* = 100 · σ( logit(π₀/100) + D_π )      Dinámica:  π ← π
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_ECONOMY')}>Economía</SubSectionTitle>
             <p className="text-sm mb-2">Modela la salud financiera de la nación, que es crucial para poder financiar políticas y mantener la estabilidad.</p>
-            <Formula>ΔPBI = <Param>PBI_Actual</Param> * (<Param>TasaBase</Param> + Σ(<Param>Efectos Políticas</Param>))
-ΔReservas = <Param>Ingresos</Param> - <Param>Egresos</Param></Formula>
-            <p className="text-sm"><Code>Ingresos</Code> = Impuestos sobre PBI (con tasa base + tasa adicional en N3) + Préstamos solicitados.</p>
-            <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (<Code>κ · PBI · (0,3 + 0,7 · esfuerzo)</Code>) + Costos Anuales de Pactos (fracción del PBI: {pactPcts('annual')}; la adhesión, {pactPcts('entry')}) + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
+            <Formula>{`g   = ${CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI} + ${PARAMS_V2.finance.growthPIE}·η_PIE + ${PARAMS_V2.finance.growthPEA}·η_PEA − ${PARAMS_V2.finance.growthTaxDrag}·τ − ${PARAMS_V2.finance.growthStress}·φ        Y' = Y·(1 + g·dt)
+T   = Y'·(${CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI} + τ/100) + ${PARAMS_V2.finance.carbonTaxRevenue}·Y'·η_CN^imp          G₀ = γ_N·Y'   (γ = ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_1} / ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_2} / ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_3})
+K   = Σ κ·Y·(0,3 + 0,7·esfuerzo) + Σ cuota_pacto·Y' + mantenimiento de usos públicos (Territorio)
+SP  = T − G₀ − K                                     saldo primario
+i   = i_N + ${PARAMS_V2.finance.riskPremium}·max(0, D/Y − ${PARAMS_V2.finance.debtThreshold})        Int = i·D     Am = α_N·D
+R'  = R + (SP − Int − Am)·dt + préstamo      D' = D − Am·dt + préstamo
+si R' < ${PARAMS_V2.finance.reserveFloor}·Y':  D' += ${PARAMS_V2.finance.reserveFloor}·Y' − R',  R' = ${PARAMS_V2.finance.reserveFloor}·Y'      (el déficit se financia con deuda)
+φ   = sHigh(Int / T; ${PARAMS_V2.finance.stressMid}, ${PARAMS_V2.finance.stressWidth})
+Quiebra: D/Y > ${PARAMS_V2.finance.bankruptcyDebtRatio} e Int/T > ${PARAMS_V2.finance.bankruptcyInterestBurden} durante ${PARAMS_V2.finance.bankruptcyYears} años seguidos (24 meses en Territorio)`}</Formula>
+            <p className="text-sm">Cuotas anuales de los pactos: {pactPcts('annual')} del PBI; la adhesión ({pactPcts('entry')}) es inversión pública, como declarar un uso público o una opción paga de una situación: se paga con las reservas por encima del piso y el resto con deuda mientras D/Y ≤ {PARAMS_V2.finance.debtThreshold}; si no, no hay espacio fiscal. Sin políticas, el superávit primario es (0,15 − γ)·Y: 2 % del PBI en el Nivel 1 y 2,5 % en los Niveles 2–3 y Territorio. γ (<Code>Gasto_Publico_Base_Nivel_N</Code>) es el parámetro más sensible del modelo.</p>
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
             <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>

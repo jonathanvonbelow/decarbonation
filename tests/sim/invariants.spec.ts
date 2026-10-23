@@ -171,6 +171,32 @@ describe('sim invariants', () => {
     );
   });
 
+  // INV-10 (spec 44 §3: "sigue valiendo"; not written as a test before phase 44): debt is never negative. With the 2.0
+  // finance the reserves also never end a step below the floor 0.02·GDP (the deficit below it becomes debt).
+  it('INV-10: debt never negative and reserves never below the floor (random portfolios, every level, loans, extra tax, events)', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 3 }),
+        fc.subarray(ALL_POLICY_IDS, { minLength: 0, maxLength: 5 }),
+        fc.integer({ min: 0, max: 20 }),
+        fc.integer({ min: 0, max: 2000 }),
+        fc.integer({ min: 1, max: 10_000 }),
+        (level, policies, tax, loan, seed) => {
+          let state = withActivePolicies(freshState(level), policies);
+          state.additionalTaxPressurePercentage = tax;
+          for (let y = 0; y < YEARS && !state.gameOverReason; y++) {
+            if (y === 2) state.loanRequestedThisRound = loan;
+            state = stepYear(state, makeRng(seed, state.year + 1)).next;
+            const st = state.stellaSpecificState;
+            expect(st.Deuda).toBeGreaterThanOrEqual(0);
+            expect(st.Reservas_del_Tesoro).toBeGreaterThanOrEqual(PARAMS_V2.finance.reserveFloor * st.PBI_Real - 1e-6);
+          }
+        },
+      ),
+      { numRuns: RUNS },
+    );
+  });
+
   it('INV-13: no game-over condition triggers on year 0 of a fresh game', () => {
     const state = freshState(1);
     expect(state.gameOverReason).toBeNull();
@@ -186,7 +212,7 @@ describe('sim invariants', () => {
       expect(PARAMS_V2.rampYears[pid], p.id).toBeGreaterThan(0);
       expect(PARAMS_V2.fatigueYears[pid], p.id).toBeGreaterThan(0);
       expect(PARAMS_V2.costShare[pid], p.id).toBeGreaterThan(0);
-      expect(costShareOf(pid), p.id).toBeGreaterThan(0); // the scale the engine charges (bridge until phase 44)
+      expect(costShareOf(pid), p.id).toBe(PARAMS_V2.costShare[pid]); // the scale the engine charges: κ since phase 44
     });
   });
 

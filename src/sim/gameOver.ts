@@ -1,4 +1,5 @@
 import type { GameState } from '../types';
+import { isBankrupt } from './v2/finance';
 
 /**
  * The four game-over reasons, deliberately Spanish-only (see the comment at `stepYear`'s call
@@ -16,17 +17,17 @@ export type GameOverKind = keyof typeof GAME_OVER_REASONS;
 
 /**
  * Game-over check shared by `stepYear` and the monthly step (src/sim/monthly.ts). Extracted
- * unchanged from `stepYear`'s step 13: same thresholds, same order, same reason strings. Returns
- * null when the game goes on.
+ * unchanged from `stepYear`'s step 13: same order, same reason strings. Returns null when the game goes on.
+ * Bankruptcy (phase 44): D/Y > 1 and interest burden > 0.20 for 2 years in a row (24 months in Territorio), the clock
+ * `model.fiscal.breachYears` that src/sim/v2/finance.ts keeps. The 1.1 rule (reserves < −0.2·Y and debt > 1.5·Y)
+ * is gone: reserves never fall below the floor 0.02·Y any more.
  */
 export function evaluateGameOver(state: GameState): string | null {
-  const { indicators, stellaSpecificState: stella } = state;
+  const { indicators } = state;
   if (indicators.politicalStability <= 5) return GAME_OVER_REASONS.political;
   if (indicators.biodiversity <= 5) return GAME_OVER_REASONS.ecological;
   if (state.currentLevel >= 2 && indicators.foodSecurity <= 10) return GAME_OVER_REASONS.famine;
-  if (stella.Reservas_del_Tesoro < -(stella.PBI_Real * 0.2) && stella.Deuda > stella.PBI_Real * 1.5) {
-    return GAME_OVER_REASONS.bankruptcy;
-  }
+  if (isBankrupt(state.model?.fiscal)) return GAME_OVER_REASONS.bankruptcy;
   return null;
 }
 

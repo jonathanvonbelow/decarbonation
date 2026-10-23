@@ -12,8 +12,8 @@
  * `CP.Velocidad_Ajuste_*`. Phase 40 applies the same frame to B (src/sim/v2/biodiversity.ts); 41–42 to F and the
  * pressures.
  *
- * Fiscal stress φ (`model.fiscal.stress`) is the prototype's sHigh(interest / tax revenue; 0.20, 0.04) on the 1.1
- * economy's stocks (`interestBurdenOf` / `fiscalStressOf`, a bridge until phase 44 ports the 2.0 economy).
+ * Fiscal stress φ (`model.fiscal.stress`) is sHigh(interest / tax revenue; 0.20, 0.04), written by the finance step of
+ * this same step (src/sim/v2/finance.ts, phase 44), which runs before the indicators, as in the prototype.
  * Not yet here (each arrives with its phase, and is 0 until then): concentration and just transition in the
  * conflict (45). The wear of open situations enters D_C as a shift (phase 42, `wearC`). Situation impulses
  * (`model.impulses`) are read and capped at ±0.6 logit, but nothing writes them before phase 47.
@@ -22,7 +22,7 @@
  */
 import type { ControlParams, GameState, ModelIndicatorKey, ModelState } from '../../types';
 import { LandUseType } from '../../types';
-import { relax, sHigh, sLow, target100 } from './math';
+import { relax, sLow, target100 } from './math';
 import { PARAMS_V2, type Pid } from './params';
 import type { PolicyEfficiency } from './policies';
 import { pactShift } from './pacts';
@@ -46,24 +46,6 @@ const ch = (eff: Eff, pid: Pid, channel: Channel): number => eff[pid]?.[channel]
 export function stepIndicator(x: number, target: number, k: number, dt: number): number {
   return relax(x, target, Math.min(1, Math.max(0, Number.isFinite(k) ? k : 0)), dt);
 }
-
-/**
- * Interest burden = interest / tax revenue (prototype `economy_step`): interest on the debt at the start of the
- * step at the level's rate plus the risk premium over D/Y = 0.6, revenue on this step's GDP at the base tax plus τ.
- */
-export function interestBurdenOf(
-  debt: number, gdpBefore: number, gdpAfter: number, tax: number, level: number, CP: ControlParams,
-): number {
-  const f = PARAMS_V2.finance;
-  const base = (CP[`Tasa_de_interes_Nivel_${level}` as keyof ControlParams] as number) || 0;
-  const rate = base + f.riskPremium * Math.max(0, (gdpBefore > 0 ? debt / gdpBefore : 0) - f.debtThreshold);
-  const revenue = gdpAfter * (CP.Tasa_Impositiva_General_Sobre_PBI + tax / 100);
-  return revenue > 0 ? (rate * Math.max(0, debt)) / revenue : 0;
-}
-
-/** φ_fiscal = sHigh(burden; stressMid, stressWidth); 0 without debt. */
-export const fiscalStressOf = (burden: number): number =>
-  (burden > 0 ? sHigh(burden, PARAMS_V2.finance.stressMid, PARAMS_V2.finance.stressWidth) : 0);
 
 /** Σ of the situation impulses on one indicator still alive at model time t: d·e^(−(t − t_i)/τ). */
 export function impulseSum(model: Pick<ModelState, 't' | 'impulses'>, X: ModelIndicatorKey): number {

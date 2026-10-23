@@ -2784,3 +2784,100 @@ rechazada); la tarjeta de pacto activo ya no muestra la entrada; manual de ecuac
 
 **Deudas.** Entrada con la regla de inversión de la 44 y cuota sobre el PBI posterior al crecimiento (44); rutas de
 conservación que los pactos solos alcanzan (49).
+
+## 2026-10-22 — v6 fase 44: finanzas públicas con escasez
+
+**Qué se hizo** (`mejora-general/files/44_finanzas_publicas.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/finance.ts` (nuevo): `stepFinance(state, eff, dt, CP, upkeep)` es el paso 6 de `advance` (un solo cuerpo para
+  todo `dt`): g = g₀ + 0,01·η_PIE^prod + 0,005·η_PEA^prod − 0,0002·τ − 0,01·φ (φ del paso anterior; **el término −0,01·φ que
+  faltaba en 1.1**), Y' = Y·(1 + g·dt), T = Y'·(0,15 + τ/100) + 0,005·Y'·η_CN^tax, G₀ = γ_N·Y' (`CP.Gasto_Publico_Base_Nivel_1..3`
+  = 0,13 / 0,125 / 0,125, sin tocar), K = costo de políticas (κ = `PARAMS_V2.costShare`) + cuotas de pactos + mantenimiento,
+  SP = T − G₀ − K, i(d) = i_N + 0,05·max(0, d − 0,6), intereses i·D y amortización α_N·D, R' = R + (SP − Int − Am)·dt + L,
+  D' = D − Am·dt + L, piso R ≥ 0,02·Y' con deuda automática, CI = Int/T, φ = sHigh(CI; 0,20, 0,04), reloj de quiebra
+  `model.fiscal.breachYears` (+dt mientras D/Y > 1 y CI > 0,2; quiebra con `breachYears ≥ 2 − breachEps`: exactamente al mes
+  24) e historial de 5 años del saldo primario / PBI (`primaryHistory`, `primaryBalanceAverage`). Coeficientes en
+  `PARAMS_V2.finance` (growthPIE / growthPEA / growthTaxDrag / growthStress / carbonTaxRevenue nuevos).
+- `payPublicInvestment(state, cost)`: reservas por encima del piso y, el resto, deuda mientras D/Y ≤ 0,6 después de la
+  operación; si no, `'no-fiscal-space'` (reemplaza `'insufficient-funds'`). Lo usan `declarePublicUse` (territory.ts),
+  `resolveSituation` (situations/index.ts), los dos `togglePact` (App.tsx y territorio/session.ts: se resuelven los TODO(v6 fase
+  44)), la validación de DecarboNito `toggle_pact` (`canPayPublicInvestment`) y `joinPacts` del arnés.
+- Borrados: `src/sim/economy.ts` (`updateEconomy`), la regla de quiebra 1.1 de `gameOver.ts` (R < −0,2Y y D > 1,5Y; ahora
+  `isBankrupt(model.fiscal)`), el puente `costShareBridge` / la escala puente de `costShareOf` (fase 36), el puente φ de la 39
+  (`interestBurdenOf` / `fiscalStressOf` de `indicators.ts`), la rama `dt` del préstamo y el `toward` del dinero en `core.ts`,
+  `PBIGrowth_Reduction_Factor_Per_Tax_Point` del CP (pasa a `PARAMS_V2.finance.growthTaxDrag`, spec §2).
+- Mantenimiento: verificado igual al prototipo (0,8·(BNP declarado + HUM + RES + ENR)); ahora entra en K (saldo primario) con
+  el valor anual, en vez de restarse de las reservas aparte.
+- Préstamo L (el prototipo no lo tiene): se conserva lo que la app ya hacía (N3 siempre; N1/N2 desde 2035, App.tsx `requestLoan`;
+  Territorio desde 2035, `session.ts`), tope 10 % del PBI/año. Convive con la deuda automática así: entra entero a R y D en el
+  paso siguiente, **antes** del test del piso; si el paso tiene déficit, el préstamo evita (sustituye) la deuda automática por el
+  mismo monto, y si deja reservas sobre el piso sirve para prefinanciar inversión pública (que se paga primero con reservas
+  libres, sin mirar D/Y). `Monto_del_Prestamo_Unico`: ya no existe (fase 34); `Flag_Prestamo_Tomado_Stock` queda sin uso.
+- Qué PBI lee cada término (la spec no lo distingue): como el prototipo (`economy_step` py:383-405), d y el costo de políticas con
+  Y previo al crecimiento; recaudación, γ, cuotas de pactos y piso con Y'.
+- UI (es/en): Territorio — HUD con Deuda/PBI, panel de finanzas con Deuda/PBI, saldo primario, intereses/recaudación, nivel de
+  estrés fiscal, reloj de quiebra y la regla de inversión pública; mensajes 'no-fiscal-space' en pactos, usos públicos (con el
+  costo del lote) y situaciones; pista de declarar ("de las reservas libres y, si no alcanzan, con deuda"); aviso `danger.debt`
+  por D/Y > 0,8 o reloj en marcha; contexto de DecarboNito con D/Y, SP, CI y φ. 3 niveles — tarjeta "Intereses / Recaudación"
+  en N3 (con SP y φ en el tooltip), tooltip de reservas, toast de pacto "sin espacio fiscal" (es/en), aviso `tips.fiscalStress`
+  (reemplaza `tips.treasuryNegative`), `agent.errors.noFiscalSpace`. Panel del facilitador: `Gasto_Publico_Base_Nivel_1..3` en
+  "Presupuesto y deuda" (descripciones con la advertencia de sensibilidad). Manuales: facilitador (modelo económico completo y
+  quiebra), ecuaciones (fórmulas desde `PARAMS_V2.finance`/CP), jugador (deuda y quiebra, es/en).
+- Rutas (necesario por esta fase, no recalibración): el piso de N1 "reservas ≥ −200" se cumplía siempre → D/Y ≤ 0,8 (ROUTES3
+  del prototipo); la ruta productiva de Territorio "reservas ≥ 8 % del PBI" se volvió inalcanzable con el piso del 2 %
+  (producción 30 % → 0 % en quick) → saldo primario medio de 5 años ≥ 0 y D/Y ≤ 0,6 (TERR_ROUTES del prototipo). Tabla de
+  `docentes-ecuaciones.html` regenerada con `scripts/routes-table-html.ts`.
+
+**Verificación.**
+- `tests/sim/finance.v2.spec.ts` (nuevo): 36 casos de `economy_step` (3 niveles × dt anual/mensual, con deuda, reservas, τ, φ
+  previo, políticas con esfuerzo, pactos y mantenimiento; `scripts/reference/finance44_cases.py` → `.json`) y 24 de `pay()`, todos
+  ±1e-9; SP = (0,15 − γ)·Y'; déficit sostenido (R en el piso, D crece exactamente por el faltante); `interestRate(0,8, 2)` =
+  0,045; quiebra con D/Y = 1,05 y CI > 0,2: 23 meses no, 24 sí, y 2 pasos anuales; reloj que se reinicia; la regla 1.1 ya no
+  quiebra; `payPublicInvestment` (reservas, deuda, límite 0,6 exacto, pureza); préstamo en ambos dt; 12 meses ≈ 1 año; ventana
+  de 5 años. **INV-10** (no existía como test) en `invariants.spec.ts`: deuda ≥ 0 y reservas ≥ piso, niveles 1–3, carteras
+  aleatorias, préstamo, τ y eventos.
+- Golden sin eventos (comparación con el prototipo, 27 puntos de `golden_v2.csv`): B, F, E, c y **D/Y** coinciden con el
+  prototipo (máx |Δ| 5e-4; D/Y verde N2 año 30 = 0,242 como el prototipo, N1 verde 0,377, N3 do_nothing 0,015). W y St difieren
+  (hasta 13 / 11 puntos en `green` N3): es el conflicto distributivo de la fase 45. Con φ = 0 sin deuda (puente de la 39) E
+  quedaba 0,16 puntos arriba en N1/N2; se adopta sHigh(0) del prototipo.
+- Tests ajustados: `core.spec` (trayectorias regeneradas: reservas en el piso y deuda en lugar de reservas negativas), `pacts.v2`
+  (cuota sobre Y', anual y mensual; el tratado solo en N3 cumple la ruta de conservación provisoria en 1 de 5 semillas por c
+  5,396 ≤ 5,4 con B 45,6 — la ruta, no el pacto: prototipo B ≥ 52, fase 49), `territory.spec` (deuda hasta 0,6 y luego
+  'no-fiscal-space'), `facilitatorParams` (Gasto_Publico_Base_Nivel_k en el nivel k), `i18n.spec` (log del préstamo vía
+  `stepYear`), `indicators.v2` (φ pasa a finance), `invariants` (INV-10; κ).
+- `npx tsc --noEmit`, `npm test` (37 archivos, 604 tests), `npm run build`, `npm run i18n:audit` limpios.
+- E2E (dev server :3144, `GEMINI_API_KEY` de relleno): `/territorio` — 4 políticas verdes, ×4: saldo primario −1,0 %, reservas
+  1 000 → 670, panel fiscal con D/Y, CI, "Sin estrés fiscal" y la regla; opción paga de situación (183) descontada de las
+  reservas 1 467 → 1 284; pista de declarar con el texto nuevo; HUD con Deuda/PBI. `/play?demo=1` — política activada y 2 años
+  simulados sin errores. Sin errores de consola ni alert/confirm. No se probó en el navegador la tarjeta N3 ni un rechazo por
+  espacio fiscal (cubiertos por tests).
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la 43:
+
+| Criterio | 43 (quick) | 43 (completo) | 44 (quick) | 44 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,200 | FAIL 0,300 | FAIL 0,600 | FAIL 0,300 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | PASS 0 | PASS 0 | FAIL 1 | PASS 0 |
+| C6 recorrido ≥ 15 | FAIL 3,616 | FAIL 3,327 | FAIL 3,652 | FAIL 3,357 |
+| C7 banda de predicción | FAIL 0,593 | FAIL 0,599 | FAIL 0,593 | FAIL 0,599 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 2,473 | FAIL 2,473 | FAIL 2,453 | FAIL 2,453 |
+
+C8 (índice §6): ninguna estrategia quiebra; `buy_everything` de Territorio termina con D/Y 0,90 (p90 1,03) pero cae antes por
+el fallo sostenido de F < 20 (hacia 2039, 5/5 quick; prototipo: quiebra hacia 2040). C2: Territorio producción 30 % en el
+completo (igual que la 43; sin el cambio de la condición fiscal de la ruta caía a 0 %); en el quick (5 semillas) 60 %, que cae en
+la banda 30–70 % de C5: es la deuda conocida (prototipo 55 %, fases 47/49). C4 Territorio `extractive` 20 % → 0 % (su saldo
+primario es negativo: κ de la cartera 2,8 % > 2,5 %). N3 E/W/F casi iguales; `green` N2 D/Y 0,24 (prototipo 0,24). C6 y C9
+mejoran levemente.
+
+**Revisión de código** (aplicada): disponibilidad de los botones de uso público y la pista "declarar" de DecarboNito con la regla
+de inversión (`canPayPublicInvestment`, sin asignar estado); el rechazo de una declaración informa el costo real del lote
+(parcial incluido); ventana de 5 años en un solo helper (`primaryWindow`); `debtToPbiRatio` exportado de `winRoutes.ts` y
+reusado en la ruta de Territorio; color de reservas por "en el piso" (y deuda > 60 %) en lugar de "negativas"; comentario de φ
+inicial (arranca en 0, como el prototipo). No aplicado: la situación `sovereign-fund` (`R > 1200`) se deja: con superávit
+(pocas políticas) las reservas sí crecen sobre el piso y la situación aparece, que es lo que describe ("excedente fiscal").
+
+**Deudas.** Rutas de Territorio (F/E de producción, banda C5) y de 3 niveles (49); noticias de "reservas en rojo" muertas
+(50, tablero fiscal); W/St del golden (45); el préstamo voluntario no mira D/Y (decisión: tope 10 % del PBI/año como antes).

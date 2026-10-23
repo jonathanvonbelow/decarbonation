@@ -7,8 +7,9 @@
  * Order inside a month follows `play_territorio` in scripts/reference/modelo_v2.py: instrument
  * effort (from 2029), pacts, one public-use attempt every `every` months, extra tax (from 2035),
  * settle the inbox, then the month is simulated. Where the prototype and the session API differ
- * the session wins (00_INDICE_v6.md §2): pacts, lots and situations are paid only from reserves
- * (the prototype's `pay()` may borrow up to D/Y = 0.6), and a lot is whatever `declareUse` takes.
+ * the session wins (00_INDICE_v6.md §2): a lot is whatever `declareUse` takes. Since phase 44 pacts, lots and paid
+ * situation options follow the prototype's `pay()` (`payPublicInvestment`: reserves above the floor, then debt while
+ * D/Y ≤ 0.6).
  */
 import { canDeclare, gameOverKind, type PublicUse } from '../../src/sim';
 import { evaluateTerritorio } from '../../src/territorio/routes';
@@ -36,7 +37,7 @@ function tryDeclare(s: Session, use: PublicUse, CP: ControlParams): Session | nu
     if (!canDeclare(s.territory, p.x, p.y, use)) continue;
     const r = declareUse(s, p.x, p.y, use, CP);
     if (!r.error) return r.session;
-    if (r.error === 'insufficient-funds' || ++tries >= MAX_DECLARE_TRIES) return null;
+    if (r.error === 'no-fiscal-space' || ++tries >= MAX_DECLARE_TRIES) return null;
   }
   return null;
 }

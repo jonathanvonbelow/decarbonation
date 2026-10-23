@@ -143,14 +143,9 @@ export function effortShare(p: PolicyState): number {
   return Math.min(100, total) / 100;
 }
 
-/**
- * Cost share at full effort the engine charges today. Until phase 44 adds base public spending this is
- * the transitional `costShareBridge` (the 1.1 scale), not the prototype's κ (`costShare`, calibrated
- * against base spending): with κ and no base spending the treasury never binds (sim:check C3/C4 regress,
- * docs/DESIGN_DECISIONS_LOG.md phase 36). Phase 44 switches this to `PARAMS_V2.costShare`.
- */
+/** Cost share at full effort, fraction of GDP per year: the prototype's κ (`PARAMS_V2.costShare`; since phase 44). */
 export function costShareOf(pid: Pid): number {
-  return PARAMS_V2.costShareBridge[pid];
+  return PARAMS_V2.costShare[pid];
 }
 
 /** Annual cost of one active policy: κ·Y·(f + (1 − f)·ē). 0 when inactive. */

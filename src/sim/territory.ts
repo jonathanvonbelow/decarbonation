@@ -38,6 +38,7 @@ import {
   CONTEXT_KINDS, createGeography, distanceField, fbm, GRID_SIZE, hash01, largestComponent4, PRODUCTIVE_PARCELS, REGIONS, regionWeights,
   urbanKind, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial,
 } from './geography';
+import { payPublicInvestment } from './v2/finance';
 
 export { GRID_SIZE, hash01, PRODUCTIVE_PARCELS, REGIONS, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial };
 
@@ -643,11 +644,11 @@ const PRODUCTIVE_SOURCES = new Set<ParcelKind>([
 const WATER_KINDS = new Set<ParcelKind>(['water', 'lake', 'wetland', 'bridge', LandUseType.PublicWetland]);
 
 export type PublicUseError =
-  | 'out-of-bounds' | 'not-convertible' | 'no-area' | 'insufficient-funds' | 'needs-water';
+  | 'out-of-bounds' | 'not-convertible' | 'no-area' | 'no-fiscal-space' | 'needs-water';
 
 export type PublicUseResult =
   | { ok: true; state: GameState; territory: Territory; cost: number; use: PublicUse; cells: number[] }
-  | { ok: false; reason: PublicUseError };
+  | { ok: false; reason: PublicUseError; /** What the lot would have cost (only with 'no-fiscal-space', phase 44). */ cost?: number };
 
 /** Parcels in one lot on this map (50 at 0.1 kHa per parcel). */
 export const lotParcels = (t: Pick<Territory, 'kHaPerParcel'>): number => Math.max(1, Math.round(LOT_KHA / t.kHaPerParcel));
@@ -712,7 +713,8 @@ export function lotFor(territory: Territory, x: number, y: number, use: PublicUs
 
 /**
  * Declares the lot around (x, y) as a public use: moves its area in the model, pays the cost
- * (per kHa actually moved) from Reservas_del_Tesoro, and — for the part that was farmland — adds
+ * (per kHa actually moved) as a public investment (reserves above the floor, then debt while D/Y ≤ 0.6; phase 44,
+ * `payPublicInvestment`; refused with 'no-fiscal-space'), and — for the part that was farmland — adds
  * the agricultural-pressure impulse that taking land out of production causes. Parcels whose area
  * the model no longer holds are left out (fallow parcels draw on the model's fallow area, FAL), so a
  * declaration never creates land. Pure: returns new state and territory, or the reason it is not possible.
@@ -747,7 +749,9 @@ export function declarePublicUse(
   if (!cells.length) return { ok: false, reason: 'no-area' };
 
   const cost = RULES[use].cost(CP) * kHa * cells.length;
-  if (state.stellaSpecificState.Reservas_del_Tesoro < cost) return { ok: false, reason: 'insufficient-funds' };
+  // Phase 44: public investment — reserves above the floor, then debt while D/Y ≤ 0.6 (src/sim/v2/finance.ts).
+  const paid = payPublicInvestment(state, cost);
+  if (!paid.ok) return { ok: false, reason: 'no-fiscal-space', cost };
 
   const landUses = { ...state.landUses };
   let farmland = 0;
@@ -762,7 +766,6 @@ export function declarePublicUse(
   });
   landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa * cells.length };
 
-  const reserves = state.stellaSpecificState.Reservas_del_Tesoro - cost;
   // Phase 42: no direct impulse on the agricultural pressure any more (was 0.08 per kHa of farmland converted):
   // the land leaves the productive share and the target of π_a rises by 4.0·(a_prod,0 − a_prod) (src/sim/v2/pressures.ts).
 
@@ -772,8 +775,8 @@ export function declarePublicUse(
     // Model 1.1 (phase 34, T-07): the forest the player protects is counted apart from the
     // protection the model's own flows add, for the public-nature route and the upkeep.
     ...(use === 'protected' ? { declaredProtectedArea: (state.declaredProtectedArea ?? 0) + kHa * cells.length } : {}),
-    stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves },
-    indicators: { ...state.indicators, treasuryReserves: reserves },
+    stellaSpecificState: paid.state.stellaSpecificState,
+    indicators: paid.state.indicators,
   };
   const parcels = territory.parcels.slice();
   cells.forEach((i) => { parcels[i] = { ...parcels[i], kind: rule.target, declared: true, declaredAt: now }; });

@@ -39,7 +39,7 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogDrawer from './components/GameLogDrawer';
-import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost } from './sim';
+import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost, payPublicInvestment } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -930,22 +930,32 @@ export const App = () => {
       const wasActive = pactToggled.isActive;
       pactToggled.isActive = !pactToggled.isActive;
 
-      let newTreasuryReserves = prev.stellaSpecificState.Reservas_del_Tesoro;
+      let paidState: GameState = prev;
       let logMsg = "";
       let toastMsg = "";
       let toastType: 'info' | 'warning' | 'error' = 'info';
+      const lang = getActiveLanguage();
 
-      // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry).
-      // TODO(v6 fase 44): pay it with the public-investment rule of phase 44; until then it comes out of the reserves.
+      // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry). Phase 44: it is a public
+      // investment — reserves above the floor, then debt while D/Y ≤ 0.6 (`payPublicInvestment`, src/sim/v2/finance.ts).
       const costToJoin = pactEntryCost(pactId, prev.stellaSpecificState.PBI_Real);
       if (pactToggled.isActive && !wasActive && costToJoin > 0) {
-        if (newTreasuryReserves >= costToJoin) {
-          newTreasuryReserves -= costToJoin;
-          logMsg = `Se unió al pacto '${pactToggled.name}'. Costo: ${costToJoin.toFixed(0)}.`;
+        const paid = payPublicInvestment(prev, costToJoin);
+        if (paid.ok) {
+          paidState = paid.state;
+          logMsg = paid.fromDebt > 0
+            ? (lang === 'en'
+              ? `Joined the pact '${pactToggled.name}'. Cost: ${costToJoin.toFixed(0)} (${paid.fromDebt.toFixed(0)} borrowed).`
+              : `Se unió al pacto '${pactToggled.name}'. Costo: ${costToJoin.toFixed(0)} (${paid.fromDebt.toFixed(0)} con deuda).`)
+            : (lang === 'en'
+              ? `Joined the pact '${pactToggled.name}'. Cost: ${costToJoin.toFixed(0)}.`
+              : `Se unió al pacto '${pactToggled.name}'. Costo: ${costToJoin.toFixed(0)}.`);
           toastMsg = logMsg;
         } else {
-          pactToggled.isActive = false; 
-          logMsg = `Fondos insuficientes para unirse a '${pactToggled.name}'. Se necesitan ${costToJoin.toFixed(0)} y solo tienes ${prev.stellaSpecificState.Reservas_del_Tesoro.toFixed(0)}.`;
+          pactToggled.isActive = false;
+          logMsg = lang === 'en'
+            ? `No fiscal space to join '${pactToggled.name}' (${costToJoin.toFixed(0)}): the free reserves do not cover it and borrowing the rest would take debt above 60 % of GDP.`
+            : `Sin espacio fiscal para unirse a '${pactToggled.name}' (${costToJoin.toFixed(0)}): las reservas libres no alcanzan y endeudarse por el resto llevaría la deuda por encima del 60 % del PBI.`;
           toastMsg = logMsg;
           toastType = 'error';
         }
@@ -963,14 +973,8 @@ export const App = () => {
       return {
         ...prev,
         pacts: newPacts,
-        stellaSpecificState: {
-          ...prev.stellaSpecificState,
-          Reservas_del_Tesoro: newTreasuryReserves
-        },
-        indicators: { 
-          ...prev.indicators,
-          treasuryReserves: newTreasuryReserves
-        }
+        stellaSpecificState: paidState.stellaSpecificState,
+        indicators: paidState.indicators,
       };
     });
   }, [logEvent, addToast]);
@@ -1170,8 +1174,14 @@ export const App = () => {
         .filter((p) => p.isActive && p.instruments && Object.keys(p.instruments).length > 0 && (p.totalInstrumentEffortApplied || 0) === 0)
         .forEach((p) => dnApiRef.current?.notify(t('tips.effortZero', { name: p.name }), { priority: 1, tone: 'caution' }));
     }
-    if (tempGameState.stellaSpecificState.Reservas_del_Tesoro < 0) {
-      dnApiRef.current?.notify(t('tips.treasuryNegative'), { priority: 1, tone: 'caution' });
+    // Phase 44: reserves never go negative any more (the deficit below the 2 % floor becomes debt); the warning is
+    // now the fiscal stress (debt above 60 % of GDP or a heavy interest burden).
+    const fiscalNow = tempGameState.model?.fiscal;
+    const debtRatioNow = tempGameState.stellaSpecificState.PBI_Real > 0 ? tempGameState.stellaSpecificState.Deuda / tempGameState.stellaSpecificState.PBI_Real : 0;
+    if (fiscalNow && (debtRatioNow > 0.6 || fiscalNow.stress > 0.3)) {
+      dnApiRef.current?.notify(t('tips.fiscalStress', {
+        dy: (debtRatioNow * 100).toFixed(0), ci: (fiscalNow.interestBurden * 100).toFixed(0),
+      }), { priority: 1, tone: 'caution' });
     }
     if (tempGameState.year - lastPolicyChangeYearRef.current >= 3) {
       dnApiRef.current?.notify(t('tips.noChangeIn3Years'), { priority: 0 });

@@ -48,7 +48,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | Fase | Paso de `advance` / módulo | Estado |
 |---|---|---|
 | 35 | estructura, `math`, `params`, `anchors`, `advance` con funciones 1.1, golden test apagado | hecho |
-| 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44) |
+| 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44, que la borró) |
 | 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | hecho (tasas base de frontera en `CONTROL_PARAMS`) |
 | 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `fluxPolicy`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`, crecimiento `(1 + g)^dt`) | hecho (topes de CO₂ de las rutas reescalados de forma provisoria hasta la 49) |
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`, `bE`, `productiveValue`, `conflict`, `greenRelief`, `conflictWeights`, `relaxation`) | hecho (presiones de D_C/D_Pc todavía 1.1 hasta la 42; φ_fiscal puente sobre la deuda 1.1 hasta la 44) |
@@ -56,7 +56,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 41 | paso 8: F por balance oferta/demanda (`food`, `foodPerCapita0`, `Velocidad_Ajuste_Seg_Alimentaria`; choque ε = `model.yieldShock`, 0 hasta la 46) | hecho (`src/sim/indicators.ts`, `INDICATOR_IMPACT_WEIGHTS` y `Pact.impulses` borrados) |
 | 42 | paso 8, último: presiones en logit, ancladas (`pressure`, `Velocidad_Ajuste_Presiones`) | hecho (desgaste de situaciones como desplazamiento hasta la 47) |
 | 43 | pasos 4, 5, 7.5 y 8: pactos como datos (`pacts`): desplazamientos, frontera, costos ∝ PBI | hecho (entrada pagada de las reservas hasta la 44) |
-| 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge` | pendiente |
+| 44 | paso 6: gasto base, deuda automática, quiebra (`finance.ts`, `PARAMS_V2.finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge`; `payPublicInvestment` | hecho (`src/sim/economy.ts` borrado; φ, B, F, E, c y D/Y coinciden con el golden ±5e-4 sin eventos) |
 | 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
 | 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
 
@@ -137,3 +137,13 @@ Fase 43: sin recortes de ecuación. Desvíos: (1) la entrada se paga de las rese
 de inversión pública (TODO en los dos `togglePact`). (2) La cuota anual se cobra sobre el PBI antes del crecimiento del paso
 (orden 1.1 de los costos; el prototipo, después) hasta la 44. (3) Las funciones reciben `pacts`, no el estado. Con esto
 ningún `GameState` lleva funciones: un clon JSON es completo.
+
+Fase 44: sin recortes de ecuación. `stepFinance` es el port exacto de `economy_step` (36 casos ±1e-9 con dt anual y mensual,
+deuda, reservas, τ, φ previo, políticas con esfuerzo, pactos, mantenimiento) y `payPublicInvestment` el de `pay()` (24 casos).
+Desvíos / decisiones: (1) qué PBI lee cada término sigue al prototipo (d y el costo de políticas con Y antes del crecimiento;
+recaudación, γ, cuotas de pactos y piso con Y'). (2) φ = sHigh(CI) también sin deuda (0,0067), como el prototipo; el puente de
+la 39 daba 0 (E quedaba 0,16 puntos arriba del golden en N1/N2). (3) El préstamo voluntario entra entero a R y D en el paso
+siguiente (ambos `dt`), antes del piso; desaparece la rama `dt` del préstamo y el `toward` del dinero. (4) Reloj de quiebra con
+`PARAMS_V2.finance.breachEps` (quiebra al mes 24 exacto). (5) La ruta productiva de Territorio pasa de "reservas ≥ 8 % del PBI"
+(inalcanzable con el piso del 2 %) a las condiciones fiscales del prototipo (saldo primario medio de 5 años ≥ 0 y D/Y ≤ 0,6);
+el piso "reservas ≥ −200" de N1 pasa a D/Y ≤ 0,8 (ROUTES3). El resto de la recalibración de rutas sigue en la 49.

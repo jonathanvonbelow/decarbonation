@@ -5,7 +5,7 @@
 import React, { useMemo } from 'react';
 import { CONTROL_PARAMS } from '../constants';
 import { getEventDescription, getEventName, getIndicatorName, getPactName } from '../legacyContent/gameData';
-import { canDeclare, productiveCount, publicUseCost, PUBLIC_USES, type ParcelKind, type PublicUse } from '../sim';
+import { canDeclare, canPayPublicInvestment, productiveCount, publicUseCost, PUBLIC_USES, type ParcelKind, type PublicUse } from '../sim';
 import { portraitUrl, type PortraitActor } from './sprites';
 import { useAnchor } from '../components/decarbonito/anchors';
 import { Sparkline } from '../components/ui/Sparkline';
@@ -66,7 +66,11 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
       <div className="pointer-events-auto panel flex flex-wrap items-center gap-1 px-2 py-1.5">
         <div className="px-2">
           <p className="label-eyebrow !text-[10px]">{c.hud.reserves}</p>
-          <p className={`tnum text-[14px] ${m.treasuryReserves < 0 ? 'text-ember' : 'text-bone'}`}>{fmt.big(m.treasuryReserves)}</p>
+          <p className={`tnum text-[14px] ${m.treasuryReserves <= 0.021 * m.pbi ? 'text-ochre' : 'text-bone'}`}>{fmt.big(m.treasuryReserves)}</p>
+        </div>
+        <div className="px-2" title={c.finance.rules}>
+          <p className="label-eyebrow !text-[10px]">{c.finance.debtRatio}</p>
+          <p className={`tnum text-[14px] ${m.debt > 0.6 * m.pbi ? 'text-ember' : m.debt > 0.4 * m.pbi ? 'text-ochre' : 'text-bone'}`}>{m.pbi > 0 ? `${Math.round((100 * m.debt) / m.pbi)} %` : '—'}</p>
         </div>
         <div className="px-2">
           <p className="label-eyebrow !text-[10px]">{c.hud.score}</p>
@@ -174,7 +178,8 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
         <div className="grid grid-cols-2 gap-1 md:grid-cols-1">
           {PUBLIC_USES.map((use) => {
             const useCost = publicUseCost(use, CONTROL_PARAMS);
-            const affordable = session.game.stellaSpecificState.Reservas_del_Tesoro >= useCost;
+            // Phase 44: the public-investment rule (free reserves, then debt while D/Y <= 0.6), not "reserves >= cost".
+            const affordable = canPayPublicInvestment(session.game, useCost);
             const anywhere = declarable.has(use);
             return (
               <button

@@ -338,7 +338,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       ppSoc: 'Presión Social', ppSocTip: 'Nivel de descontento general de la población. Aumenta si el bienestar social es bajo.',
       pbi: 'PBI Real', pbiTip: 'Producto Bruto Interno, mide la actividad económica.',
       debt: 'Deuda', debtTip: (r:string) => `Deuda total de la nación. Ratio Deuda/PBI: ${r}`,
-      reserves: 'Reservas Tesoro', reservesTip: 'Fondos disponibles del gobierno.',
+      reserves: 'Reservas Tesoro', reservesTip: 'Fondos disponibles del gobierno. No bajan del 2 % del PBI: el déficit por debajo de ese piso se paga con deuda.',
+      burden: 'Intereses / Recaudación', burdenTip: (sp:string, st:string) => `Carga de intereses de la deuda sobre la recaudación. Por encima del 20 % aparece el estrés fiscal (hoy ${st}), que frena el crecimiento y sube el conflicto y el colapso. Saldo primario: ${sp} % del PBI. Quiebra: deuda > 100 % del PBI con intereses > 20 % durante dos años.`,
       policyPanel: 'Panel de Políticas',
       activePolicies: (a:number,m:number) => `Activas: ${a} / ${m}`,
       policyPanelTip: (m:number,d:number) => `Puedes activar hasta ${m} políticas simultáneamente. Una vez activada, una política se bloquea por ${d} años.`,
@@ -359,7 +360,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       ppSoc: 'Social Pressure', ppSocTip: 'General population discontent. Increases if social wellbeing is low.',
       pbi: 'Real GDP', pbiTip: 'Gross Domestic Product, measures economic activity.',
       debt: 'Debt', debtTip: (r:string) => `Total national debt. Debt/GDP ratio: ${r}`,
-      reserves: 'Treasury Reserves', reservesTip: 'Available government funds.',
+      reserves: 'Treasury Reserves', reservesTip: 'Available government funds. They never fall below 2 % of GDP: the deficit below that floor is paid with debt.',
+      burden: 'Interest / Revenue', burdenTip: (sp:string, st:string) => `Interest on the debt as a share of tax revenue. Above 20 % fiscal stress appears (now ${st}), slowing growth and raising conflict and collapse. Primary balance: ${sp} % of GDP. Bankruptcy: debt > 100 % of GDP with interest > 20 % for two years.`,
       policyPanel: 'Policy Panel',
       activePolicies: (a:number,m:number) => `Active: ${a} / ${m}`,
       policyPanelTip: (m:number,d:number) => `You can activate up to ${m} policies simultaneously. Once activated, a policy is locked for ${d} years.`,
@@ -395,6 +397,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const debtRatio = stellaSpecificState.PBI_Real > 0 ? indicators.debt / stellaSpecificState.PBI_Real : 0;
   const reservesRatio = stellaSpecificState.PBI_Real > 0 ? indicators.treasuryReserves / stellaSpecificState.PBI_Real : 0;
+  // Phase 44: interest burden, fiscal stress and primary balance of the last step (src/sim/v2/finance.ts).
+  const fiscal = gameState.model?.fiscal;
 
   return (
     <div className="space-y-6">
@@ -417,7 +421,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <>
             <IndicatorCard index={9} title={t.pbi} value={indicators.pbi} precision={0} color={indicators.pbi > 14000 ? 'text-chlorophyll' : indicators.pbi > 11000 ? 'text-ochre' : 'text-ember'} isWinCondition={isWinCondition('pbi')} tooltip={t.pbiTip} winLabel={t.winStar} />
             <IndicatorCard index={10} title={t.debt} value={indicators.debt} precision={0} invert color={debtRatio > 0.8 ? 'text-ember' : debtRatio > 0.5 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('deudaPbi')} tooltip={t.debtTip(debtRatio.toFixed(2))} winLabel={t.winStar} />
-            <IndicatorCard index={11} title={t.reserves} value={indicators.treasuryReserves} precision={0} color={indicators.treasuryReserves < 0 ? 'text-ember' : reservesRatio < 0.05 ? 'text-ochre' : 'text-chlorophyll'} tooltip={t.reservesTip} winLabel={t.winStar} />
+            <IndicatorCard index={11} title={t.reserves} value={indicators.treasuryReserves} precision={0} color={reservesRatio <= 0.021 ? (debtRatio > 0.6 ? 'text-ember' : 'text-ochre') : 'text-chlorophyll'} tooltip={t.reservesTip} winLabel={t.winStar} />
+            {fiscal && (
+              <IndicatorCard index={12} title={t.burden} value={fiscal.interestBurden * 100} unit=" %" invert color={fiscal.interestBurden > 0.2 ? 'text-ember' : fiscal.interestBurden > 0.12 ? 'text-ochre' : 'text-chlorophyll'} tooltip={t.burdenTip(((stellaSpecificState.PBI_Real > 0 ? fiscal.primaryBalance / stellaSpecificState.PBI_Real : 0) * 100).toFixed(1), fiscal.stress.toFixed(2))} winLabel={t.winStar} />
+            )}
           </>
         )}
       </div>

@@ -203,6 +203,42 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
 
 /* ── Pacts & finance ───────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Phase 44: debt/GDP, primary balance and interest burden, with the fiscal-stress level and the bankruptcy clock
+ * (src/sim/v2/finance.ts). Phase 50 completes the dashboard.
+ */
+function FiscalSummary({ session }: { session: Session }) {
+  const { c } = useCopy();
+  const st = session.game.stellaSpecificState;
+  const fiscal = session.game.model?.fiscal;
+  if (!fiscal) return null;
+  const pctOf = (x: number) => `${(100 * x).toFixed(1)} %`;
+  const dy = st.PBI_Real > 0 ? st.Deuda / st.PBI_Real : 0;
+  const primary = st.PBI_Real > 0 ? fiscal.primaryBalance / st.PBI_Real : 0;
+  const stressText = fiscal.stress >= 0.5 ? c.finance.stressHigh : fiscal.stress >= 0.15 ? c.finance.stressMid : c.finance.stressLow;
+  const stressTone = fiscal.stress >= 0.5 ? 'text-ember' : fiscal.stress >= 0.15 ? 'text-ochre' : 'text-chlorophyll';
+  const breachMonths = Math.round(fiscal.breachYears * 12);
+  return (
+    <div className="space-y-1">
+      <dl className="grid grid-cols-3 gap-2">
+        {([
+          [c.finance.debtRatio, pctOf(dy), dy > 0.6 ? 'text-ember' : dy > 0.4 ? 'text-ochre' : 'text-bone'],
+          [c.finance.primary, pctOf(primary), primary < 0 ? 'text-ochre' : 'text-bone'],
+          [c.finance.burden, pctOf(fiscal.interestBurden), fiscal.interestBurden > 0.2 ? 'text-ember' : 'text-bone'],
+        ] as const).map(([label, value, tone]) => (
+          <div key={label} className="rounded-md bg-basalt-800 px-2 py-2">
+            <dt className="text-[11px] text-ash-dim">{label}</dt>
+            <dd className={`tnum text-[14px] ${tone}`}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className={`text-[11px] ${stressTone}`}>{stressText}</p>
+      {breachMonths > 0 && <p className="text-[11px] text-ember">{fill(c.finance.breach, { months: breachMonths })}</p>}
+      <p className="text-[11px] text-ash-dim">{c.finance.rules}</p>
+    </div>
+  );
+}
+
 export function FinancePanel({ session, onPact, onTax, onLoan }: {
   session: Session; onPact: (id: string) => void; onTax: (pct: number) => void; onLoan: () => void;
 }) {
@@ -223,6 +259,7 @@ export function FinancePanel({ session, onPact, onTax, onLoan }: {
           </div>
         ))}
       </dl>
+      <FiscalSummary session={session} />
 
       <section>
         <h3 className="label-eyebrow mb-2 !text-[11px]">{c.finance.pactsTitle}</h3>

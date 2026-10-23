@@ -46,7 +46,7 @@ const manualSlides = [
     title: "Políticas e Instrumentos",
     content: (
         <div>
-            <p className="mb-4">Las políticas son las principales palancas de cambio. Cada una tiene su costo a esfuerzo pleno (fracción del PBI; hoy la escala transitoria <Param>costShareBridge</Param>, que la fase 44 reemplaza por <Param>costShare</Param>), su puesta en marcha (<Param>rampYears</Param>) y su desgaste (<Param>fatigueYears</Param>), en <Param>PARAMS_V2</Param>.</p>
+            <p className="mb-4">Las políticas son las principales palancas de cambio. Cada una tiene su costo a esfuerzo pleno (fracción del PBI, <Param>costShare</Param>: 0,2–1,2 % del PBI por año, calibrado contra el gasto público base de la fase 44), su puesta en marcha (<Param>rampYears</Param>) y su desgaste (<Param>fatigueYears</Param>), en <Param>PARAMS_V2</Param>.</p>
             <h4 className="font-semibold mt-4 mb-2 text-blue-300">Listado de Políticas</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 {Object.values(INITIAL_POLICIES).map(p => <div key={p.id}>- {p.name}</div>)}
@@ -154,22 +154,26 @@ const manualSlides = [
     title: "Modelo Económico y Financiero",
     content: (
       <div>
-        <p className="mb-4">La economía se modela a través del PBI, Reservas del Tesoro y Deuda.</p>
+        <p className="mb-4">La economía se modela a través del PBI, Reservas del Tesoro y Deuda, con dinero escaso (modelo 2.0, fase 44): el Estado ya gasta casi todo lo que recauda antes de pagar una sola política.</p>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Crecimiento del PBI</h4>
-        <p className="text-sm">La tasa de crecimiento anual se basa en una tasa base más los efectos de las políticas:</p>
         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Tasa Crecimiento</Param> = <Param>Tasa Base ({CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI})</Param> + <Param>Efecto P-PIE</Param> + <Param>Efecto P-PEA</Param> - <Param>Impacto Impuestos (N3)</Param></p>
+            <p><Param>g</Param> = <Param>{CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI}</Param> + {PARAMS_V2.finance.growthPIE}·η<sub>PIE</sub> + {PARAMS_V2.finance.growthPEA}·η<sub>PEA</sub> − {PARAMS_V2.finance.growthTaxDrag}·τ − {PARAMS_V2.finance.growthStress}·φ<sub>fiscal</sub></p>
         </div>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Finanzas del Tesoro</h4>
+        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Saldo primario</h4>
          <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Reservas Anuales</Param> += (<Param>Ingresos</Param> - <Param>Egresos</Param>)</p>
+            <p><Param>SP</Param> = <Param>T</Param> − <Param>γ<sub>N</sub>·Y</Param> − <Param>K</Param></p>
         </div>
          <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-green-400">Ingresos:</strong> Recaudación de impuestos (un % del PBI, <Param>{CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI}</Param>, más impuestos adicionales en Nivel 3) y préstamos solicitados.</li>
-            <li><strong className="text-red-400">Egresos:</strong> Costos de políticas activas, costos de pactos, pago de intereses de la deuda y pago anual de capital de la deuda.</li>
+            <li><strong className="text-green-400">Recaudación T:</strong> <Param>{CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI}</Param> del PBI + la presión fiscal adicional τ + el impuesto al carbono ({PARAMS_V2.finance.carbonTaxRevenue}·Y·η<sub>CN</sub><sup>impuesto</sup>).</li>
+            <li><strong className="text-red-400">Gasto público base γ<sub>N</sub>·Y:</strong> <Param>Gasto_Publico_Base_Nivel_N</Param> = {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_1} / {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_2} / {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_3} (Territorio usa el Nivel 2). Con 15 % de recaudación deja un superávit de 2–2,5 % del PBI. <strong>Es el parámetro más sensible del modelo</strong>: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2; no lo mueva sin correr <Code>npm run sim:check</Code>.</li>
+            <li><strong className="text-red-400">K:</strong> costos de las políticas activas (sobre el PBI previo al crecimiento del año), cuotas anuales de los pactos y, en Territorio, el mantenimiento de los usos públicos (<Param>{CONTROL_PARAMS.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual}</Param> por kHa y año de bosque declarado, humedal, restauración y parque energético). Una cartera verde de cuatro políticas cuesta ≈ 3,8 % del PBI: déficit primario de ≈ 1,3 %.</li>
         </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Deuda</h4>
-        <p className="text-sm">La deuda aumenta con nuevos préstamos y disminuye con los pagos anuales. Genera un pago de intereses que afecta a las reservas del tesoro.</p>
+        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Deuda, piso de reservas y estrés fiscal</h4>
+         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
+            <p><Param>i(d)</Param> = <Param>i<sub>N</sub></Param> + {PARAMS_V2.finance.riskPremium}·max(0, D/Y − {PARAMS_V2.finance.debtThreshold}) · <Param>R</Param> += SP − i·D − α<sub>N</sub>·D + préstamo · si R &lt; {PARAMS_V2.finance.reserveFloor}·Y, la diferencia se cubre con deuda</p>
+            <p><Param>φ<sub>fiscal</sub></Param> = sHigh(intereses / recaudación; {PARAMS_V2.finance.stressMid}, {PARAMS_V2.finance.stressWidth})</p>
+        </div>
+        <p className="text-sm">Las reservas nunca bajan del {PARAMS_V2.finance.reserveFloor * 100} % del PBI: cada déficit se financia con deuda automáticamente, a una tasa que sube cuando la deuda pasa el {PARAMS_V2.finance.debtThreshold * 100} % del PBI. El estrés fiscal frena el crecimiento y empuja hacia abajo la seguridad económica y hacia arriba el conflicto y el colapso político. La inversión pública (entrar a un pacto, declarar un uso público en Territorio, una opción paga de una situación) se paga con las reservas por encima del piso y, el resto, con deuda mientras la deuda no supere el {PARAMS_V2.finance.debtThreshold * 100} % del PBI; si no, se rechaza por falta de espacio fiscal. El préstamo voluntario (hasta 10 % del PBI por año; Nivel 3 siempre, Niveles 1–2 y Territorio desde <Param>{CONTROL_PARAMS.Ano_Activacion_Prestamo}</Param>) entra entero a reservas y deuda en el paso siguiente: sirve para prefinanciar inversión que el piso de reservas impediría.</p>
       </div>
     )
   },
@@ -259,7 +263,7 @@ const manualSlides = [
         <h4 className="font-semibold mt-4 mb-2 text-red-400">Condiciones de Derrota Instantánea</h4>
          <ul className="list-disc list-inside text-sm text-red-300">
             <li>Colapso político &ge; 95%</li>
-            <li>Crisis fiscal severa (Reservas muy negativas y Deuda muy alta)</li>
+            <li>Bancarrota: deuda &gt; {PARAMS_V2.finance.bankruptcyDebtRatio * 100} % del PBI con intereses &gt; {PARAMS_V2.finance.bankruptcyInterestBurden * 100} % de la recaudación durante {PARAMS_V2.finance.bankruptcyYears} años seguidos (24 meses en Territorio)</li>
             <li>Catástrofe ecológica (Biodiversidad &le; 5%)</li>
             <li>Hambruna (Seguridad Alimentaria &le; 10%)</li>
         </ul>

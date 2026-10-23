@@ -8,7 +8,7 @@
  * Pure functions over plain values, so the rules are testable without a browser.
  */
 import type { ControlParams, GameState, Indicators, RandomEventEffect, StellaStocks } from '../../types';
-import { applyRandomEventEffects, toMapFlow, type DeferredAdjustment, type LandFlow, type Rng } from '../../sim';
+import { applyRandomEventEffects, payPublicInvestment, toMapFlow, type DeferredAdjustment, type LandFlow, type Rng } from '../../sim';
 import { PARAMS_V2 } from '../../sim/v2/params';
 import { CLIMATE_SITUATIONS } from './climate';
 import { ECONOMY_SITUATIONS } from './economy';
@@ -163,7 +163,7 @@ export function situationCost(base: number, state: GameState): number {
 }
 
 /**
- * Applies one option of a situation: pays its cost from the treasury and runs its effects through
+ * Applies one option of a situation: pays its cost as a public investment (`payPublicInvestment`) and runs its effects through
  * the same path the model's own random events use.
  */
 export function resolveSituation(
@@ -178,11 +178,13 @@ export function resolveSituation(
   if (!def || !option) return { state, deferred: [], cost: 0, ok: false, flows: [] };
 
   const cost = situationCost(option.cost ?? 0, state);
-  if (cost > state.stellaSpecificState.Reservas_del_Tesoro) return { state, deferred: [], cost, ok: false, flows: [] };
+  // Phase 44: a paid option is a public investment — reserves above the floor, then debt while D/Y ≤ 0.6
+  // (src/sim/v2/finance.ts); otherwise it is refused ('no-fiscal-space' in the session).
+  const paid = payPublicInvestment(state, cost);
+  if (!paid.ok) return { state, deferred: [], cost, ok: false, flows: [] };
 
-  const next: GameState = JSON.parse(JSON.stringify(state));
-  next.pacts = state.pacts; // JSON round-trip strips the pact effect functions
-  next.stellaSpecificState.Reservas_del_Tesoro -= cost;
+  const next: GameState = JSON.parse(JSON.stringify(paid.state));
+  next.pacts = state.pacts; // keep the caller's pact objects (plain data since phase 43)
 
   const deferred: DeferredAdjustment[] = [];
   const logs: string[] = [];
@@ -194,6 +196,7 @@ export function resolveSituation(
   // are NOT applied here: they would be erased by that recomputation (phase 34, T-12). They go back
   // to the caller, which queues them in `Session.pendingDeferred` for the next `stepMonth`.
   next.indicators.treasuryReserves = next.stellaSpecificState.Reservas_del_Tesoro;
+  next.indicators.debt = next.stellaSpecificState.Deuda;
   next.indicators.socialWellbeing = Math.max(0, Math.min(100, 100 - next.stellaSpecificState.Conflicto_social));
   next.indicators.ppAgricola = next.stellaSpecificState.PP_AGRICOLA;
   next.indicators.ppAmbientalista = next.stellaSpecificState.PP_AMBIENTALISTA;

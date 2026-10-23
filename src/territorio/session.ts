@@ -18,7 +18,7 @@
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
   changesTouchForest, createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
-  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, stepMonth, syncTerritory, type DeferredAdjustment,
+  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, payPublicInvestment, stepMonth, syncTerritory, type DeferredAdjustment,
   type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -372,7 +372,7 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
   const option = def.options.find((o) => o.id === optionId);
   if (!option) return { session: s };
   const applied = resolveSituation(s.game, item.defId, optionId, CP, language);
-  if (!applied.ok) return { session: s, error: 'insufficient-funds', detail: { cost: Math.round(situationCost(option.cost ?? 0, s.game)) } };
+  if (!applied.ok) return { session: s, error: 'no-fiscal-space', detail: { cost: Math.round(situationCost(option.cost ?? 0, s.game)) } };
 
   const news: NewsItem = {
     id: `${item.id}-done`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,
@@ -398,7 +398,7 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
 /* ── Player actions ────────────────────────────────────────────────────────────────────────── */
 
 export type ActionError =
-  | 'max-active' | 'locked' | 'not-unlocked' | 'insufficient-funds' | 'invalid-amount' | 'game-over' | 'loan-cap'
+  | 'max-active' | 'locked' | 'not-unlocked' | 'invalid-amount' | 'game-over' | 'loan-cap'
   | PublicUseError;
 
 export interface ActionResult {
@@ -468,20 +468,18 @@ export function togglePact(s: Session, pactId: string, CP: ControlParams = CONTR
   const pact = s.game.pacts[pactId];
   if (!pact) return { session: s };
   if (!unlocks(s, CP).pact(pactId)) return { session: s, error: 'not-unlocked', detail: { year: pact.unlockYear ?? 0 } };
-  const reserves = s.game.stellaSpecificState.Reservas_del_Tesoro;
-  let nextReserves = reserves;
-  // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry).
-  // TODO(v6 fase 44): pay it with the public-investment rule of phase 44; until then it comes out of the reserves.
+  // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry). Phase 44: it is a public
+  // investment — reserves above the floor, then debt while D/Y ≤ 0.6 (`payPublicInvestment`, src/sim/v2/finance.ts).
   const costToJoin = pactEntryCost(pactId, s.game.stellaSpecificState.PBI_Real);
+  let paidGame = s.game;
   if (!pact.isActive && costToJoin > 0) {
-    if (reserves < costToJoin) return { session: s, error: 'insufficient-funds', detail: { cost: costToJoin } };
-    nextReserves -= costToJoin;
+    const paid = payPublicInvestment(s.game, costToJoin);
+    if (!paid.ok) return { session: s, error: 'no-fiscal-space', detail: { cost: Math.round(costToJoin) } };
+    paidGame = paid.state;
   }
   const game: GameState = {
-    ...s.game,
+    ...paidGame,
     pacts: { ...s.game.pacts, [pactId]: { ...pact, isActive: !pact.isActive } },
-    stellaSpecificState: { ...s.game.stellaSpecificState, Reservas_del_Tesoro: nextReserves },
-    indicators: { ...s.game.indicators, treasuryReserves: nextReserves },
   };
   return { session: { ...s, game } };
 }
@@ -523,7 +521,11 @@ export function requestLoan(s: Session, amount: number, CP: ControlParams = CONT
 export function declareUse(s: Session, x: number, y: number, use: PublicUse, CP: ControlParams = CONTROL_PARAMS): ActionResult {
   if (s.outcome) return { session: s, error: 'game-over' };
   const r = declarePublicUse(s.game, s.territory, x, y, use, CP, s.monthIndex);
-  if (!r.ok) return { session: s, error: (r as { reason: PublicUseError }).reason };
+  if (!r.ok) {
+    const { reason, cost } = r as { reason: PublicUseError; cost?: number };
+    // Phase 44: say what the lot would have cost when there is no fiscal space for it.
+    return { session: s, error: reason, ...(cost !== undefined ? { detail: { cost: Math.round(cost) } } : {}) };
+  }
   const ok = r as Extract<typeof r, { ok: true }>;
   const item: NewsItem = {
     id: `p-${s.monthIndex}-${x}-${y}`, monthIndex: s.monthIndex, year: s.game.year, month: s.month,

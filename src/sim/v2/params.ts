@@ -125,14 +125,12 @@ export const PARAMS_V2 = {
   rampYears:   { AS: 1.5, CR: 2.5, GS: 1.5, AGUA: 2.0, CN: 2.5, PAI: 1.0, PEA: 0.5, PIE: 1.5, FRA: 0.5, SE: 0.5 },
   /** 36 — fatigue time constant (years of accumulated activity). Replaces efficiencyDecayDuration. Criterio experto. */
   fatigueYears: { AS: 15, CR: 25, GS: 12, AGUA: 20, CN: 25, PAI: 8, PEA: 10, PIE: 10, FRA: 6, SE: 5 },
-  /** 36/44 — annual cost at full effort, fraction of GDP (prototype κ). Calibrated against base public spending (phase 44). */
-  costShare:   { AS: 0.008, CR: 0.010, GS: 0.006, AGUA: 0.008, CN: 0.012, PAI: 0.006, PEA: 0.003, PIE: 0.005, FRA: 0.002, SE: 0.012 },
   /**
-   * 36 → 44 — TRANSITIONAL cost at full effort, fraction of GDP: the 1.1 `costFactor` values (deleted from
-   * INITIAL_POLICIES), used by `costShareOf` until phase 44 adds base public spending and switches to
-   * `costShare`. The 1.1 economy has no base spending, so with κ the treasury would never bind. Phase 44 deletes it.
+   * 36/44 — annual cost at full effort, fraction of GDP (prototype κ), calibrated against base public spending
+   * (CP.Gasto_Publico_Base_Nivel_*, phase 44). Since phase 44 the engine charges these (the 1.1-scale bridge
+   * `costShareBridge` of phase 36 was deleted). Criterio experto.
    */
-  costShareBridge: { AS: 0.04, CR: 0.05, GS: 0.03, AGUA: 0.05, CN: 0.07, PAI: 0.02, PEA: 0.01, PIE: 0.02, FRA: 0.01, SE: 0.02 },
+  costShare:   { AS: 0.008, CR: 0.010, GS: 0.006, AGUA: 0.008, CN: 0.012, PAI: 0.006, PEA: 0.003, PIE: 0.005, FRA: 0.002, SE: 0.012 },
   /** 36 — share of the cost paid regardless of effort (dimensionless). Criterio experto. */
   costFixedShare: 0.3,
   /** 36 — effort scale of the diminishing returns (phiEffort), effort points 0-100. Criterio experto. */
@@ -342,13 +340,25 @@ export const PARAMS_V2 = {
     techTransferInitiative: { entry: 0.10, annual: 0.008, E: 0.15, renewables: 0.10, efficiency: 0.05 },
   },
 
-  /** 44 — public finance (fractions of GDP or of tax revenue; years). */
+  /**
+   * 44 — public finance (mejora-general/files/44 §1; prototype `economy_step`, `pay`, bankruptcy rule of `step()`).
+   * reserveFloor: reserves never below this fraction of GDP (the deficit below it is financed with debt automatically).
+   * riskPremium / debtThreshold: i(d) = i_N + riskPremium·max(0, d − debtThreshold), d = D/Y; debtThreshold is also the
+   * ceiling of D/Y after a public investment paid with debt (`payPublicInvestment`). Bankruptcy: D/Y > bankruptcyDebtRatio
+   * and interest/revenue > bankruptcyInterestBurden for bankruptcyYears in a row. Fiscal stress φ = sHigh(CI; stressMid,
+   * stressWidth). Growth g = g0 + growthPIE·η_PIE^prod + growthPEA·η_PEA^prod − growthTaxDrag·τ − growthStress·φ (fraction
+   * of GDP per year per unit of efficiency / per pp of extra tax / per unit of φ; growthTaxDrag was the facilitator's
+   * PBIGrowth_Reduction_Factor_Per_Tax_Point until phase 44). carbonTaxRevenue: revenue of the carbon tax, fraction of GDP
+   * per unit of η_CN^tax. Base rates i_N, α_N and γ_N are the facilitator's (CP). Criterio experto (prototype values).
+   */
   finance: {
     reserveFloor: 0.02, riskPremium: 0.05, debtThreshold: 0.6,
     bankruptcyDebtRatio: 1.0, bankruptcyInterestBurden: 0.20, bankruptcyYears: 2,
-    /** Tolerance of the bankruptcy clock: with dt = 1/12, 24 months add up to 1.9999… (fase 32, BREACH_EPS). */
+    /** Tolerance of the bankruptcy clock (years): with dt = 1/12, 24 months add up to 1.9999… (fase 32, BREACH_EPS). */
     breachEps: 1e-9,
     stressMid: 0.20, stressWidth: 0.04,
+    growthPIE: 0.01, growthPEA: 0.005, growthTaxDrag: 0.0002, growthStress: 0.01,
+    carbonTaxRevenue: 0.005,
   },
 } as const;
 

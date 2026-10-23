@@ -7,7 +7,8 @@
  *   - `Pago_deuda_anual_Nivel_k` / `Tasa_de_interes_Nivel_k` are only read on level k and only matter with
  *     debt, which is 0 at the start of every level: the scenario runs on level k with a loan taken in
  *     year 1 (loans open in levels 1–2 from `Ano_Activacion_Prestamo`, App.tsx `requestLoan`);
- *   - the four per-tax-point factors only act with additional tax, which only level 3 has: level 3 with 10 pp;
+ *   - `Gasto_Publico_Base_Nivel_k` (phase 44) is only read on level k: same scenario;
+ *   - the per-tax-point factors only acted with additional tax (level 3 with 10 pp); the last one left for PARAMS_V2 in 44;
  *   - `Ano_Activacion_Prestamo` and `Max_Additional_Tax_Rate_Percentage` only gate the UI: they are
  *     checked against the Territorio session actions that read them (UI_ONLY_PARAM_KEYS).
  */
@@ -24,12 +25,12 @@ const noEventRng = () => 0.999;
 const BALANCED = [
   Policy.NaturalConservation, Policy.Agroecological, Policy.AgriculturalExports, Policy.CarbonNeutrality, Policy.ForeignInvestment,
 ];
-const FISCAL_KEYS = new Set<NumericParamKey>([
-  'PBIGrowth_Reduction_Factor_Per_Tax_Point',
-]);
+/** Keys that only act with additional tax (level 3, 10 pp). Empty since phase 44 moved the growth drag to PARAMS_V2. */
+const FISCAL_KEYS = new Set<NumericParamKey>([]);
 
 function scenario(key: NumericParamKey): { level: number; tax: number; loan: number } {
-  const debtLevel = /^(Pago_deuda_anual|Tasa_de_interes)_Nivel_(\d)$/.exec(key);
+  // Per-level money keys are read only on their level; interest and amortisation also need debt (a loan in year 1).
+  const debtLevel = /^(Pago_deuda_anual|Tasa_de_interes|Gasto_Publico_Base)_Nivel_(\d)$/.exec(key);
   if (debtLevel) return { level: Number(debtLevel[2]), tax: 0, loan: 1000 };
   if (FISCAL_KEYS.has(key)) return { level: 3, tax: 10, loan: 0 };
   return { level: 2, tax: 0, loan: 0 };

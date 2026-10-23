@@ -247,15 +247,23 @@ describe('public uses (map → model)', () => {
     expect(r.cost).toBeCloseTo(protectedAreaCost(CONTROL_PARAMS) * (2 / LOT_KHA), 6);
   });
 
-  it('refuses parcels that do not take the use, and when the treasury cannot pay', () => {
+  it('refuses parcels that do not take the use, and when there is no fiscal space (phase 44)', () => {
     const state = freshState(2);
     const t = createTerritory(state.landUses, 2);
     const crop = t.parcels.find((p) => p.kind === LU.ConventionalCrops)!;
     expect(declareProtectedArea(state, t, crop.x, crop.y, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'not-convertible' });
     expect(declareProtectedArea(state, t, -1, 0, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'out-of-bounds' });
-    const broke = { ...state, stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: 10 } };
     const p = findForest(t);
-    expect(declareProtectedArea(broke, t, p.x, p.y, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'insufficient-funds' });
+    // Reserves on the floor: the lot (100) is borrowed while D/Y stays ≤ 0.6 …
+    const floor = 0.02 * state.stellaSpecificState.PBI_Real;
+    const atFloor = { ...state, stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: floor } };
+    const borrowed = expectOk(declareProtectedArea(atFloor, t, p.x, p.y, CONTROL_PARAMS));
+    expect(borrowed.state.stellaSpecificState.Reservas_del_Tesoro).toBeCloseTo(floor, 9);
+    expect(borrowed.state.stellaSpecificState.Deuda).toBeCloseTo(borrowed.cost, 9);
+    expect(borrowed.state.indicators.debt).toBeCloseTo(borrowed.cost, 9);
+    // … and refused once that debt would take D/Y above 0.6.
+    const broke = { ...atFloor, stellaSpecificState: { ...atFloor.stellaSpecificState, Deuda: 0.6 * state.stellaSpecificState.PBI_Real } };
+    expect(declareProtectedArea(broke, t, p.x, p.y, CONTROL_PARAMS)).toEqual({ ok: false, reason: 'no-fiscal-space', cost: borrowed.cost });
   });
 
   it('declared lots survive later syncs', () => {
