@@ -35,7 +35,7 @@
 import type { ControlParams, GameState, LandUse } from '../types';
 import { LandUseType } from '../types';
 import {
-  CONTEXT_KINDS, createGeography, distanceField, fbm, GRID_SIZE, hash01, PRODUCTIVE_PARCELS, REGIONS, regionWeights,
+  CONTEXT_KINDS, createGeography, distanceField, fbm, GRID_SIZE, hash01, largestComponent4, PRODUCTIVE_PARCELS, REGIONS, regionWeights,
   urbanKind, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial,
 } from './geography';
 
@@ -386,6 +386,30 @@ export function createTerritory(landUses: Record<LandUseType, LandUse>, seed = 1
   allocate(geo, cells, counts, seed).forEach((k, i) => { parcels[i].kind = k; });
   return t;
 }
+
+/* ── Landscape connectivity (model 2.0, phase 40 §3) ──────────────────────────────────────── */
+
+/** Parcel kinds that count as forest habitat for the connectivity K: native forest (both) and restoration. */
+export const FOREST_KINDS: ReadonlySet<ParcelKind> = new Set<ParcelKind>([
+  LandUseType.UnprotectedNativeForest, LandUseType.ProtectedNativeForest, LandUseType.RestorationForest,
+]);
+
+/**
+ * K = share of the forest parcels (BNNP + BNP + RES) that belong to the largest 4-connected forest patch (0-1; 0
+ * with no forest). It enters biodiversity as γ_K·ln(K/K0) (src/sim/v2/biodiversity.ts): a protected area or a
+ * restoration next to the existing forest raises K, an isolated lot lowers it. One flood fill over the grid.
+ */
+export function forestConnectivity(t: Territory): number {
+  let total = 0;
+  const member = (i: number): boolean => FOREST_KINDS.has(t.parcels[i].kind);
+  t.parcels.forEach((p) => { if (FOREST_KINDS.has(p.kind)) total++; });
+  if (total === 0) return 0;
+  return largestComponent4(t.size, member).bestSize / total;
+}
+
+/** True when a batch of parcel changes touched forest (only then can K change). */
+export const changesTouchForest = (changes: ParcelChange[]): boolean =>
+  changes.some((c) => FOREST_KINDS.has(c.from) || FOREST_KINDS.has(c.to));
 
 /* ── Model → map ───────────────────────────────────────────────────────────────────────────── */
 

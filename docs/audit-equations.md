@@ -198,3 +198,20 @@ Spec: `mejora-general/files/39_indicadores_por_relajacion.md`; prototipo: bloque
 | — (impuesto) | τ entra en E y C en todos los niveles (antes solo N3, `fiscalTermsActive`, que se borra). | `core.ts`, `monthly.ts`, `territorio/session.ts` | Solo N3 y Territorio pueden fijar τ: sin cambio práctico en N1/N2. |
 | — (rutas, provisorio) | Producción: piso de E 25 / 32 / 30 → 36 / 40 / 36 (`ROUTES3` del prototipo); los viejos estaban calibrados para un E inmóvil y dos eran E₀ (C1: `do_nothing` N3 ganaba producción en 5/10). | `src/sim/winRoutes.ts` | C1 PASS; la fase 49 recalibra. |
 
+
+## Modelo 2.0-dev — biodiversidad por especies-área (fase 40, 2026-10-22)
+
+Spec: `mejora-general/files/40_biodiversidad_especies_area.md`; prototipo: bloque B de `indicators_step` en
+`scripts/reference/modelo_v2.py`. Código: `src/sim/v2/biodiversity.ts`, primer indicador del paso 8 de `advance`
+(`src/sim/v2/core.ts`), tablas `PARAMS_V2.habitat` / `zSAR` / `qB` / `biodiversity`, k = `CP.Velocidad_Ajuste_Biodiversidad`;
+conectividad en `src/sim/territory.ts` (`forestConnectivity`) y `src/territorio/session.ts`. Verificado:
+`tests/sim/biodiversity.v2.spec.ts` (ancla ±1e-9 en los 3 niveles; CC → HUM 5 kHa: H +3,006 %, ΔB* +0,4154; SAR cerca
+del inicio; sinergia continua 0,05; tratado +0,25 logit; 12 meses = 1 año; 24 casos del prototipo ±1e-9 con
+`scripts/reference/biodiversity40_cases.json`; K 4-conexo, lote contiguo / aislado, caché de la sesión) y
+`npm run sim:check` contra la 39.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| R-5 / N-04 / T-04 / I-2 | B relaja (k_B = 0,12) hacia `100·σ(ℓ_B0 + D_B)`, `D_B = z/(1 − B₀/100)·ln(H/H₀) + Σ qB·η^land + 0,10·min(η_AS, η_CR) − 0,12·min(η_PAI, η_FRA) + γ_K·ln(K/K₀) + pactos.B + cap(impulsos)`, `H = Σ h_i·a_i` (FAL 0,3), z = 0,35. Se borran `calculateBiodiversityChange`, `INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY`, `Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso`, `Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso` y `impulses.biodiversity` del tratado (ahora `pactos.B` = +0,25 logit). | `src/sim/v2/biodiversity.ts`, `params.ts`, `core.ts`, `anchors.ts`, `constants.ts`, `types.ts` | B deja de estar casi inmóvil: N2 año 30 sin eventos `do_nothing` 39,3, verde 54,9, conservación con tratado 60,4 (sin tratado 54,2), extractiva 28,7 (prototipo 39,2 / 54,8 / 60,3 / 54,2 / 28,5); recorrido 27–32 puntos (antes ≈ 12). |
+| — (conectividad) | Territorio: K = fracción del bosque (BNNP + BNP + RES) en el parche 4-conexo más grande del mapa; K₀ al crear la sesión; γ_K = 0,25, piso 0,001·K₀; `advanceMonth` pasa {K, K₀} en `opts.connectivity` y recalcula K solo si cambió bosque. | `src/sim/territory.ts`, `src/sim/geography.ts` (`largestComponent4`), `src/territorio/session.ts` | Ninguno (0 sin mapa). En Territorio `conservation` sigue ganando (100 %) y `do_nothing` no (0 %). |
+| — (capa del mapa) | Capa "Biodiversidad" de Territorio: h_i − H actual (antes el peso 1.1 del uso). | `src/territorio/heat.ts` | — |

@@ -217,6 +217,15 @@ export const PARAMS_V2 = {
   zSAR: 0.35,
   /** 40 — direct policy effect on biodiversity, logit units per unit of effective efficiency. */
   qB: { CR: 0.55, AS: 0.20, GS: 0.12, AGUA: 0.08, CN: 0.05, PAI: -0.25, PEA: -0.06, PIE: -0.03, FRA: -0.45, SE: -0.10 },
+  /**
+   * 40 — the rest of D_B (mejora-general/files/40 §1, §3; prototype inline coefficients). Synergies in logit units per
+   * unit of min(η, η) on the land channel: +0.10·min(η_AS, η_CR), −0.12·min(η_PAI, η_FRA) (criterio experto; in 1.1
+   * a fixed +0.10 / −0.15 bonus). Connectivity (Territorio only): γ_K = 0.25 logit units per unit of ln(K/K0), with K
+   * floored at 0.001·K0 so a map with no forest stays finite (same floor as ρ in phase 41). Criterio experto.
+   * gammaMaxB0: B0 (points) used in γ_H = z/(1 − B0/100) is capped at 95 so a state anchored near B = 100 (an old 1.1
+   * save re-anchored by advance) cannot give γ_H = ∞ (NaN at H = H0). Every level starts at B0 = 40: no effect there.
+   */
+  biodiversity: { synergyAgroConservation: 0.10, synergyIntensiveFlexible: 0.12, connectivityGamma: 0.25, connectivityFloor: 1e-3, gammaMaxB0: 95 },
 
   /** 41 — food balance: yields (production units per kHa), annual yield trend, export share, logit slopes. */
   food: { yield: { CC: 1.0, CA: 0.7, PRG: 0.25 }, yieldTrend: 0.006, export0: 0.30, kappa1: 2.5, kappa2: 0.6 },

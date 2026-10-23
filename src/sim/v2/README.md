@@ -15,6 +15,7 @@ calibración.**
 | `policies.ts` | fase 36: `tickPolicyClocks`, `baseEfficiency`, `channelStrength`, `computeEfficiencies` (η base + canales `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost` (por esfuerzo), `policyStatus` ("en marcha" / "desgastada" para la UI) |
 | `carbon.ts` | fase 38: `energyTargets` / `updateEnergyState` (s*, u*, inercia k = 0,15), `fluxOf`, `computeEmissions` (energía, AFOLU, LUC desde los flujos realizados ÷ dt, total y per cápita en tCO₂e), `budgetPath` / `carbonBudgetIndex` (B_t), `CO2_PER_C` = 44/12 |
 | `indicators.ts` | fase 39: marco común X* = 100·σ(ℓ₀ + D), `stepIndicator` (= `relax`), `impulseSum` / `capImpulses` (±0,6), `pactShift`, `productiveValue`, `driveE` / `driveC` / `drivePc`, `targetE` / `targetC` / `targetPc`, `updateRelaxedIndicators` (paso 8: E → C (W) → Pc (St)) |
+| `biodiversity.ts` | fase 40: `habitatIndex` (H = Σ h·a, también el ancla H₀), `driveB` / `targetB` (especies-área en logit, γ_H = z/(1 − B₀/100), calidad de manejo qB·η^land, sinergias continuas, conectividad γ_K·ln(K/K₀) solo con mapa, pactos), `connectivityTerm`, `updateBiodiversity` (paso 8, primero) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
@@ -48,7 +49,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | hecho (tasas base de frontera en `CONTROL_PARAMS`) |
 | 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `fluxPolicy`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`, crecimiento `(1 + g)^dt`) | hecho (topes de CO₂ de las rutas reescalados de forma provisoria hasta la 49) |
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`, `bE`, `productiveValue`, `conflict`, `greenRelief`, `conflictWeights`, `relaxation`) | hecho (presiones de D_C/D_Pc todavía 1.1 hasta la 42; φ_fiscal puente sobre la deuda 1.1 hasta la 44) |
-| 40 | B por especies-área (`habitat`, `zSAR`, `qB`) | pendiente |
+| 40 | paso 8: B por especies-área (`habitat`, `zSAR`, `qB`, `biodiversity`, `Velocidad_Ajuste_Biodiversidad`; conectividad K del mapa vía `AdvanceOptions.connectivity`) | hecho (FAL sigue con su peso 1.1 en F hasta la 41) |
 | 41 | F por balance oferta/demanda (`food`, `foodPerCapita0`) | pendiente |
 | 42 | presiones en logit, ancladas (`pressure`) | pendiente |
 | 43 | pactos como desplazamiento de objetivo (`pacts`) | pendiente |
@@ -108,3 +109,9 @@ pactos desplazan E* y Pc* con `PARAMS_V2.pacts.*.E` / `.Pc`: el +3 de estabilida
 `extractive` N2/N3 el colapso político llega a St ≤ 5 hacia el año 19 (el prototipo, con presiones ancladas, termina en
 St 55 / 47). Transitorio hasta la fase 42.
 
+
+Fase 40: sin recortes de ecuación. B es el port exacto del bloque B del prototipo (24 casos ±1e-9). Desvíos: (1) la
+conectividad K (spec §3) no está en el prototipo; se agrega solo en Territorio, con piso K ≥ 0,001·K₀
+(`PARAMS_V2.biodiversity.connectivityFloor`) para que un mapa sin bosque no dé ln 0. (2) K se cachea en la sesión
+(`Session.connectivity`) y se recalcula solo si el mapa cambió desde el último cálculo o los cambios del mes tocaron
+bosque (BNNP, BNP, RES). (3) `targetB` no recibe `CP` (ningún término lo lee; k_B se aplica en `updateBiodiversity`).

@@ -19,6 +19,7 @@ import { AGRI_CODES, PARAMS_V2, type LandCode } from './params';
 import { landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
 import { computeEmissions } from './carbon';
 import { productiveValue } from './indicators';
+import { habitatIndex } from './biodiversity';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
@@ -70,7 +71,7 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
   const st = state.stellaSpecificState;
   const pop = CP.Poblacion_Inicial;
 
-  const habitat0 = LAND_CODES.reduce((sum, k) => sum + PARAMS_V2.habitat[k] * A[k], 0) / total;
+  const habitat0 = habitatIndex(state.landUses);
   const productiveValue0 = productiveValue(state.landUses);
   const agri = A.CC + A.CA + A.PRG + A.PF || 1;
   const y = PARAMS_V2.food.yield;

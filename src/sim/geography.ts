@@ -162,6 +162,48 @@ export function distanceField(size: number, source: (i: number) => boolean, pass
   return dist;
 }
 
+/**
+ * 4-connected components of the cells where `member` holds (iterative flood fill, row-major order): the label of
+ * each member cell (−1 outside), the label of the largest component (the first one found on a tie; −1 if none) and
+ * its size. The map generator keeps the largest land piece with it; the connectivity K of model 2.0 (phase 40,
+ * `forestConnectivity` in territory.ts) is the forest's largest patch over all forest.
+ */
+export function largestComponent4(size: number, member: (i: number) => boolean): { comp: Int32Array; best: number; bestSize: number } {
+  const comp = new Int32Array(size * size).fill(-1);
+  let best = -1;
+  let bestSize = 0;
+  let id = 0;
+  const stack: number[] = [];
+  for (let i = 0; i < size * size; i++) {
+    if (comp[i] >= 0 || !member(i)) continue;
+    stack.push(i);
+    comp[i] = id;
+    let n = 0;
+    while (stack.length) {
+      const p = stack.pop()!;
+      n++;
+      const x = p % size;
+      const y = (p / size) | 0;
+      for (const [ox, oy] of N4) {
+        const nx = x + ox;
+        const ny = y + oy;
+        if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+        const j = ny * size + nx;
+        if (comp[j] < 0 && member(j)) {
+          comp[j] = id;
+          stack.push(j);
+        }
+      }
+    }
+    if (n > bestSize) {
+      bestSize = n;
+      best = id;
+    }
+    id++;
+  }
+  return { comp, best, bestSize };
+}
+
 /* ── Generator ─────────────────────────────────────────────────────────────────────────────── */
 
 type Cell = ContextKind | 'productive';
@@ -201,37 +243,7 @@ function carve(size: number, seed: number, landCells: number): { kind: Cell[]; s
   const order = score.map((s, i) => i).filter((i) => !sea[i]).sort((a, b) => score[a] - score[b]);
   order.slice(0, landCells).forEach((i) => { kind[i] = 'productive'; });
   // …keep the largest 4-connected piece…
-  const comp = new Int32Array(size * size).fill(-1);
-  let best = -1;
-  let bestSize = 0;
-  let id = 0;
-  for (let i = 0; i < size * size; i++) {
-    if (kind[i] !== 'productive' || comp[i] >= 0) continue;
-    const stack = [i];
-    comp[i] = id;
-    let n = 0;
-    while (stack.length) {
-      const p = stack.pop()!;
-      n++;
-      const x = p % size;
-      const y = (p / size) | 0;
-      for (const [ox, oy] of N4) {
-        const nx = x + ox;
-        const ny = y + oy;
-        if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
-        const j = ny * size + nx;
-        if (kind[j] === 'productive' && comp[j] < 0) {
-          comp[j] = id;
-          stack.push(j);
-        }
-      }
-    }
-    if (n > bestSize) {
-      bestSize = n;
-      best = id;
-    }
-    id++;
-  }
+  const { comp, best } = largestComponent4(size, (i) => kind[i] === 'productive');
   for (let i = 0; i < size * size; i++) if (kind[i] === 'productive' && comp[i] !== best) kind[i] = 'void';
   // …fill enclosed holes, and give the sea its cells.
   const outside = new Array<boolean>(size * size).fill(false);

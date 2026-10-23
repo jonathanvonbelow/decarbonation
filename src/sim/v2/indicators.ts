@@ -9,7 +9,8 @@
  * D_X is a sum of drivers, each a deviation from the level's starting state (anchors, phase 35) or the
  * effect of a policy (0 while inactive), so a level with no policies and the land standing still does not
  * move. The target lives in (0, 100) with no clip per term. k_X are the facilitator's
- * `CP.Velocidad_Ajuste_*`. Phases 40–42 apply the same frame to B, F and the pressures.
+ * `CP.Velocidad_Ajuste_*`. Phase 40 applies the same frame to B (src/sim/v2/biodiversity.ts); 41–42 to F and the
+ * pressures.
  *
  * Fiscal stress φ (`model.fiscal.stress`) is the prototype's sHigh(interest / tax revenue; 0.20, 0.04) on the 1.1
  * economy's stocks (`interestBurdenOf` / `fiscalStressOf`, a bridge until phase 44 ports the 2.0 economy).
@@ -73,10 +74,10 @@ export function impulseSum(model: Pick<ModelState, 't' | 'impulses'>, X: ModelIn
 /** Situation impulses are capped at ±impulseCap logit units per indicator (spec 39 §1). */
 export const capImpulses = (v: number): number => Math.max(-R.impulseCap, Math.min(R.impulseCap, v));
 
-/** Target shift (logit) of the active pacts on E or Pc (PARAMS_V2.pacts; phase 43 makes every pact data). */
-export function pactShift(pacts: Record<string, Pact> | undefined, X: 'E' | 'Pc'): number {
+/** Target shift (logit) of the active pacts on B, E or Pc (PARAMS_V2.pacts; phase 43 makes every pact data). */
+export function pactShift(pacts: Record<string, Pact> | undefined, X: 'B' | 'E' | 'Pc'): number {
   if (!pacts) return 0;
-  const table = PARAMS_V2.pacts as Record<string, Partial<Record<'E' | 'Pc', number>>>;
+  const table = PARAMS_V2.pacts as Record<string, Partial<Record<'B' | 'E' | 'Pc', number>>>;
   return (Object.values(pacts) as Pact[]).reduce((sum, p) => sum + (p.isActive ? table[p.id]?.[X] ?? 0 : 0), 0);
 }
 
@@ -160,8 +161,8 @@ export const targetPc = (s: IndicatorState): number => target100(s.model.anchors
 
 /**
  * Step 8 (E → C (W) → Pc (St)) of advance(): each reads the ones already updated. Mutates `s.indicators`,
- * `s.stellaSpecificState` and `s.model.targets` (advance() owns the copy). B and F are updated before
- * (still model 1.1 until phases 40/41) and the pressures after (1.1 until phase 42).
+ * `s.stellaSpecificState` and `s.model.targets` (advance() owns the copy). B (phase 40, biodiversity.ts) and F
+ * (still model 1.1 until phase 41) are updated before and the pressures after (1.1 until phase 42).
  */
 export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: ControlParams, dt: number): void {
   const st = s.stellaSpecificState;

@@ -64,7 +64,8 @@ El prototipo de referencia no modela `K` (no tiene mapa): las tasas de victoria 
 ## 4. Tests
 
 - Ancla: sin políticas y con suelo congelado, B* = B₀.
-- Convertir 5 kHa de CC en humedal en N2 sube H ≈ 2,9 % y B* ≈ +0,4 puntos (verificar con el prototipo).
+- Convertir 5 kHa de CC en humedal en N2 sube H 3,01 % y B* +0,415 puntos (prototipo: 3,006 % y +0,4154; v6/40: decía
+  "H ≈ 2,9 %").
 - Sinergia continua: con η_AS = 0,5 y η_CR = 0,8 suma 0,05.
 - Conectividad: un lote contiguo al parche mayor sube K; uno aislado no.
 

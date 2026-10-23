@@ -17,8 +17,8 @@
  */
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
-  createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
-  evenEffort, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
+  changesTouchForest, createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
+  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
   type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -97,6 +97,21 @@ export interface Session {
    * money, pressures). Handed to the next `stepMonth` as `extraDeferred`, then emptied (phase 34, T-12).
    */
   pendingDeferred: DeferredAdjustment[];
+  /**
+   * Landscape connectivity of the map (model 2.0, phase 40 §3): K0 when the game started, K of the map as of
+   * `tick` (the `lastChanges.tick` it was computed at). `advanceMonth` hands {K, K0} to the model and recomputes
+   * K only when the map changed since (a declaration, a situation) or this month's changes touched forest.
+   * Optional so a session built before phase 40 still runs (K0 is then taken from its current map).
+   */
+  connectivity?: { K0: number; K: number; tick: number };
+}
+
+/** Connectivity of the session's current map: the cached K when the map has not changed since, else recomputed. */
+export function currentConnectivity(s: Session): { K0: number; K: number; tick: number } {
+  const c = s.connectivity;
+  if (c && c.tick === s.lastChanges.tick) return c;
+  const K = forestConnectivity(s.territory);
+  return { K0: c?.K0 ?? K, K, tick: s.lastChanges.tick };
 }
 
 export interface Unlocks {
@@ -157,6 +172,7 @@ export function newGameState(CP: ControlParams = CONTROL_PARAMS): GameState {
 export function createSession(seed: number): Session {
   const game = newGameState();
   const territory = developTerritory(createTerritory(game.landUses, seed), developmentOf(game)).territory;
+  const K0 = forestConnectivity(territory);
   return {
     seed,
     game,
@@ -180,6 +196,7 @@ export function createSession(seed: number): Session {
     landTally: {},
     breach: {},
     pendingDeferred: [],
+    connectivity: { K0, K: K0, tick: 0 },
   };
 }
 
@@ -224,9 +241,12 @@ function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
 /** Advances one month. Only the end of the game stops it: situations never pause the clock. */
 export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): Session {
   if (s.outcome) return s;
+  // Connectivity of the map as the previous month left it (the engine does not know the map, phase 40 §3).
+  const conn = currentConnectivity(s);
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
     publicUseUpkeep: true,
     extraDeferred: s.pendingDeferred ?? [],
+    connectivity: { K: conn.K, K0: conn.K0 },
   });
   const pendingDeferred: DeferredAdjustment[] = [];
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
@@ -291,6 +311,12 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     monthIndex,
     territory,
     lastChanges: { tick: s.lastChanges.tick + 1, list: changes },
+    // Recompute K only when this month's parcel changes touched forest (a 10 000-cell flood fill otherwise saved).
+    connectivity: {
+      K0: conn.K0,
+      K: changesTouchForest(changes) ? forestConnectivity(territory) : conn.K,
+      tick: s.lastChanges.tick + 1,
+    },
     fx: mapFx({ territory, game, open, event: r.event, month: s.month, monthIndex }),
     history: [...s.history, sample(game, monthIndex)],
     open,

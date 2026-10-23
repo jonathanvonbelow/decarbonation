@@ -351,11 +351,10 @@ export const INITIAL_PACTS: Record<string, Pact> = {
         tasa_BNNP_a_CC: 0.5, // Reduce la tasa de deforestación para cultivos convencionales en un 50%
       }
     }),
-    // Model 1.1 (phase 34, N-03/T-03): replaces +5 B and −1 E per year, applied as a level jump in
-    // effects() (B went 40 → 100 in 13 years). Criterio experto: as strong as Conservation (+0,50 on B),
-    // not stronger.
-    // Fase 39: el −0,05 sobre E es ahora PARAMS_V2.pacts.biodiversityTreaty.E (desplazamiento del objetivo).
-    impulses: { biodiversity: 0.40 },
+    // Model 1.1 (phase 34, N-03/T-03) replaced +5 B and −1 E per year (a level jump in effects(): B went 40 → 100
+    // in 13 years) with impulses of +0,40 / −0,05. Fase 39: el −0,05 sobre E es PARAMS_V2.pacts.biodiversityTreaty.E;
+    // fase 40: el +0,40 sobre B es PARAMS_V2.pacts.biodiversityTreaty.B = +0,25 logit (desplazamiento de B*).
+
   },
   techTransferInitiative: {
     id: 'techTransferInitiative', name: "Iniciativa de Transferencia Tecnológica",
@@ -394,8 +393,8 @@ export const CONTROL_PARAMS: ControlParams = {
   Tasa_disipacion_presion_social: 0.09, // fracción anual; provisorio (fase 42 lo borra)
 
   Tasa_de_interes_Nivel_1: 0.025, Tasa_de_interes_Nivel_2: 0.035, Tasa_de_interes_Nivel_3: 0.045,
-  Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso: 0.2,
-  Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso: 0.8,
+  // Fase 40: Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso (0,2) y Factor_Impacto_Usos_del_Suelo_en_
+  // Biodiversidad_Peso (0,8) se borraron: B relaja hacia su objetivo especies-área (src/sim/v2/biodiversity.ts).
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso: 0.4,
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso: 0.5,
   Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso: 0.1,
@@ -887,39 +886,9 @@ export const INITIAL_REGIONAL_ZONES_DATA: RegionalZoneData[] = [
 
 
 export const INDICATOR_IMPACT_WEIGHTS = {
-  BIODIVERSITY: {
-    POLICIES: {
-      [Policy.Agroecological]: 0.15,
-      [Policy.NaturalConservation]: 0.50,
-      [Policy.SustainableLivestock]: 0.10,
-      [Policy.SustainableWaterManagement]: 0.05,
-      [Policy.CarbonNeutrality]: 0.05,
-      [Policy.IntensiveAgriculture]: -0.20,
-      [Policy.AgriculturalExports]: -0.05,
-      [Policy.ForeignInvestment]: -0.02,
-      [Policy.FlexibleEnvironmentalRegulations]: -0.30,
-      [Policy.EnergySubsidies]: -0.10,
-      Sinergia_AS_CR_Bio_Factor: 0.1, // Placeholder for synergy
-      Sinergia_Neg_PAI_FRA_Bio_Factor: -0.15, // Placeholder for negative synergy
-    },
-    LAND_USE: {
-      [LandUseType.UnprotectedNativeForest]: 0.20,
-      [LandUseType.ProtectedNativeForest]: 0.50,
-      [LandUseType.AgroecologicalCrops]: 0.10,
-      [LandUseType.ConventionalCrops]: -0.30,
-      [LandUseType.ForestPlantations]: -0.05,
-      [LandUseType.GrasslandsPastures]: -0.10,
-      // Usos públicos: el humedal es el hábitat de mayor valor del modelo (supera al bosque
-      // protegido por filtrado, refugio y conectividad); la restauración vale menos que el bosque
-      // maduro pero más que cualquier cultivo; el parque energético ocupa hábitat sin reponerlo.
-      [LandUseType.PublicWetland]: 0.55,
-      [LandUseType.RestorationForest]: 0.30,
-      [LandUseType.EnergyPark]: -0.05,
-      // Barbecho (fase 37): hábitat bajo pero no nulo (rebrote), entre el cultivo agroecológico y la
-      // plantación (PARAMS_V2.habitat.FAL = 0,3 en el modelo 2.0, fase 40). Puente 1.1, criterio experto.
-      [LandUseType.Fallow]: 0.05,
-    }
-  },
+  // Fase 40: BIODIVERSITY se borró. La biodiversidad relaja hacia un objetivo especies-área (src/sim/v2/biodiversity.ts;
+  // afinidades de hábitat en PARAMS_V2.habitat, efecto de las políticas en PARAMS_V2.qB, sinergias en
+  // PARAMS_V2.biodiversity).
   FOOD_SECURITY: {
     POLICIES: {
       [Policy.Agroecological]: 0.20,

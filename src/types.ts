@@ -106,7 +106,6 @@ export interface StellaStocks {
  * year. Economic security left in phase 39: the pacts shift its logistic target (PARAMS_V2.pacts.*.E).
  */
 export interface PactImpulses {
-  biodiversity?: number;
   foodSecurity?: number;
 }
 
@@ -128,7 +127,7 @@ export interface Pact {
   costToJoin?: number;
   annualCost?: number;
   unlockYear?: number;
-  /** Effects on B and F, summed into the 1.1 indicator functions' policy impact (see PactImpulses). */
+  /** Effects on F, summed into the 1.1 food-security function's policy impact (see PactImpulses). Phase 40: B left. */
   impulses?: PactImpulses;
 }
 
@@ -415,8 +414,6 @@ export interface ControlParams {
   Tasa_de_interes_Nivel_1: number;
   Tasa_de_interes_Nivel_2: number;
   Tasa_de_interes_Nivel_3: number;
-  Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso: number;
-  Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso: number;
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso: number;
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso: number;
   Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso: number;

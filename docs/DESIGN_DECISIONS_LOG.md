@@ -2486,3 +2486,75 @@ el test ahora además exige que ningún par acumule una parcela entera).
 **Deudas.** Presiones ancladas (42: colapso de `extractive`, umbral 8 t); B y F (40/41, C6); economía 2.0, reservas
 negativas y −0,01·φ en g (44); concentración y transición justa (45); desgaste de situaciones como impulsos (47); pisos de
 producción provisorios y C4 (49).
+
+## 2026-10-22 — v6 fase 40: biodiversidad por especies-área y conectividad
+
+**Qué se hizo** (`mejora-general/files/40_biodiversidad_especies_area.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/biodiversity.ts` (port del bloque B de `indicators_step`): `habitatIndex` (H = Σ h·a; también el ancla
+  `habitat0`), `driveB` / `targetB` con γ_H = z/(1 − B₀/100), z = 0,35, calidad de manejo `qB·η^land`, sinergias continuas
+  +0,10·min(η_AS, η_CR) y −0,12·min(η_PAI, η_FRA) (`PARAMS_V2.biodiversity`), tratado como desplazamiento +0,25 logit
+  (`pactShift` acepta 'B'), impulsos de situaciones con tope; `updateBiodiversity` relaja exacto con k_B =
+  `CP.Velocidad_Ajuste_Biodiversidad` (0,12) y guarda `model.targets.B`. Es el primer indicador del paso 8 (B → F → E …).
+- Conectividad (solo Territorio, spec §3): `forestConnectivity(territory)` = fracción del bosque (BNNP + BNP + RES) en el
+  parche **4-conexo** más grande; `largestComponent4` se extrajo de `carve` (`geography.ts`) y lo usan los dos (mapa
+  bit-idéntico). `Session.connectivity` = {K₀ al crear la sesión, K, tick}; `advanceMonth` pasa {K, K₀} en
+  `AdvanceOptions.connectivity` (también en `MonthlyOptions`) y recalcula K solo si el mapa cambió desde el último cálculo
+  (declaración, situación) o si los cambios del mes tocaron bosque. γ_K = 0,25, K con piso 0,001·K₀. En el juego de 3
+  niveles el término es 0.
+- Se borran `calculateBiodiversityChange`, `INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY`, los `CONTROL_PARAMS`
+  `Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso` / `Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso`
+  (y sus descripciones), `PactImpulses.biodiversity` y el `impulses` del tratado.
+- Consumidores: panel del facilitador (k_B en "Velocidad de ajuste"), descripciones, manual del facilitador (sección de
+  biodiversidad reescrita), manual de ecuaciones (fórmula de D_B), capa "Biodiversidad" del mapa (h_i − H actual).
+- Prototipo: sin cambios (sin golden nuevo). `scripts/reference/biodiversity40_cases.py` → `biodiversity40_cases.json`
+  (24 casos, 3 niveles × dt 1 y 1/12).
+- Tests: `tests/sim/biodiversity.v2.spec.ts` (ancla, CC → HUM, SAR, sinergias, tratado, k y 12 = 1, recorrido de una
+  partida, 24 casos ±1e-9, K 4-conexo, lote contiguo/aislado, término de K por `stepMonth`, caché de la sesión).
+  Actualizados: `core.spec` (trayectorias regeneradas: el `balanced` con tratado llega a B ≈ 57 en 12 años en lugar de
+  ≈ 43; E, W, St, la presión agrícola, F vía E y el puntaje siguen a B; deuda, PBI, CO₂ y CC sin cambio), `model11.spec`
+  (el test del impulso del tratado en la función 1.1 se retiró: ahora es desplazamiento de B*), `invariants.spec` INV-16
+  (pactos.B ≤ máx |qB|).
+
+**Desvíos y discrepancias** (filas 40 de `docs/v6-spec-vs-motor.md`).
+- Spec §4 "H ≈ 2,9 %": exacto 3,006 % y ΔB* +0,4154 (prototipo = port). Texto corregido.
+- Spec §3 pedía reutilizar "el BFS de geography.ts" para K 4-conexo; ese BFS es 8-vecinos (`distanceField`): se reutilizó
+  el etiquetado 4-conexo de `carve`, extraído como `largestComponent4`.
+- El prototipo no modela K. Verificado con el arnés: `conservation` de Territorio 100 %, `do_nothing` 0 %.
+- `targetB` no recibe `CP` (la spec lo lista): ningún término lo lee; k_B entra en `updateBiodiversity`.
+- 🟧 sin reemplazo: piso de K (0,001·K₀) por criterio experto, igual al de ρ en la 41.
+
+**Referencias del prototipo** (N2, año 30, sin eventos; port por `stepYear` y `--quick`): sin políticas 39,3 (39,2), verde
+54,9 (54,8), conservación con tratado 60,4 / 60,35 (60,3), conservación sin tratado 54,24 (54,2), extractiva 28,7 (28,5).
+
+**`npm run sim:check -- --quick`** (sale 0), contra el quick de la fase 39:
+
+| Criterio | 39 (quick) | 40 (quick) |
+|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,200 | FAIL 0,200 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | FAIL 2 | FAIL 2 |
+| C6 recorrido ≥ 15 | FAIL 11,577 | FAIL 12,148 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,600 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 |
+| C9 anual–mensual | PASS 0,697 | PASS 0,947 |
+
+C6: B pasa en todos (N1 27,4, N2 31,7, N3 31,1, Territorio 30,2; antes ≈ 12); solo falla F de N3 (12,1, fase 41). C7: B
+"sin cambio" baja de 100 % a 92–93 % (la banda pide 30–36 %; la estrechez de B es esperable con k_B = 0,12, fase 48). C9:
+el peor pasa a St de `green` año 10 (Δ −0,95): B ahora cruza 45 y activa el término de B de la presión ambientalista 1.1,
+integrada por Euler mensual; lo resuelven 42/46 (margen chico). C2: producción N1 20 %, N2 40 %, Territorio 60 % (F, 41).
+
+**Revisión de código** (aplicada): γ_H con B₀ acotado a 95 (`gammaMaxB0`; un estado re-anclado cerca de B = 100 daba
+γ_H = ∞ y NaN con H = H₀); fórmula del manual del facilitador con logit(B₀/100); tooltip del título de indicadores del
+manual de ecuaciones reescrito; afinidades listadas una por uso (HUM, PRG, ENR propias). No aplicadas, anotadas: (a) los
+choques de eventos y de situaciones sobre B son saltos de nivel que ahora se relajan hacia B* (k_B = 0,12; a 30 años
+queda ≈ 2 %), igual que E/W/St desde la 39; la fase 47 los convierte en impulsos del objetivo (`model.impulses`, hoy
+siempre vacío). (b) K es "fracción en el parche mayor" como dice la spec: talar un parche secundario aislado sube K
+(+0,13 logit en un caso 60/40), aunque la pérdida de H domina; anotado para la 49/50. (c) La caché de K casi siempre
+recalcula (el modelo mueve bosque casi todos los meses); se mantiene porque es barata y correcta. (d) K entra con el mapa
+del mes anterior (lo que pide la spec §3). (e) `habitatIndex` / capa del mapa recalculan H por parcela (costo menor).
+
+**Deudas.** F por balance (41); presiones ancladas (42; también el umbral 45 de B en la presión ambientalista 1.1); C9 (46);
+impulsos de situaciones/eventos sobre B (47); K y parches secundarios (49);
+`Factor_Impacto_*_Seguridad_Economica_Peso` / `Impacto_Biodiversidad_en_SE_Peso` sin consumidor desde la 39 (limpieza).

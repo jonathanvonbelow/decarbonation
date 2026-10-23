@@ -2,7 +2,8 @@
  * Map overlays ("ver sobre el mapa"). Each value comes straight from the model's own coefficients
  * for that land use — nothing is invented for the picture:
  *   carbon       −flux of the use (PARAMS_V2.flux, tCO2e/ha/yr; phase 38): positive = sink
- *   biodiversity INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE
+ *   biodiversity habitat affinity of the use minus the territory's mean H (PARAMS_V2.habitat; H/H0 drives biodiversity
+ *                through the species-area relation since phase 40): a use below the mean lowers B* when it grows
  *   food         INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE
  *   economy      productive value of the use minus the territory's mean V (PARAMS_V2.productiveValue; V/V0 drives
  *                economic security since phase 39): a use below the mean lowers E* when it grows
@@ -12,6 +13,7 @@ import { INDICATOR_IMPACT_WEIGHTS } from '../constants';
 import { LAND_USE_TYPES, type ParcelKind } from '../sim';
 import { PARAMS_V2, type LandCode } from '../sim/v2/params';
 import { productiveValue } from '../sim/v2/indicators';
+import { habitatIndex } from '../sim/v2/biodiversity';
 import type { LandUse } from '../types';
 import { LandUseType } from '../types';
 
@@ -25,7 +27,7 @@ export function rawCoefficient(mode: Exclude<HeatMode, 'none'>, lu: LandUseType,
     case 'carbon':
       return -(PARAMS_V2.flux[lu as LandCode] ?? 0);
     case 'biodiversity':
-      return (INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE as Record<string, number>)[lu] ?? 0;
+      return (PARAMS_V2.habitat[lu as LandCode] ?? 0) - habitatIndex(landUses);
     case 'food':
       return (INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE as Record<string, number>)[lu] ?? 0;
     case 'economy':

@@ -5,8 +5,7 @@ const FM_UI = {
   es: { access: 'Acceso para Facilitadores', enterPassword: 'Por favor, ingrese la contraseña para ver el manual técnico.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', enter: 'Acceder', wrongPassword: 'Contraseña incorrecta.', subtitle: 'Detrás de Escena de DecarboNation', closeLabel: 'Cerrar manual', page: (c:number,t:number) => `Página ${c} de ${t}`, prev: 'Anterior', next: 'Siguiente' },
   en: { access: 'Facilitator Access', enterPassword: 'Please enter the password to view the technical manual.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', enter: 'Access', wrongPassword: 'Incorrect password.', subtitle: 'Behind the Scenes of DecarboNation', closeLabel: 'Close manual', page: (c:number,t:number) => `Page ${c} of ${t}`, prev: 'Previous', next: 'Next' },
 } as const;
-import { CONTROL_PARAMS, LEVEL_CONFIGS, INDICATOR_IMPACT_WEIGHTS, INITIAL_POLICIES, INITIAL_LAND_USES, ALL_RANDOM_EVENTS, INITIAL_PACTS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
-import { Policy, LandUseType } from '../../types';
+import { CONTROL_PARAMS, LEVEL_CONFIGS, INITIAL_POLICIES, INITIAL_LAND_USES, ALL_RANDOM_EVENTS, INITIAL_PACTS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
 import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
 
 interface FacilitatorManualProps {
@@ -107,14 +106,17 @@ const manualSlides = [
     title: "Indicadores Socio-Ambientales",
     content: (
        <div>
-        <p className="mb-4">Estos indicadores (0-100%) se calculan en base a los pesos definidos en <Code>INDICATOR_IMPACT_WEIGHTS</Code>.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Cálculo de Biodiversidad</h4>
+        <p className="mb-4">Estos indicadores (0-100%) se acercan cada año a un objetivo; el objetivo depende de cuánto cambió el territorio desde el inicio del nivel y de las políticas activas. Sin políticas y con el territorio quieto, no se mueven.</p>
+        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Biodiversidad: relación especies-área</h4>
         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Cambio Biodiversidad</Param> = (<Param>Impacto Políticas</Param> * <Param>{CONTROL_PARAMS.Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso}</Param>) + (<Param>Impacto Uso Suelo</Param> * <Param>{CONTROL_PARAMS.Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso}</Param>)</p>
+            <p><Param>Hábitat H</Param> = Σ afinidad · fracción del territorio de cada uso</p>
+            <p><Param>Objetivo B*</Param> = 100 · σ( logit(B₀/100) + <Param>{PARAMS_V2.zSAR}</Param>/(1 − B₀/100) · ln(H/H₀) + Σ calidad de manejo · η + sinergias + pactos )</p>
         </div>
          <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-cyan-400">Impacto Políticas:</strong> Suma de <Code>(Eficiencia Política * Peso)</Code>. Por ejemplo, P. Conservación tiene un peso positivo de <Param>{INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES[Policy.NaturalConservation]}</Param>, mientras que P. Normativas Flexibles tiene un peso negativo de <Param>{INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES[Policy.FlexibleEnvironmentalRegulations]}</Param>.</li>
-            <li><strong className="text-cyan-400">Impacto Uso Suelo:</strong> Suma de <Code>(% Área / 100 * Peso)</Code>. Por ejemplo, Bosque Nativo Protegido tiene el peso más alto con <Param>{INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE[LandUseType.ProtectedNativeForest]}</Param>.</li>
+            <li><strong className="text-cyan-400">Afinidad de hábitat:</strong> bosque protegido <Param>{PARAMS_V2.habitat.BNP}</Param>, humedal <Param>{PARAMS_V2.habitat.HUM}</Param>, bosque no protegido <Param>{PARAMS_V2.habitat.BNNP}</Param>, restauración <Param>{PARAMS_V2.habitat.RES}</Param>, cultivo agroecológico <Param>{PARAMS_V2.habitat.CA}</Param>, barbecho <Param>{PARAMS_V2.habitat.FAL}</Param>, plantaciones <Param>{PARAMS_V2.habitat.PF}</Param>, pasturas <Param>{PARAMS_V2.habitat.PRG}</Param>, cultivo convencional <Param>{PARAMS_V2.habitat.CC}</Param>, parque energético <Param>{PARAMS_V2.habitat.ENR}</Param>. El exponente z = {PARAMS_V2.zSAR} es el de la relación especies-área de paisaje (Pereira, Ziv y Miranda, 2014).</li>
+            <li><strong className="text-cyan-400">Calidad de manejo:</strong> cada política suma o resta según su eficiencia; Conservación <Param>+{PARAMS_V2.qB.CR}</Param> y Normativas Flexibles <Param>{PARAMS_V2.qB.FRA}</Param> son los extremos. Sinergias continuas: +{PARAMS_V2.biodiversity.synergyAgroConservation}·min(Agroecología, Conservación) y −{PARAMS_V2.biodiversity.synergyIntensiveFlexible}·min(Agricultura Intensiva, Normativas Flexibles). El Tratado de Biodiversidad desplaza el objetivo <Param>+{PARAMS_V2.pacts.biodiversityTreaty.B}</Param>.</li>
+            <li><strong className="text-cyan-400">Inercia:</strong> B recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Biodiversidad * 100)}%</Param> del camino por año (deuda de extinción): el hábitat responde lento.</li>
+            <li><strong className="text-cyan-400">Territorio:</strong> además cuenta la conectividad del bosque en el mapa (fracción del bosque en el parche continuo más grande), con peso <Param>{PARAMS_V2.biodiversity.connectivityGamma}</Param>·ln(K/K₀): proteger o restaurar junto al bosque existente rinde más que un lote aislado.</li>
         </ul>
          <h4 className="font-semibold mt-4 mb-2 text-blue-300">Interdependencias</h4>
          <p className="text-sm">Los indicadores se influyen mutuamente. Por ejemplo, un cambio en la Seguridad Económica tiene un impacto en la Seguridad Alimentaria, ponderado por <Code>ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY</Code>.</p>

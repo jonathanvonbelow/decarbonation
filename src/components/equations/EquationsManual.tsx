@@ -237,8 +237,12 @@ CO₂eq per cápita = (Energía + Suelo + Cambio de uso) / Población`}</Formula
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_INDICATORS')}>Cálculo de Indicadores (Ej. Biodiversidad)</SubSectionTitle>
              <p className="text-sm mb-2">Los indicadores socio-ambientales son el resultado de la compleja interacción entre las decisiones políticas y el estado del territorio.</p>
-            <Formula>ΔBiodiversidad = (Σ(<Param>Efic. Política</Param> * <Param>Peso</Param>)) * <Param>Factor_P</Param> + (Σ(<Param>% AreaUso</Param> * <Param>Peso</Param>)) * <Param>Factor_U</Param></Formula>
-            <p className="text-sm">El cambio anual en cada indicador (Biodiversidad, Seg. Alimentaria, etc.) es una suma ponderada del impacto de las políticas activas (positivas o negativas) y de la distribución actual del uso del suelo. Algunos indicadores también se afectan entre sí.</p>
+            <Formula>{`Hábitat:   H = Σ h_i · a_i          (a_i = fracción del territorio de cada uso)
+Objetivo:  B* = 100 · σ( logit(B₀/100) + D_B )
+D_B = z/(1 − B₀/100) · ln(H/H₀) + Σ qB·η^suelo + ${PARAMS_V2.biodiversity.synergyAgroConservation}·min(η_AS, η_CR) − ${PARAMS_V2.biodiversity.synergyIntensiveFlexible}·min(η_PAI, η_FRA) + pactos
+      [+ ${PARAMS_V2.biodiversity.connectivityGamma}·ln(K/K₀) en Territorio]
+Dinámica:  B ← B* + (B − B*) · (1 − k_B)^dt`}</Formula>
+            <p className="text-sm">Relación especies-área de paisaje (Pereira, Ziv y Miranda, 2014) con z = {PARAMS_V2.zSAR}. Afinidades h: bosque protegido {PARAMS_V2.habitat.BNP}, humedal {PARAMS_V2.habitat.HUM}, bosque no protegido {PARAMS_V2.habitat.BNNP}, restauración {PARAMS_V2.habitat.RES}, agroecológico {PARAMS_V2.habitat.CA}, barbecho {PARAMS_V2.habitat.FAL}, plantaciones {PARAMS_V2.habitat.PF}, pasturas {PARAMS_V2.habitat.PRG}, convencional {PARAMS_V2.habitat.CC}, parque energético {PARAMS_V2.habitat.ENR}. qB: Conservación +{PARAMS_V2.qB.CR}, Normativas Flexibles {PARAMS_V2.qB.FRA}. k_B = {CONTROL_PARAMS.Velocidad_Ajuste_Biodiversidad} por año (deuda de extinción). K es la fracción del bosque en el parche continuo más grande del mapa. La seguridad alimentaria todavía es una suma ponderada de políticas y usos del suelo.</p>
             
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLITICAL_PRESSURE')}>Presión Política (Nivel 2+)</SubSectionTitle>
             <p className="text-sm mb-2">Simula el comportamiento de grupos de interés. La presión no cambia linealmente; crece o decrece lentamente al principio, se acelera, y luego se satura cerca de los extremos, imitando fenómenos sociales reales.</p>

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  calculateBiodiversityChange, createInitialState, evenEffort, getPolicyEfficiency,
+  createInitialState, evenEffort, getPolicyEfficiency,
   stepMonth, stepYear,
 } from '../../src/sim';
 import { ALL_RANDOM_EVENTS, CONTROL_PARAMS, INITIAL_PACTS } from '../../src/constants';
@@ -69,15 +69,8 @@ describe('model 1.1 §3: pacts are impulses, not level jumps (N-03, T-03)', () =
     s0.pacts.biodiversityTreaty.isActive = true;
     expect(run(s0, 15).indicators.biodiversity).toBeLessThan(60);
   });
-
-  it('an active pact adds its impulse inside the biodiversity function', () => {
-    const s = freshState(2);
-    const off = calculateBiodiversityChange(s.policies, s.landUses, 40, 2, CONTROL_PARAMS, s.pacts);
-    const pacts = { ...s.pacts, biodiversityTreaty: { ...s.pacts.biodiversityTreaty, isActive: true } };
-    const on = calculateBiodiversityChange(s.policies, s.landUses, 40, 2, CONTROL_PARAMS, pacts);
-    // impulse x policy-impact weight x the function's own gain (1.5)
-    expect(on - off).toBeCloseTo(0.4 * CONTROL_PARAMS.Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso * 1.5, 6);
-  });
+  // Phase 40: the treaty's impulse inside the 1.1 biodiversity function became a shift of B*
+  // (PARAMS_V2.pacts.biodiversityTreaty.B; tests/sim/biodiversity.v2.spec.ts).
 });
 
 describe('model 1.1 §4: pacts keep their functions from the first year (N-14)', () => {

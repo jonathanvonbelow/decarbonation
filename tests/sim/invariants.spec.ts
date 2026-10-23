@@ -193,7 +193,6 @@ describe('sim invariants', () => {
   // Model 1.1 (phase 34, N-03/T-03): a pact is at most as strong as the strongest policy on the same indicator.
   it('INV-16: no pact impulse exceeds the largest policy weight on the same indicator', () => {
     const groups: Record<keyof PactImpulses, Record<string, number>> = {
-      biodiversity: INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.POLICIES as unknown as Record<string, number>,
       foodSecurity: INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES as unknown as Record<string, number>,
     };
     const policyIds = new Set<string>(ALL_POLICY_IDS);
@@ -207,6 +206,9 @@ describe('sim invariants', () => {
     // Phase 39: E is a logistic target; a pact's shift on it is at most the largest policy weight bE (logit units).
     const maxBE = Math.max(...(Object.values(PARAMS_V2.bE) as number[]).map(Math.abs));
     (Object.values(PARAMS_V2.pacts) as { E?: number }[]).forEach((p) => expect(Math.abs(p.E ?? 0)).toBeLessThanOrEqual(maxBE));
+    // Phase 40: same for B, against the largest policy weight qB.
+    const maxQB = Math.max(...(Object.values(PARAMS_V2.qB) as number[]).map(Math.abs));
+    (Object.values(PARAMS_V2.pacts) as { B?: number }[]).forEach((p) => expect(Math.abs(p.B ?? 0)).toBeLessThanOrEqual(maxQB));
     // And no pact writes B, F, E or political stability as a level any more.
     (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
       const out = pact.effects(freshState(2).indicators, freshState(2).stellaSpecificState).indicators ?? {};
