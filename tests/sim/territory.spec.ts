@@ -13,6 +13,8 @@ import {
 import { CONTROL_PARAMS } from '../../src/constants';
 import { LandUseType, Policy, type GameState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
+import { targetPressures } from '../../src/sim/v2/pressures';
+import type { IndicatorState } from '../../src/sim/v2/indicators';
 
 const LU = LandUseType;
 const noEventRng = () => 0.999;
@@ -292,8 +294,10 @@ describe('public uses (map → model)', () => {
     const restored = expectOk(declarePublicUse(state, t, crop.x, crop.y, 'restoration', CONTROL_PARAMS));
     expect(restored.state.landUses[LU.RestorationForest].area).toBeCloseTo(LOT_KHA, 9);
     expect(restored.state.landUses[LU.ConventionalCrops].area).toBeLessThan(state.landUses[LU.ConventionalCrops].area);
-    // Taking productive land out of production pushes agricultural pressure up.
-    expect(restored.state.stellaSpecificState.PP_AGRICOLA).toBeGreaterThan(state.stellaSpecificState.PP_AGRICOLA);
+    // Taking productive land out of production pushes agricultural pressure up: since phase 42 through the target
+    // (4.0·(a_prod,0 − a_prod), src/sim/v2/pressures.ts), not as a direct impulse on the stock.
+    expect(restored.state.stellaSpecificState.PP_AGRICOLA).toBe(state.stellaSpecificState.PP_AGRICOLA);
+    expect(targetPressures(restored.state as IndicatorState, {}).a).toBeGreaterThan(targetPressures(state as IndicatorState, {}).a);
 
     const energy = expectOk(declarePublicUse(state, t, crop.x, crop.y, 'energy', CONTROL_PARAMS));
     expect(energy.cost).toBe(publicUseCost('energy', CONTROL_PARAMS));

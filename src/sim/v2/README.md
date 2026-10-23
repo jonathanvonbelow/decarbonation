@@ -17,6 +17,7 @@ calibración.**
 | `indicators.ts` | fase 39: marco común X* = 100·σ(ℓ₀ + D), `stepIndicator` (= `relax`), `impulseSum` / `capImpulses` (±0,6), `pactShift`, `productiveValue`, `driveE` / `driveC` / `drivePc`, `targetE` / `targetC` / `targetPc`, `updateRelaxedIndicators` (paso 8: E → C (W) → Pc (St)) |
 | `biodiversity.ts` | fase 40: `habitatIndex` (H = Σ h·a, también el ancla H₀), `driveB` / `targetB` (especies-área en logit, γ_H = z/(1 − B₀/100), calidad de manejo qB·η^land, sinergias continuas, conectividad γ_K·ln(K/K₀) solo con mapa, pactos), `connectivityTerm`, `updateBiodiversity` (paso 8, primero) |
 | `food.ts` | fase 41: `exportShare` (x = 0,30 + 0,20·η_PEA), `domesticSupply` (Q, también el ancla ρ₀), `foodPerCapita` (ρ con piso 0,001·ρ₀), `meanYield` (capa del mapa), `driveF` / `targetF` (2,5·ln(ρ/ρ₀) + 0,6·(E − E₀)/50), `updateFoodSecurity` (paso 8, segundo; lee la E del paso anterior) |
+| `pressures.ts` | fase 42: `productiveShare` (a_prod = (CC + CA + PRG)/ΣA, PF fuera), `sectorSize` (σ_prod), `drivePressures` / `targetPressures` (φ·η^social/15, σ_prod solo sobre la suma de políticas de π_a, desvíos de E, F, a_prod, B, c, W y τ, desgaste, impulsos con tope), `updatePressures` (paso 8, último) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
@@ -52,7 +53,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`, `bE`, `productiveValue`, `conflict`, `greenRelief`, `conflictWeights`, `relaxation`) | hecho (presiones de D_C/D_Pc todavía 1.1 hasta la 42; φ_fiscal puente sobre la deuda 1.1 hasta la 44) |
 | 40 | paso 8: B por especies-área (`habitat`, `zSAR`, `qB`, `biodiversity`, `Velocidad_Ajuste_Biodiversidad`; conectividad K del mapa vía `AdvanceOptions.connectivity`) | hecho (FAL sigue con su peso 1.1 en F hasta la 41) |
 | 41 | paso 8: F por balance oferta/demanda (`food`, `foodPerCapita0`, `Velocidad_Ajuste_Seg_Alimentaria`; choque ε = `model.yieldShock`, 0 hasta la 46) | hecho (`src/sim/indicators.ts`, `INDICATOR_IMPACT_WEIGHTS` y `Pact.impulses` borrados) |
-| 42 | presiones en logit, ancladas (`pressure`) | pendiente |
+| 42 | paso 8, último: presiones en logit, ancladas (`pressure`, `Velocidad_Ajuste_Presiones`) | hecho (desgaste de situaciones como desplazamiento hasta la 47) |
 | 43 | pactos como desplazamiento de objetivo (`pacts`) | pendiente |
 | 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge` | pendiente |
 | 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
@@ -121,3 +122,12 @@ Fase 41: sin recortes de ecuación. F es el port exacto de `food_production` + b
 con t, población y choque ε variables). El choque ε queda en 0 hasta la fase 46 (`model.yieldShock`, el gancho ya
 está). Con esto los cinco indicadores acotados (B, F, E, W, St) relajan exacto; quedan en 1.1 + `toward` las presiones
 (42) y el dinero (44).
+
+Fase 42: sin recortes de ecuación. Las presiones son el port exacto del bloque del prototipo (24 casos ±1e-9, con desgaste).
+Desvíos: (1) canal η^social (spec) en lugar del `eta` uniforme del prototipo (iguales con reparto parejo). (2) El desgaste de
+situaciones abiertas es un desplazamiento de los objetivos de C y de las tres presiones (`AdvanceOptions.wear`, de `wearShift`:
+0,04 logit por punto del catálogo × factor de edad 1–2, como `play_territorio` del prototipo); antes empujaba los stocks
+(`applyWear`, borrada) y la relajación lo disipaba. La 47 porta las situaciones como impulsos. (2b) `targetPressures(state, eff,
+wear)` no recibe `CP` (ningún término lo lee; k_π en `updatePressures`), como `targetF`. (3) Un choque de evento sobre una presión (stock o indicador diferido) es un salto del stock que la
+relajación disipa (como W/St desde la 39). Con esto todo indicador acotado y las presiones relajan exacto; queda en 1.1 +
+`toward` solo el dinero (44).

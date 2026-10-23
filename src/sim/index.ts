@@ -43,7 +43,7 @@ export type { SimTrace } from './trace';
 export * from './policies';
 export * from './v2/land';
 export * from './v2/carbon';
-export * from './pressures';
+export { drivePressures, productiveShare, sectorSize, targetPressures, updatePressures, type PressureTargets, type PressureWear } from './v2/pressures';
 export * from './economy';
 export * from './score';
 export * from './events';

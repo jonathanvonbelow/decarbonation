@@ -763,9 +763,8 @@ export function declarePublicUse(
   landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa * cells.length };
 
   const reserves = state.stellaSpecificState.Reservas_del_Tesoro - cost;
-  const pressure = farmland > 0
-    ? Math.min(100, state.stellaSpecificState.PP_AGRICOLA + CP.Impulso_PP_Agricola_por_kHa_Convertida * kHa * farmland)
-    : state.stellaSpecificState.PP_AGRICOLA;
+  // Phase 42: no direct impulse on the agricultural pressure any more (was 0.08 per kHa of farmland converted):
+  // the land leaves the productive share and the target of π_a rises by 4.0·(a_prod,0 − a_prod) (src/sim/v2/pressures.ts).
 
   const next: GameState = {
     ...state,
@@ -773,8 +772,8 @@ export function declarePublicUse(
     // Model 1.1 (phase 34, T-07): the forest the player protects is counted apart from the
     // protection the model's own flows add, for the public-nature route and the upkeep.
     ...(use === 'protected' ? { declaredProtectedArea: (state.declaredProtectedArea ?? 0) + kHa * cells.length } : {}),
-    stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves, PP_AGRICOLA: pressure },
-    indicators: { ...state.indicators, treasuryReserves: reserves, ppAgricola: pressure },
+    stellaSpecificState: { ...state.stellaSpecificState, Reservas_del_Tesoro: reserves },
+    indicators: { ...state.indicators, treasuryReserves: reserves },
   };
   const parcels = territory.parcels.slice();
   cells.forEach((i) => { parcels[i] = { ...parcels[i], kind: rule.target, declared: true, declaredAt: now }; });

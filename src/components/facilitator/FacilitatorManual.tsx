@@ -136,16 +136,16 @@ const manualSlides = [
     title: "Dinámica de Presión Política (Nivel 2+)",
     content: (
        <div>
-        <p className="mb-2">A partir del Nivel 2, la presión política (0-100) de tres grupos clave se simula con un modelo de <strong className="text-yellow-400">Impulso vs. Disipación</strong>.</p>
+        <p className="mb-2">A partir del Nivel 2, la presión política (0-100) de tres grupos clave se acerca cada año a un <strong className="text-yellow-400">objetivo en S</strong> anclado al inicio del nivel (modelo 2.0, fase 42).</p>
          <div className="bg-slate-800 p-4 rounded font-mono text-sm space-y-2">
-            <p>1. <strong className="text-yellow-400">Calcular Impulso:</strong> Suma de todos los factores de influencia (efectos de políticas e indicadores desalineados con los umbrales).</p>
-            <p>2. <strong className="text-yellow-400">Calcular Fuerza de Disipación:</strong> La presión existente decae naturalmente. <br/>   <span className="text-cyan-400">FuerzaDisipacion</span> = <span className="text-cyan-400">PresionActual</span> * <span className="text-cyan-400">0,10</span> (agrícola y ambientalista, fija en todos los niveles) o <span className="text-cyan-400">Tasa_disipacion_presion_social</span> = {CONTROL_PARAMS.Tasa_disipacion_presion_social} (social)</p>
-            <p>3. <strong className="text-yellow-400">Calcular Cambio Neto:</strong> El cambio es la diferencia lineal, limitada entre 0 y 100.<br/>   <span className="text-cyan-400">NuevaPresion</span> = <span className="text-cyan-400">PresionActual</span> + <span className="text-cyan-400">Impulso</span> - <span className="text-cyan-400">FuerzaDisipacion</span></p>
+            <p>1. <strong className="text-yellow-400">Impulsor D:</strong> suma de los efectos de las políticas activas (factor φ × eficiencia en el canal social ÷ {PARAMS_V2.pressure.phiScale}) y de los desvíos de los indicadores respecto del inicio.</p>
+            <p>2. <strong className="text-yellow-400">Objetivo:</strong> <span className="text-cyan-400">π*</span> = 100 · σ( logit(π₀/100) + D ): sin políticas y con todo quieto, π* = π₀.</p>
+            <p>3. <strong className="text-yellow-400">Dinámica:</strong> la presión recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Presiones * 100)}%</Param> del camino hacia π* por año; nunca toca 0 ni 100 de golpe.</p>
          </div>
-         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Factores de Presión Agrícola</h4>
+         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Presión Agrícola</h4>
           <ul className="list-disc list-inside space-y-2 text-sm">
-              <li><strong className="text-red-400">Aumenta Impulso (más presión):</strong> Indicadores de Seg. Económica y Alimentaria por debajo de sus umbrales (<Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegEconomica}%</Param> y <Param>{CONTROL_PARAMS.Umbral_PP_Agricola_SegAlimentaria}%</Param>).</li>
-              <li><strong className="text-green-400">Reduce Impulso (menos presión):</strong> Las políticas que benefician al productor, todas con factor negativo: <Code>P-PAI</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPAI}</Param>), <Code>P-PEA</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PPEA}</Param>), <Code>P-AS</Code> agroecológica (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PAS}</Param>) y <Code>P-GS</Code> (<Param>{CONTROL_PARAMS.Factor_Presion_Agricola_PGS}</Param>).</li>
+              <li><strong className="text-red-400">La sube:</strong> Seguridad Económica y Alimentaria por debajo de su valor inicial (<Param>{PARAMS_V2.pressure.drivers.a.econ}</Param> y <Param>{PARAMS_V2.pressure.drivers.a.food}</Param> logit por punto), sacar tierra de producción (<Param>{PARAMS_V2.pressure.drivers.a.prodShare}</Param> por unidad de fracción del territorio) y <Code>P-CR</Code> conservación sin compensar (<Param>+{PARAMS_V2.pressure.a.CR}</Param>).</li>
+              <li><strong className="text-green-400">La baja:</strong> las políticas que benefician al productor: <Code>P-PAI</Code> (<Param>{PARAMS_V2.pressure.a.PAI}</Param>), <Code>P-PEA</Code> (<Param>{PARAMS_V2.pressure.a.PEA}</Param>), <Code>P-AS</Code> (<Param>{PARAMS_V2.pressure.a.AS}</Param>) y <Code>P-GS</Code> (<Param>{PARAMS_V2.pressure.a.GS}</Param>), multiplicadas por el tamaño del sector productivo.</li>
           </ul>
       </div>
     )

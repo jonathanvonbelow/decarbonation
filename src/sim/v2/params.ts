@@ -261,6 +261,11 @@ export const PARAMS_V2 = {
   relaxation: {
     /** Cap of |Σ situation impulses| on one indicator's target, logit units (spec 39 §1). */
     impulseCap: 0.6,
+    /**
+     * 42 — logit units of target shift per point of a situation's catalogue wear (× age factor 1–2) while it is open,
+     * on C and on the three pressures. Prototype `play_territorio` (0.04). Criterio experto.
+     */
+    wearLogit: 0.04,
     E: {
       /** −w·η_CN^tax: the carbon tax weighs on business. */
       carbonTax: 0.15,
@@ -297,12 +302,30 @@ export const PARAMS_V2 = {
     },
   },
 
-  /** 42 — pressures: v1 impulse factors (points per unit of efficiency), divided by phiScale in logit space. */
+  /**
+   * 42 — sectoral pressures (mejora-general/files/42 §1; the pressure block of `indicators_step` in the prototype).
+   * a / e / s: the v1 impulse factors (points per unit of η^social; the old CP.Factor_Presion_*, same values) plus
+   * CR +3.0 on the agricultural pressure (conserving without compensation annoys the sector), divided by phiScale
+   * into logit units (CR −12.5/15 lowers π_e from 25 to ≈ 12.6 at full efficiency). Criterio experto.
+   * drivers: logit units per unit of each deviation from the start (points 0-100, shares 0-1, c relative to c0, τ in pp):
+   *   D_πa += econ·(E0 − E) + food·(F0 − F) + prodShare·(a_prod,0 − a_prod)    (a_prod = (CC + CA + PRG)/ΣA, PF out)
+   *   D_πe += biodiversity·(B0 − B) + co2·(c − c0)/c0
+   *   D_πs += wellbeing·(W0 − W) + tax·τ
+   * The policy sum of π_a is multiplied by the size of the productive sector σ_prod = a_prod/a_prod,0. Criterio experto
+   * (prototype inline coefficients; prodShare replaces the 1.1 impulse of 0.4 points per declared lot).
+   */
   pressure: {
     a: { AS: -2.0, GS: -1.5, PAI: -10.0, PEA: -6.0, CR: 3.0 },
     e: { AS: -5.0, CR: -12.5, GS: -4.0, AGUA: -4.0, CN: -9.0, PAI: 7.5, FRA: 12.5, SE: 10.0 },
     s: { AS: -5.0, AGUA: -3.5, CN: -3.5, CR: -2.5, PAI: 5.0, PIE: 3.5, FRA: 7.5 },
     phiScale: 15,
+    /** Points: a pressure is anchored within [anchorFloor, 100 − anchorFloor] (only an old 1.1 save pinned at 0/100 hits it). */
+    anchorFloor: 2,
+    drivers: {
+      a: { econ: 0.03, food: 0.02, prodShare: 4.0 },
+      e: { biodiversity: 0.035, co2: 1.5 },
+      s: { wellbeing: 0.04, tax: 0.04 },
+    },
   },
 
   /** 43 — pacts as target shifts while active (logit units); entry and annual costs as fractions of GDP. */

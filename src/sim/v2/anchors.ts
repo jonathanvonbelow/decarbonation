@@ -21,6 +21,7 @@ import { computeEmissions } from './carbon';
 import { productiveValue } from './indicators';
 import { habitatIndex } from './biodiversity';
 import { domesticSupply } from './food';
+import { productiveShare } from './pressures';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
@@ -34,6 +35,9 @@ export function areasByCode(landUses: GameState['landUses']): Areas {
   LAND_CODES.forEach((k) => { out[k] = landUses[k as LandUseType]?.area ?? 0; });
   return out;
 }
+
+const pressureForAnchor = (p: number): number =>
+  Math.min(100 - PARAMS_V2.pressure.anchorFloor, Math.max(PARAMS_V2.pressure.anchorFloor, p));
 
 const totalOf = (A: Areas): number => LAND_CODES.reduce((sum, k) => sum + A[k], 0);
 
@@ -89,9 +93,11 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
       E: logit(ind.economicSecurity / 100),
       C: logit(st.Conflicto_social / 100),
       Pc: logit(st.Colapso_politico / 100),
-      pa: logit(st.PP_AGRICOLA / 100),
-      pe: logit(st.PP_AMBIENTALISTA / 100),
-      ps: logit(st.PP_SOCIAL / 100),
+      // A save re-anchored from model 1.1 may carry a pressure pinned at 0 or 100: anchored there, logit(±9.2) would
+      // freeze it (phase 42 review). Floored to [floor, 100 − floor] points; every level starts at 15–30.
+      pa: logit(pressureForAnchor(st.PP_AGRICOLA) / 100),
+      pe: logit(pressureForAnchor(st.PP_AMBIENTALISTA) / 100),
+      ps: logit(pressureForAnchor(st.PP_SOCIAL) / 100),
     },
     B0: ind.biodiversity,
     F0: ind.foodSecurity,
@@ -103,7 +109,7 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
     foodPerCapita0: food0 / (st.Poblacion_Total > 0 ? st.Poblacion_Total : pop),
     productiveValue0,
     concentration0: (A.CC + A.PF) / agri,
-    productiveShare0: (A.CC + A.CA + A.PRG) / total,
+    productiveShare0: productiveShare(state.landUses),
     shareCC0: A.CC / total,
     sharePF0: A.PF / total,
     forestShare0: (A.BNNP + A.BNP) / total,

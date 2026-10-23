@@ -68,7 +68,6 @@ export enum LandUseType {
   Fallow = "FAL",
 }
 
-
 export interface StellaStocks {
   MEAN_colapso: number;
 
@@ -94,7 +93,6 @@ export interface StellaStocks {
   Desactivar_Nivel_1: number;
   Desactivar_Nivel_2: number;
   Desactivar_Nivel_3: number;
-
 
   Conflicto_social: number;
   Conteo_Chatgpt: number;
@@ -396,65 +394,18 @@ export interface ControlParams {
   Pago_deuda_anual_Nivel_2: number;
   Pago_deuda_anual_Nivel_3: number;
 
-  /**
-   * Annual dissipation of the 1.1 social pressure (PP_SOCIAL), provisional until phase 42 ports the pressures.
-   * Phase 39: the old `Tasa_disipacion_social`, which also dissipated social conflict (now `Velocidad_Ajuste_Conflicto`).
-   */
-  Tasa_disipacion_presion_social: number;
-
   Tasa_de_interes_Nivel_1: number;
   Tasa_de_interes_Nivel_2: number;
   Tasa_de_interes_Nivel_3: number;
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: number;
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: number;
-  Impacto_Biodiversidad_en_SE_Peso: number;
 
   Tasa_de_BNNP_a_BNP_Base: number;
   Tasa_de_BNNP_a_CA_Base: number;
   Tasa_de_BNNP_a_CC_Base: number;
   Tasa_de_CA_a_BNNP_Base: number;
 
-  // Political Pressure Policy Effects (Negative values decrease pressure, positive values increase pressure)
-  Factor_Presion_Agricola_PAS: number; 
-  Factor_Presion_Agricola_PGS: number; 
-  Factor_Presion_Agricola_PPAI: number;
-  Factor_Presion_Agricola_PPEA: number; 
-
-  Factor_Presion_Ambiental_PAS: number;
-  Factor_Presion_Ambiental_PCR: number; 
-  Factor_Presion_Ambiental_PGS: number;
-  Factor_Presion_Ambiental_PAGUA: number;
-  Factor_Presion_Ambiental_PCN: number; 
-  Factor_Presion_Ambiental_PPAI_Neg: number; // Negative effect on Env Pressure (increases it)
-  Factor_Presion_Ambiental_PFRA_Neg: number;
-  Factor_Presion_Ambiental_PSE_Neg: number;  
-
-  Factor_Presion_Social_PAS: number;
-  Factor_Presion_Social_PAGUA: number;
-  Factor_Presion_Social_PCN: number;
-  Factor_Presion_Social_PCR: number; 
-  Factor_Presion_Social_PPAI_Neg: number; // Negative effect on Social Pressure (increases it)
-  Factor_Presion_Social_PPIE_Neg: number;
-  Factor_Presion_Social_PFRA_Neg: number;
-
-  // Political Pressure Baseline Indicator Sensitivities & Targets
-  Sensibilidad_PP_Agricola_SegEconomica: number;
-  Umbral_PP_Agricola_SegEconomica: number;
-  Sensibilidad_PP_Agricola_SegAlimentaria: number; 
-  Umbral_PP_Agricola_SegAlimentaria: number;
-
-  Sensibilidad_PP_Ambiental_Biodiversidad: number;
-  Umbral_PP_Ambiental_Biodiversidad: number;
-  Sensibilidad_PP_Ambiental_CO2PerCapita: number;
-  Umbral_PP_Ambiental_CO2PerCapita: number;
-
-  Sensibilidad_PP_Social_BienestarSocial: number;
-  Umbral_PP_Social_BienestarSocial: number;
-
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: number; // e.g., 20 for 20%
   PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
-  PPSocial_Increase_Factor_Per_Tax_Point: number; // e.g., 0.4 points of Social Pressure increase per 1% additional tax
 
   // Territorio preview (mejora-general/files/21_fusion_ecosim.md §5): one-time costs, paid from
   // Reservas_del_Tesoro, of declaring each public use, per kHa.
@@ -463,8 +414,6 @@ export interface ControlParams {
   Costo_Humedal_Publico_por_kHa: number;
   Costo_Parque_Energetico_por_kHa: number;
   Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: number;
-  /** Agricultural-pressure impulse per kHa of *productive* land taken into a public use. */
-  Impulso_PP_Agricola_por_kHa_Convertida: number;
   /** Annual share of restoration area that matures into unprotected native forest. */
   /** Restoration maturing into protected native forest (RES → BNP), fraction of RES per year. */
   Tasa_de_RES_a_BNP_Base: number;

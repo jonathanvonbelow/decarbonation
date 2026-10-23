@@ -15,7 +15,7 @@
  * Fiscal stress φ (`model.fiscal.stress`) is the prototype's sHigh(interest / tax revenue; 0.20, 0.04) on the 1.1
  * economy's stocks (`interestBurdenOf` / `fiscalStressOf`, a bridge until phase 44 ports the 2.0 economy).
  * Not yet here (each arrives with its phase, and is 0 until then): concentration and just transition in the
- * conflict (45), wear of open situations (47). Situation impulses
+ * conflict (45). The wear of open situations enters D_C as a shift (phase 42, `wearC`). Situation impulses
  * (`model.impulses`) are read and capped at ±0.6 logit, but nothing writes them before phase 47.
  *
  * Pure: no React, no randomness, no mutation.
@@ -110,7 +110,7 @@ export function driveE(s: IndicatorState, eff: Eff, CP: ControlParams): number {
 }
 
 /** D_C: drive of social conflict (spec 39 §3). Reads F and E of this step and the previous environmentalist pressure. */
-export function driveC(s: IndicatorState, eff: Eff): number {
+export function driveC(s: IndicatorState, eff: Eff, wear = 0): number {
   const a = s.model.anchors;
   const w = PARAMS_V2.conflictWeights;
   const r = R.C;
@@ -126,8 +126,8 @@ export function driveC(s: IndicatorState, eff: Eff): number {
   d += r.sharePF * ((s.landUses[LandUseType.ForestPlantations]?.area ?? 0) / total - a.sharePF0);
   // [concentration and just transition: phase 45]
   d += r.tax * (s.additionalTaxPressurePercentage ?? 0) + r.fiscalStress * phi;
-  // [wear of open situations: phase 47]
-  d += capImpulses(impulseSum(s.model, 'C'));
+  // Wear of the open situations (Territorio; wired in phase 42, phase 47 ports the situations as impulses).
+  d += wear + capImpulses(impulseSum(s.model, 'C'));
   return d;
 }
 
@@ -155,7 +155,7 @@ export function drivePc(s: IndicatorState): number {
 /** E* (0-100). */
 export const targetE = (s: IndicatorState, eff: Eff, CP: ControlParams): number => target100(s.model.anchors.l.E, driveE(s, eff, CP));
 /** C* (0-100); W* = 100 − C*. */
-export const targetC = (s: IndicatorState, eff: Eff): number => target100(s.model.anchors.l.C, driveC(s, eff));
+export const targetC = (s: IndicatorState, eff: Eff, wear = 0): number => target100(s.model.anchors.l.C, driveC(s, eff, wear));
 /** Pc* (0-100); St* = 100 − Pc*. */
 export const targetPc = (s: IndicatorState): number => target100(s.model.anchors.l.Pc, drivePc(s));
 
@@ -164,11 +164,11 @@ export const targetPc = (s: IndicatorState): number => target100(s.model.anchors
  * `s.stellaSpecificState` and `s.model.targets` (advance() owns the copy). B (phase 40, biodiversity.ts) and F
  * (still model 1.1 until phase 41) are updated before and the pressures after (1.1 until phase 42).
  */
-export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: ControlParams, dt: number): void {
+export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: ControlParams, dt: number, wearC = 0): void {
   const st = s.stellaSpecificState;
   const eStar = targetE(s, eff, CP);
   s.indicators.economicSecurity = stepIndicator(s.indicators.economicSecurity, eStar, CP.Velocidad_Ajuste_Seg_Economica, dt);
-  const cStar = targetC(s, eff);
+  const cStar = targetC(s, eff, wearC);
   st.Conflicto_social = stepIndicator(st.Conflicto_social, cStar, CP.Velocidad_Ajuste_Conflicto, dt);
   s.indicators.socialWellbeing = 100 - st.Conflicto_social;
   const pcStar = targetPc(s);

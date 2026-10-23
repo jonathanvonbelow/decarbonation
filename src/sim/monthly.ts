@@ -40,7 +40,7 @@ import { advance, MONTHLY_DT, type AdvanceOptions, type StepYearChatMessage } fr
 export { MONTHS_PER_YEAR, declaredProtectedOf, monthlyTriggerChance, rollMonthlyEvent } from './v2/core';
 
 /** Options of the monthly step (the monthly subset of `AdvanceOptions`). */
-export type MonthlyOptions = Pick<AdvanceOptions, 'events' | 'publicUseUpkeep' | 'extraDeferred' | 'connectivity'>;
+export type MonthlyOptions = Pick<AdvanceOptions, 'events' | 'publicUseUpkeep' | 'extraDeferred' | 'connectivity' | 'wear'>;
 
 export interface StepMonthResult {
   next: GameState;

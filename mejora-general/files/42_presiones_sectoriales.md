@@ -52,6 +52,6 @@ compensar molesta al sector). Dividir por 15 los lleva al espacio logit: CR (−
 
 ## 4. Verificación
 
-- [ ] `npm run sim:check -- --quick`: piso de presiones de las rutas de N2 (≤ 85) ya no se viola por saturación.
-- [ ] El tablero y el panel de presiones no asumen valores 0/100 exactos.
-- [ ] `docs/audit-equations.md`: I-4 OK, I-5 (años para volver de 80 a 50) medido con el arnés y anotado.
+- [x] `npm run sim:check -- --quick`: piso de presiones de las rutas de N2 (≤ 85) ya no se viola por saturación (v6/42: `extractive` N2 termina π máx 55, St 51).
+- [x] El tablero y el panel de presiones no asumen valores 0/100 exactos.
+- [x] `docs/audit-equations.md`: I-4 OK, I-5 (años para volver de 80 a 50) medido con el arnés y anotado (1,5–1,8 años).

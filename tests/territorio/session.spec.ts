@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../src/constants';
 import { fatigueFactor, getPolicyEfficiency, PRODUCTIVE_PARCELS, productiveCount } from '../../src/sim';
 import { LandUseType, Policy } from '../../src/types';
-import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS } from '../../src/territorio/situations';
+import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS, wearShift } from '../../src/territorio/situations';
 import {
   advanceMonth, createSession, decideSituation, protectParcel, requestLoan, setInstrumentEffort, setTaxPressure,
-  togglePact, togglePolicy, unlocks, INSTRUMENTS_UNLOCK_YEAR, START_YEAR, TOTAL_MONTHS, type Session,
+  togglePact, togglePolicy, unlocks, INSTRUMENTS_UNLOCK_YEAR, START_YEAR, SUSTAINED_REASONS, TOTAL_MONTHS, type Session,
 } from '../../src/territorio/session';
 
 function advance(s: Session, months: number): Session {
@@ -22,7 +22,7 @@ function advance(s: Session, months: number): Session {
 
 /**
  * Advances while actually governing: every situation on the desk is settled with its first
- * affordable option. Ignoring the inbox for years now ends the game (sustained-breach defeat), so
+ * affordable option. Ignoring the inbox wears the government (until phase 42 it ended the game), so
  * tests about anything else have to keep the desk clear.
  */
 function govern(s: Session, months: number): Session {
@@ -210,16 +210,46 @@ describe('Territorio session', () => {
 
 describe('sustained breaches (Territorio only)', () => {
   it('ends the game when a floor stays broken for a whole year, not on a single bad month', () => {
-    // Ignoring the inbox for thirty years used to end in 2054 with the pressures pinned at 100 and
-    // social wellbeing at 0 for two decades: the government never fell.
+    // Phase 42: with anchored pressures a neglected desk no longer drags the government down by itself (seed 11 now
+    // reaches 2054 with St ≈ 46, as in the prototype's Territorio `do_nothing`; see the next test), so the breach is
+    // forced: conflict anchored at 97 keeps wellbeing at ≈ 3 month after month.
     let s = createSession(11);
-    s = advance(s, TOTAL_MONTHS);
+    const game = JSON.parse(JSON.stringify(s.game)) as typeof s.game;
+    game.stellaSpecificState.Conflicto_social = 97;
+    game.indicators.socialWellbeing = 3;
+    game.model!.anchors = { ...game.model!.anchors, l: { ...game.model!.anchors.l, C: Math.log(97 / 3) } };
+    s = { ...s, game };
+    s = advance(s, 11);
+    // eleven months below the floor: still running
+    expect(s.outcome).toBeNull();
+    s = advance(s, 1);
     expect(s.outcome?.kind).toBe('collapse');
-    // Phase 41: with food security by supply/demand balance F stays ≈ 40 (it sank to ≈ 31 under the 1.1 weights), so
-    // wellbeing holds longer and the neglected government falls in 2048 instead of 2040 (political collapse, seed 11).
-    expect(s.game.year).toBeLessThan(START_YEAR + 25);
-    // The month the streak started, the game was still running.
-    expect(s.monthIndex).toBeGreaterThan(12);
+    expect(s.outcome && 'reason' in s.outcome ? s.outcome.reason : null).toBe(SUSTAINED_REASONS.socialWellbeing);
+    expect(s.monthIndex).toBe(12);
+  });
+
+  it('a neglected desk wears the government but, with anchored pressures, does not topple it (seed 11, phase 42)', () => {
+    const s = advance(createSession(11), TOTAL_MONTHS);
+    expect(s.outcome?.kind).toBe('lost');
+    expect(s.game.indicators.politicalStability).toBeLessThan(s.game.levelBaseline.politicalStability);
+  });
+
+  it('an open situation shifts the targets while it stays open (phase 42 wear) and the pressure relaxes back once settled', () => {
+    const def = SITUATIONS.find((d) => (d.wear.ppAmbientalista ?? 0) >= 0.5)!;
+    const s0 = createSession(4);
+    const opened: Session = { ...s0, open: [{ id: 'w1', defId: def.id, openedAt: 0, expiresAt: 600, worn: 0 }] };
+    const shift = wearShift(opened.open, 1);
+    expect(shift.e).toBeCloseTo(0.04 * def.wear.ppAmbientalista! * (1 + 1 / 600), 12);
+    // the open situation no longer pushes the stock directly: it moves the target
+    let a = s0;
+    let b = opened;
+    for (let i = 0; i < 24; i++) {
+      a = advanceMonth({ ...a, open: [] });
+      b = advanceMonth({ ...b, open: b.open.filter((o) => o.id === 'w1') });
+    }
+    expect(b.game.model!.targets.pe!).toBeGreaterThan(a.game.model!.targets.pe!);
+    expect(b.game.indicators.ppAmbientalista).toBeGreaterThan(a.game.indicators.ppAmbientalista);
+    expect(b.open[0].worn).toBeGreaterThan(0);
   });
 
   it('does not end the game for a government that keeps the desk clear', () => {

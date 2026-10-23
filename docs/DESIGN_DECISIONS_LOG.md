@@ -2634,3 +2634,82 @@ exigiendo colapso antes del final; la 47 cambia el desgaste); capa del mapa reca
 
 **Deudas.** Presiones ancladas (42: colapso de `extractive` N3, C9, umbral de F en la presión agrícola 1.1); eventos 2.0 y ε
 (46); situaciones como impulsos (47); C6 de W en N1 (48); Territorio producción y F (49).
+
+## 2026-10-22 — v6 fase 42: presiones sectoriales con respuesta en S
+
+**Qué se hizo** (`mejora-general/files/42_presiones_sectoriales.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/pressures.ts` (port del bloque de presiones de `indicators_step`, py:472-487): `productiveShare`
+  (a_prod = (CC + CA + PRG)/ΣA, PF fuera), `sectorSize` (σ_prod = a_prod/a_prod,0), `drivePressures` / `targetPressures`
+  (Σ φ·η^social/15, con σ_prod solo sobre la suma de políticas de π_a; desvíos 0,03·(E₀ − E) + 0,02·(F₀ − F) +
+  4,0·(a_prod,0 − a_prod), 0,035·(B₀ − B) + 1,5·(c − c₀)/c₀, 0,04·(W₀ − W) + 0,04·τ; desgaste; impulsos con tope),
+  `updatePressures` (relax exacto, k_π = `CP.Velocidad_Ajuste_Presiones` 0,35; `model.targets.pa/pe/ps`). Último del paso 8
+  de `advance` (B → F → E → C → Pc → presiones; D_C y D_Pc leen las del paso anterior, como el prototipo).
+- `PARAMS_V2.pressure`: los factores φ de 1.1 + CR +3,0 sobre π_a (ya estaban desde la 35), `drivers` (coeficientes en
+  línea del prototipo), `anchorFloor` (2 puntos); `PARAMS_V2.relaxation.wearLogit` (0,04).
+- Desgaste de situaciones (adelantado de la 47 tras la revisión de código): `wearShift(open, monthIndex)` da el
+  desplazamiento de C y de las tres presiones (0,04 logit por punto del catálogo × factor de edad 1–2, como `play_territorio`),
+  `advanceMonth` lo pasa en `AdvanceOptions.wear`; `applyWear` (que sumaba puntos a los stocks y la relajación disipaba) se
+  borra y `wearTally` queda para el contador del escritorio (`worn`, `wearTotal`).
+- Un choque de evento sobre una presión (stock o indicador diferido) se escribe en el stock al final del paso: la
+  relajación lo disipa (como W/St desde la 39).
+- Se borran `src/sim/pressures.ts` (`updatePressures` 1.1) y sus `CONTROL_PARAMS`: `Factor_Presion_*` (19), `Umbral_PP_*`
+  (5, incluido el umbral de 8 t de CO₂ en escala vieja), `Sensibilidad_PP_*` (5), `PPSocial_Increase_Factor_Per_Tax_Point`,
+  `Tasa_disipacion_presion_social`, `Impulso_PP_Agricola_por_kHa_Convertida` (y el impulso directo en `declarePublicUse`);
+  limpieza: `Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso`, `Factor_Impacto_Usos_del_Suelo_en_Seguridad_
+  Economica_Peso`, `Impacto_Biodiversidad_en_SE_Peso` (sin uso desde la 39). Descripciones, panel del facilitador
+  (`Velocidad_Ajuste_Presiones` entra; disipación y factor fiscal de la presión social salen), manual del facilitador
+  (diapositiva de presiones) y manual de ecuaciones (fórmulas de π*) actualizados. `Tasa_disipacion_agricola/ambientalista_
+  Nivel_N` y `Factor_Impulso_Presion_*` ya no existían (fase 34).
+- Prototipo: sin cambios (sin golden nuevo). `scripts/reference/pressures42_cases.py` → `pressures42_cases.json` (24 casos con
+  áreas, B, F, E, C, c, π, τ y desgaste variables; los objetivos se recuperan de la relajación exacta).
+- Tests: `tests/sim/pressures.v2.spec.ts` (ancla ±1e-9 en los 3 niveles; CR → π_e* 12,65 ∈ [10, 14], FRA → 43,4; CR +3/15
+  sobre π_a; monotonía en FRA; σ_prod solo sobre la suma de políticas y PF fuera; desgaste; k fuera de [0, 1]; ancla acotada
+  de una partida 1.1; 24 casos del prototipo; 8 estrategias × 3 niveles sin tocar 0/100 en 30 años, `extractive` < 90;
+  N2 verde π_e < 8 y extractiva > 45; choque de evento que se relaja; declarar un uso público sube el objetivo de π_a y no el
+  stock). Actualizados: `core.spec` (trayectorias regeneradas: `balanced` ya no clava π_e y π_s en 0 — N2 termina π 15 / 3 / 6
+  en lugar de 8 / 0 / 0 —, W, St y puntaje siguen; B, F, E, deuda, PBI, CO₂ y CC sin cambio), `territory.spec` (el uso público
+  sube el objetivo de π_a), `facilitatorParams.spec`, `session.spec` (incumplimiento sostenido con brecha forzada; el
+  escritorio abandonado de la semilla 11 llega al final y pierde; una situación abierta sube el objetivo de π_e).
+
+**Desvíos y discrepancias** (filas 42 de `docs/v6-spec-vs-motor.md`).
+- `targetPressures(state, eff, wear)` sin `CP`; canal η^social (prototipo: `eta` uniforme).
+- Desgaste como desplazamiento adelantado de la 47; con él y las presiones ancladas, ignorar la bandeja en Territorio ya no
+  derriba al gobierno (igual que el prototipo): choca con la decisión del usuario del 2026-09-19 → 47/49.
+- Expectativas de la cadena que no se cumplen: **C9 no vuelve a PASS** (2,473; el prototipo da Δ St −2,05 en el mismo caso:
+  es partición del paso anual, 46) y **F de N3 13,8** (< 15; economía/eventos 1.1, 44/46). Sí se cumple: `extractive`
+  N2/N3 deja de colapsar (St 51 / 42 con eventos; sin eventos 61,5 / 52,8, prototipo 55,5 / 47,2).
+
+**Referencias del prototipo** (sin eventos, golden, año 30; port por `stepYear`): N2 π_e verde 3,93 (3,4), extractiva 55,09
+(55,1); π_a extractiva 4,75 (4,7), verde 22,26 (22,0); N1 extractiva π_e 61,26 (61,3). Máx |Δ| sobre las 27 filas: π_a 0,60,
+π_e 0,08, π_s 4,52 (sigue a W, 45). I-5 medido: de 80 a 50 sin acción, 1,5–1,8 años (N2 mensual).
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la 41:
+
+| Criterio | 41 (quick) | 41 (completo) | 42 (quick) | 42 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,400 | FAIL 0,350 | FAIL 0,200 | FAIL 0,300 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | FAIL 1 | FAIL 1 | **PASS 0** | **PASS 0** |
+| C6 recorrido ≥ 15 | FAIL 9,456 | FAIL 9,001 | FAIL 3,616 | FAIL 3,327 |
+| C7 banda de predicción | FAIL 0,593 | FAIL 0,599 | FAIL 0,593 | FAIL 0,599 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 1,279 | FAIL 1,279 | FAIL 2,473 | FAIL 2,473 |
+
+C2: queda Territorio producción 30 % (49). C4: `tech_tax` N1 (49) y, nuevo, `extractive` de Territorio gana producción en 20 %
+(antes colapsaba; prototipo 0/10; 49). C5 pasa. C6 (completo): F N3 13,8 y Territorio 13,5; W de N1 3,3 (el prototipo da el
+mismo recorrido estrecho, 48/49); W de N2/N3 baja de 44–50 a 22–23 porque `extractive` ya no colapsa. C9: peor St de
+`extractive` N2 año 10 (45,15 / 42,68), también en el prototipo (46).
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm test` (515 + 27 skipped), `npm run build`, `npm run i18n:audit` limpios. E2E
+con navegador al final de la unidad (fases 42 y 43 juntas; ver la entrada de la 43).
+
+**Revisión de código** (aplicada): desgaste cableado como desplazamiento (antes `wear` existía pero `advance` no lo pasaba y el
+empuje a los stocks se disipaba); ancla de presiones acotada para partidas 1.1 pegadas en 0/100; `productiveShare0` de las
+anclas con la misma función que el impulsor (mismo denominador); σ_prod calculado una vez. No aplicadas, anotadas: un choque
+de evento sobre `stella.PP_*` entra antes de la relajación del mismo paso y uno sobre el indicador `pp*` después (igual que el
+prototipo para el primero; la 46 unifica los eventos); firma sin `CP` (documentada).
+
+**Deudas.** C9 (46); F N3 (44/46); Territorio `extractive`/producción y la decisión del escritorio abandonado (47/49); π_s y W
+(45).

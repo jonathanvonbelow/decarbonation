@@ -29,7 +29,7 @@ import { evaluateTerritorio } from './routes';
 import { mapFx, type FxId } from './fx';
 import { buildMonthNews, tallyLand, unlockNews, type NewsItem } from './news';
 import {
-  applyWear, defaultOption, resolveSituation, rollSituation, situationCost, SITUATION_BY_ID, type OpenSituation,
+  wearShift, wearTally, defaultOption, resolveSituation, rollSituation, situationCost, SITUATION_BY_ID, type OpenSituation,
 } from './situations';
 
 export * from './calendar';
@@ -243,22 +243,25 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   if (s.outcome) return s;
   // Connectivity of the map as the previous month left it (the engine does not know the map, phase 40 §3).
   const conn = currentConnectivity(s);
+  const monthIndex = s.monthIndex + 1;
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
     publicUseUpkeep: true,
     extraDeferred: s.pendingDeferred ?? [],
     connectivity: { K: conn.K, K0: conn.K0 },
+    // Everything still on the desk wears the government down this month: a shift of the targets of conflict and of
+    // the pressures while it stays open (phase 42, the prototype's `wear`).
+    wear: wearShift(s.open, monthIndex),
   });
   const pendingDeferred: DeferredAdjustment[] = [];
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
   const situationFlows: LandFlow[] = [];
-  const monthIndex = s.monthIndex + 1;
 
   let game = r.next;
   const situationNews: NewsItem[] = [];
   const stamp = { monthIndex, year: s.game.year, month: s.month };
 
-  // 1. Everything still on the desk wears the government down this month.
-  const wear = applyWear(s.open, game.stellaSpecificState, game.indicators, monthIndex);
+  // 1. Tally of the wear the desk caused this month (the wear itself entered the step above as a target shift).
+  const wear = wearTally(s.open, monthIndex);
   const wornTotal = Object.values(wear).reduce((sum, n) => sum + n, 0);
   let open = s.open.map((item) => ({ ...item, worn: item.worn + (wear[item.id] ?? 0) }));
 

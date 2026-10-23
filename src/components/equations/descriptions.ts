@@ -92,8 +92,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "How Biodiversity (effective habitat, species-area relation, management quality and, in Territorio, forest connectivity) and Food Security (food available per person against the start, and access by income) are calculated: each moves toward its target every year.",
   },
   EQUATION_TITLE_POLITICAL_PRESSURE: {
-    es: "Modela cómo aumenta o disminuye el descontento de los grupos de interés: cada año la presión suma un impulso lineal (políticas e indicadores bajo su umbral) y pierde una fracción fija de sí misma (disipación), con límites 0 y 100.",
-    en: "Models how discontent among interest groups rises or falls: each year the pressure adds a linear impulse (policies and indicators below their threshold) and loses a fixed share of itself (dissipation), bounded to 0 and 100.",
+    es: "Modela el descontento de los grupos de interés: cada presión se acerca cada año a un objetivo en S anclado al inicio del nivel, que mueven las políticas y los desvíos de los indicadores (y, la agrícola, el tamaño del sector productivo).",
+    en: "Models discontent among interest groups: each pressure moves every year toward an S-shaped target anchored at the level start, moved by the policies and by how far the indicators drifted (and, for the agricultural one, by the size of the productive sector).",
   },
   EQUATION_TITLE_ECONOMY: {
     es: "Fórmulas que gobiernan la macroeconomía de la nación, incluyendo el crecimiento del PBI y el balance de las finanzas públicas.",
@@ -133,10 +133,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Porcentaje del capital de la deuda total que se paga anualmente en el Nivel 3.",
     en: "Percentage of total debt principal paid annually in Level 3.",
   },
-  Tasa_disipacion_presion_social: {
-    es: "Fracción de la Presión Social que se disipa cada año (provisoria: las presiones pasan al modelo 2.0 en una fase posterior).",
-    en: "Share of the Social Pressure that dissipates each year (provisional: the pressures move to model 2.0 in a later phase).",
-  },
   Velocidad_Ajuste_Biodiversidad: {
     es: "Fracción anual del camino que la Biodiversidad recorre hacia su objetivo (0,12: unos 8 años de constante de tiempo; el hábitat responde lento, deuda de extinción).",
     en: "Annual share of the way Biodiversity moves toward its target (0.12: a time constant of about 8 years; habitat responds slowly, extinction debt).",
@@ -157,6 +153,10 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Fracción anual del camino que el Colapso Político (100 − Estabilidad) recorre hacia su objetivo.",
     en: "Annual share of the way Political Collapse (100 − Stability) moves toward its target.",
   },
+  Velocidad_Ajuste_Presiones: {
+    es: "Fracción anual del camino que las tres presiones sectoriales (agrícola, ambientalista, social) recorren hacia su objetivo en S (0,35: unos 3 años para dos tercios).",
+    en: "Annual share of the way the three sectoral pressures (agricultural, environmentalist, social) move toward their S-shaped target (0.35: about 3 years for two thirds).",
+  },
   Tasa_de_interes_Nivel_1: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 1.",
     en: "Annual interest rate applied to total debt in Level 1.",
@@ -168,18 +168,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Tasa_de_interes_Nivel_3: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 3.",
     en: "Annual interest rate applied to total debt in Level 3.",
-  },
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: {
-    es: "Peso relativo del componente 'Políticas' en el cálculo del cambio anual de la Seguridad Económica.",
-    en: "Relative weight of the 'Policies' component in the annual Economic Security change calculation.",
-  },
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: {
-    es: "Peso relativo del componente 'Uso del Suelo' en el cálculo del cambio anual de la Seguridad Económica.",
-    en: "Relative weight of the 'Land Use' component in the annual Economic Security change calculation.",
-  },
-  Impacto_Biodiversidad_en_SE_Peso: {
-    es: "Peso relativo del impacto directo de la Biodiversidad sobre la Seguridad Económica.",
-    en: "Relative weight of Biodiversity's direct impact on Economic Security.",
   },
   Tasa_de_BNNP_a_BNP_Base: {
     es: "Tasa de conversión anual base de Bosque Nativo No Protegido a Bosque Nativo Protegido.",
@@ -197,130 +185,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Tasa de conversión anual base (reforestación) de Cultivos Agroecológicos a Bosque Nativo No Protegido.",
     en: "Base annual conversion rate (reforestation) from Agro-ecological Crops to Unprotected Native Forest.",
   },
-  Factor_Presion_Agricola_PAS: {
-    es: "Impacto de la política Agroecológica sobre la presión del sector agrícola (positivo = aumenta la presión).",
-    en: "Impact of the Agro-ecological policy on agricultural sector pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Agricola_PGS: {
-    es: "Impacto de la política de Ganadería Sostenible sobre la presión del sector agrícola (positivo = aumenta la presión).",
-    en: "Impact of the Sustainable Livestock policy on agricultural sector pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Agricola_PPAI: {
-    es: "Impacto de la política de Agricultura Intensiva sobre la presión del sector agrícola (negativo = disminuye la presión).",
-    en: "Impact of the Intensive Agriculture policy on agricultural sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Agricola_PPEA: {
-    es: "Impacto de la política de Exportaciones Agrícolas sobre la presión del sector agrícola (negativo = disminuye la presión).",
-    en: "Impact of the Agricultural Exports policy on agricultural sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PAS: {
-    es: "Impacto de la política Agroecológica sobre la presión del sector ambientalista (negativo = disminuye la presión).",
-    en: "Impact of the Agro-ecological policy on environmentalist sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PCR: {
-    es: "Impacto de la política de Conservación sobre la presión del sector ambientalista (negativo = disminuye la presión).",
-    en: "Impact of the Conservation policy on environmentalist sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PGS: {
-    es: "Impacto de la política de Ganadería Sostenible sobre la presión del sector ambientalista (negativo = disminuye la presión).",
-    en: "Impact of the Sustainable Livestock policy on environmentalist sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PAGUA: {
-    es: "Impacto de la política de Gestión del Agua sobre la presión del sector ambientalista (negativo = disminuye la presión).",
-    en: "Impact of the Water Management policy on environmentalist sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PCN: {
-    es: "Impacto de la política de Neutralidad de Carbono sobre la presión del sector ambientalista (negativo = disminuye la presión).",
-    en: "Impact of the Carbon Neutrality policy on environmentalist sector pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Ambiental_PPAI_Neg: {
-    es: "Impacto de la política de Agricultura Intensiva sobre la presión del sector ambientalista (positivo = aumenta la presión).",
-    en: "Impact of the Intensive Agriculture policy on environmentalist sector pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Ambiental_PFRA_Neg: {
-    es: "Impacto de la política de Normativas Flexibles sobre la presión del sector ambientalista (positivo = aumenta la presión).",
-    en: "Impact of the Flexible Regulations policy on environmentalist sector pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Ambiental_PSE_Neg: {
-    es: "Impacto de la política de Subsidios Energéticos sobre la presión del sector ambientalista (positivo = aumenta la presión).",
-    en: "Impact of the Energy Subsidies policy on environmentalist sector pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Social_PAS: {
-    es: "Impacto de la política Agroecológica sobre la presión social (negativo = disminuye la presión).",
-    en: "Impact of the Agro-ecological policy on social pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Social_PAGUA: {
-    es: "Impacto de la política de Gestión del Agua sobre la presión social (negativo = disminuye la presión).",
-    en: "Impact of the Water Management policy on social pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Social_PCN: {
-    es: "Impacto de la política de Neutralidad de Carbono sobre la presión social (negativo = disminuye la presión).",
-    en: "Impact of the Carbon Neutrality policy on social pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Social_PCR: {
-    es: "Impacto de la política de Conservación sobre la presión social (negativo = disminuye la presión).",
-    en: "Impact of the Conservation policy on social pressure (negative = decreases pressure).",
-  },
-  Factor_Presion_Social_PPAI_Neg: {
-    es: "Impacto de la política de Agricultura Intensiva sobre la presión social (positivo = aumenta la presión).",
-    en: "Impact of the Intensive Agriculture policy on social pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Social_PPIE_Neg: {
-    es: "Impacto de la política de Inversión Extranjera sobre la presión social (positivo = aumenta la presión).",
-    en: "Impact of the Foreign Investment policy on social pressure (positive = increases pressure).",
-  },
-  Factor_Presion_Social_PFRA_Neg: {
-    es: "Impacto de la política de Normativas Flexibles sobre la presión social (positivo = aumenta la presión).",
-    en: "Impact of the Flexible Regulations policy on social pressure (positive = increases pressure).",
-  },
-  Sensibilidad_PP_Agricola_SegEconomica: {
-    es: "Factor que multiplica la diferencia entre el umbral y el valor real de la Seguridad Económica para generar presión agrícola.",
-    en: "Factor multiplying the gap between the threshold and the actual Economic Security value to generate agricultural pressure.",
-  },
-  Umbral_PP_Agricola_SegEconomica: {
-    es: "Valor de Seguridad Económica por debajo del cual el sector agrícola comienza a generar presión.",
-    en: "Economic Security value below which the agricultural sector starts generating pressure.",
-  },
-  Sensibilidad_PP_Agricola_SegAlimentaria: {
-    es: "Factor que multiplica la diferencia entre el umbral y el valor real de la Seguridad Alimentaria para generar presión agrícola.",
-    en: "Factor multiplying the gap between the threshold and the actual Food Security value to generate agricultural pressure.",
-  },
-  Umbral_PP_Agricola_SegAlimentaria: {
-    es: "Valor de Seguridad Alimentaria por debajo del cual el sector agrícola comienza a generar presión.",
-    en: "Food Security value below which the agricultural sector starts generating pressure.",
-  },
-  Sensibilidad_PP_Ambiental_Biodiversidad: {
-    es: "Factor que multiplica la diferencia entre el umbral y el valor real de la Biodiversidad para generar presión ambientalista.",
-    en: "Factor multiplying the gap between the threshold and the actual Biodiversity value to generate environmentalist pressure.",
-  },
-  Umbral_PP_Ambiental_Biodiversidad: {
-    es: "Valor de Biodiversidad por debajo del cual el sector ambientalista comienza a generar presión.",
-    en: "Biodiversity value below which the environmentalist sector starts generating pressure.",
-  },
-  Sensibilidad_PP_Ambiental_BalanceCarbono: {
-    es: "Factor que multiplica el déficit de carbono (si es negativo) para generar presión ambientalista.",
-    en: "Factor multiplying the carbon deficit (if negative) to generate environmentalist pressure.",
-  },
-  EfectoPositivo_PP_Ambiental_BalanceCarbono: {
-    es: "Pequeño efecto de reducción de presión si el balance de carbono es positivo.",
-    en: "Small pressure-reducing effect when the carbon balance is positive.",
-  },
-  Sensibilidad_PP_Social_BienestarSocial: {
-    es: "Factor que multiplica la diferencia entre el umbral y el valor real del Bienestar Social para generar presión social.",
-    en: "Factor multiplying the gap between the threshold and the actual Social Wellbeing value to generate social pressure.",
-  },
-  Umbral_PP_Social_BienestarSocial: {
-    es: "Valor de Bienestar Social por debajo del cual se comienza a generar presión social.",
-    en: "Social Wellbeing value below which social pressure starts being generated.",
-  },
-  PRESION_PUNTO_EQUILIBRIO: {
-    es: "El valor de presión (0-100) hacia el cual todos los grupos de presión tienden a normalizarse si no hay otros impulsos.",
-    en: "The pressure value (0-100) toward which every pressure group tends to normalize absent other drivers.",
-  },
-  PRESION_TASA_NORMALIZACION: {
-    es: "La velocidad (porcentaje por año) a la que la presión se mueve hacia el Punto de Equilibrio.",
-    en: "The speed (percentage per year) at which pressure moves toward the Equilibrium Point.",
-  },
   Max_Additional_Tax_Rate_Percentage: {
     es: "La tasa impositiva adicional máxima que el jugador puede aplicar en el Nivel 3.",
     en: "The maximum additional tax rate the player can apply in Level 3.",
@@ -328,9 +192,5 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   PBIGrowth_Reduction_Factor_Per_Tax_Point: {
     es: "Reducción en la tasa de crecimiento del PBI por cada punto porcentual de impuesto adicional aplicado.",
     en: "Reduction in GDP growth rate per percentage point of additional tax applied.",
-  },
-  PPSocial_Increase_Factor_Per_Tax_Point: {
-    es: "Puntos de aumento en la Presión Social por cada punto porcentual de impuesto adicional aplicado.",
-    en: "Points of Social Pressure increase per percentage point of additional tax applied.",
   },
 };

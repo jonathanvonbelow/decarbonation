@@ -251,11 +251,13 @@ Dinámica:  F ← F* + (F − F*) · (1 − k_F)^dt`}</Formula>
             <p className="text-sm">Seguridad alimentaria por balance de oferta y demanda: ρ es la disponibilidad por persona y ρ₀ la del inicio del nivel; E es la seguridad económica del paso anterior (acceso por ingreso). ε es el choque de rendimiento (0 por ahora). k_F = {CONTROL_PARAMS.Velocidad_Ajuste_Seg_Alimentaria} por año.</p>
             
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLITICAL_PRESSURE')}>Presión Política (Nivel 2+)</SubSectionTitle>
-            <p className="text-sm mb-2">Simula el comportamiento de grupos de interés. La presión no cambia linealmente; crece o decrece lentamente al principio, se acelera, y luego se satura cerca de los extremos, imitando fenómenos sociales reales.</p>
-            <Formula>Impulso = (Σ <Param>Efectos de Políticas</Param>) + (Σ <Param>Efectos de Indicadores</Param>)
-FuerzaNormalización = (<Param>PuntoEquilibrio</Param> - <Param>PresiónActual</Param>) * <Param>TasaNormalización</Param>
-ΔPresión = (<Param>Impulso</Param> + <Param>FuerzaNormalización</Param>) * f(<Param>PresiónActual</Param>)</Formula>
-            <p className="text-sm">La función <Code>f()</Code> modera el cambio, haciéndolo más lento cerca de los extremos 0 y 100. Esto evita cambios abruptos y crea una dinámica de 'inercia' social.</p>
+            <p className="text-sm mb-2">Las tres presiones sectoriales (agrícola, ambientalista, social) se acercan cada año a un objetivo en S anclado al inicio del nivel: viven en el interior del rango y solo se acercan a 0 o 100 con carteras extremas.</p>
+            <Formula>{`σ_prod = a_prod / a_prod,0      a_prod = (A_CC + A_CA + A_PRG) / ΣA   (las plantaciones no cuentan)
+D_πa = σ_prod · Σ φa·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.a.econ}·(E₀ − E) + ${PARAMS_V2.pressure.drivers.a.food}·(F₀ − F) + ${PARAMS_V2.pressure.drivers.a.prodShare}·(a_prod,0 − a_prod)
+D_πe = Σ φe·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.e.biodiversity}·(B₀ − B) + ${PARAMS_V2.pressure.drivers.e.co2}·(c − c₀)/c₀
+D_πs = Σ φs·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.s.wellbeing}·(W₀ − W) + ${PARAMS_V2.pressure.drivers.s.tax}·τ
+Objetivo:  π* = 100 · σ( logit(π₀/100) + D_π )      Dinámica:  π ← π* + (π − π*) · (1 − k_π)^dt`}</Formula>
+            <p className="text-sm">φ son los factores por política (Conservación: ambientalista {PARAMS_V2.pressure.e.CR}, agrícola +{PARAMS_V2.pressure.a.CR}; Normativas Flexibles: ambientalista +{PARAMS_V2.pressure.e.FRA}; Agricultura Intensiva: agrícola {PARAMS_V2.pressure.a.PAI}). Sacar tierra de producción (usos públicos, restauración) tensiona al gremio en proporción al área. k_π = {CONTROL_PARAMS.Velocidad_Ajuste_Presiones} por año.</p>
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_ECONOMY')}>Economía</SubSectionTitle>
             <p className="text-sm mb-2">Modela la salud financiera de la nación, que es crucial para poder financiar políticas y mantener la estabilidad.</p>

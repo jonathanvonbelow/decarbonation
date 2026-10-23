@@ -13,7 +13,6 @@ export const MAX_LEVELS = 3;
 export const POLICY_LOCK_IN_DURATION = 5; // Años que una política debe permanecer activa
 export const MAX_ACTIVE_POLICIES = 5; // Máximo de políticas activas simultáneamente
 
-
 export const API_KEY_ERROR_MESSAGE = "La variable de entorno API_KEY no está configurada. La funcionalidad del chatbot estará desactivada.";
 // Model ids live in services/geminiConfig.ts (env-configurable); re-exported to keep imports stable.
 export { GEMINI_MODEL_TEXT, GEMINI_MODEL_TTS } from './services/geminiConfig';
@@ -89,7 +88,6 @@ export const INITIAL_POLICY_INSTRUMENTS: Record<Policy, Record<string, PolicyIns
   },
 };
 
-
 /**
  * Model 2.0 (phase 36): a policy's ramp, fatigue and cost come from PARAMS_V2 (rampYears, fatigueYears,
  * and the cost scale of `costShareOf` — costShareBridge until phase 44, then costShare; src/sim/v2/params.ts); `currentEfficiency` stores the base efficiency the engine computed on
@@ -159,7 +157,6 @@ export const INITIAL_POLICIES: Record<Policy, PolicyState> = {
   },
 };
 
-
 export const INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.UnprotectedNativeForest]: {
     name: "Bosque Nativo No Protegido", area: 100, stellaName: "\"Bosque_Nativo_No_Protegido_(BNNP)\"",
@@ -212,7 +209,6 @@ export const INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
 };
 export const TOTAL_LAND_AREA = Object.values(INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
-
 export const LEVEL_2_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.UnprotectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.UnprotectedNativeForest], area: 80 },
   [LandUseType.ProtectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.ProtectedNativeForest], area: 20 },
@@ -227,7 +223,6 @@ export const LEVEL_2_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
 };
 export const LEVEL_2_TOTAL_LAND_AREA = Object.values(LEVEL_2_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
-
 export const LEVEL_3_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.UnprotectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.UnprotectedNativeForest], area: 60 },
   [LandUseType.ProtectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.ProtectedNativeForest], area: 40 },
@@ -241,7 +236,6 @@ export const LEVEL_3_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.Fallow]: { ...INITIAL_LAND_USES[LandUseType.Fallow] },
 };
 export const LEVEL_3_TOTAL_LAND_AREA = Object.values(LEVEL_3_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
-
 
 export const INITIAL_STELLA_STOCKS: StellaStocks = {
   MEAN_colapso: 0,
@@ -293,7 +287,6 @@ export const LEVEL_3_INITIAL_INDICATOR_OVERRIDES: InitialIndicatorOverrides = {
   economicSecurity: 30,
 };
 
-
 export const INITIAL_INDICATORS = {
   biodiversity: 40,
   foodSecurity: 35,
@@ -312,7 +305,6 @@ export const INITIAL_INDICATORS = {
   cumplimientoNivel2: INITIAL_STELLA_STOCKS.Cumplimiento_Nivel_2,
   cumplimientoNivel3: INITIAL_STELLA_STOCKS.Cumplimiento_Nivel_3,
 };
-
 
 export const INITIAL_FINANCES = {
   pbi: INITIAL_STELLA_STOCKS.PBI_Real,
@@ -373,7 +365,6 @@ export const INITIAL_PACTS: Record<string, Pact> = {
   }
 };
 
-
 export const CONTROL_PARAMS: ControlParams = {
   // Model 1.1 (phase 34, N-08): the 70 keys no engine path read (Duracion_Efecto_*, Ponderacion_*,
   // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
@@ -388,9 +379,11 @@ export const CONTROL_PARAMS: ControlParams = {
   Pago_deuda_anual_Nivel_2: 0.12,
   Pago_deuda_anual_Nivel_3: 0.1,
 
-  // Fase 39: era Tasa_disipacion_social (0,09) y disipaba también el conflicto social, que ahora relaja hacia su
-  // objetivo con Velocidad_Ajuste_Conflicto. Queda sólo para la presión social 1.1 (pressures.ts) hasta la fase 42.
-  Tasa_disipacion_presion_social: 0.09, // fracción anual; provisorio (fase 42 lo borra)
+  // Fase 39: Tasa_disipacion_social (0,09) disipaba también el conflicto social, que ahora relaja hacia su objetivo
+  // con Velocidad_Ajuste_Conflicto; quedó como Tasa_disipacion_presion_social hasta la fase 42, que la borró junto con
+  // todo el sistema de presiones 1.1 (Factor_Presion_*, Umbral_PP_*, Sensibilidad_PP_*, PPSocial_Increase_Factor_Per_
+  // Tax_Point, Impulso_PP_Agricola_por_kHa_Convertida): las tres presiones relajan hacia su objetivo logístico con
+  // Velocidad_Ajuste_Presiones (src/sim/v2/pressures.ts, coeficientes en PARAMS_V2.pressure).
 
   Tasa_de_interes_Nivel_1: 0.025, Tasa_de_interes_Nivel_2: 0.035, Tasa_de_interes_Nivel_3: 0.045,
   // Fase 40: Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso (0,2) y Factor_Impacto_Usos_del_Suelo_en_
@@ -398,9 +391,8 @@ export const CONTROL_PARAMS: ControlParams = {
   // Fase 41: Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso (0,4), Factor_Impacto_Usos_del_Suelo_en_
   // Seguridad_Alimentaria_Peso (0,5) e Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso (0,1) se borraron: F relaja
   // hacia su objetivo por balance oferta/demanda (src/sim/v2/food.ts).
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: 0.65,
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: 0.30,
-  Impacto_Biodiversidad_en_SE_Peso: 0.05,
+  // Fase 42: Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso (0,65), Factor_Impacto_Usos_del_Suelo_en_
+  // Seguridad_Economica_Peso (0,30) e Impacto_Biodiversidad_en_SE_Peso (0,05) se borraron: sin uso desde la fase 39.
 
   Tasa_de_BNNP_a_BNP_Base: 0.008,
   Tasa_de_BNNP_a_CA_Base: 0.002,
@@ -408,46 +400,6 @@ export const CONTROL_PARAMS: ControlParams = {
   Tasa_de_CA_a_BNNP_Base: 0.001,
   // (Tasa_de_CC_a_CA_Base, 0,005, se borró en la fase 37: el pool agrícola por renta de src/sim/v2/land.ts
   // reemplaza el flujo CC→CA de 1.1.)
-
-  // --- REBALANCEO DE DINÁMICAS (v3) ---
-  // Sistema de Presión por Impulso/Disipación y rebalanceo de impactos.
-
-  // Political Pressure Policy Effects (Negative values decrease pressure, positive values increase pressure) - REBALANCED v3
-  Factor_Presion_Agricola_PAS: -2.0,      // FIX: Agroecological should REDUCE agricultural pressure (farmers benefiting)
-  Factor_Presion_Agricola_PGS: -1.5,      // FIX: Sustainable livestock also benefits farmers → reduces pressure
-  Factor_Presion_Agricola_PPAI: -10.0,    // Slightly reduced — still the main lever but less dominant
-  Factor_Presion_Agricola_PPEA: -6.0,     // Slightly reduced     
-
-  Factor_Presion_Ambiental_PAS: -5.0,     
-  Factor_Presion_Ambiental_PCR: -12.5,    
-  Factor_Presion_Ambiental_PGS: -4.0,     
-  Factor_Presion_Ambiental_PAGUA: -4.0,   
-  Factor_Presion_Ambiental_PCN: -9.0,     
-  Factor_Presion_Ambiental_PPAI_Neg: 7.5, 
-  Factor_Presion_Ambiental_PFRA_Neg: 12.5, 
-  Factor_Presion_Ambiental_PSE_Neg: 10.0,  
-
-  Factor_Presion_Social_PAS: -5.0,        
-  Factor_Presion_Social_PAGUA: -3.5,      
-  Factor_Presion_Social_PCN: -3.5,        
-  Factor_Presion_Social_PCR: -2.5,        
-  Factor_Presion_Social_PPAI_Neg: 5.0,    
-  Factor_Presion_Social_PPIE_Neg: 3.5,    
-  Factor_Presion_Social_PFRA_Neg: 7.5,    
-
-  // Political Pressure Baseline Indicator Sensitivities & Targets - REBALANCED v3
-  Sensibilidad_PP_Agricola_SegEconomica: 0.3,
-  Umbral_PP_Agricola_SegEconomica: 50,
-  Sensibilidad_PP_Agricola_SegAlimentaria: 0.2,  // Reduced sensitivity — less punishing
-  Umbral_PP_Agricola_SegAlimentaria: 50,          // Lower threshold — only triggers at truly critical food security
-
-  Sensibilidad_PP_Ambiental_Biodiversidad: 0.35,
-  Umbral_PP_Ambiental_Biodiversidad: 45,
-  Sensibilidad_PP_Ambiental_CO2PerCapita: 0.6,
-  Umbral_PP_Ambiental_CO2PerCapita: 8,
-
-  Sensibilidad_PP_Social_BienestarSocial: 0.4,
-  Umbral_PP_Social_BienestarSocial: 50,
 
   // Fase 38: los factores de carbono 1.1 por instrumento (Factor_Reduccion_Emisiones_Renovables_PCN,
   // Factor_Aumento_Secuestro_CAC_PCN, Factor_Aumento_Emisiones_*) se borraron; los reemplaza el carbono
@@ -459,7 +411,6 @@ export const CONTROL_PARAMS: ControlParams = {
   // se borraron; el impuesto adicional τ entra en los objetivos de E (−0,04·τ) y de C (+0,03·τ) en todos los
   // niveles (PARAMS_V2.relaxation).
   PBIGrowth_Reduction_Factor_Per_Tax_Point: 0.0002,
-  PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
 
   // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Un lote declarado son 5 kHa (LOT_KHA,
   // 50 parcelas de 0,1 kHa del mapa; src/sim/territory.ts), así que proteger un lote
@@ -473,9 +424,8 @@ export const CONTROL_PARAMS: ControlParams = {
   // Vista previa Territorio: lo declarado se mantiene (guardaparques, vivero, obra, operación).
   // Sólo lo lee stepMonth con `publicUseUpkeep`; el juego de 3 niveles nunca lo aplica.
   Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: 0.8,
-  // Sacar tierra productiva de producción tensiona al gremio agrícola: 0,08 por kHa = 0,4 puntos
-  // de presión por lote de 5 kHa convertido. Proteger bosque no aplica este impulso.
-  Impulso_PP_Agricola_por_kHa_Convertida: 0.08,
+  // (Impulso_PP_Agricola_por_kHa_Convertida, 0,08, se borró en la fase 42: sacar tierra de producción tensiona al
+  // gremio a través del término 4,0·(a_prod,0 − a_prod) del objetivo de la presión agrícola.)
   // Fase 38: el parque energético ya no desplaza emisiones con un factor sobre el total
   // (Factor_Desplazamiento_Emisiones_Parque_Energetico, borrado): entra en la participación renovable
   // eléctrica s* (4 % del territorio en parques = electricidad 100 % renovable, PARAMS_V2.energy.parksFullShare).
@@ -504,7 +454,6 @@ export const CONTROL_PARAMS: ControlParams = {
   Gasto_Publico_Base_Nivel_3: 0.125,
 };
 
-
 const CHATBOT_BASE_INSTRUCTION = `Eres DecarboNito, un asesor experto para el juego de simulación DecarboNation. Tu objetivo es ayudar al jugador a entender las mecánicas del juego, las consecuencias de sus decisiones y a formular estrategias para alcanzar la sostenibilidad y reducir las emisiones de gases de efecto invernadero.
 
 **REGLAS CRÍTICAS E INVIOLABLES:**
@@ -518,7 +467,6 @@ const CHATBOT_BASE_INSTRUCTION = `Eres DecarboNito, un asesor experto para el ju
 Analiza el CONTEXTO DEL JUEGO proporcionado y la pregunta del jugador. Ofrece explicaciones claras, identifica trade-offs y sinergias entre las políticas y acciones listadas. No tomes decisiones por el jugador, sino empodéralo con conocimiento. El indicador clave de emisiones es 'CO2eq per cápita'; un valor bajo es favorable.
 Responde siempre en ESPAÑOL.
 4.  **NUNCA USES MARKDOWN:** Tus respuestas se muestran como texto plano y también se convierten a voz (texto a voz), así que los símbolos de markdown se leen en voz alta letra por letra o rompen la lectura. Por lo tanto está PROHIBIDO usar '**negrita**', '*cursiva*', '# títulos', backticks, o viñetas con '*' o '-'. Para resaltar una idea o un título, usá una oración clara, dos puntos, o mayúscula inicial — nunca símbolos especiales. Si necesitás enumerar puntos breves, escribilos como oraciones separadas por saltos de línea, sin ningún símbolo al inicio.`;
-
 
 // Phase 5 (mejora-general/files/17_multiples_vias_victoria.md §3.4): `progressionConditionsMet`
 // external signature (gameState) => boolean is unchanged for every caller, but its body now
@@ -798,7 +746,6 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
   },
 ];
 
-
 // Placeholder for PLAYER_REPORT_GUIDE_QUESTIONS
 export const PLAYER_REPORT_GUIDE_QUESTIONS = {
   sections: [
@@ -883,7 +830,6 @@ export const INITIAL_REGIONAL_ZONES_DATA: RegionalZoneData[] = [
         structure: { agrarian: "Pequeña agricultura costera", commercial: "Comercio de productos marinos, servicios turísticos", industrial: "Plantas de procesamiento pesquero" }
     }
 ];
-
 
 // Fase 39–41: INDICATOR_IMPACT_WEIGHTS se borró entero. Todos los indicadores acotados relajan hacia objetivos logísticos
 // anclados (src/sim/v2/indicators.ts, biodiversity.ts, food.ts) con sus coeficientes en PARAMS_V2 (bE, productiveValue,

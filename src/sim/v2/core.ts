@@ -17,7 +17,8 @@
  * flows; cumulative emissions in `model`) and compounds population growth exactly. Phase 39 replaces the
  * indicators E, C (W) and Pc (St) of step 8 with exact relaxation toward anchored logistic targets
  * (src/sim/v2/indicators.ts); phase 40 does the same for B (species-area, src/sim/v2/biodiversity.ts) and phase 41
- * for F (supply/demand balance, src/sim/v2/food.ts); the pressures still use 1.1 + `toward`. Each later phase replaces
+ * for F (supply/demand balance, src/sim/v2/food.ts) and phase 42 for the three sectoral pressures (src/sim/v2/pressures.ts).
+ * Each later phase replaces
  * one step with its 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
@@ -40,9 +41,9 @@
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
- *  - the 1.1 stocks (pressures, money) move by Euler `x + (F(x) − x)·dt` toward the value the annual
- *    equation gives (`toward`); with dt = 1 the annual value is taken as is (42, 44, 46); E, C, Pc relax
- *    exactly since phase 39, B since phase 40, F since phase 41;
+ *  - the 1.1 stocks (money) move by Euler `x + (F(x) − x)·dt` toward the value the annual equation gives
+ *    (`toward`); with dt = 1 the annual value is taken as is (44, 46); E, C, Pc relax exactly since phase 39,
+ *    B since phase 40, F since phase 41, the pressures since phase 42;
  *  - event roll: dt = 1 uses the yearly draw (`rollEvent`, at most one event, level-3 weighting),
  *    dt < 1 the monthly Bernoulli walk (`rollMonthlyEvent`) (46);
  *  - a requested loan: dt = 1 goes through `updateEconomy` (its 1.1 order), dt < 1 is credited whole
@@ -72,9 +73,9 @@ import {
   type TransitionFlow,
 } from './land';
 import { checkEfficiencyWarning } from '../policies';
+import { updatePressures } from './pressures';
 import { computeEfficiencies, policyCost, tickPolicyClocks, type PolicyEfficiency } from './policies';
 import type { Pid } from './params';
-import { updatePressures } from '../pressures';
 import type { Rng } from '../rng';
 import { computeScore } from '../score';
 import { toMapFlow, type LandFlow } from '../territory';
@@ -128,6 +129,11 @@ export interface AdvanceOptions {
    * 3-level game, which has no map) the term is 0.
    */
   connectivity?: Connectivity;
+  /**
+   * Wear of the Territorio situations still open (phase 42): logit shifts of the targets of conflict (C) and of the
+   * three pressures (a / e / s) this step. Absent (the 3-level game), every shift is 0.
+   */
+  wear?: { C?: number; a?: number; e?: number; s?: number };
 }
 
 export interface AdvanceResult {
@@ -407,19 +413,14 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   //    exactly toward its species-area target (phase 40, src/sim/v2/biodiversity.ts; connectivity from the map in
   //    Territorio); F toward its supply/demand target (phase 41, src/sim/v2/food.ts; it reads the E of the previous
   //    step, as in the prototype); E, C and Pc toward their anchored logistic targets (phase 39,
-  //    src/sim/v2/indicators.ts). The pacts enter as target shifts. The pressures (1.1 until phase 42) come after.
+  //    src/sim/v2/indicators.ts). The pacts enter as target shifts. The pressures (phase 42) come after.
   updateBiodiversity(next as GameState & { model: typeof model }, eff, CP, dt, opts.connectivity);
   updateFoodSecurity(next as GameState & { model: typeof model }, eff, CP, dt);
-  updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt);
+  updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt, opts.wear?.C ?? 0);
 
-  // 10. Sectoral political pressures (read the CO2/biodiversity values just updated): annual impulse × dt.
-  const pressures = updatePressures(
-    { ppAgricola: stella.PP_AGRICOLA, ppAmbientalista: stella.PP_AMBIENTALISTA, ppSocial: stella.PP_SOCIAL },
-    next.policies, next.indicators, currentLevel, tax, CP,
-  );
-  stella.PP_AGRICOLA = toward(stella.PP_AGRICOLA, pressures.ppAgricola, dt);
-  stella.PP_AMBIENTALISTA = toward(stella.PP_AMBIENTALISTA, pressures.ppAmbientalista, dt);
-  stella.PP_SOCIAL = toward(stella.PP_SOCIAL, pressures.ppSocial, dt);
+  // 10 (2.0 step 8, last). Sectoral pressures relax exactly toward their anchored logistic targets (phase 42,
+  //     src/sim/v2/pressures.ts): they read the B, F, E, W of this step and the c of step 7.5.
+  updatePressures(next as GameState & { model: typeof model }, eff, CP, dt, opts.wear);
 
   // 11. Sync derived indicators from Stella stocks, then clamp every 0-100 indicator (final step, not
   //     per term — docs/audit-equations.md item I-3).
@@ -446,10 +447,13 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   }
   applyDeferredAdjustments(next.indicators, deferred);
   if (opts.extraDeferred?.length) applyDeferredAdjustments(next.indicators, opts.extraDeferred);
-  // A shock to W or St is a level jump on its stock (phase 39): the next step relaxes it away instead of
-  // recomputing from a stock that never saw it.
+  // A shock to W or St is a level jump on its stock (phase 39), and so is a shock to a pressure (phase 42, the
+  // prototype's `pi_e += 8`): the next step relaxes it away instead of recomputing from a stock that never saw it.
   stella.Conflicto_social = 100 - next.indicators.socialWellbeing;
   stella.Colapso_politico = 100 - next.indicators.politicalStability;
+  stella.PP_AGRICOLA = next.indicators.ppAgricola;
+  stella.PP_AMBIENTALISTA = next.indicators.ppAmbientalista;
+  stella.PP_SOCIAL = next.indicators.ppSocial;
 
   // 12. Score.
   next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);

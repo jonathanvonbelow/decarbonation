@@ -9,6 +9,7 @@
  */
 import type { ControlParams, GameState, Indicators, RandomEventEffect, StellaStocks } from '../../types';
 import { applyRandomEventEffects, toMapFlow, type DeferredAdjustment, type LandFlow, type Rng } from '../../sim';
+import { PARAMS_V2 } from '../../sim/v2/params';
 import { CLIMATE_SITUATIONS } from './climate';
 import { ECONOMY_SITUATIONS } from './economy';
 import { PRODUCTION_SITUATIONS } from './production';
@@ -94,33 +95,47 @@ export function rollSituation(
   };
 }
 
+/** How much an open situation has aged: 1 when it arrives, 2 by the month its deadline arrives (wear doubles). */
+const ageFactorOf = (item: OpenSituation, monthIndex: number): number =>
+  1 + Math.min(1, Math.max(0, monthIndex - item.openedAt) / Math.max(1, item.expiresAt - item.openedAt));
+
+export interface SituationWearShift { C: number; a: number; e: number; s: number }
+
 /**
- * One month of wear from everything still unresolved. Mutates the state's pressures and social
- * conflict in place (the caller owns a fresh copy) and returns the points applied per situation.
+ * Wear of everything still unresolved this month, as a shift of the targets (phase 42; the prototype's `wear` of
+ * `play_territorio`): `PARAMS_V2.relaxation.wearLogit` logit units per point of the catalogue's wear x age factor, on the
+ * conflict (C) and on each pressure (a / e / s). While the situation stays open its targets sit higher; once it is
+ * settled the indicators relax back. Until phase 42 the wear was added to the stocks, and the relaxation of phases
+ * 39/42 dissipated it within months.
  */
-export function applyWear(
-  open: OpenSituation[], stella: StellaStocks, indicators: Indicators, monthIndex: number,
-): Record<string, number> {
+export function wearShift(open: OpenSituation[], monthIndex: number): SituationWearShift {
+  const out: SituationWearShift = { C: 0, a: 0, e: 0, s: 0 };
+  const k = PARAMS_V2.relaxation.wearLogit;
+  open.forEach((item) => {
+    const def = SITUATION_BY_ID[item.defId];
+    if (!def) return;
+    const { conflict = 0, ppAgricola = 0, ppAmbientalista = 0, ppSocial = 0 } = def.wear;
+    const f = k * ageFactorOf(item, monthIndex);
+    out.C += f * conflict;
+    out.a += f * ppAgricola;
+    out.e += f * ppAmbientalista;
+    out.s += f * ppSocial;
+  });
+  return out;
+}
+
+/**
+ * One month of wear from everything still unresolved, in catalogue points x age factor per situation: the tally the
+ * desk shows (`worn`, `wearTotal`). Since phase 42 it no longer touches the state (see `wearShift`).
+ */
+export function wearTally(open: OpenSituation[], monthIndex: number): Record<string, number> {
   const applied: Record<string, number> = {};
   open.forEach((item) => {
     const def = SITUATION_BY_ID[item.defId];
     if (!def) return;
     const { conflict = 0, ppAgricola = 0, ppAmbientalista = 0, ppSocial = 0 } = def.wear;
-    // Wear grows the longer it is ignored: it doubles by the month the deadline arrives.
-    const deadline = Math.max(1, item.expiresAt - item.openedAt);
-    const ageFactor = 1 + Math.min(1, (monthIndex - item.openedAt) / deadline);
-    const clamp = (n: number) => Math.max(0, Math.min(100, n));
-    stella.Conflicto_social = clamp(stella.Conflicto_social + conflict * ageFactor);
-    stella.PP_AGRICOLA = clamp(stella.PP_AGRICOLA + ppAgricola * ageFactor);
-    stella.PP_AMBIENTALISTA = clamp(stella.PP_AMBIENTALISTA + ppAmbientalista * ageFactor);
-    stella.PP_SOCIAL = clamp(stella.PP_SOCIAL + ppSocial * ageFactor);
-    const total = (conflict + ppAgricola + ppAmbientalista + ppSocial) * ageFactor;
-    applied[item.id] = total;
+    applied[item.id] = (conflict + ppAgricola + ppAmbientalista + ppSocial) * ageFactorOf(item, monthIndex);
   });
-  indicators.socialWellbeing = Math.max(0, Math.min(100, 100 - stella.Conflicto_social));
-  indicators.ppAgricola = stella.PP_AGRICOLA;
-  indicators.ppAmbientalista = stella.PP_AMBIENTALISTA;
-  indicators.ppSocial = stella.PP_SOCIAL;
   return applied;
 }
 
