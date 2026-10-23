@@ -395,9 +395,9 @@ export const CONTROL_PARAMS: ControlParams = {
   Tasa_de_interes_Nivel_1: 0.025, Tasa_de_interes_Nivel_2: 0.035, Tasa_de_interes_Nivel_3: 0.045,
   // Fase 40: Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso (0,2) y Factor_Impacto_Usos_del_Suelo_en_
   // Biodiversidad_Peso (0,8) se borraron: B relaja hacia su objetivo especies-área (src/sim/v2/biodiversity.ts).
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso: 0.4,
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso: 0.5,
-  Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso: 0.1,
+  // Fase 41: Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso (0,4), Factor_Impacto_Usos_del_Suelo_en_
+  // Seguridad_Alimentaria_Peso (0,5) e Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso (0,1) se borraron: F relaja
+  // hacia su objetivo por balance oferta/demanda (src/sim/v2/food.ts).
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: 0.65,
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: 0.30,
   Impacto_Biodiversidad_en_SE_Peso: 0.05,
@@ -885,46 +885,9 @@ export const INITIAL_REGIONAL_ZONES_DATA: RegionalZoneData[] = [
 ];
 
 
-export const INDICATOR_IMPACT_WEIGHTS = {
-  // Fase 40: BIODIVERSITY se borró. La biodiversidad relaja hacia un objetivo especies-área (src/sim/v2/biodiversity.ts;
-  // afinidades de hábitat en PARAMS_V2.habitat, efecto de las políticas en PARAMS_V2.qB, sinergias en
-  // PARAMS_V2.biodiversity).
-  FOOD_SECURITY: {
-    POLICIES: {
-      [Policy.Agroecological]: 0.20,
-      [Policy.NaturalConservation]: -0.05,
-      [Policy.SustainableLivestock]: 0.15,
-      [Policy.SustainableWaterManagement]: 0.10,
-      [Policy.CarbonNeutrality]: 0.0,
-      [Policy.IntensiveAgriculture]: 0.30,
-      [Policy.AgriculturalExports]: -0.1, // Can reduce domestic availability if not managed
-      [Policy.ForeignInvestment]: 0.05,
-      [Policy.FlexibleEnvironmentalRegulations]: 0.0,
-      [Policy.EnergySubsidies]: 0.02,
-      Sinergia_GS_AS_SA_Factor: 0.08, // Placeholder
-    },
-    LAND_USE: {
-      [LandUseType.UnprotectedNativeForest]: -0.1,
-      [LandUseType.ProtectedNativeForest]: -0.2,
-      [LandUseType.AgroecologicalCrops]: 0.3,
-      [LandUseType.ConventionalCrops]: 0.4,
-      [LandUseType.ForestPlantations]: -0.05,
-      [LandUseType.GrasslandsPastures]: 0.1,
-      // Sacan tierra de producción; el humedal algo menos, por pesca, polinización y control de
-      // inundaciones sobre los cultivos vecinos.
-      [LandUseType.PublicWetland]: -0.15,
-      [LandUseType.RestorationForest]: -0.15,
-      [LandUseType.EnergyPark]: -0.10,
-      // Barbecho (fase 37): peso productivo 0 (no produce alimentos).
-      [LandUseType.Fallow]: 0,
-    },
-    BIODIVERSITY_IMPACT_ON_FOOD_SECURITY: 0.005, // e.g., 0.5% FS change per 10 points of biodiversity
-    ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY: 0.008, // e.g., 0.8% FS change per 10 points of econ security
-  },
-  // Fase 39: ECONOMIC_SECURITY, SOCIAL_WELLBEING y POLITICAL_STABILITY se borraron. Seguridad económica,
-  // conflicto social y colapso político relajan hacia objetivos logísticos anclados (src/sim/v2/indicators.ts;
-  // coeficientes en PARAMS_V2.bE / productiveValue / conflict / greenRelief / conflictWeights / relaxation).
-};
+// Fase 39–41: INDICATOR_IMPACT_WEIGHTS se borró entero. Todos los indicadores acotados relajan hacia objetivos logísticos
+// anclados (src/sim/v2/indicators.ts, biodiversity.ts, food.ts) con sus coeficientes en PARAMS_V2 (bE, productiveValue,
+// conflict, greenRelief, conflictWeights, relaxation, habitat, qB, biodiversity, food).
 
 export const INSTRUMENT_IMPACT_HINTS: InstrumentImpactHints = {
   // Agroecological

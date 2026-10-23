@@ -15,8 +15,8 @@ import { describe, expect, it } from 'vitest';
 import { costShareOf, makeRng, PID_OF, stepYear } from '../../src/sim';
 import { PARAMS_V2 } from '../../src/sim/v2/params';
 import { Policy, type LandUseType } from '../../src/types';
-import { INDICATOR_IMPACT_WEIGHTS, INITIAL_PACTS, INITIAL_POLICIES, TOTAL_LAND_AREA } from '../../src/constants';
-import type { Pact, PactImpulses, PolicyState } from '../../src/types';
+import { INITIAL_PACTS, INITIAL_POLICIES, TOTAL_LAND_AREA } from '../../src/constants';
+import type { Pact, PolicyState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
 const ALL_POLICY_IDS = Object.values(Policy);
@@ -191,18 +191,9 @@ describe('sim invariants', () => {
   });
 
   // Model 1.1 (phase 34, N-03/T-03): a pact is at most as strong as the strongest policy on the same indicator.
-  it('INV-16: no pact impulse exceeds the largest policy weight on the same indicator', () => {
-    const groups: Record<keyof PactImpulses, Record<string, number>> = {
-      foodSecurity: INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.POLICIES as unknown as Record<string, number>,
-    };
-    const policyIds = new Set<string>(ALL_POLICY_IDS);
-    (Object.keys(groups) as (keyof PactImpulses)[]).forEach((key) => {
-      const weights = Object.entries(groups[key]).filter(([id]) => policyIds.has(id)).map(([, w]) => Math.abs(w));
-      const maxWeight = Math.max(...weights);
-      (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
-        expect(Math.abs(pact.impulses?.[key] ?? 0), `${pact.id}.${key}`).toBeLessThanOrEqual(maxWeight);
-      });
-    });
+  // Phase 41: the 1.1 `impulses` (B, F) are gone; every pact effect on an indicator is a target shift (PARAMS_V2.pacts).
+  it('INV-16: no pact shift exceeds the largest policy weight on the same indicator', () => {
+    (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => expect('impulses' in pact, pact.id).toBe(false));
     // Phase 39: E is a logistic target; a pact's shift on it is at most the largest policy weight bE (logit units).
     const maxBE = Math.max(...(Object.values(PARAMS_V2.bE) as number[]).map(Math.abs));
     (Object.values(PARAMS_V2.pacts) as { E?: number }[]).forEach((p) => expect(Math.abs(p.E ?? 0)).toBeLessThanOrEqual(maxBE));

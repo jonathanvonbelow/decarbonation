@@ -215,3 +215,19 @@ del inicio; sinergia continua 0,05; tratado +0,25 logit; 12 meses = 1 año; 24 c
 | R-5 / N-04 / T-04 / I-2 | B relaja (k_B = 0,12) hacia `100·σ(ℓ_B0 + D_B)`, `D_B = z/(1 − B₀/100)·ln(H/H₀) + Σ qB·η^land + 0,10·min(η_AS, η_CR) − 0,12·min(η_PAI, η_FRA) + γ_K·ln(K/K₀) + pactos.B + cap(impulsos)`, `H = Σ h_i·a_i` (FAL 0,3), z = 0,35. Se borran `calculateBiodiversityChange`, `INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY`, `Factor_Impacto_Politicas_y_Presiones_en_Biodiversidad_Peso`, `Factor_Impacto_Usos_del_Suelo_en_Biodiversidad_Peso` y `impulses.biodiversity` del tratado (ahora `pactos.B` = +0,25 logit). | `src/sim/v2/biodiversity.ts`, `params.ts`, `core.ts`, `anchors.ts`, `constants.ts`, `types.ts` | B deja de estar casi inmóvil: N2 año 30 sin eventos `do_nothing` 39,3, verde 54,9, conservación con tratado 60,4 (sin tratado 54,2), extractiva 28,7 (prototipo 39,2 / 54,8 / 60,3 / 54,2 / 28,5); recorrido 27–32 puntos (antes ≈ 12). |
 | — (conectividad) | Territorio: K = fracción del bosque (BNNP + BNP + RES) en el parche 4-conexo más grande del mapa; K₀ al crear la sesión; γ_K = 0,25, piso 0,001·K₀; `advanceMonth` pasa {K, K₀} en `opts.connectivity` y recalcula K solo si cambió bosque. | `src/sim/territory.ts`, `src/sim/geography.ts` (`largestComponent4`), `src/territorio/session.ts` | Ninguno (0 sin mapa). En Territorio `conservation` sigue ganando (100 %) y `do_nothing` no (0 %). |
 | — (capa del mapa) | Capa "Biodiversidad" de Territorio: h_i − H actual (antes el peso 1.1 del uso). | `src/territorio/heat.ts` | — |
+
+## Modelo 2.0-dev — seguridad alimentaria por balance (fase 41, 2026-10-22)
+
+Spec: `mejora-general/files/41_seguridad_alimentaria_balance.md`; prototipo: `food_production` y bloque F de
+`indicators_step` en `scripts/reference/modelo_v2.py`. Código: `src/sim/v2/food.ts`, segundo indicador del paso 8 de
+`advance` (B → F → E: F lee la E del paso anterior), tabla `PARAMS_V2.food`, k = `CP.Velocidad_Ajuste_Seg_Alimentaria`
+(0,35), ancla `foodPerCapita0`. Verificado: `tests/sim/food.v2.spec.ts` (ancla ±1e-9 en los 3 niveles; ρ₀ N2 = 167,3/400 000;
++20 % de ρ → 51,26; PEA → 22,33; rendimientos, agua, tendencia y choque; piso de ρ; k y 12 = 1; N1 sin políticas 35 → 37,6;
+reglas de hambruna y de incumplimiento sostenido sin cambio; 24 casos del prototipo ±1e-9 con
+`scripts/reference/food41_cases.json`) y `npm run sim:check` contra la 40.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| R-6 / N-04 / T-04 / I-2 / I-3 | F relaja hacia `100·σ(ℓ_F0 + 2,5·ln(ρ/ρ₀) + 0,6·(E − E₀)/50 + cap(impulsos))`, `ρ = max(Q/P, 0,001·ρ₀)`, `Q = (1 − x)·[A_CC·1,0·(1 + 0,25·η_PAI) + A_CA·0,7·(1 + 0,15·η_AS) + A_PRG·0,25·(1 + 0,20·η_GS)]·(1 + 0,06·η_AGUA)·1,006^t·(1 + ε)`, `x = 0,30 + 0,20·η_PEA` (η^prod; ε = `model.yieldShock` = 0 hasta la 46). Sin clamp ni tope ±4. Se borran `calculateFoodSecurityChange` (y con ella `src/sim/indicators.ts` y `pactImpulse`), `INDICATOR_IMPACT_WEIGHTS` entero, `Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso`, `Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso`, `Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso`, `PactImpulses` y `Pact.impulses`. | `src/sim/v2/food.ts`, `params.ts`, `anchors.ts`, `core.ts`, `constants.ts`, `types.ts`, `sim/index.ts` | F deja de estar inmóvil: N2 año 30 sin eventos `do_nothing` 40,6, extractiva 51,1, verde 37,6, balanceada 32,6 (prototipo 40,5 / 51,1 / 37,4 / 32,4; en 1.1 40,3–41,1); exportar baja Q y sube E (*trade-off* explícito). |
+| — (rutas, provisorio) | Producción N1: piso de F 40 → 32 (`ROUTES3`). | `src/sim/winRoutes.ts` | C2 producción N1 0 % → 100 %; la 49 recalibra. |
+| — (capa del mapa) | Capa "Alimentos" de Territorio: rendimiento relativo del uso − rendimiento medio del territorio (antes el peso 1.1). | `src/territorio/heat.ts` | — |

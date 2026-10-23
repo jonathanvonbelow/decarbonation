@@ -20,6 +20,7 @@ import { landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
 import { computeEmissions } from './carbon';
 import { productiveValue } from './indicators';
 import { habitatIndex } from './biodiversity';
+import { domesticSupply } from './food';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
@@ -74,9 +75,8 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
   const habitat0 = habitatIndex(state.landUses);
   const productiveValue0 = productiveValue(state.landUses);
   const agri = A.CC + A.CA + A.PRG + A.PF || 1;
-  const y = PARAMS_V2.food.yield;
-  // food_production at t = 0 with no policies and no yield shock, net of the starting export share.
-  const food0 = (A.CC * y.CC + A.CA * y.CA + A.PRG * y.PRG) * (1 - PARAMS_V2.food.export0);
+  // food_production at t = 0 with no policies and no yield shock, net of the starting export share (phase 41).
+  const food0 = domesticSupply(state.landUses, {}, 0, 0);
   const emissions = startingEmissions(state.currentLevel, state.landUses, pop, CP);
   const pressures = [st.PP_AGRICOLA, st.PP_AMBIENTALISTA, st.PP_SOCIAL];
   const agriAreas0 = {} as ModelAnchors['agriAreas0'];
@@ -98,7 +98,9 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
     E0: ind.economicSecurity,
     W0: 100 - st.Conflicto_social,
     habitat0,
-    foodPerCapita0: food0 / pop,
+    // Per inhabitant of the state being anchored (the prototype's s["pop"]): equal to CP.Poblacion_Inicial at level
+    // start; for a mid-game state re-anchored by advance() it keeps ρ/ρ0 = 1 at the anchor (F* = F0).
+    foodPerCapita0: food0 / (st.Poblacion_Total > 0 ? st.Poblacion_Total : pop),
     productiveValue0,
     concentration0: (A.CC + A.PF) / agri,
     productiveShare0: (A.CC + A.CA + A.PRG) / total,

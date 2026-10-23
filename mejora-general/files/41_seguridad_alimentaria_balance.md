@@ -32,7 +32,7 @@ objetivo:
   mecanismo.
 
 Valores de referencia del prototipo (N2, año 30, sin eventos): sin políticas 40,5; extractiva 51,1; cartera verde 37,4;
-balanceada 32,3. En 1.1, 40,3–41,1 para todas.
+balanceada 32,4 (v6/41: decía 32,3; el prototipo da 32,44). En 1.1, 40,3–41,1 para todas.
 
 ## 2. Implementación
 
@@ -48,7 +48,7 @@ balanceada 32,3. En 1.1, 40,3–41,1 para todas.
 
 - Ancla: sin políticas, con suelo congelado, sin tendencia ni crecimiento poblacional (mock) ⇒ F* = F₀.
 - +20 % de ρ con E = E₀ ⇒ F* sube de 40 a ≈ 51,3 (±0,5).
-- PEA a eficiencia 1: F* baja (x de 0,30 a 0,50 ⇒ ρ × 0,714 ⇒ de 40 a ≈ 22,4 antes de la compensación por E).
+- PEA a eficiencia 1: F* baja (x de 0,30 a 0,50 ⇒ ρ × 0,714 ⇒ de 40 a ≈ 22,3 antes de la compensación por E; prototipo 22,33, v6/41: decía 22,4).
 - El juego no cambia la condición de hambruna (F ≤ 10 desde N2) ni la de incumplimiento sostenido de Territorio.
 
 ## 4. Verificación

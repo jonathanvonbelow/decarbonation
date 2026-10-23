@@ -100,15 +100,6 @@ export interface StellaStocks {
   Conteo_Chatgpt: number;
 }
 
-/**
- * Model 1.1 (phase 34, N-03/T-03): what a pact adds to the policy-impact sum of the 1.1 indicator
- * functions of B and F, like one more policy at efficiency 1. Replaces effects() writing `B + 5` every
- * year. Economic security left in phase 39: the pacts shift its logistic target (PARAMS_V2.pacts.*.E).
- */
-export interface PactImpulses {
-  foodSecurity?: number;
-}
-
 export interface Pact {
   id: string;
   name: string;
@@ -127,8 +118,8 @@ export interface Pact {
   costToJoin?: number;
   annualCost?: number;
   unlockYear?: number;
-  /** Effects on F, summed into the 1.1 food-security function's policy impact (see PactImpulses). Phase 40: B left. */
-  impulses?: PactImpulses;
+  // Model 1.1 (phase 34) had `impulses` (B, F, E inside the 1.1 indicator functions); phases 39–41 replaced them with
+  // shifts of the logistic targets (PARAMS_V2.pacts.*.B / E / Pc) and the field was deleted in phase 41.
 }
 
 // Helper to filter keys of an object to only those that point to a 'number' type value.
@@ -414,9 +405,6 @@ export interface ControlParams {
   Tasa_de_interes_Nivel_1: number;
   Tasa_de_interes_Nivel_2: number;
   Tasa_de_interes_Nivel_3: number;
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso: number;
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso: number;
-  Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso: number;
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: number;
   Factor_Impacto_Usos_del_Suelo_en_Seguridad_Economica_Peso: number;
   Impacto_Biodiversidad_en_SE_Peso: number;

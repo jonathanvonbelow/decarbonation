@@ -41,7 +41,6 @@ export { makeRng, type Rng } from './rng';
 export { MODEL_VERSION, MODEL_VERSION_BY_GAME } from './version';
 export type { SimTrace } from './trace';
 export * from './policies';
-export * from './indicators';
 export * from './v2/land';
 export * from './v2/carbon';
 export * from './pressures';

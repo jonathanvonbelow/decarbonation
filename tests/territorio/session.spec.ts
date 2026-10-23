@@ -215,7 +215,9 @@ describe('sustained breaches (Territorio only)', () => {
     let s = createSession(11);
     s = advance(s, TOTAL_MONTHS);
     expect(s.outcome?.kind).toBe('collapse');
-    expect(s.game.year).toBeLessThan(START_YEAR + 20);
+    // Phase 41: with food security by supply/demand balance F stays ≈ 40 (it sank to ≈ 31 under the 1.1 weights), so
+    // wellbeing holds longer and the neglected government falls in 2048 instead of 2040 (political collapse, seed 11).
+    expect(s.game.year).toBeLessThan(START_YEAR + 25);
     // The month the streak started, the game was still running.
     expect(s.monthIndex).toBeGreaterThan(12);
   });

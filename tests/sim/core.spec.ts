@@ -109,10 +109,13 @@ describe('advance', () => {
    * Phase 40 regenerated them: B relaxes toward its species-area target (the balanced portfolio with the treaty
    * reaches B ≈ 57 in 12 years instead of ≈ 43 under the 1.1 weights); E (ecosystem services), W, St, the
    * agricultural pressure, F (through E) and the score follow B. Debt, GDP, CO2 and CC are unchanged.
+   * Phase 41 regenerated them: F relaxes toward its supply/demand target (balanced exports part of a shrinking
+   * farm area: F falls instead of drifting with the 1.1 weights); E, W, St, the pressures and the score follow F.
+   * Debt, GDP, CO2, B and CC are unchanged.
    */
-  it('reproduces the phase-40 reference trajectories (annual and monthly)', () => {
+  it('reproduces the phase-41 reference trajectories (annual and monthly)', () => {
     type Ref = [Record<string, number>, number, number];
-    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":56.782650702129544,"foodSecurity":32.879351251118905,"economicSecurity":44.843371996333694,"socialWellbeing":80.3141468527725,"co2EqEmissionsPerCapita":4.781739560947802,"politicalStability":93.38975807798899,"generalScore":724.0587270125886,"pbi":14362.986473223866,"treasuryReserves":-4426.870883463552,"debt":139.25048800470103,"ppAgricola":1.417889347412994,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},139.25048800470103,141.4522622638243],"annual3":[{"biodiversity":56.713818266670835,"foodSecurity":40.51914311376308,"economicSecurity":42.24127996501177,"socialWellbeing":80.23060953878553,"co2EqEmissionsPerCapita":3.8965310758233094,"politicalStability":92.09788207672345,"generalScore":725.4653219235058,"pbi":17335.63086839157,"treasuryReserves":-3590.778577066905,"debt":1586.4869024549994,"ppAgricola":0,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1586.4869024549994,95.36683584161274],"monthly":[{"biodiversity":45.351135608783686,"foodSecurity":42.457203806606614,"economicSecurity":41.37308663412847,"socialWellbeing":72.65616210543692,"co2EqEmissionsPerCapita":5.823566029144177,"politicalStability":76.48853143559776,"generalScore":659.5843589354718,"pbi":10964.353398467998,"treasuryReserves":-147.50903381984065,"debt":213.1659681816877,"ppAgricola":11.171887596062888,"ppAmbientalista":1.9264800175275187,"ppSocial":2.137654029092321,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,149.5913851147525]};
+    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":56.782650702129544,"foodSecurity":31.008609974666832,"economicSecurity":44.29939531387643,"socialWellbeing":77.85668277327639,"co2EqEmissionsPerCapita":4.781739560947802,"politicalStability":91.43787059539841,"generalScore":711.8359840158247,"pbi":14362.986473223866,"treasuryReserves":-4426.870883463552,"debt":139.25048800470103,"ppAgricola":7.669571513305282,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},139.25048800470103,141.4522622638243],"annual3":[{"biodiversity":56.713818266670835,"foodSecurity":32.930546438652364,"economicSecurity":41.700837748423744,"socialWellbeing":74.46444903671056,"co2EqEmissionsPerCapita":3.8965310758233094,"politicalStability":87.99865292127475,"generalScore":706.6966226237048,"pbi":17335.63086839157,"treasuryReserves":-3590.778577066905,"debt":1586.4869024549994,"ppAgricola":11.283272184805329,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1586.4869024549994,95.36683584161274],"monthly":[{"biodiversity":45.351135608783686,"foodSecurity":32.951712824287455,"economicSecurity":41.05270024408953,"socialWellbeing":68.91276400340257,"co2EqEmissionsPerCapita":5.823566029144177,"politicalStability":75.39460388014255,"generalScore":643.538745973773,"pbi":10964.353398467998,"treasuryReserves":-147.50903381984065,"debt":213.1659681816877,"ppAgricola":14.387197906644904,"ppAmbientalista":1.9264800175275187,"ppSocial":2.137654029092321,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,149.5913851147525]};
     const fresh = (level: number) => {
       const s = withActivePolicies(freshState(level), BALANCED);
       s.pacts.biodiversityTreaty.isActive = true;
@@ -249,9 +252,13 @@ describe('anchors', () => {
     expect(Object.values(inn).reduce((s, x) => s + x, 0)).toBeCloseTo(moved, 9);
   });
 
-  it('uses the 2.0 population, not the 1.1 Poblacion_Total', () => {
+  // Phase 41: ρ0 is per inhabitant of the state being anchored (prototype s["pop"]); since phase 38 a level starts with
+  // Poblacion_Total = CP.Poblacion_Inicial, so doubling the initial population halves ρ0.
+  it('anchors food per capita on the starting population (CP.Poblacion_Inicial)', () => {
+    const CP2 = { ...CONTROL_PARAMS, Poblacion_Inicial: 800_000 };
     const patch = createInitialState(1).gameStatePatch;
-    const twice = computeAnchors(patch, { ...CONTROL_PARAMS, Poblacion_Inicial: 800_000 });
-    expect(twice.foodPerCapita0).toBeCloseTo(patch.model!.anchors.foodPerCapita0 / 2, 12);
+    const twice = createInitialState(1, CP2).gameStatePatch;
+    expect(twice.stellaSpecificState.Poblacion_Total).toBe(800_000);
+    expect(computeAnchors(twice, CP2).foodPerCapita0).toBeCloseTo(patch.model!.anchors.foodPerCapita0 / 2, 12);
   });
 });

@@ -223,7 +223,9 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
-          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 40, dir: 'min' },
+          // Phase 41 (provisional, phase 49 recalibrates): 40 → 32 (ROUTES3 of the prototype). 40 was set for the 1.1 F;
+          // with F by supply/demand the production portfolio ends N1 at ≈ 36 and no seed reached 40.
+          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 32, dir: 'min' },
           { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 400, dir: 'min' },
         ],

@@ -227,8 +227,20 @@ export const PARAMS_V2 = {
    */
   biodiversity: { synergyAgroConservation: 0.10, synergyIntensiveFlexible: 0.12, connectivityGamma: 0.25, connectivityFloor: 1e-3, gammaMaxB0: 95 },
 
-  /** 41 — food balance: yields (production units per kHa), annual yield trend, export share, logit slopes. */
-  food: { yield: { CC: 1.0, CA: 0.7, PRG: 0.25 }, yieldTrend: 0.006, export0: 0.30, kappa1: 2.5, kappa2: 0.6 },
+  /**
+   * 41 — food balance (mejora-general/files/41 §1; prototype `food_production` and the F block of `indicators_step`).
+   * yield: production units per kHa per year relative to CC (CA 0.7, PRG 0.25). yieldPolicy: yield multipliers per
+   * unit of η^prod (CC ×(1 + 0.25·η_PAI), CA ×(1 + 0.15·η_AS), PRG ×(1 + 0.20·η_GS), all ×(1 + 0.06·η_AGUA)).
+   * yieldTrend: technological yield growth, fraction per year. export0 + exportPEA·η_PEA: exported share of the
+   * production (fraction). kappa1: logit units per unit of ln(ρ/ρ0) (+20 % of ρ lifts F ≈ 11 points near 40);
+   * kappa2 / econScale: access by income, logit units per (E − E0)/50. rhoFloor: ρ ≥ 0.001·ρ0 (a territory with no
+   * farmland still imports a little; avoids ln 0). Criterio experto (prototype values).
+   */
+  food: {
+    yield: { CC: 1.0, CA: 0.7, PRG: 0.25 },
+    yieldPolicy: { PAI: 0.25, AS: 0.15, GS: 0.20, AGUA: 0.06 },
+    yieldTrend: 0.006, export0: 0.30, exportPEA: 0.20, kappa1: 2.5, kappa2: 0.6, econScale: 50, rhoFloor: 1e-3,
+  },
 
   /** 39 — economic security coefficients (logit units per unit of effective efficiency). */
   bE: { PIE: 0.55, PEA: 0.45, PAI: 0.35, FRA: 0.20, SE: 0.15, AS: 0.10, GS: 0.10, AGUA: 0.05, CN: -0.10, CR: -0.05 },

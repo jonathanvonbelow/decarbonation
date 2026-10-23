@@ -2558,3 +2558,79 @@ del mes anterior (lo que pide la spec §3). (e) `habitatIndex` / capa del mapa r
 **Deudas.** F por balance (41); presiones ancladas (42; también el umbral 45 de B en la presión ambientalista 1.1); C9 (46);
 impulsos de situaciones/eventos sobre B (47); K y parches secundarios (49);
 `Factor_Impacto_*_Seguridad_Economica_Peso` / `Impacto_Biodiversidad_en_SE_Peso` sin consumidor desde la 39 (limpieza).
+
+## 2026-10-22 — v6 fase 41: seguridad alimentaria por balance de oferta y demanda
+
+**Qué se hizo** (`mejora-general/files/41_seguridad_alimentaria_balance.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/food.ts` (port de `food_production` y del bloque F de `indicators_step`): `exportShare` (x = 0,30 + 0,20·η_PEA),
+  `domesticSupply(landUses, eff, t, ε)` (rendimientos CC 1,0 / CA 0,7 / PRG 0,25 con PAI / AS / GS, AGUA, tendencia 0,6 %/año
+  y choque ε), `foodPerCapita` (ρ = max(Q/P, 0,001·ρ₀)), `driveF` / `targetF` (2,5·ln(ρ/ρ₀) + 0,6·(E − E₀)/50 + impulsos con
+  tope), `updateFoodSecurity` (relax exacto, k_F = `CP.Velocidad_Ajuste_Seg_Alimentaria` 0,35; `model.targets.F`). Canal
+  η^prod. Coeficientes en línea del prototipo → `PARAMS_V2.food` (`yieldPolicy`, `exportPEA`, `econScale`, `rhoFloor`).
+- Paso 8: B → **F** → E → C → Pc; F lee la E del paso anterior (como el prototipo, py:424-444). ε = `model.yieldShock`
+  (0 hasta la 46: el gancho queda). Ancla `foodPerCapita0` = `domesticSupply` en t = 0 sin políticas / `Poblacion_Total`
+  del estado anclado (= `Poblacion_Inicial` al inicio de nivel).
+- Se borran `calculateFoodSecurityChange` y con ella `src/sim/indicators.ts` (y `pactImpulse`, export de `src/sim/index.ts`),
+  `INDICATOR_IMPACT_WEIGHTS` entero, `PactImpulses` / `Pact.impulses`, y los `CONTROL_PARAMS`
+  `Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso`, `Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso`,
+  `Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso` (y sus descripciones). Con esto no queda ningún indicador acotado en 1.1.
+- Consumidores: panel del facilitador (k_F), descripciones (k_F; tooltip de indicadores), manual del facilitador (sección
+  de F; "Interdependencias" 1.1 reemplazada), manual de ecuaciones (fórmulas de Q, x, ρ, F*), capa "Alimentos" del mapa
+  (rendimiento relativo − medio, `meanYield`).
+- Rutas (provisorio, recalibra la 49): producción N1, piso de F 40 → 32 (`ROUTES3`); con 40 ninguna semilla de
+  `production` llegaba (F ≈ 36). Nota: 32 < F₀ = 35, igual que en el prototipo.
+- Prototipo: sin cambios (sin golden nuevo). `scripts/reference/food41_cases.py` → `food41_cases.json` (24 casos con t,
+  población y ε variables).
+- Tests: `tests/sim/food.v2.spec.ts` (ancla ±1e-9 en los 3 niveles y re-anclado a mitad de partida; ρ₀ N2; +20 % de ρ →
+  51,26; PEA → 22,33 y compensación por E; rendimientos, agua, tendencia y ε; piso de ρ; k y 12 = 1; N1 sin políticas
+  35 → 37,6; extractiva − verde ≥ 10 en N2; hambruna y sostenido sin cambio; 24 casos ±1e-9). Actualizados: `core.spec`
+  (trayectorias regeneradas: F por balance — `balanced` exporta y frena la frontera, F 31–33 en lugar de 33–42; E, W, St,
+  presiones y puntaje siguen a F; deuda, PBI, CO₂, B y CC sin cambio; el test de población de las anclas pasa a crear el
+  estado con el mismo CP), `invariants.spec` INV-16 (ningún pacto tiene `impulses`), `session.spec` (el gobierno que
+  ignora la bandeja cae en 2048 en lugar de 2040 — F ≈ 40 en lugar de ≈ 31 sostiene W — la cota pasa a START_YEAR + 25).
+
+**Desvíos y discrepancias** (filas 41 de `docs/v6-spec-vs-motor.md`).
+- Spec §3 "≈ 22,4" y §1 "balanceada 32,3": exactos 22,33 y 32,44; textos corregidos.
+- Firmas: `domesticSupply(landUses, eff, t, shock)` y `targetF(state, eff)` (sin CP).
+- Choques de eventos sobre F: ahora se relajan (k_F = 0,35; en el anual ≈ 1/3 se pierde en el mismo paso) — 46/47.
+
+**Referencias del prototipo** (año 30, sin eventos; port por `stepYear`): N2 sin políticas 40,57 (40,53), extractiva 51,14
+(51,09), verde 37,55 (37,44), balanceada 32,55 (32,44); N1 sin políticas 37,60 (37,56); N3 extractiva 47,91 (47,20).
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la fase 40:
+
+| Criterio | 40 (quick) | 41 (quick) | 41 (completo) |
+|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,200 | FAIL 0,400 | FAIL 0,350 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | FAIL 2 | FAIL 1 | FAIL 1 |
+| C6 recorrido ≥ 15 | FAIL 12,148 | FAIL 9,456 | FAIL 9,001 |
+| C7 banda de predicción | FAIL 0,600 | FAIL 0,593 | FAIL 0,599 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | PASS 0,947 | **FAIL 1,279** | FAIL 1,279 |
+
+C2: producción N1 100 % (piso nuevo), N2/N3 100 %; queda Territorio producción 35–40 % (F ≥ 45; prototipo 44; 49). C4: solo
+`tech_tax` N1 (49). C5: solo Territorio producción. C6 (completo): B pasa en todos; F pasa en N1 (20,5) y N2 (16,8), falla en
+N3 (12,6: `extractive` N3 cae en colapso político hacia 2044 con eventos — deuda 39/42 — y su F se mide al año 20; sin
+eventos el recorrido es 15,5) y Territorio (13,8, calibración 49); W de N1 baja a 9,0 porque ahora reproduce el prototipo
+(W de N1 93,7–97,8 sin eventos; antes se movía por la F 1.1) → revisar el criterio en la 48/49. C7: B "sin cambio" 92–93 %
+(antes 100 %). **C9 pasa a FAIL**: el peor es St de `green` N2 año 30 (anual 65,3 / mensual 66,6); B, F, E coinciden con el
+prototipo, la diferencia es la presión agrícola 1.1 (umbral sobre F, integrada por Euler mensual: pa 70,0 / 68,4) — la
+resuelven las presiones ancladas (42) y el mensual exacto (46). No se puede arreglar dentro de la 41 sin portar las presiones.
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm test` (452 + 27 skipped), `npm run build`, `npm run i18n:audit` limpios.
+E2E con navegador (dev server :3141, `GEMINI_API_KEY` de relleno): `/territorio` — capas "Biodiversidad" y "Alimentos"
+dibujan, área protegida declarada sobre bosque nativo (reservas 1 000 → 900, BNP 20 → 25 kHa), Conservación + Agricultura
+Intensiva, ×4 → B 40,8, F 39,4, E 28,4, W 54,3, St 66,5; `/play?demo=1` N2, Agricultura Intensiva, 1 año → B 39,6, F 42,0,
+E 31,4. Sin errores de consola.
+
+**Revisión de código** (aplicada): ρ₀ por `Poblacion_Total` del estado anclado (un re-anclado a mitad de partida daba
+F* ≠ F₀); `grossYield` compartido por `domesticSupply` y `meanYield`; manual del facilitador con piso de ρ y tasas leídas de
+`CP` / `PARAMS_V2`; filas de auditoría y de discrepancias. No aplicadas, anotadas: choques de eventos sobre F que se relajan
+(46/47); piso de ruta N1 bajado a mano (provisorio como los de la 39; 49); cota del test de colapso de Territorio (sigue
+exigiendo colapso antes del final; la 47 cambia el desgaste); capa del mapa recalcula el medio por parcela (costo menor).
+
+**Deudas.** Presiones ancladas (42: colapso de `extractive` N3, C9, umbral de F en la presión agrícola 1.1); eventos 2.0 y ε
+(46); situaciones como impulsos (47); C6 de W en N1 (48); Territorio producción y F (49).

@@ -118,8 +118,17 @@ const manualSlides = [
             <li><strong className="text-cyan-400">Inercia:</strong> B recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Biodiversidad * 100)}%</Param> del camino por año (deuda de extinción): el hábitat responde lento.</li>
             <li><strong className="text-cyan-400">Territorio:</strong> además cuenta la conectividad del bosque en el mapa (fracción del bosque en el parche continuo más grande), con peso <Param>{PARAMS_V2.biodiversity.connectivityGamma}</Param>·ln(K/K₀): proteger o restaurar junto al bosque existente rinde más que un lote aislado.</li>
         </ul>
-         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Interdependencias</h4>
-         <p className="text-sm">Los indicadores se influyen mutuamente. Por ejemplo, un cambio en la Seguridad Económica tiene un impacto en la Seguridad Alimentaria, ponderado por <Code>ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY</Code>.</p>
+        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Seguridad alimentaria: balance de oferta y demanda</h4>
+        <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
+            <p><Param>Oferta Q</Param> = (1 − exportado) · [CC · {PARAMS_V2.food.yield.CC} · (1 + {PARAMS_V2.food.yieldPolicy.PAI}·η_PAI) + CA · {PARAMS_V2.food.yield.CA} · (1 + {PARAMS_V2.food.yieldPolicy.AS}·η_AS) + Pasturas · {PARAMS_V2.food.yield.PRG} · (1 + {PARAMS_V2.food.yieldPolicy.GS}·η_GS)] · (1 + {PARAMS_V2.food.yieldPolicy.AGUA}·η_AGUA) · (1 + {PARAMS_V2.food.yieldTrend})^t</p>
+            <p><Param>Exportado</Param> = {PARAMS_V2.food.export0} + {PARAMS_V2.food.exportPEA}·η_PEA;   <Param>ρ</Param> = max(Q / Población, {PARAMS_V2.food.rhoFloor}·ρ₀)</p>
+            <p><Param>Objetivo F*</Param> = 100 · σ( logit(F₀/100) + {PARAMS_V2.food.kappa1}·ln(ρ/ρ₀) + {PARAMS_V2.food.kappa2}·(E − E₀)/{PARAMS_V2.food.econScale} )</p>
+        </div>
+         <ul className="list-disc list-inside space-y-2 text-sm">
+            <li><strong className="text-cyan-400">Qué la mueve:</strong> la tierra agrícola (convencional rinde más que agroecológica y que pasturas), los rendimientos (Agricultura Intensiva, Agroecología, Ganadería Sostenible, Gestión del Agua), cuánto se exporta (Exportaciones Agrícolas sube la fracción exportada) y el acceso por ingreso (Seguridad Económica).</li>
+            <li><strong className="text-cyan-400">Trade-off:</strong> la población crece {(CONTROL_PARAMS.Tasa_Crecimiento_Poblacional_Base * 100).toLocaleString('es')} %/año y los rendimientos {(PARAMS_V2.food.yieldTrend * 100).toLocaleString('es')} %/año; si se frena la deforestación sin subir rendimientos, la disponibilidad por persona baja. Un 20 % más de alimentos por persona sube el objetivo {PARAMS_V2.food.kappa1}·ln(1,2) unidades logit (unos 11 puntos cerca de 40).</li>
+            <li><strong className="text-cyan-400">Inercia:</strong> F recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Seg_Alimentaria * 100)}%</Param> del camino por año.</li>
+        </ul>
       </div>
     )
   },

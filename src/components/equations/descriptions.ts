@@ -88,8 +88,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The central equation for climate change: a yearly inventory in tonnes of CO₂ equivalent with three components (energy, land flux and land-use change), divided by the population.",
   },
   EQUATION_TITLE_INDICATORS: {
-    es: "Cómo se calcula la Biodiversidad: se acerca cada año a un objetivo que depende del hábitat efectivo del territorio (relación especies-área), de la calidad de manejo de las políticas y, en Territorio, de la conectividad del bosque.",
-    en: "How Biodiversity is calculated: each year it moves toward a target set by the territory's effective habitat (species-area relation), the management quality of the policies and, in Territorio, forest connectivity.",
+    es: "Cómo se calculan la Biodiversidad (hábitat efectivo, relación especies-área, calidad de manejo y, en Territorio, conectividad del bosque) y la Seguridad Alimentaria (alimentos disponibles por persona frente al inicio y acceso por ingreso): cada una se acerca cada año a su objetivo.",
+    en: "How Biodiversity (effective habitat, species-area relation, management quality and, in Territorio, forest connectivity) and Food Security (food available per person against the start, and access by income) are calculated: each moves toward its target every year.",
   },
   EQUATION_TITLE_POLITICAL_PRESSURE: {
     es: "Modela cómo aumenta o disminuye el descontento de los grupos de interés: cada año la presión suma un impulso lineal (políticas e indicadores bajo su umbral) y pierde una fracción fija de sí misma (disipación), con límites 0 y 100.",
@@ -141,6 +141,10 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Fracción anual del camino que la Biodiversidad recorre hacia su objetivo (0,12: unos 8 años de constante de tiempo; el hábitat responde lento, deuda de extinción).",
     en: "Annual share of the way Biodiversity moves toward its target (0.12: a time constant of about 8 years; habitat responds slowly, extinction debt).",
   },
+  Velocidad_Ajuste_Seg_Alimentaria: {
+    es: "Fracción anual del camino que la Seguridad Alimentaria recorre hacia su objetivo (0,35: los mercados de alimentos se ajustan en pocos años).",
+    en: "Annual share of the way Food Security moves toward its target (0.35: food markets adjust within a few years).",
+  },
   Velocidad_Ajuste_Seg_Economica: {
     es: "Fracción anual del camino que la Seguridad Económica recorre hacia su objetivo (0,30: tarda unos 3 años en recorrer dos tercios).",
     en: "Annual share of the way Economic Security moves toward its target (0.30: about 3 years to cover two thirds).",
@@ -164,18 +168,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   Tasa_de_interes_Nivel_3: {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 3.",
     en: "Annual interest rate applied to total debt in Level 3.",
-  },
-  Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Alimentaria_Peso: {
-    es: "Peso relativo del componente 'Políticas' en el cálculo del cambio anual de la Seguridad Alimentaria.",
-    en: "Relative weight of the 'Policies' component in the annual Food Security change calculation.",
-  },
-  Factor_Impacto_Usos_del_Suelo_en_Seguridad_Alimentaria_Peso: {
-    es: "Peso relativo del componente 'Uso del Suelo' en el cálculo del cambio anual de la Seguridad Alimentaria.",
-    en: "Relative weight of the 'Land Use' component in the annual Food Security change calculation.",
-  },
-  Impacto_Biodiversidad_en_Seguridad_Alimentaria_Peso: {
-    es: "Peso relativo del impacto directo de la Biodiversidad sobre la Seguridad Alimentaria.",
-    en: "Relative weight of Biodiversity's direct impact on Food Security.",
   },
   Factor_Impacto_Politicas_y_Presiones_en_Seguridad_Economica_Peso: {
     es: "Peso relativo del componente 'Políticas' en el cálculo del cambio anual de la Seguridad Económica.",

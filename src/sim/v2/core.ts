@@ -16,8 +16,8 @@
  * units, src/sim/v2/carbon.ts: energy with renewables/efficiency inertia, AFOLU flux, LUC from the realised
  * flows; cumulative emissions in `model`) and compounds population growth exactly. Phase 39 replaces the
  * indicators E, C (W) and Pc (St) of step 8 with exact relaxation toward anchored logistic targets
- * (src/sim/v2/indicators.ts); phase 40 does the same for B (species-area, src/sim/v2/biodiversity.ts); F and the
- * pressures still use 1.1 + `toward`. Each later phase replaces
+ * (src/sim/v2/indicators.ts); phase 40 does the same for B (species-area, src/sim/v2/biodiversity.ts) and phase 41
+ * for F (supply/demand balance, src/sim/v2/food.ts); the pressures still use 1.1 + `toward`. Each later phase replaces
  * one step with its 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
@@ -40,9 +40,9 @@
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
- *  - the 1.1 stocks (F, pressures, money) move by Euler `x + (F(x) − x)·dt` toward the value the annual
- *    equation gives (`toward`); with dt = 1 the annual value is taken as is (41–42, 44, 46); E, C, Pc relax
- *    exactly since phase 39, B since phase 40;
+ *  - the 1.1 stocks (pressures, money) move by Euler `x + (F(x) − x)·dt` toward the value the annual
+ *    equation gives (`toward`); with dt = 1 the annual value is taken as is (42, 44, 46); E, C, Pc relax
+ *    exactly since phase 39, B since phase 40, F since phase 41;
  *  - event roll: dt = 1 uses the yearly draw (`rollEvent`, at most one event, level-3 weighting),
  *    dt < 1 the monthly Bernoulli walk (`rollMonthlyEvent`) (46);
  *  - a requested loan: dt = 1 goes through `updateEconomy` (its 1.1 order), dt < 1 is credited whole
@@ -64,8 +64,8 @@ import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator
 import { computeTotalPactCost, updateEconomy } from '../economy';
 import { applyRandomEventEffects, rollEvent } from '../events';
 import { evaluateGameOver } from '../gameOver';
-import { calculateFoodSecurityChange } from '../indicators';
 import { updateBiodiversity, type Connectivity } from './biodiversity';
+import { updateFoodSecurity } from './food';
 import { fiscalStressOf, interestBurdenOf, updateRelaxedIndicators } from './indicators';
 import {
   applyLandFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
@@ -299,7 +299,7 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const totalPactCost = computeTotalPactCost(next.pacts);
 
   // 5. Pact effects: each returns the value one full year of the pact would reach (moved × dt), and the
-  //    land-use change-factor multipliers. No pact writes B, F or E here (B and E: target shifts, PARAMS_V2.pacts).
+  //    land-use change-factor multipliers. No pact writes B, F or E here (B and E: target shifts, PARAMS_V2.pacts; F: none).
   let landUseChangeFactors: LandUseChangeFactors = { ...DEFAULT_LAND_USE_CHANGE_FACTORS };
   (Object.values(next.pacts) as Pact[]).forEach((pact) => {
     if (!pact.isActive) return;
@@ -405,15 +405,11 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
 
   // 8. Indicators B -> F -> E -> C (W) -> Pc (St), each reading the ones already updated this step. B relaxes
   //    exactly toward its species-area target (phase 40, src/sim/v2/biodiversity.ts; connectivity from the map in
-  //    Territorio); F is still model 1.1 (phase 41); E, C and Pc relax exactly toward their anchored logistic
-  //    targets (phase 39, src/sim/v2/indicators.ts). The pacts enter as target shifts. The pressures (1.1 until
-  //    phase 42) come after.
+  //    Territorio); F toward its supply/demand target (phase 41, src/sim/v2/food.ts; it reads the E of the previous
+  //    step, as in the prototype); E, C and Pc toward their anchored logistic targets (phase 39,
+  //    src/sim/v2/indicators.ts). The pacts enter as target shifts. The pressures (1.1 until phase 42) come after.
   updateBiodiversity(next as GameState & { model: typeof model }, eff, CP, dt, opts.connectivity);
-  next.indicators.foodSecurity = toward(
-    next.indicators.foodSecurity,
-    calculateFoodSecurityChange(next.policies, next.landUses, next.indicators, currentLevel, CP, next.pacts),
-    dt,
-  );
+  updateFoodSecurity(next as GameState & { model: typeof model }, eff, CP, dt);
   updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt);
 
   // 10. Sectoral political pressures (read the CO2/biodiversity values just updated): annual impulse × dt.
