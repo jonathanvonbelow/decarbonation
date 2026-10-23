@@ -2881,3 +2881,47 @@ inicial (arranca en 0, como el prototipo). No aplicado: la situación `sovereign
 
 **Deudas.** Rutas de Territorio (F/E de producción, banda C5) y de 3 niveles (49); noticias de "reservas en rojo" muertas
 (50, tablero fiscal); W/St del golden (45); el préstamo voluntario no mira D/Y (decisión: tope 10 % del PBI/año como antes).
+
+## 2026-10-22 — v6 fase 45: conflicto distributivo y transición justa
+
+**Qué se hizo** (`mejora-general/files/45_conflicto_distributivo.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/social.ts` (nuevo): `landConcentration(landUses)` = (CC + PF)/(CC + CA + PRG + PF) (prototipo `concentration()`),
+  `justTransition(policies, eff)` → { R_load, Support, J } y `distributiveDrive(G, G₀, jt)` = 3,0·(G − G₀) + 0,6·(1 − J)·R_load.
+- `driveC` (`indicators.ts`) suma el término; `updateRelaxedIndicators` escribe `model.social = { concentration, justTransition,
+  restrictionLoad }` (nuevo en `ModelState`, opcional para estados guardados antes de la 45; `createModelState` lo arranca en
+  G₀ / 1 / 0). El ancla G₀ (`concentration0`) ya existía desde la 35. El término 2,0·Δa_CC + 1,0·Δa_PF del prototipo ya estaba (39).
+- `PARAMS_V2.justTransition`: pesos del prototipo (restricción CR 1,0 / CN 0,5 / AGUA 0,3; apoyo AS 0,5 / GS 0,5).
+
+**Desvío respecto de la spec.** La spec dice que R_load y Support se calculan por instrumento sumando η_j·e_jk/100 y que las
+constantes del prototipo "son el resultado con reparto parejo". No lo son (CR daría 0,5, CN 0,25, AS 1,0, y contaría los apoyos
+de CR/AGUA/CN). Se implementa peso del prototipo × η_j × χ_j, con χ el canal de `channelStrength` cuya relevancia es la máscara
+0/1 de las etiquetas de `INSTRUMENT_CHANNELS`: con reparto parejo χ = 1 (constantes exactas del prototipo, golden idéntico) y con
+esfuerzo desigual responde como pide la spec (Conservación todo en PSA ⇒ R_load = 0; todo en guardaparques ⇒ 0,99·η; C* menor
+en el primer caso). Consecuencia (como el prototipo): los instrumentos de apoyo de CR (PSA), AGUA y CN no suman a Support; mover
+esfuerzo a PSA baja la restricción pero no sube el apoyo, y con solo CR/CN/AGUA activas J = 0 cualquiera sea el reparto.
+
+**Revisión de código** (aplicada): G y J se calculan una vez por paso (`socialIndices`) y los leen D_C y `model.social`;
+`IndicatorState` exige `policies` (antes opcional: un estado sin políticas perdía el término en silencio); el ancla G₀ usa
+`landConcentration` (una sola definición, sobre `AGRI_CODES`); el test de CA → CC aísla el término de G del de Δa_CC. Las
+rutas que leen W/St no se recalibran (49); `sim:check --quick` no cambia C2–C5.
+
+**Verificación.**
+- Golden sin eventos (`golden_v2.csv`, 27 puntos): B, F, E, W, St y c coinciden (máx |Δ| < 5e-4; antes W/St hasta 13 / 11).
+  El test golden sigue apagado hasta la 46 (lo pide la spec 46).
+- `tests/sim/social.v2.spec.ts` (7 tests: G y su ancla, CA → CC sube G y C*, sin políticas J = 1 y término 0, constantes con
+  reparto parejo, PSA vs guardaparques, restricción sin apoyo, `model.social` escrito por `advance`).
+- `indicators39_cases.py`: ν_G encendido (antes ambos en 0), ν_J apagado (casos sin esfuerzos); JSON regenerado.
+- `core.spec`: trayectorias regeneradas (fase 45): la balanceada con tratado restringe (CR + impuesto CN) más de lo que acompaña
+  (AS): J ≈ 0,25, W −10 puntos (N2 76,5 → 66,6; N3 73,5 → 62,6; mensual 66,1 → 60,5); St, π_s y puntaje siguen. B, F, E, CO₂,
+  dinero y CC sin cambio.
+- Spec §6: `tech_tax` no gana en N2/N3 (gana innovación N1, deuda conocida de la 49); `extractive` tiene el W más bajo de N2
+  (51,0 mediana con eventos; prototipo 47–55).
+
+**`npm run sim:check -- --quick`** contra la 44 (quick): C1 PASS 0 = ; C2 FAIL 0,600 = ; C3 PASS 0 = ; C4 FAIL 1,000 = ; C5 FAIL 1
+= (Territorio producción 60 %, banda prohibida, deuda 47/49); C6 FAIL 3,652 → 4,817 (mejora: el peor sigue siendo W de N1, que
+casi no se mueve también en el prototipo); C7 FAIL 0,593 → 0,592; C8 PASS 0; C9 FAIL 2,453 → 2,052 (ahora coincide con el
+prototipo, Δ St −2,05 en `extractive` N2 año 10; lo decide la 46).
+
+**UI.** Sin cambios: el panel social con G y J es de la fase 50 (spec §3); los índices de investigación, de la 48.
+
+**Deudas.** Presentación de G/J (50) e índices de investigación (48); C9 (46).

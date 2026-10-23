@@ -276,6 +276,11 @@ export interface ModelState {
   productiveYears: number;
   /** Current yield shock (fraction, AR(1) in 46). */
   yieldShock: number;
+  /**
+   * Distributive conflict of the last step (phase 45, src/sim/v2/social.ts): land concentration G (0-1), just-transition
+   * index J (0-1) and restriction load R_load. Absent in a sub-state saved before phase 45 until its next step.
+   */
+  social?: { concentration: number; justTransition: number; restrictionLoad: number };
 }
 
 export interface HistoricalDataPoint {

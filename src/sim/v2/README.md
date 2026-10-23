@@ -57,7 +57,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 42 | paso 8, último: presiones en logit, ancladas (`pressure`, `Velocidad_Ajuste_Presiones`) | hecho (desgaste de situaciones como desplazamiento hasta la 47) |
 | 43 | pasos 4, 5, 7.5 y 8: pactos como datos (`pacts`): desplazamientos, frontera, costos ∝ PBI | hecho (entrada pagada de las reservas hasta la 44) |
 | 44 | paso 6: gasto base, deuda automática, quiebra (`finance.ts`, `PARAMS_V2.finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge`; `payPublicInvestment` | hecho (`src/sim/economy.ts` borrado; φ, B, F, E, c y D/Y coinciden con el golden ±5e-4 sin eventos) |
-| 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
+| 45 | conflicto distributivo: G y J en D_C (`src/sim/v2/social.ts`, `conflictWeights.gini/just`, `justTransition`; `model.social`) | hecho (golden W/St coinciden) |
 | 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
 
 ## Convenciones
@@ -147,3 +147,8 @@ siguiente (ambos `dt`), antes del piso; desaparece la rama `dt` del préstamo y 
 `PARAMS_V2.finance.breachEps` (quiebra al mes 24 exacto). (5) La ruta productiva de Territorio pasa de "reservas ≥ 8 % del PBI"
 (inalcanzable con el piso del 2 %) a las condiciones fiscales del prototipo (saldo primario medio de 5 años ≥ 0 y D/Y ≤ 0,6);
 el piso "reservas ≥ −200" de N1 pasa a D/Y ≤ 0,8 (ROUTES3). El resto de la recalibración de rutas sigue en la 49.
+
+Fase 45: sin recortes de ecuación. Concentración G y transición justa J entran en D_C con los pesos del prototipo (ν_G 3,0,
+ν_J 0,6). Desvío: la spec pide sumar η_j·e_jk/100 por instrumento etiquetado, que con reparto parejo no da las constantes del
+prototipo; se usa peso del prototipo × η × canal enmascarado por etiqueta (igual con reparto parejo, sensible al esfuerzo).
+G/J quedan en `model.social`; su presentación (panel social, DecarboNito) es de la fase 50 y los índices de investigación de la 48.

@@ -5,8 +5,9 @@
 Each case perturbs a level's starting state (efficiencies, areas, B/F/E/C/Pc, pressures, growth, tax, pacts),
 runs the prototype's `indicators_step` once and records the B and F it produced (inputs of E, C, Pc in the
 port, which still computes B and F with model 1.1) and E*, C*, Pc* and the relaxed E, C, Pc.
-The concentration and just-transition terms of the conflict belong to phase 45: they are switched off here
-(nu_gini = nu_just = 0). Fiscal stress is 0 (phase 44). Regenerate whenever modelo_v2.py changes E, C or Pc.
+Phase 45: the concentration term of the conflict is on (nu_gini of the prototype); the just-transition term is
+switched off (nu_just = 0) because the port computes J per instrument from the policies' efforts, which these
+synthetic cases (efficiencies without policies) do not carry — J has its own cases in tests/sim/social.v2.spec.ts. Fiscal stress is 0 (phase 44). Regenerate whenever modelo_v2.py changes E, C or Pc.
 """
 import json
 import random
@@ -16,7 +17,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import modelo_v2 as m  # noqa: E402
 
-m.P["nu_gini"] = 0.0
 m.P["nu_just"] = 0.0
 
 PACT_IDS = {"treaty": "biodiversityTreaty", "accord": "globalCarbonAccord", "tech": "techTransferInitiative"}

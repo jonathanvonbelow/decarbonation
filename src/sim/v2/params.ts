@@ -249,6 +249,16 @@ export const PARAMS_V2 = {
   conflict: { FRA: 0.60, PAI: 0.30, PIE: 0.20, SE: -0.10 },
   greenRelief: { CN: 0.25, CR: 0.25, AGUA: 0.15 },
   conflictWeights: { food: 0.6, econ: 0.5, envPressure: 0.4, gini: 3.0, just: 0.6 },
+  /**
+   * 45 — weights of the just-transition index (src/sim/v2/social.ts), dimensionless per unit of efficiency: each multiplies
+   * η_j·χ_j over the instruments of policy j tagged `restriction` / `support` in INSTRUMENT_CHANNELS (even split ⇒ χ = 1,
+   * so R_load = η_CR + 0.5·η_CN^tax + 0.3·η_AGUA and Support = 0.5·(η_AS + η_GS), the prototype's constants). The support
+   * instruments of CR (PSA), AGUA and CN carry no support weight, as in the prototype. Criterio experto.
+   */
+  justTransition: {
+    restriction: { CR: 1.0, CN: 0.5, AGUA: 0.3 } as Partial<Record<Pid, number>>,
+    support: { AS: 0.5, GS: 0.5 } as Partial<Record<Pid, number>>,
+  },
 
   /**
    * 39 — the remaining drivers of the logistic targets of E, C and Pc (mejora-general/files/39 §2–4; the

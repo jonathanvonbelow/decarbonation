@@ -22,6 +22,7 @@ import { productiveValue } from './indicators';
 import { habitatIndex } from './biodiversity';
 import { domesticSupply } from './food';
 import { productiveShare } from './pressures';
+import { landConcentration } from './social';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
@@ -78,7 +79,6 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
 
   const habitat0 = habitatIndex(state.landUses);
   const productiveValue0 = productiveValue(state.landUses);
-  const agri = A.CC + A.CA + A.PRG + A.PF || 1;
   // food_production at t = 0 with no policies and no yield shock, net of the starting export share (phase 41).
   const food0 = domesticSupply(state.landUses, {}, 0, 0);
   const emissions = startingEmissions(state.currentLevel, state.landUses, pop, CP);
@@ -108,7 +108,7 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
     // start; for a mid-game state re-anchored by advance() it keeps ρ/ρ0 = 1 at the anchor (F* = F0).
     foodPerCapita0: food0 / (st.Poblacion_Total > 0 ? st.Poblacion_Total : pop),
     productiveValue0,
-    concentration0: (A.CC + A.PF) / agri,
+    concentration0: landConcentration(state.landUses),
     productiveShare0: productiveShare(state.landUses),
     shareCC0: A.CC / total,
     sharePF0: A.PF / total,
@@ -141,5 +141,6 @@ export function createModelState(state: AnchorInput, CP: ControlParams): ModelSt
     impulses: [],
     productiveYears: 0,
     yieldShock: 0,
+    social: { concentration: anchors.concentration0, justTransition: 1, restrictionLoad: 0 },
   };
 }

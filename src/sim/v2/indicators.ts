@@ -14,8 +14,7 @@
  *
  * Fiscal stress φ (`model.fiscal.stress`) is sHigh(interest / tax revenue; 0.20, 0.04), written by the finance step of
  * this same step (src/sim/v2/finance.ts, phase 44), which runs before the indicators, as in the prototype.
- * Not yet here (each arrives with its phase, and is 0 until then): concentration and just transition in the
- * conflict (45). The wear of open situations enters D_C as a shift (phase 42, `wearC`). Situation impulses
+ * Concentration and just transition enter the conflict since phase 45 (src/sim/v2/social.ts). The wear of open situations enters D_C as a shift (phase 42, `wearC`). Situation impulses
  * (`model.impulses`) are read and capped at ±0.6 logit, but nothing writes them before phase 47.
  *
  * Pure: no React, no randomness, no mutation.
@@ -26,12 +25,14 @@ import { relax, sLow, target100 } from './math';
 import { PARAMS_V2, type Pid } from './params';
 import type { PolicyEfficiency } from './policies';
 import { pactShift } from './pacts';
+import { distributiveDrive, socialIndices, type SocialIndices } from './social';
 
 type Eff = Partial<Record<Pid, PolicyEfficiency>>;
 type Channel = 'prod' | 'social' | 'tax';
 
 /** What the targets read of the state. A GameState with its 2.0 sub-state fits. */
 export type IndicatorState = Pick<GameState, 'landUses' | 'indicators' | 'stellaSpecificState' | 'pacts' | 'additionalTaxPressurePercentage'>
+  & Pick<GameState, 'policies'>
   & { model: ModelState };
 
 const R = PARAMS_V2.relaxation;
@@ -86,7 +87,7 @@ export function driveE(s: IndicatorState, eff: Eff, CP: ControlParams): number {
 }
 
 /** D_C: drive of social conflict (spec 39 §3). Reads F and E of this step and the previous environmentalist pressure. */
-export function driveC(s: IndicatorState, eff: Eff, wear = 0): number {
+export function driveC(s: IndicatorState, eff: Eff, wear = 0, social: SocialIndices = socialIndices(s.landUses, s.policies, eff)): number {
   const a = s.model.anchors;
   const w = PARAMS_V2.conflictWeights;
   const r = R.C;
@@ -100,7 +101,8 @@ export function driveC(s: IndicatorState, eff: Eff, wear = 0): number {
   const total = totalArea(s);
   d += r.shareCC * ((s.landUses[LandUseType.ConventionalCrops]?.area ?? 0) / total - a.shareCC0);
   d += r.sharePF * ((s.landUses[LandUseType.ForestPlantations]?.area ?? 0) / total - a.sharePF0);
-  // [concentration and just transition: phase 45]
+  // Distributive conflict (phase 45, src/sim/v2/social.ts): ν_G·(G − G0) + ν_J·(1 − J)·R_load.
+  d += distributiveDrive(social.concentration, a.concentration0, social.jt);
   d += r.tax * (s.additionalTaxPressurePercentage ?? 0) + r.fiscalStress * phi;
   // Wear of the open situations (Territorio; wired in phase 42, phase 47 ports the situations as impulses).
   d += wear + capImpulses(impulseSum(s.model, 'C'));
@@ -131,7 +133,8 @@ export function drivePc(s: IndicatorState): number {
 /** E* (0-100). */
 export const targetE = (s: IndicatorState, eff: Eff, CP: ControlParams): number => target100(s.model.anchors.l.E, driveE(s, eff, CP));
 /** C* (0-100); W* = 100 − C*. */
-export const targetC = (s: IndicatorState, eff: Eff, wear = 0): number => target100(s.model.anchors.l.C, driveC(s, eff, wear));
+export const targetC = (s: IndicatorState, eff: Eff, wear = 0, social?: SocialIndices): number =>
+  target100(s.model.anchors.l.C, driveC(s, eff, wear, social));
 /** Pc* (0-100); St* = 100 − Pc*. */
 export const targetPc = (s: IndicatorState): number => target100(s.model.anchors.l.Pc, drivePc(s));
 
@@ -144,7 +147,9 @@ export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: Control
   const st = s.stellaSpecificState;
   const eStar = targetE(s, eff, CP);
   s.indicators.economicSecurity = stepIndicator(s.indicators.economicSecurity, eStar, CP.Velocidad_Ajuste_Seg_Economica, dt);
-  const cStar = targetC(s, eff, wearC);
+  const social = socialIndices(s.landUses, s.policies, eff);
+  const cStar = targetC(s, eff, wearC, social);
+  s.model.social = { concentration: social.concentration, justTransition: social.jt.justTransition, restrictionLoad: social.jt.restrictionLoad };
   st.Conflicto_social = stepIndicator(st.Conflicto_social, cStar, CP.Velocidad_Ajuste_Conflicto, dt);
   s.indicators.socialWellbeing = 100 - st.Conflicto_social;
   const pcStar = targetPc(s);

@@ -280,3 +280,15 @@ sin eventos: B, F, E, c y D/Y del port coinciden con `golden_v2.csv` en los 27 p
 | — | `PBIGrowth_Reduction_Factor_Per_Tax_Point` pasa a `PARAMS_V2.finance.growthTaxDrag` (spec §2); `Gasto_Publico_Base_Nivel_*` entra al panel del facilitador | `constants.ts`, `paramGroups.ts` | El facilitador ya no mueve el arrastre del impuesto sobre g |
 | — | Rutas: piso N1 "reservas ≥ −200" → D/Y ≤ 0,8 (ROUTES3); ruta productiva de Territorio "reservas ≥ 8 % del PBI" → saldo primario medio de 5 años ≥ 0 y D/Y ≤ 0,6 (TERR_ROUTES) | `winRoutes.ts`, `territorio/routes.ts`, `docentes-ecuaciones.html` | El piso de N1 vuelve a poder fallar (antes se cumplía siempre) |
 
+
+## Modelo 2.0-dev — conflicto distributivo (fase 45, 2026-10-22)
+
+Spec: `mejora-general/files/45_conflicto_distributivo.md`; prototipo: `concentration()` y el bloque restriction / support / just
+de `indicators_step`. Código: `src/sim/v2/social.ts` (`landConcentration`, `justTransition`, `distributiveDrive`),
+`PARAMS_V2.justTransition`, `driveC` de `indicators.ts`, `ModelState.social`. Verificado: `tests/sim/social.v2.spec.ts` y el
+golden sin eventos: **los 27 puntos de `golden_v2.csv` coinciden en B, F, E, W, St y c (máx |Δ| < 5e-4)**; antes W/St
+diferían hasta 13 / 11 puntos.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| Propuesta de conflicto distributivo | D_C += 3,0·(G − G₀) + 0,6·(1 − J)·R_load; G = (CC + PF)/(CC + CA + PRG + PF); R_load = Σ w^R·η·χ^R sobre los instrumentos `restriction` (w^R: CR 1,0, CN 0,5, AGUA 0,3), Support = Σ w^S·η·χ^S sobre los `support` (AS 0,5, GS 0,5), χ con la máscara de etiquetas (reparto parejo ⇒ constantes del prototipo); J = S/(S + R) (1 si ambos son 0). El término 2,0·Δa_CC + 1,0·Δa_PF ya estaba desde la 39 | `src/sim/v2/social.ts`, `indicators.ts`, `params.ts`, `anchors.ts`, `types.ts` | Las carteras que restringen sin acompañar pierden bienestar: `green` N2 año 10 W 76 → 64 (prototipo 64,3), la balanceada con tratado N2 76,5 → 66,6; `extractive` sigue con el W más bajo de N2 (51, prototipo 47–55); `tech_tax` no gana en N2/N3 |
