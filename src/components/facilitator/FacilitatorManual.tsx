@@ -7,6 +7,7 @@ const FM_UI = {
 } as const;
 import { CONTROL_PARAMS, LEVEL_CONFIGS, INDICATOR_IMPACT_WEIGHTS, INITIAL_POLICIES, INITIAL_LAND_USES, ALL_RANDOM_EVENTS, INITIAL_PACTS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
 import { Policy, LandUseType } from '../../types';
+import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
 
 interface FacilitatorManualProps {
   onClose: () => void;
@@ -67,7 +68,7 @@ const manualSlides = [
         <p className="mb-4">Las políticas impactan directamente las tasas de transición entre diferentes usos del suelo.</p>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Usos del Suelo y Propiedades</h4>
         <ul className="list-disc list-inside space-y-1 text-xs">
-            {Object.values(INITIAL_LAND_USES).map(lu => <li key={lu.stellaName}>{lu.name} (Emisión: <Param>{lu.emissionRate}</Param>, Secuestro: <Param>{lu.sequestrationRate}</Param>)</li>)}
+            {Object.entries(INITIAL_LAND_USES).map(([key, lu]) => <li key={lu.stellaName}>{lu.name} (Flujo: <Param>{PARAMS_V2.flux[key as LandCode]}</Param> tCO₂e/ha/año, Stock: <Param>{PARAMS_V2.stock[key as LandCode]}</Param> Mg C/ha)</li>)}
         </ul>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Lógica de Transición (Ejemplo)</h4>
         <p className="text-sm">La tasa de conversión de Bosque Nativo No Protegido (BNNP) a Cultivos Convencionales (CC) se calcula así:</p>
@@ -83,20 +84,21 @@ const manualSlides = [
     content: (
       <div>
         <h3 className="text-xl font-bold text-yellow-400 mb-2">Cálculo del Balance de Carbono</h3>
-        <p className="mb-4">El balance neto anual es la diferencia entre el carbono secuestrado y el emitido.</p>
+        <p className="mb-4">Un inventario anual en toneladas de CO₂ equivalente (tCO₂e) con tres componentes, dividido por la población ({CONTROL_PARAMS.Poblacion_Inicial.toLocaleString('es')} habitantes al inicio, crece {CONTROL_PARAMS.Tasa_Crecimiento_Poblacional_Base * 100} % por año).</p>
         <div className="bg-slate-800 p-4 rounded font-mono text-sm">
-            <p><span className="text-green-400">Balance Anual</span> = <span className="text-cyan-400">Total Secuestrado</span> - <span className="text-red-400">Total Emitido</span></p>
+            <p><span className="text-green-400">CO₂eq per cápita</span> = (<span className="text-red-400">Energía</span> + <span className="text-cyan-400">Flujo del suelo</span> + <span className="text-red-400">Cambio de uso</span>) / Población</p>
         </div>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Componentes:</h4>
         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-cyan-400">Total Secuestrado</strong>: Suma de <Code>(Área de Uso de Suelo * Tasa de Secuestro)</Code> para todos los usos.</li>
-            <li><strong className="text-red-400">Total Emitido</strong>: Suma de <Code>(Área de Uso de Suelo * Tasa de Emisión)</Code> para todos los usos.</li>
+            <li><strong className="text-red-400">Energía</strong>: <Code>ε0 · ingreso^{PARAMS_V2.energy.incomeElasticity} · (1 + {PARAMS_V2.energy.subsidyBoost}·η_SE) · [{PARAMS_V2.energy.electricShare}·(1 − s) + {1 - PARAMS_V2.energy.electricShare}·(1 − u)] · Población</Code>, con ε0 = {PARAMS_V2.energy.eps0[1]} / {PARAMS_V2.energy.eps0[2]} / {PARAMS_V2.energy.eps0[3]} t por nivel. <Code>s</Code> es la participación renovable de la electricidad y <Code>u</Code> la eficiencia del resto; avanzan {PARAMS_V2.energy.adjust * 100} % del camino por año hacia sus objetivos.</li>
+            <li><strong className="text-cyan-400">Flujo del suelo</strong>: suma de <Code>flujo × hectáreas</Code> de cada uso (puede ser negativo: sumidero).</li>
+            <li><strong className="text-red-400">Cambio de uso</strong>: hectáreas convertidas por año × pérdida de stock (Mg C/ha) × 44/12. Solo cuentan las pérdidas; la ganancia llega por el flujo del uso nuevo.</li>
         </ul>
         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Modificadores:</h4>
-        <p className="text-sm">El balance no tiene sinergias ni antagonismos entre políticas: solo estos modificadores.</p>
         <ul className="list-disc list-inside space-y-2 text-sm mt-2">
-            <li><strong>Instrumentos de Neutralidad de Carbono:</strong> 'Fomento a Renovables' reduce las emisiones en <Code>{CONTROL_PARAMS.Factor_Reduccion_Emisiones_Renovables_PCN} × esfuerzo</Code> y 'I+D en CAC' suma <Code>{CONTROL_PARAMS.Factor_Aumento_Secuestro_CAC_PCN} × esfuerzo</Code> al secuestro. Al activar una política el esfuerzo se reparte en partes iguales entre sus instrumentos, también en el Nivel 1.</li>
-            <li><strong>Subsidios Energéticos y Agricultura Intensiva:</strong> multiplican las emisiones por <Code>(1 + {CONTROL_PARAMS.Factor_Aumento_Emisiones_Fosiles_PSE} × eficiencia)</Code> y <Code>(1 + {CONTROL_PARAMS.Factor_Aumento_Emisiones_AgroIntensivo_PPAI} × eficiencia)</Code>.</li>
+            <li><strong>Neutralidad de Carbono:</strong> objetivo renovable <Code>s* = min({PARAMS_V2.energy.renewablesCap}; {PARAMS_V2.energy.renewablesMaxCN}·η_elec + min(1; %parques / {PARAMS_V2.energy.parksFullShare * 100} %) + pactos)</Code> y de eficiencia <Code>u* = min({PARAMS_V2.energy.efficiencyCap}; {PARAMS_V2.energy.efficiencyMaxCN}·η_otros + pactos)</Code>. Con 4 % del territorio en parques energéticos la electricidad sería 100 % renovable (un lote representa una cartera de generación, transmisión y almacenamiento).</li>
+            <li><strong>Subsidios Energéticos</strong> suben la energía; <strong>Agricultura Intensiva</strong> sube el flujo de cultivos convencionales (×(1 + 0,3·η)); <strong>Ganadería Sostenible</strong>, <strong>Agroecología</strong> y <strong>Conservación</strong> lo bajan en pasturas, cultivos agroecológicos y bosque no protegido; <strong>Normativas Flexibles</strong> lo sube en el bosque no protegido.</li>
+            <li><strong>Presupuesto de carbono</strong>: emisiones acumuladas sobre una trayectoria lineal a −{PARAMS_V2.energy.budgetCut2054 * 100} % en 2054; &gt; 1 = por encima del presupuesto.</li>
         </ul>
       </div>
     )

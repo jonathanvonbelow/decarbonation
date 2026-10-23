@@ -602,7 +602,7 @@ def snapshot(s) -> dict:
 
 
 def budget(s) -> float:
-    """Cumulative emissions of a linear path to -50 % by 2054, up to the current time."""
+    """Cumulative emissions of a linear path to -30 % (budget_cut) by 2054, up to the current time (v6/38: the docstring said -50 %)."""
     E0, t = s["anchor"]["E_tot0"], s["t"]
     return E0 * (t - P["budget_cut"] * t * t / 60)
 

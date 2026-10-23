@@ -44,8 +44,7 @@ export interface PolicyState {
 export interface LandUse {
   name: string;
   area: number;
-  emissionRate: number;
-  sequestrationRate: number;
+  // Phase 38: emissionRate / sequestrationRate are gone; the carbon of each use is PARAMS_V2.flux / stock.
   stellaName: string;
   document?: string;
 }
@@ -264,6 +263,8 @@ export interface ModelAnchors {
   pressureMean0: number; pressureSpread0: number; pressureEnv0: number;
   /** GDP at start (u.m.). */
   gdp0: number;
+  /** Population at start (inhabitants, CP.Poblacion_Inicial): reference of income per capita in the energy emissions (38). */
+  pop0: number;
   /** Starting area of each use of the agricultural pool (kHa, floored at 1e-6), for the anchored rents (37). */
   agriAreas0: Record<'CC' | 'CA' | 'PRG' | 'PF', number>;
 }
@@ -401,7 +402,6 @@ export interface ControlParams {
   Tasa_Impositiva_General_Sobre_PBI: number;
   Tasa_Base_Crecimiento_PBI: number;
   Tasa_Crecimiento_Poblacional_Base: number;
-  FACTOR_C_A_CO2EQ: number;
 
   Pago_deuda_anual_Nivel_1: number;
   Pago_deuda_anual_Nivel_2: number;
@@ -463,19 +463,12 @@ export interface ControlParams {
   Sensibilidad_PP_Social_BienestarSocial: number;
   Umbral_PP_Social_BienestarSocial: number;
 
-  // Direct Carbon Impact Factors for Specific Policy Instruments
-  Factor_Reduccion_Emisiones_Renovables_PCN: number;
-  Factor_Aumento_Secuestro_CAC_PCN: number;
-  Factor_Aumento_Emisiones_Fosiles_PSE: number;
-  Factor_Aumento_Emisiones_AgroIntensivo_PPAI: number;
-
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: number; // e.g., 20 for 20%
   EcoSec_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.25 points of EcoSec reduction per 1% additional tax
   SocialConflict_Increase_Factor_Per_Tax_Point: number; // e.g., 0.3 points of Conflict increase per 1% additional tax
   PBIGrowth_Reduction_Factor_Per_Tax_Point: number; // e.g., 0.0002 (0.02% PBI growth reduction per 1% additional tax)
   PPSocial_Increase_Factor_Per_Tax_Point: number; // e.g., 0.4 points of Social Pressure increase per 1% additional tax
-  CO2_EMISSIONS_SCALING_FACTOR: number;
 
   // Territorio preview (mejora-general/files/21_fusion_ecosim.md §5): one-time costs, paid from
   // Reservas_del_Tesoro, of declaring each public use, per kHa.
@@ -486,15 +479,13 @@ export interface ControlParams {
   Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: number;
   /** Agricultural-pressure impulse per kHa of *productive* land taken into a public use. */
   Impulso_PP_Agricola_por_kHa_Convertida: number;
-  /** Share of total emissions displaced if the whole territory were a public energy park. */
-  Factor_Desplazamiento_Emisiones_Parque_Energetico: number;
   /** Annual share of restoration area that matures into unprotected native forest. */
   /** Restoration maturing into protected native forest (RES → BNP), fraction of RES per year. */
   Tasa_de_RES_a_BNP_Base: number;
 
   // Model 2.0 scalars (phase 35, 35_motor_v2_estructura.md §5). Declared now; each one starts acting in the
   // phase that ports its equation (the facilitator panel exposes them in phase 50).
-  /** Initial population of the territory (inhabitants), every level and Territorio. Phase 38 makes Poblacion_Total start here. */
+  /** Initial population of the territory (inhabitants), every level and Territorio: Poblacion_Total starts here (phase 38). */
   Poblacion_Inicial: number;
   /** Annual fraction of the way to the logistic target: biodiversity, food, economic security, conflict, collapse, pressures. */
   Velocidad_Ajuste_Biodiversidad: number;

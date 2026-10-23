@@ -13,6 +13,7 @@ calibración.**
 | `params.ts` | `PARAMS_V2`: tablas del modelo (copia fiel de `P` del prototipo), `PID` (códigos cortos → enum `Policy`) |
 | `anchors.ts` | `computeAnchors` / `createModelState`: anclas del estado inicial de cada nivel (`GameState.model`) |
 | `policies.ts` | fase 36: `tickPolicyClocks`, `baseEfficiency`, `channelStrength`, `computeEfficiencies` (η base + canales `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost` (por esfuerzo), `policyStatus` ("en marcha" / "desgastada" para la UI) |
+| `carbon.ts` | fase 38: `energyTargets` / `updateEnergyState` (s*, u*, inercia k = 0,15), `fluxOf`, `computeEmissions` (energía, AFOLU, LUC desde los flujos realizados ÷ dt, total y per cápita en tCO₂e), `budgetPath` / `carbonBudgetIndex` (B_t), `CO2_PER_C` = 44/12 |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
@@ -44,7 +45,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 35 | estructura, `math`, `params`, `anchors`, `advance` con funciones 1.1, golden test apagado | hecho |
 | 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44) |
 | 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | hecho (tasas base de frontera en `CONTROL_PARAMS`) |
-| 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`) | pendiente |
+| 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `fluxPolicy`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`, crecimiento `(1 + g)^dt`) | hecho (topes de CO₂ de las rutas reescalados de forma provisoria hasta la 49) |
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`) | pendiente |
 | 40 | B por especies-área (`habitat`, `zSAR`, `qB`) | pendiente |
 | 41 | F por balance oferta/demanda (`food`, `foodPerCapita0`) | pendiente |
@@ -64,8 +65,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
   muta su entrada (`tests/sim/core.spec.ts`).
 - Pactos con los IDs del código (`biodiversityTreaty`, `globalCarbonAccord`, `techTransferInitiative`), no los del
   prototipo (`treaty` / `accord` / `tech`).
-- Las anclas usan `CP.Poblacion_Inicial` (400 000); el motor 1.1 sigue leyendo `Poblacion_Total` (10 millones) hasta
-  la fase 38.
+- Población: `CP.Poblacion_Inicial` (400 000) en las anclas (`pop0`) y como `Poblacion_Total` inicial (fase 38).
 - Golden: `tests/sim/golden.v2.spec.ts` (apagado con `GOLDEN_ACTIVE = false` hasta la fase 46) compara B, F, E, W, St
   y c de `playLevel` (`tests/sim/testHelpers.ts`, estrategias de `scripts/harness/strategies.ts`, sin eventos) con
   `golden_v2.csv`. Si una fase cambia una ecuación o un parámetro del prototipo, regenera el golden en el mismo commit
@@ -85,3 +85,11 @@ a su canal (`land`, `social`, `elec`/`other`/`tax`).
 Fase 37: ningún recorte de la spec. Las tasas base de frontera quedan en `CONTROL_PARAMS` (no se duplican en
 `PARAMS_V2.land`). Hasta la fase 38 el carbono 1.1 lee la matriz 2.0, y sin el flujo CC→CA de 1.1 las emisiones
 suben (rutas dirigidas de los 3 niveles en 0 % en `sim:check --quick`): transitorio, documentado en el log.
+
+Fase 38: ningún recorte de la spec. Desvíos: el doble acotado del prototipo (`min(0,95, s*)` dentro del `relax`, después
+de acotar s* a 0,9) no se porta por redundante; las claves `s`/`u` de pactos del prototipo son `renewables`/`efficiency`;
+los canales son los de la spec (η_PAI^prod en CC, η^land en el resto y en SE), el prototipo usa el `eta` uniforme (iguales
+con reparto parejo). El paso de carbono va justo después de la economía (como el prototipo), antes de los indicadores 1.1.
+Los topes de CO₂ de las rutas (`winRoutes.ts`, `territorio/routes.ts`) se reescalaron de forma provisoria; los recalibra la
+fase 49. El umbral 8 t de la presión ambientalista por CO₂ (fase 42), el escrutinio `c > 12` (fase 46) y
+`RANGE.co2 = 15` de la predicción (fase 48) quedan en la escala vieja, anotados en el log.

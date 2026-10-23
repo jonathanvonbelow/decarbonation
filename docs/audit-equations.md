@@ -17,12 +17,12 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 
 | ID | Qué verificar | Estado | Nota |
 |---|---|---|---|
-| C-1 | Conversión a CO₂eq con 44/12 antes del per cápita | PENDIENTE | El factor vive en `CONTROL_PARAMS.FACTOR_C_A_CO2EQ` (`src/sim/carbon.ts`); falta confirmar su valor numérico contra 44/12 = 3.667. |
-| C-2 | Población constante o creciente, y documentada | DOCUMENTAR | `Poblacion_Total *= (1 + Tasa_Crecimiento_Poblacional_Base)` cada año (`src/sim/index.ts` paso 0) — sí crece. No está documentado en el `EquationsManual` in-app; agregar. |
-| C-3 | Balance neto: ¿flujo o stock acumulado? | PENDIENTE | `co2EqEmissionsPerCapita` es un flujo anual recalculado desde cero cada año (`computeCarbonBalance`), no un acumulado. Falta confirmar si `Conteo_Carbono_Neut` (Stella stock, no tocado por `stepYear`) debería acumularlo y no lo hace. |
+| C-1 | Conversión a CO₂eq con 44/12 antes del per cápita | **OK (modelo 2.0, fase 38)** | La constante `CO2_PER_C = 44/12` vive en `src/sim/v2/carbon.ts` y solo convierte las pérdidas de stock (Mg C/ha) del cambio de uso; los flujos del suelo y la energía ya están en tCO₂e. Se borraron `FACTOR_C_A_CO2EQ` (3,67) y el factor de escala 40 000. |
+| C-2 | Población constante o creciente, y documentada | **OK (fase 38)** | Arranca en `CP.Poblacion_Inicial` (400 000) en todos los niveles y crece `P *= (1 + g)^dt` (exacto: 12 meses = 1 año; antes `1 + g·dt`). Documentada en el manual del facilitador y el de ecuaciones. |
+| C-3 | Balance neto: ¿flujo o stock acumulado? | **OK (fase 38): ambos** | `co2EqEmissionsPerCapita` es el flujo anual (energía + suelo + cambio de uso) / población; el acumulado vive en `model.cumulativeEmissions` (Σ E_total·dt) y alimenta el índice de presupuesto `carbonBudgetIndex` (B_t, > 1 = sobre el presupuesto). |
 | C-4 | Sinergia CR+C: ¿antes o después de instrumentos? | PENDIENTE | No se encontró una sinergia explícita CR+C en el bloque de carbono (`src/sim/carbon.ts`); sí existe una sinergia CR+C en biodiversidad (`Sinergia_AS_CR_Bio_Factor`, distinta). Revisar si el manual describe una sinergia de carbono que el código no implementa. |
 | C-5 | Antagonismo C+SE: ¿multiplicativo o aditivo? | PENDIENTE | No identificado en el bloque de carbono actual. |
-| C-6 | Efectos de instrumentos: ¿escalan con esfuerzo o son binarios? | OK | `renInst?.effortPercentage > 0` y `ccsInst?.effortPercentage > 0` con multiplicación por `effortPercentage / 100` — sí escalan continuamente (`src/sim/carbon.ts`), no son binarios. |
+| C-6 | Efectos de instrumentos: ¿escalan con esfuerzo o son binarios? | OK | Desde la fase 38 los instrumentos de Neutralidad de Carbono entran por los canales `elec` / `other` (φ con rendimientos decrecientes, fase 36), que mueven los objetivos s* / u*; escalan con el esfuerzo. |
 
 ## Usos del suelo
 
@@ -166,4 +166,19 @@ suelo en `src/sim/events.ts`, mapa en `src/sim/territory.ts`. Verificado contra 
 | L-4 / R-matriz | Matriz 2.0: frontera y protección como 1.1 (η^land), RES→BNP, FAL→BNNP 0,05; el flujo CC→CA de 1.1 (`Tasa_de_CC_a_CA_Base`, borrada) se reemplaza por el pool agrícola: Σ 0,02·A_k (CC, CA, PRG, PF) + 0,25·A_FAL repartido con pesos e^{β r_k}, r_k = ln A_k,0 + Δr_k(η^prod), β = 1. Neteo de todos los pares bilaterales (como el prototipo). Se aplica exacto con dt (sin el Euler `toward`) y con escala por fuente para no dejar negativos. | `src/sim/v2/land.ts`, `src/sim/v2/params.ts` (`PARAMS_V2.land`) | Sin políticas la mezcla agrícola queda anclada (solo la mueve la deforestación: CC 25,0 → 27,9 % de lo agrícola en N1). AS sube CA (N1 25,0 → 29,5; N2 14,0 → 17,7); PAI+PEA suben CC (N1 25,0 → 35,3; N2 30,0 → 38,2). **Efecto transitorio hasta la fase 38**: sin el CC→CA de 1.1 (0,5 %/año + 3 %·η_AS) el CC queda más alto y el balance de carbono 1.1 (CC emite 8,0) sube: c a 30 años de `conservation` N1 1,32 → 5,07, N2 5,72 → 12,11; las rutas dirigidas de los 3 niveles pasan a 0 % (ver log). La fase 38 reemplaza el carbono. |
 | — (renombre) | `Tasa_de_RES_a_BNNP_Base` → `Tasa_de_RES_a_BNP_Base` (el destino ya era BNP desde F8-1). | `src/constants.ts`, `src/types.ts` | Ninguno. |
 | — (Territorio) | El barbecho del mapa es el área FAL del modelo (`parcelTargets`), no "lo que el modelo dejó de contar"; declarar sobre barbecho descuenta de FAL; `SOURCES` agrega el pool y BNNP ← barbecho; las situaciones pasan sus transferencias al mapa. | `src/sim/territory.ts`, `src/territorio/*` | — |
+
+
+## Modelo 2.0-dev — carbono en unidades físicas (fase 38, 2026-10-22)
+
+Spec: `mejora-general/files/38_carbono_unidades_fisicas.md`; prototipo: `carbon` y `budget` de
+`scripts/reference/modelo_v2.py`. Código: `src/sim/v2/carbon.ts`, paso 7.5 de `advance` (`src/sim/v2/core.ts`), anclas
+(`src/sim/v2/anchors.ts`). Verificado: c₀ = 5,947 / 7,135 / 5,733 t (prototipo), `tests/sim/carbon.v2.spec.ts`, y
+`npm run sim:check` (rápido y completo) contra la fase 37.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| N-12 / T-11 / R-4 | Inventario en tCO₂e con tres componentes: energía `ε0_N·y^0,3·(1 + 0,15·η_SE)·[0,35(1 − s) + 0,65(1 − u)]·P`, flujo del suelo `Σ f_i·A_i[ha]` (puede ser negativo) y cambio de uso `Σ F_ij·max(0, C_i − C_j)·44/12` con los flujos realizados de la matriz (÷ dt). s, u con inercia k = 0,15 hacia s* = min(0,9; 0,60·η_CN^elec + min(1; a_ENR/0,04) + pactos) y u* = min(0,6; 0,35·η_CN^other + pactos). Se borran `computeCarbonBalance` (`src/sim/carbon.ts`), `emissionRate`/`sequestrationRate` de `LandUse`, `CO2_EMISSIONS_SCALING_FACTOR`, `FACTOR_C_A_CO2EQ`, `Factor_Reduccion_Emisiones_Renovables_PCN`, `Factor_Aumento_Secuestro_CAC_PCN`, `Factor_Aumento_Emisiones_*`, `Factor_Desplazamiento_Emisiones_Parque_Energetico`, y el −5 % / −10 % de CO₂ de los pactos 1.1 (pasan a `renewables`/`efficiency`). | `src/sim/v2/carbon.ts`, `params.ts` (`flux`, `stock`, `fluxPolicy`, `energy`), `core.ts`, `src/constants.ts`, `src/types.ts` | Cambia la escala: c₀ 7,8 / 17,4 / 10,6 → 5,95 / 7,13 / 5,73 t. Recorrido de c en N2 a 30 años: extractiva 8,05 vs innovación 4,84 (≥ 3 t). Con el carbono físico vuelven las rutas dirigidas (ver log). El puntaje sube (la parte de carbono `100 − c/12·100` deja de estar en 0 en N2/N3) y la presión ambientalista por CO₂ (umbral 8 t) casi no actúa: lo recalibran las fases 42/49. |
+| C-1 / C-3 | Ver la tabla de Carbono arriba (44/12 explícito; flujo y acumulado). Presupuesto `B_t = Σ E·dt / [E0·(t − 0,30·t²/60)]` (`budgetCut2054` = 0,30, 🟧). | `src/sim/v2/carbon.ts` | El índice se calcula; lo muestra el tablero en la fase 50. |
+| — (población) | `Poblacion_Total` arranca en `CP.Poblacion_Inicial` (400 000; antes 10 millones con el factor 40 000) y crece `(1 + g)^dt`. Anclas con `pop0`. | `src/sim/index.ts`, `src/constants.ts`, `core.ts`, `anchors.ts` | El per cápita es físico; el paso anual da igual que antes, el mensual compone exacto. |
+| — (rutas, provisorio) | Topes de `cond.emissions` reescalados a la escala física, anclados a c₀ como `ROUTES3`/`TERR_ROUTES` del prototipo (N1 5,2 / 6,5 / 4,6; N2 6,5 / 7,8 / 5,5; N3 5,4 / 6,3 / 4,5, equilibrio 2 → 4,5; Territorio 6,2 / 7,8 / 4,8). `carbonTechEffort` = (Renovables + Eficiencia)/2 (antes Renovables + Captura). | `src/sim/winRoutes.ts`, `src/territorio/routes.ts`, `src/constants.ts` (`winConditions` N3) | La fase 49 los recalibra. |
 

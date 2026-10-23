@@ -1,14 +1,15 @@
 /**
  * Map overlays ("ver sobre el mapa"). Each value comes straight from the model's own coefficients
  * for that land use — nothing is invented for the picture:
- *   carbon       sequestration − emission rate of the use (GameState.landUses, per kHa)
+ *   carbon       −flux of the use (PARAMS_V2.flux, tCO2e/ha/yr; phase 38): positive = sink
  *   biodiversity INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE
  *   food         INDICATOR_IMPACT_WEIGHTS.FOOD_SECURITY.LAND_USE
  *   economy      INDICATOR_IMPACT_WEIGHTS.ECONOMIC_SECURITY.LAND_USE
- * Normalised to [-1, 1] across the six uses, positive = favourable for that indicator.
+ * Normalised to [-1, 1] across the uses, positive = favourable for that indicator.
  */
 import { INDICATOR_IMPACT_WEIGHTS } from '../constants';
 import { LAND_USE_TYPES, type ParcelKind } from '../sim';
+import { PARAMS_V2, type LandCode } from '../sim/v2/params';
 import type { LandUse } from '../types';
 import { LandUseType } from '../types';
 
@@ -20,7 +21,7 @@ const LAND_USES = LAND_USE_TYPES;
 export function rawCoefficient(mode: Exclude<HeatMode, 'none'>, lu: LandUseType, landUses: Record<LandUseType, LandUse>): number {
   switch (mode) {
     case 'carbon':
-      return landUses[lu].sequestrationRate - landUses[lu].emissionRate;
+      return -(PARAMS_V2.flux[lu as LandCode] ?? 0);
     case 'biodiversity':
       return (INDICATOR_IMPACT_WEIGHTS.BIODIVERSITY.LAND_USE as Record<string, number>)[lu] ?? 0;
     case 'food':

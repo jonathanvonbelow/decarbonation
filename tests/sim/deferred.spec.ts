@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepMonth, stepYear } from '../../src/sim';
 import { INITIAL_PACTS } from '../../src/constants';
+import { PARAMS_V2 } from '../../src/sim/v2/params';
 import { Policy, type GameState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
@@ -16,19 +17,28 @@ function withPact(state: GameState, pactId: string): GameState {
 }
 
 describe('deferred pact and event effects', () => {
-  it('the Global Carbon Accord actually cuts CO2 by 5% and raises political stability by 3', () => {
+  // Phase 38: the 1.1 pacts cut CO2 by a flat −5 % / −10 % after the recomputation; in the physical carbon
+  // they shift the renewables / efficiency targets (PARAMS_V2.pacts.*.renewables / efficiency), which the
+  // energy state follows with inertia (k = 0.15 per year): after one year s = 0.15·Δs*, u = 0.15·Δu*.
+  it('the Global Carbon Accord shifts renewables and efficiency, and raises political stability by 3', () => {
     const base = withActivePolicies(freshState(3), [Policy.IntensiveAgriculture]);
     const without = stepYear(base, noEventRng).next;
     const with_ = stepYear(withPact(base, 'globalCarbonAccord'), noEventRng).next;
-    expect(with_.indicators.co2EqEmissionsPerCapita).toBeCloseTo(without.indicators.co2EqEmissionsPerCapita * 0.95, 6);
+    const k = PARAMS_V2.energy.adjust;
+    expect(with_.model!.energy.renewableShare - without.model!.energy.renewableShare).toBeCloseTo(k * 0.05, 9);
+    expect(with_.model!.energy.efficiency - without.model!.energy.efficiency).toBeCloseTo(k * 0.05, 9);
+    expect(with_.indicators.co2EqEmissionsPerCapita).toBeLessThan(without.indicators.co2EqEmissionsPerCapita);
     expect(with_.indicators.politicalStability).toBeCloseTo(without.indicators.politicalStability + 3, 6);
   });
 
-  it('the Technology Transfer Initiative cuts CO2 by 10%', () => {
+  it('the Technology Transfer Initiative shifts renewables by 0.10 and efficiency by 0.05', () => {
     const base = freshState(3);
     const without = stepYear(base, noEventRng).next;
     const with_ = stepYear(withPact(base, 'techTransferInitiative'), noEventRng).next;
-    expect(with_.indicators.co2EqEmissionsPerCapita).toBeCloseTo(without.indicators.co2EqEmissionsPerCapita * 0.9, 6);
+    const k = PARAMS_V2.energy.adjust;
+    expect(with_.model!.energy.renewableShare - without.model!.energy.renewableShare).toBeCloseTo(k * 0.10, 9);
+    expect(with_.model!.energy.efficiency - without.model!.energy.efficiency).toBeCloseTo(k * 0.05, 9);
+    expect(with_.indicators.co2EqEmissionsPerCapita).toBeLessThan(without.indicators.co2EqEmissionsPerCapita);
   });
 
   it("the green-tech boom event's −5% CO2 survives the year's carbon recomputation", () => {
@@ -50,6 +60,6 @@ describe('deferred pact and event effects', () => {
     const oneMonth = stepMonth(base, 0, noEventRng).next;
     const ratio = oneMonth.indicators.co2EqEmissionsPerCapita / plain.indicators.co2EqEmissionsPerCapita;
     expect(ratio).toBeLessThan(1);
-    expect(ratio).toBeGreaterThan(0.95); // a twelfth of the way toward −5%, not the whole cut
+    expect(ratio).toBeGreaterThan(0.99); // one month of the energy inertia (phase 38), not the whole shift
   });
 });

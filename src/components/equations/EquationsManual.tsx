@@ -3,12 +3,12 @@ import { GameState, ControlParams, Policy, LandUseType } from '../../types';
 import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, LEVEL_CONFIGS } from '../../constants';
 import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
-import { PARAMS_V2 } from '../../sim/v2/params';
+import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
 import { costShareOf, PID_OF } from '../../sim/v2/policies';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const EQ_UI = {
-  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo (% PBI, esfuerzo pleno)', thDecay: 'Puesta en marcha / desgaste (años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Emisión', thSequestration: 'Secuestro', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
-  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost (% GDP, full effort)', thDecay: 'Start-up / wear (years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Emission', thSequestration: 'Sequestration', thArea: 'Area (Live)', noDescription: 'No description.' },
+  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo (% PBI, esfuerzo pleno)', thDecay: 'Puesta en marcha / desgaste (años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Flujo (tCO₂e/ha/año)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
+  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost (% GDP, full effort)', thDecay: 'Start-up / wear (years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Flux (tCO₂e/ha/yr)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Area (Live)', noDescription: 'No description.' },
 } as const;
 
 // Helper components for styling
@@ -84,10 +84,11 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
   }, [gameState.policies, gameState.currentLevel]);
 
   const landUseData = useMemo(() => {
+    // Phase 38: the carbon of each use is PARAMS_V2.flux (+ = emission) and stock, not 1.1 emission/sequestration rates.
     return Object.entries(INITIAL_LAND_USES).map(([key, lu]) => ({
       name: lu.name,
-      emissionRate: lu.emissionRate,
-      sequestrationRate: lu.sequestrationRate,
+      flux: PARAMS_V2.flux[key as LandCode],
+      stock: PARAMS_V2.stock[key as LandCode],
       liveArea: <LiveValue>{gameState.landUses[key as LandUseType].area.toFixed(1)} kHa</LiveValue>
     }));
   }, [gameState.landUses]);
@@ -206,8 +207,8 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                                     {lu.name}
                                   </Tooltip>
                                 </td>
-                                <td className="p-2 text-red-400">{lu.emissionRate}</td>
-                                <td className="p-2 text-green-400">{lu.sequestrationRate}</td>
+                                <td className={`p-2 ${lu.flux > 0 ? 'text-red-400' : 'text-green-400'}`}>{lu.flux}</td>
+                                <td className="p-2 text-gray-300">{lu.stock}</td>
                                 <td className="p-2">{lu.liveArea}</td>
                             </tr>
                         ))}
@@ -226,9 +227,13 @@ Costo anual = κ · PBI · (0,3 + 0,7 · esfuerzo total / 100)`}</Formula>
             <p className="text-sm">Por defecto <Param>η_min</Param> = {CONTROL_PARAMS.Eficiencia_Minima_Politicas} y <Param>ρ</Param> = {CONTROL_PARAMS.Recuperacion_Politicas_Anios} años (el facilitador puede cambiarlos). κ es el costo a esfuerzo pleno de la tabla (escala transitoria hasta que exista el gasto público base). Cada instrumento pesa distinto en cada canal (suelo, producción, social); el reparto parejo 25/25/25/25 da 1 en todos, concentrar sube un canal y baja los demás. En el Nivel 1 el esfuerzo siempre es parejo.</p>
             
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_CARBON_BALANCE')}>Balance de Carbono</SubSectionTitle>
-            <p className="text-sm mb-2">Esta es la contabilidad climática de la nación. El objetivo final es hacer que el secuestro supere a las emisiones.</p>
-            <Formula>BalanceNetoAnual = (Σ (<Param>AreaUso</Param> * <Param>TasaSecuestro</Param>)) - (Σ (<Param>AreaUso</Param> * <Param>TasaEmision</Param>))</Formula>
-            <p className="text-sm">El resultado se ajusta por sinergias (ej. <Code>Conservación</Code> + <Code>Carbono Neutralidad</Code>) y antagonismos (<Code>Subsidios Energéticos</Code> vs <Code>Carbono Neutralidad</Code>) y efectos directos de instrumentos de política (Nivel 2+).</p>
+            <p className="text-sm mb-2">Inventario en toneladas de CO₂ equivalente por año, con tres componentes: energía, flujo del suelo y cambio de uso. El componente del suelo puede ser negativo (sumidero).</p>
+            <Formula>{`Energía = ε0 · (ingreso per cápita relativo)^0,3 · (1 + 0,15·η_SE) · [0,35·(1 − s) + 0,65·(1 − u)] · Población
+s* = min(0,9; 0,60·η_CN^elec + min(1; %parques/4 %) + pactos)   u* = min(0,6; 0,35·η_CN^otros + pactos)
+s, u avanzan hacia s*, u* un 15 % del camino por año (inercia de infraestructura)
+Suelo = Σ flujo_i · Área_i[ha]      Cambio de uso = Σ ha convertidas/año · max(0, stock_i − stock_j) · 44/12
+CO₂eq per cápita = (Energía + Suelo + Cambio de uso) / Población`}</Formula>
+            <p className="text-sm">ε0 = {PARAMS_V2.energy.eps0[1]} / {PARAMS_V2.energy.eps0[2]} / {PARAMS_V2.energy.eps0[3]} t por habitante (niveles 1 / 2 / 3); población inicial {CONTROL_PARAMS.Poblacion_Inicial.toLocaleString('es')} habitantes. Las políticas cambian el flujo de algunos usos (<Code>Agricultura Intensiva</Code> sube el de cultivos convencionales; <Code>Ganadería Sostenible</Code>, <Code>Agroecología</Code> y <Code>Conservación</Code> lo bajan; <Code>Normativas Flexibles</Code> lo sube en el bosque no protegido). Flujos y stocks por criterio experto (stocks basados en la revisión del Bosque Atlántico, 2024).</p>
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_INDICATORS')}>Cálculo de Indicadores (Ej. Biodiversidad)</SubSectionTitle>
              <p className="text-sm mb-2">Los indicadores socio-ambientales son el resultado de la compleja interacción entre las decisiones políticas y el estado del territorio.</p>

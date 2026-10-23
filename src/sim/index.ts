@@ -29,7 +29,6 @@ import type {
   LandUseType, Pact, PolicyState, StellaStocks,
 } from '../types';
 import { Policy } from '../types';
-import { computeCarbonBalance } from './carbon';
 import type { Rng } from './rng';
 import { computeScore } from './score';
 import type { SimTrace } from './trace';
@@ -44,7 +43,7 @@ export type { SimTrace } from './trace';
 export * from './policies';
 export * from './indicators';
 export * from './v2/land';
-export * from './carbon';
+export * from './v2/carbon';
 export * from './pressures';
 export * from './economy';
 export * from './score';
@@ -141,14 +140,20 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
   newIndicators.debt = newStellaState.Deuda || INITIAL_STELLA_STOCKS.Deuda;
   newIndicators.treasuryReserves = newStellaState.Reservas_del_Tesoro || INITIAL_STELLA_STOCKS.Reservas_del_Tesoro;
 
-  // CO2 per capita and the score at year zero, computed from the level's own land uses and
-  // policies instead of the fixed INITIAL_INDICATORS values (6.5 t/cap, score 0). Those were not
-  // what any level's land uses produce — level 1 starts at ~9.4 and level 2 at ~17.4 — so the
-  // first simulated year showed a jump the player had not caused. Reported by the user and fixed
-  // in v4 (docs/DESIGN_DECISIONS_LOG.md); the win-route baseline is taken from these values too.
-  newIndicators.co2EqEmissionsPerCapita = computeCarbonBalance(
-    newLandUses, newPolicies, levelNumber, newStellaState.Poblacion_Total, CP,
+  // Population: the facilitator's CP.Poblacion_Inicial (400 000, phase 38), every level.
+  newStellaState.Poblacion_Total = CP.Poblacion_Inicial;
+
+  // Model 2.0 anchors of this level's starting state (phase 35, src/sim/v2/anchors.ts).
+  const model = createModelState(
+    { currentLevel: levelNumber, landUses: newLandUses, indicators: newIndicators, stellaSpecificState: newStellaState },
+    CP,
   );
+  // CO2 per capita and the score at year zero come from the level's own land uses, not the fixed
+  // INITIAL_INDICATORS value (fixed in v4: the first simulated year showed a jump the player had not
+  // caused). Since phase 38 it is the physical carbon c0 of the anchors' dry run: 5.95 / 7.13 / 5.73 t
+  // per person in levels 1 / 2 / 3 (1.1, with the 40 000 scale factor: ~7.8 / 17.4 / 10.6). The
+  // win-route baseline is taken from these values too.
+  newIndicators.co2EqEmissionsPerCapita = model.anchors.c0;
   newIndicators.generalScore = computeScore(newIndicators, levelNumber, CP);
 
   const initialHistoricalDataPoint: HistoricalDataPoint = {
@@ -187,11 +192,7 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
       // Snapshot for win-route progress bars (src/sim/winRoutes.ts) — "how far the player moved"
       // is measured from here, not from zero.
       levelBaseline: { ...newIndicators },
-      // Model 2.0 anchors of this level's starting state (phase 35, src/sim/v2/anchors.ts).
-      model: createModelState(
-        { currentLevel: levelNumber, landUses: newLandUses, indicators: newIndicators, stellaSpecificState: newStellaState },
-        CP,
-      ),
+      model,
     },
     initialHistoricalDataPoint,
   };

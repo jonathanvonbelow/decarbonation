@@ -16,7 +16,8 @@ import type { ControlParams, Indicators } from '../types';
 
 export function computeScore(indicators: Indicators, currentLevel: number, CP: ControlParams): number {
   const carbonScoreRaw = 100 - (indicators.co2EqEmissionsPerCapita / CP.Referencia_Max_CO2_per_Capita_Puntaje) * 100;
-  const carbonScore = Math.max(0, carbonScoreRaw);
+  // Phase 38: the physical carbon can go below 0 (net sink), so the component is also capped at 100.
+  const carbonScore = Math.min(100, Math.max(0, carbonScoreRaw));
 
   let finalScore = 0;
   if (currentLevel === 1) {

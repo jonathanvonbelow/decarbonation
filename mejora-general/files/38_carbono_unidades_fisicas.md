@@ -99,7 +99,7 @@ Las cifras que muestran la UI y DecarboNito (“t CO₂eq por habitante”) no c
 ## 6. Verificación
 
 - [ ] `npm run sim:check -- --quick`: el recorrido de `c` entre estrategias extremas en N2 es ≥ 3 t (prototipo:
-      extractiva 8,0 vs innovación ≈ 4,9). Los umbrales de rutas en t/cáp. quedan desalineados hasta la fase 49:
+      extractiva 8,0 vs innovación 4,75; v6/38: decía "≈ 4,9", gana el prototipo). Los umbrales de rutas en t/cáp. quedan desalineados hasta la fase 49:
       **esperado**; anotar en el log.
 - [ ] `predictions.ts` usa todavía `RANGE.co2 = 15`: queda así hasta 48.
 - [ ] `npx tsc --noEmit`, `npm test`, `npm run build` limpios.

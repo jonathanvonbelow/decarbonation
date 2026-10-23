@@ -8,13 +8,13 @@
  * verification checklist, item 8). `evaluateBadges` is the single orchestrator App.tsx calls.
  *
  * Deviations from the source spec, logged in docs/DESIGN_DECISIONS_LOG.md:
- *  - "Balance de carbono positivo" (Primer Balance / Sumidero Neto): `computeCarbonBalance`
- *    (src/sim/carbon.ts) clamps its result at 0 -- `co2EqEmissionsPerCapita` can never actually go
- *    negative in this codebase. A genuinely positive balance (sequestration >= emissions) always
- *    surfaces as exactly 0, so that's the condition used here instead of `< 0`.
+ *  - "Balance de carbono positivo" (Primer Balance / Sumidero Neto): the condition is total
+ *    emissions per capita <= 0 (sequestration >= emissions). Since phase 38 the physical carbon
+ *    (src/sim/v2/carbon.ts) is no longer clamped at 0, but energy emissions only fall to ~30 % of
+ *    their start, so a net sink needs a land flux strongly negative (restoration, wetlands).
  *  - "Sin Atajos" (política de bajo costo ambiental): no cost-tier field exists on PolicyState.
  *    Interpreted as the three policies whose own mechanics directly worsen emissions or weaken
- *    oversight (EnergySubsidies/IntensiveAgriculture push totalEmissions up in carbon.ts;
+ *    oversight (EnergySubsidies/IntensiveAgriculture push emissions up in src/sim/v2/carbon.ts;
  *    FlexibleEnvironmentalRegulations is the deregulation lever) -- see SHORTCUT_POLICIES. Checked
  *    against the policy snapshot active *at the moment of winning*, not "never activated during
  *    the level" (no per-policy activation history log exists to check the stronger claim).

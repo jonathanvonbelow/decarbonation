@@ -66,12 +66,12 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The land use type's name.",
   },
   LAND_USE_TABLE_HEADER_EMISSION: {
-    es: "Tasa anual de emisión de carbono (en Mg C por kHa) para este tipo de uso del suelo.",
-    en: "Annual carbon emission rate (in Mg C per kHa) for this land use type.",
+    es: "Flujo anual de carbono del suelo (en tCO₂e por hectárea; positivo = emite, negativo = captura) para este uso.",
+    en: "Annual land carbon flux (in tCO₂e per hectare; positive = emits, negative = captures) for this land use.",
   },
   LAND_USE_TABLE_HEADER_SEQUESTRATION: {
-    es: "Tasa anual de secuestro de carbono (en Mg C por kHa) para este tipo de uso del suelo.",
-    en: "Annual carbon sequestration rate (in Mg C per kHa) for this land use type.",
+    es: "Carbono almacenado (en Mg C por hectárea, biomasa y suelo). Convertir un uso en otro de menor stock emite la diferencia × 44/12.",
+    en: "Stored carbon (in Mg C per hectare, biomass and soil). Converting a use into one with a lower stock emits the difference × 44/12.",
   },
   LAND_USE_TABLE_HEADER_AREA_LIVE: {
     es: "La superficie actual (en miles de hectáreas - kHa) que ocupa este tipo de uso del suelo en la nación.",
@@ -84,8 +84,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The formula that determines how effective a policy is: it starts slowly (start-up), wears with use towards a floor and recovers while resting; the effort on its instruments scales it per channel.",
   },
   EQUATION_TITLE_CARBON_BALANCE: {
-    es: "La ecuación central para el cambio climático. Calcula la diferencia neta entre el carbono capturado por los ecosistemas y el carbono emitido por las actividades humanas anualmente.",
-    en: "The central equation for climate change. It calculates the net difference between carbon captured by ecosystems and carbon emitted by human activity each year.",
+    es: "La ecuación central para el cambio climático: un inventario anual en toneladas de CO₂ equivalente con tres componentes (energía, flujo del suelo y cambio de uso), dividido por la población.",
+    en: "The central equation for climate change: a yearly inventory in tonnes of CO₂ equivalent with three components (energy, land flux and land-use change), divided by the population.",
   },
   EQUATION_TITLE_INDICATORS: {
     es: "Fórmula genérica que muestra cómo se calculan los indicadores socio-ambientales como la Biodiversidad. Son una suma ponderada de los efectos de las políticas y los usos del suelo.",
@@ -324,18 +324,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
   PRESION_TASA_NORMALIZACION: {
     es: "La velocidad (porcentaje por año) a la que la presión se mueve hacia el Punto de Equilibrio.",
     en: "The speed (percentage per year) at which pressure moves toward the Equilibrium Point.",
-  },
-  Factor_Reduccion_Emisiones_Renovables_PCN: {
-    es: "Factor de reducción de emisiones que se aplica al activar el instrumento de 'Fomento a Energías Renovables' en la política de Neutralidad de Carbono.",
-    en: "Emissions-reduction factor applied when activating the 'Renewable Energy Promotion' instrument in the Carbon Neutrality policy.",
-  },
-  Factor_Aumento_Secuestro_CAC_PCN: {
-    es: "Cantidad de secuestro de carbono adicional que se obtiene al activar el instrumento de 'I+D en Captura de Carbono' en la política de Neutralidad de Carbono.",
-    en: "Amount of additional carbon sequestration gained by activating the 'Carbon Capture R&D' instrument in the Carbon Neutrality policy.",
-  },
-  Factor_Aumento_Emisiones_Fosiles_PSE: {
-    es: "Factor de aumento de emisiones que se aplica al activar instrumentos de la política de 'Subsidios Energéticos'.",
-    en: "Emissions-increase factor applied when activating instruments of the 'Energy Subsidies' policy.",
   },
   Max_Additional_Tax_Rate_Percentage: {
     es: "La tasa impositiva adicional máxima que el jugador puede aplicar en el Nivel 3.",

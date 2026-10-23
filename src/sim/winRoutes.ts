@@ -171,19 +171,27 @@ const debtToPbiRatio = (s: GameState): number =>
 
 const activePactsCount = (s: GameState): number => Object.values(s.pacts).filter((p) => p.isActive).length;
 
-/** Average effort assigned to the two Carbon Neutrality instruments that actually move the CO2
- *  formula (see src/sim/carbon.ts) — the real-data stand-in for "tech instrument effort". */
-const carbonTechEffort = (s: GameState): number => {
+/** Average effort assigned to the two Carbon Neutrality instruments that move the CO2 formula most
+ *  — the real-data stand-in for "tech instrument effort". Phase 38: renewables and efficiency, which
+ *  lead the electric and non-electric channels of the physical carbon (src/sim/v2/carbon.ts); before,
+ *  renewables and carbon capture (the 1.1 carbon). Capture now only weighs 0.5 on the non-electric
+ *  channel, and the canonical innovation vector (20/40/40/0) gave 20 < 25 with the old pair. */
+export const carbonTechEffort = (s: GameState): number => {
   const instruments = s.policies[Policy.CarbonNeutrality]?.instruments;
   if (!instruments) return 0;
   const ren = instruments['C_Fomento_Energias_Renovables_No_Convencionales']?.effortPercentage ?? 0;
-  const ccs = instruments['C_Investigacion_Desarrollo_Captura_Carbono']?.effortPercentage ?? 0;
-  return (ren + ccs) / 2;
+  const eff = instruments['C_Eficiencia_Energetica_Industrial_Residencial']?.effortPercentage ?? 0;
+  return (ren + eff) / 2;
 };
 
 /* ── Level configuration ─────────────────────────────────────────────────────────────────────── */
 
 export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: WinRoute[] }> = {
+  // Phase 38 (provisional, phase 49 recalibrates): the `cond.emissions` ceilings moved to the physical
+  // carbon scale (c0 = 5.95 / 7.13 / 5.73 t in levels 1 / 2 / 3; 1.1 had ~7.8 / 17.4 / 10.6). They are
+  // the prototype's ROUTES3 values (scripts/reference/modelo_v2.py), anchored to c0 there; production of
+  // levels 2 and 3, which ROUTES3 leaves without a carbon condition, keeps one at level 1's ratio
+  // 6.5 / 5.95 ≈ 1.09·c0 (7.8 / 6.3). Level 3's equilibrium ceiling goes 2 → 4.5 (ROUTES3).
   // ─────────────────────────── LEVEL 1 ───────────────────────────
   // Thresholds calibrated against scripts/simulate.ts (7 strategies, seed 1) rather than picked
   // blind — see reports/routes-calibration.md and docs/DESIGN_DECISIONS_LOG.md. Real finding from
@@ -203,7 +211,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         conditions: [
           { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 42, dir: 'min' },
           { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.5, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.2, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 480, dir: 'min' },
         ],
       },
@@ -213,7 +221,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         conditions: [
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 25, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 40, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 400, dir: 'min' },
         ],
       },
@@ -221,7 +229,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.6, dir: 'max' },
           { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 38, dir: 'min' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 390, dir: 'min' },
         ],
@@ -245,7 +253,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         conditions: [
           { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 41, dir: 'min' },
           { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 9, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 350, dir: 'min' },
         ],
       },
@@ -255,7 +263,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         conditions: [
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 32, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 10, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 300, dir: 'min' },
         ],
       },
@@ -263,7 +271,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 9.5, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.5, dir: 'max' },
           { labelKey: 'cond.techEffort', read: carbonTechEffort, target: 30, dir: 'min' },
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 28, dir: 'min' },
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 300, dir: 'min' },
@@ -283,7 +291,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
         descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.5, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.4, dir: 'max' },
           { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 42, dir: 'min' },
           { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
           { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.1, dir: 'max' },
@@ -295,7 +303,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         conditions: [
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 30, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 9, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.3, dir: 'max' },
           { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.1, dir: 'max' },
         ],
       },
@@ -303,7 +311,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.5, dir: 'max' },
           // Untested by scripts/simulate.ts (none of its strategies join pacts) -- kept at a
           // realistic-but-unverified target of 1. See docs/DESIGN_DECISIONS_LOG.md.
           { labelKey: 'cond.pactsActive', read: activePactsCount, target: 1, dir: 'min' },
@@ -320,7 +328,7 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         minConditionsMet: 6,
         conditions: [
           { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 700, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 2, dir: 'max' },
+          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.5, dir: 'max' },
           { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 55, dir: 'min' },
           { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 60, dir: 'min' },
           { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 50, dir: 'min' },

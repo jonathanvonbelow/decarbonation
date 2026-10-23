@@ -12,8 +12,10 @@
  *
  * Phase 37 replaces step 5 (land use): the conservative transition matrix with fallow and the agricultural
  * pool by anchored rents (src/sim/v2/land.ts), applied exactly with dt (no Euler `toward`), and event /
- * situation land effects become transfers (losses to fallow). Each later phase replaces one step with its
- * 2.0 equation; see src/sim/v2/README.md for which phase implements what.
+ * situation land effects become transfers (losses to fallow). Phase 38 replaces step 7 (carbon in physical
+ * units, src/sim/v2/carbon.ts: energy with renewables/efficiency inertia, AFOLU flux, LUC from the realised
+ * flows; cumulative emissions in `model`) and compounds population growth exactly. Each later phase replaces
+ * one step with its 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
  *  1. population            P *= (1 + g_P)^dt
@@ -27,11 +29,11 @@
  *  9. bookkeeping           cumulative emissions, fiscal history, productive years, game over
  *
  * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
- *  0 population, 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event roll, 3 policy
- *  efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact costs, 5 pact
- *  effects, 6 land use (2.0 step 5, phase 37), 7 finances, 8 indicators B -> F -> E -> C -> Pc,
- *  9 CO2 per capita, 10 pressures, 11 sync + clamp, 11.5 deferred effects, 12 score, 13 game over,
- *  14 fatigue warning (phase 36).
+ *  0 population (2.0 step 1, phase 38), 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event
+ *  roll, 3 policy efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact
+ *  costs, 5 pact effects, 6 land use (2.0 step 5, phase 37), 7 finances, 7.5 carbon (2.0 step 7, phase 38;
+ *  was step 9 of 1.1), 8 indicators B -> F -> E -> C -> Pc, 10 pressures, 11 sync + clamp, 11.5 deferred
+ *  effects, 12 score, 13 game over, 14 fatigue warning (phase 36).
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
@@ -52,7 +54,8 @@ import type { ControlParams, GameState, Indicators, Pact, PolicyState, RandomEve
 import { LandUseType } from '../../types';
 import type { Language } from '../../hooks/useLanguage';
 import { getEventDescription, getEventName, getPolicyName } from '../../legacyContent/gameData';
-import { computeCarbonBalance } from '../carbon';
+import { updateEnergyState, computeEmissions } from './carbon';
+import { createModelState } from './anchors';
 import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from '../deferred';
 import { computeTotalPactCost, updateEconomy } from '../economy';
 import { applyRandomEventEffects, rollEvent } from '../events';
@@ -80,6 +83,9 @@ export const MONTHLY_DT = 1 / MONTHS_PER_YEAR;
 
 /** Draw used when `advance` gets no rng: above every trigger chance, so no event fires. */
 const NO_EVENTS: Rng = () => 0.999;
+
+/** Starting population of model 1.0/1.1 (before phase 38), only to re-anchor an old saved state. */
+const LEGACY_POPULATION = 10_000_000;
 
 /**
  * Model-1.1 move of a stock toward the value its annual equation gives: the annual value itself for
@@ -228,8 +234,20 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const tax = next.additionalTaxPressurePercentage;
   const fiscalTermsActive = opts.fiscalTermsActive ?? currentLevel === 3;
 
-  // 0. Population growth (annual rate × dt).
-  next.stellaSpecificState.Poblacion_Total *= 1 + CP.Tasa_Crecimiento_Poblacional_Base * dt;
+  // A state built before phase 35 has no 2.0 sub-state: anchor it here (the carbon of phase 38 needs it).
+  if (!next.model) next.model = createModelState(next, CP);
+  const model = next.model;
+  // A 2.0 sub-state from before phase 38 has no pop0 and may still carry the 1.1 population (10 million with
+  // the 40 000 carbon scale): re-anchor it to CP.Poblacion_Inicial so per-capita figures stay physical.
+  if (!(model.anchors.pop0 > 0)) {
+    model.anchors = { ...model.anchors, pop0: CP.Poblacion_Inicial };
+    if (next.stellaSpecificState.Poblacion_Total > 5 * CP.Poblacion_Inicial) {
+      next.stellaSpecificState.Poblacion_Total *= CP.Poblacion_Inicial / LEGACY_POPULATION;
+    }
+  }
+
+  // 0 (2.0 step 1). Population growth, compounded exactly: P *= (1 + g)^dt (phase 38; 1.1 used 1 + g·dt).
+  next.stellaSpecificState.Poblacion_Total *= Math.pow(1 + CP.Tasa_Crecimiento_Poblacional_Base, dt);
 
   // 1. Confirm policy activation year (bookkeeping only — decay runs after the event roll).
   (Object.values(next.policies) as PolicyState[]).forEach((p) => {
@@ -358,6 +376,18 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     next.loanRequestedThisRound = 0;
   }
 
+  // 7.5 (2.0 step 7). Carbon in physical units (phase 38, src/sim/v2/carbon.ts): renewables and efficiency move
+  //    toward their targets with inertia, then energy + AFOLU flux + LUC from this step's realised flows (÷ dt,
+  //    an annual rate). After the economy (income per capita reads this step's GDP), as in the prototype.
+  model.energy = updateEnergyState(model.energy, next.landUses, eff, next.pacts, dt);
+  const carbon = computeEmissions(
+    { level: currentLevel, landUses: next.landUses, population: stella.Poblacion_Total, gdp: stella.PBI_Real, anchors: model.anchors, energy: model.energy },
+    eff, realised, dt,
+  );
+  model.emissions = { energy: carbon.energy, afolu: carbon.afolu, luc: carbon.luc, total: carbon.total };
+  model.cumulativeEmissions += carbon.total * dt;
+  next.indicators.co2EqEmissionsPerCapita = carbon.perCapita;
+
   // 8. Indicators (each reads the ones already updated this step). Active pacts enter through
   //    `impulses`, inside each function's policy impact (model 1.1, N-03).
   next.indicators.biodiversity = toward(
@@ -383,9 +413,6 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   next.indicators.socialWellbeing = 100 - stella.Conflicto_social;
   stella.Colapso_politico = toward(stella.Colapso_politico, calculatePoliticalCollapseChange(stella, next.indicators, CP), dt);
   next.indicators.politicalStability = 100 - stella.Colapso_politico;
-
-  // 9. CO2eq per capita — a function of the current state, recomputed every step.
-  next.indicators.co2EqEmissionsPerCapita = computeCarbonBalance(next.landUses, next.policies, currentLevel, stella.Poblacion_Total, CP);
 
   // 10. Sectoral political pressures (read the CO2/biodiversity values just updated): annual impulse × dt.
   const pressures = updatePressures(
@@ -436,8 +463,8 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     logs.push(warning);
   });
 
-  // Bookkeeping of the 2.0 sub-state (only the clock in phase 35) and the monthly calendar.
-  if (next.model) next.model.t += dt;
+  // Bookkeeping of the 2.0 sub-state (clock; cumulative emissions are added at step 7.5) and the monthly calendar.
+  model.t += dt;
   let nextMonth = 0;
   let yearRolled = annual;
   if (!annual) {

@@ -163,60 +163,50 @@ export const INITIAL_POLICIES: Record<Policy, PolicyState> = {
 export const INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.UnprotectedNativeForest]: {
     name: "Bosque Nativo No Protegido", area: 100, stellaName: "\"Bosque_Nativo_No_Protegido_(BNNP)\"",
-    emissionRate: 0.75, sequestrationRate: 5,
     document: "Áreas de bosques compuestas principalmente por especies de árboles y vegetación que son endémicas de la región, actualmente sin un estatus de protección legal formal que restrinja actividades extractivas o de conversión de uso de suelo. Son vulnerables a la deforestación y degradación."
   },
   [LandUseType.ProtectedNativeForest]: {
     name: "Bosque Nativo Protegido", area: 0, stellaName: "\"Bosque_Nativo_Protegido_(BNP)\"",
-    emissionRate: 0.75, sequestrationRate: 5,
     document: "Superficie de Bosque Nativo que, mediante decisiones políticas, ha sido designada bajo un régimen de protección legal (ej. Parque Nacional, Reserva Natural). Esto implica restricciones a actividades humanas para conservar su biodiversidad y servicios ecosistémicos."
   },
   [LandUseType.AgroecologicalCrops]: {
     name: "Cultivos Agroecológicos", area: 100, stellaName: "\"Cultivos_Agroecológicos_(CA)\"",
-    emissionRate: 0.5, sequestrationRate: 1.9,
     document: "Prácticas de cultivo que buscan integrar aspectos ambientales, económicos y sociales, minimizando el uso de insumos externos sintéticos, promoviendo la biodiversidad funcional, la salud del suelo y el cierre de ciclos de nutrientes. Suelen tener menor emisión y mayor secuestro de C que los convencionales."
   },
   [LandUseType.ConventionalCrops]: {
     name: "Cultivos Convencionales", area: 100, stellaName: "\"Cultivos_Convencionales_(CC)\"",
-    emissionRate: 8.0, sequestrationRate: 0.9,
     document: "Refiere a la agricultura moderna que utiliza métodos de cultivo intensivos, incluyendo el uso de fertilizantes sintéticos, pesticidas, maquinaria pesada y, a menudo, monocultivos. Busca altos rendimientos pero puede tener mayores emisiones y menor capacidad de secuestro de carbono."
   },
   [LandUseType.ForestPlantations]: {
     name: "Plantaciones Forestales", area: 100, stellaName: "\"Plantaciones_Forestales_(PF)\"",
-    emissionRate: 1.5, sequestrationRate: 2.4,
     document: "Áreas donde se cultivan árboles, generalmente de rápido crecimiento y a menudo especies exóticas, con fines comerciales (madera, pulpa) o para restauración. Su balance de carbono varía según la especie, manejo y edad."
   },
   [LandUseType.GrasslandsPastures]: {
     name: "Praderas y Pasturas para Ganadería", area: 100, stellaName: "\"Praderas_Ganadería_(PRG)\"",
-    emissionRate: 5.0, sequestrationRate: 0.24,
     document: "Extensiones de terreno cubiertas principalmente por pastos y otras herbáceas, utilizadas para la cría y alimentación de ganado. Su manejo (intensivo vs. extensivo, tipo de pastura) influye significativamente en su balance de carbono."
   },
   // ── Usos públicos (vista previa Territorio, 21_fusion_ecosim.md §5) ─────────────────────────
-  // Arrancan en 0 kHa: solo existen si el jugador los declara. Tasas por criterio experto,
-  // ancladas en las que ya tenia el modelo (bosque nativo 0,75/5,0; cultivo convencional 8,0/0,9).
+  // Arrancan en 0 kHa: solo existen si el jugador los declara. Su carbono (flujo y stock) está en
+  // PARAMS_V2.flux / stock (src/sim/v2/params.ts, fase 38), por criterio experto.
   [LandUseType.PublicWetland]: {
     name: "Humedal Protegido", area: 0, stellaName: "Humedal_Protegido_(HUM)",
-    emissionRate: 1.2, sequestrationRate: 6.0,
     document: "Humedales protegidos o restaurados por decision publica. Emiten metano por descomposicion anaerobica (de ahi una tasa de emision mayor que la del bosque), pero acumulan carbono organico en suelo a un ritmo superior al de cualquier otro uso del modelo, y son el uso con mayor valor de habitat, filtrado de nutrientes y regulacion hidrica. Balance neto: sumidero mas fuerte que el bosque nativo."
   },
   [LandUseType.RestorationForest]: {
     name: "Restauracion de Bosque Nativo", area: 0, stellaName: "Restauracion_(RES)",
-    emissionRate: 0.6, sequestrationRate: 3.4,
     document: "Tierra agricola o degradada comprada o cedida al Estado y puesta en restauracion activa. El rebrote joven secuestra menos que el bosque maduro y con los anios madura hacia bosque nativo no protegido (tasa de maduracion en CONTROL_PARAMS)."
   },
   [LandUseType.EnergyPark]: {
     name: "Parque Energetico Publico", area: 0, stellaName: "Parque_Energetico_(ENR)",
-    emissionRate: 0.2, sequestrationRate: 0.3,
     document: "Solar, eolica y almacenamiento en tierra publica. El suelo en si es casi neutro en carbono (mantenimiento contra cobertura vegetal bajo los paneles); su efecto real es desplazar generacion fosil, que el balance de carbono aplica aparte en proporcion al area."
   },
   // ── Barbecho (modelo 2.0, fase 37, mejora-general/files/37 §1) ─────────────────────────────
   // Arranca en 0 kHa en los tres niveles: lo crean los eventos y situaciones que sacan tierra de uso
   // (la sequía ya no hace desaparecer área). Rebrota hacia BNNP (5 %/año) y vuelve al pool agrícola
-  // (25 %/año), src/sim/v2/land.ts. Tasas 1.1 de puente hasta el carbono físico de la fase 38 (que usa
-  // PARAMS_V2.flux.FAL = −2,0 tCO2e/ha/año): emite poco y rebrota más que un cultivo. Criterio experto.
+  // (25 %/año), src/sim/v2/land.ts. Carbono: PARAMS_V2.flux.FAL = −2,0 tCO2e/ha/año (rebrota) y stock 55 Mg C/ha
+  // (fase 38). Criterio experto.
   [LandUseType.Fallow]: {
     name: "Barbecho / tierra degradada", area: 0, stellaName: "Barbecho_(FAL)",
-    emissionRate: 1.0, sequestrationRate: 2.5,
     document: "Tierra que una sequia, una crisis o una decision dejo fuera de uso. No produce alimentos ni ingresos; rebrota de a poco hacia bosque nativo y vuelve a cultivarse cuando las rentas agricolas la atraen."
   },
 };
@@ -225,8 +215,8 @@ export const TOTAL_LAND_AREA = Object.values(INITIAL_LAND_USES).reduce((sum, lu)
 
 export const LEVEL_2_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.UnprotectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.UnprotectedNativeForest], area: 80 },
-  [LandUseType.ProtectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.ProtectedNativeForest], area: 20, sequestrationRate: 5.2 },
-  [LandUseType.AgroecologicalCrops]: { ...INITIAL_LAND_USES[LandUseType.AgroecologicalCrops], area: 70, sequestrationRate: 2.0 },
+  [LandUseType.ProtectedNativeForest]: { ...INITIAL_LAND_USES[LandUseType.ProtectedNativeForest], area: 20 },
+  [LandUseType.AgroecologicalCrops]: { ...INITIAL_LAND_USES[LandUseType.AgroecologicalCrops], area: 70 },
   [LandUseType.ConventionalCrops]: { ...INITIAL_LAND_USES[LandUseType.ConventionalCrops], area: 150 },
   [LandUseType.ForestPlantations]: { ...INITIAL_LAND_USES[LandUseType.ForestPlantations], area: 120 },
   [LandUseType.GrasslandsPastures]: { ...INITIAL_LAND_USES[LandUseType.GrasslandsPastures], area: 160 },
@@ -255,7 +245,9 @@ export const LEVEL_3_TOTAL_LAND_AREA = Object.values(LEVEL_3_INITIAL_LAND_USES).
 
 export const INITIAL_STELLA_STOCKS: StellaStocks = {
   MEAN_colapso: 0,
-  Poblacion_Total: 10000000,
+  // Fase 38: 400 000 habitantes (00_INDICE_v6 decisión 4) = CONTROL_PARAMS.Poblacion_Inicial; createInitialState
+  // la toma del CP vivo. Antes 10 millones, con el factor de escala 40 000 del carbono 1.1.
+  Poblacion_Total: 400_000,
   PP_AGRICOLA: 30, PP_AMBIENTALISTA: 30, PP_SOCIAL: 30,
   // Nivel 1 arranca en 5 (antes 0), como el prototipo (LEVELS[1].Pc = 5): con 0 el logit del colapso
   // queda pegado al recorte de logit() (−9,2) y el objetivo 2.0 no podría moverse (fase 35 §8;
@@ -307,7 +299,7 @@ export const INITIAL_INDICATORS = {
   foodSecurity: 35,
   economicSecurity: 25,
   socialWellbeing: 100 - INITIAL_STELLA_STOCKS.Conflicto_social,
-  co2EqEmissionsPerCapita: 6.5,  // More realistic starting point for a mid-income nation (~10M pop)
+  co2EqEmissionsPerCapita: 6.5,  // Placeholder: createInitialState replaces it with the level's c0 (5.95 / 7.13 / 5.73 t, fase 38)
   politicalStability: 100 - INITIAL_STELLA_STOCKS.Colapso_politico,
   generalScore: INITIAL_STELLA_STOCKS.Puntaje_General,
   pbi: INITIAL_STELLA_STOCKS.PBI_Real,
@@ -337,8 +329,9 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     costToJoin: 500,
     annualCost: 50,
     effects: (indicators, stellaStocks) => ({
+      // Fase 38: el −5 % de CO2 de 1.1 pasa al carbono físico (PARAMS_V2.pacts.globalCarbonAccord.renewables /
+      // efficiency suman 0,05 a s* y u*, src/sim/v2/carbon.ts).
       indicators: {
-        co2EqEmissionsPerCapita: (indicators.co2EqEmissionsPerCapita || 0) * 0.95, // 5% reduction
         politicalStability: (indicators.politicalStability || 0) + 3,
       },
       stellaStocks: {}
@@ -373,10 +366,9 @@ export const INITIAL_PACTS: Record<string, Pact> = {
     unlockYear: 2038,
     costToJoin: 1000,
     annualCost: 100,
-    effects: (indicators, stellaStocks) => ({
-      indicators: {
-        co2EqEmissionsPerCapita: (indicators.co2EqEmissionsPerCapita || 0) * 0.9, // 10% reduction
-      },
+    // Fase 38: el −10 % de CO2 de 1.1 pasa al carbono físico (PARAMS_V2.pacts.techTransferInitiative.renewables
+    // 0,10 / efficiency 0,05 sobre s* y u*, src/sim/v2/carbon.ts).
+    effects: () => ({
       stellaStocks: {}
     }),
     // Model 1.1 (phase 34, N-03/T-03): replaces +2 E per year. Criterio experto: half of Foreign
@@ -396,7 +388,6 @@ export const CONTROL_PARAMS: ControlParams = {
   Tasa_Impositiva_General_Sobre_PBI: 0.15,
   Tasa_Base_Crecimiento_PBI: 0.02,
   Tasa_Crecimiento_Poblacional_Base: 0.008,
-  FACTOR_C_A_CO2EQ: 3.67,
 
   Pago_deuda_anual_Nivel_1: 0.15,
   Pago_deuda_anual_Nivel_2: 0.12,
@@ -461,11 +452,9 @@ export const CONTROL_PARAMS: ControlParams = {
   Sensibilidad_PP_Social_BienestarSocial: 0.4,
   Umbral_PP_Social_BienestarSocial: 50,
 
-  // Direct Carbon Impact Factors for Specific Policy Instruments - REBALANCED v3
-  Factor_Reduccion_Emisiones_Renovables_PCN: 0.05,
-  Factor_Aumento_Secuestro_CAC_PCN: 100,
-  Factor_Aumento_Emisiones_Fosiles_PSE: 0.15, // Aumentado drásticamente
-  Factor_Aumento_Emisiones_AgroIntensivo_PPAI: 0.08, // Nuevo factor de emisiones
+  // Fase 38: los factores de carbono 1.1 por instrumento (Factor_Reduccion_Emisiones_Renovables_PCN,
+  // Factor_Aumento_Secuestro_CAC_PCN, Factor_Aumento_Emisiones_*) se borraron; los reemplaza el carbono
+  // físico de src/sim/v2/carbon.ts (canales elec/other de CN, PARAMS_V2.fluxPolicy, energy.subsidyBoost).
 
   // Fiscal Pressure Parameters (Level 3)
   Max_Additional_Tax_Rate_Percentage: 20,
@@ -473,7 +462,6 @@ export const CONTROL_PARAMS: ControlParams = {
   SocialConflict_Increase_Factor_Per_Tax_Point: 0.08, // Ajustado de 0.15 para suavizar más el impacto
   PBIGrowth_Reduction_Factor_Per_Tax_Point: 0.0002,
   PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
-  CO2_EMISSIONS_SCALING_FACTOR: 40000,
 
   // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Un lote declarado son 5 kHa (LOT_KHA,
   // 50 parcelas de 0,1 kHa del mapa; src/sim/territory.ts), así que proteger un lote
@@ -490,9 +478,9 @@ export const CONTROL_PARAMS: ControlParams = {
   // Sacar tierra productiva de producción tensiona al gremio agrícola: 0,08 por kHa = 0,4 puntos
   // de presión por lote de 5 kHa convertido. Proteger bosque no aplica este impulso.
   Impulso_PP_Agricola_por_kHa_Convertida: 0.08,
-  // Si todo el territorio fuera parque energético desplazaría el 60 % de las emisiones totales; el
-  // efecto entra en proporción al área (10 % del territorio => -6 %).
-  Factor_Desplazamiento_Emisiones_Parque_Energetico: 0.6,
+  // Fase 38: el parque energético ya no desplaza emisiones con un factor sobre el total
+  // (Factor_Desplazamiento_Emisiones_Parque_Energetico, borrado): entra en la participación renovable
+  // eléctrica s* (4 % del territorio en parques = electricidad 100 % renovable, PARAMS_V2.energy.parksFullShare).
   // La restauración madura hacia bosque nativo *protegido* (BNP, fase F8-1): 4 % del área por año, ~25 años
   // para convertirse. Hasta la fase 37 se llamaba Tasa_de_RES_a_BNNP_Base aunque el destino ya era BNP.
   Tasa_de_RES_a_BNP_Base: 0.04,
@@ -501,7 +489,7 @@ export const CONTROL_PARAMS: ControlParams = {
   // Escalares que el facilitador podrá mover en vivo (los expone la fase 50). En la fase 35 todavía no
   // los lee ninguna ecuación del motor: cada uno entra en la fase que porta su ecuación (36–44).
   // Las tablas del modelo 2.0 viven en src/sim/v2/params.ts.
-  Poblacion_Inicial: 400_000,             // habitantes; 00_INDICE_v6 decisión 4 (densidad 67–80 hab/km²). Lo usan las anclas (fase 35) y Poblacion_Total desde la fase 38
+  Poblacion_Inicial: 400_000,             // habitantes; 00_INDICE_v6 decisión 4 (densidad 67–80 hab/km²). Lo usan las anclas (fase 35) y Poblacion_Total arranca acá (fase 38)
   Velocidad_Ajuste_Biodiversidad: 0.12,   // k_B, fracción anual del camino al objetivo logístico (fase 39–40). Criterio experto
   Velocidad_Ajuste_Seg_Alimentaria: 0.35, // k_F (fase 41). Criterio experto
   Velocidad_Ajuste_Seg_Economica: 0.30,   // k_E (fase 39). Criterio experto
@@ -571,7 +559,7 @@ Mantenlo simple y centrado en las políticas macro y sus efectos sobre el uso de
     winConditions: {
       puntajeGeneralMin: 600,
       biodiversityMin: 40,
-      co2EqEmissionsPerCapitaMax: 5,  // More challenging: player must actively reduce from 6.5 starting point
+      co2EqEmissionsPerCapitaMax: 5,  // Fase 38: el nivel arranca en c0 = 5,95 t (carbono físico); hay que bajar ~16 %
       nativeForestTotalMinPercentage: 0.18,
       economicSecurityMin: 20,  // NEW: minimum economic floor — pure-green portfolio without productive policies will fail
     }
@@ -623,7 +611,9 @@ El objetivo es demostrar un liderazgo integral. Ayuda al jugador a prepararse pa
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
     winConditions: {
       puntajeGeneralMin: 700,
-      co2EqEmissionsPerCapitaMax: 2,
+      // Fase 38 (provisorio, recalibra la 49): 2 → 4,5 t con el carbono físico (c0 = 5,73 t), igual que la ruta
+      // `equilibrium` de src/sim/winRoutes.ts (ROUTES3 del prototipo).
+      co2EqEmissionsPerCapitaMax: 4.5,
       biodiversityMin: 55,
       foodSecurityMin: 60,
       economicSecurityMin: 50,
@@ -702,6 +692,8 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
     triggerChance: (gs) => {
       let chance = 0;
       if (gs.indicators.biodiversity < 30) chance += 0.05;
+      // Fase 38: con el carbono físico (c0 = 7,13 t en N2, máximo ~8,5 t) este umbral 1.1 queda inalcanzable;
+      // la fase 46 lo pasa a c > 1,5·c0 (docs/v6-spec-vs-motor.md).
       if (gs.indicators.co2EqEmissionsPerCapita > 12) chance += 0.05;
       if (gs.policies[Policy.FlexibleEnvironmentalRegulations].isActive) chance += 0.04;
       return chance;

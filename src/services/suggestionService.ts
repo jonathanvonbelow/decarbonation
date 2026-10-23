@@ -52,7 +52,7 @@ export const getSuggestedQuestions = (gameState: GameState, language: Language =
   if (suggestions.size < MAX_SUGGESTIONS && yearsSimulatedInCurrentLevel > 2) suggestions.add(s.improveScore);
 
   if (suggestions.size < MAX_SUGGESTIONS && indicators.biodiversity < 35) suggestions.add(s.biodiversity);
-  if (suggestions.size < MAX_SUGGESTIONS && indicators.co2EqEmissionsPerCapita > 10) suggestions.add(s.co2);
+  if (suggestions.size < MAX_SUGGESTIONS && indicators.co2EqEmissionsPerCapita > (gameState.model?.anchors.c0 ?? 6)) suggestions.add(s.co2); // phase 38: above the level's start (was > 10 t on the 1.1 scale)
   if (suggestions.size < MAX_SUGGESTIONS && currentLevel >= 2 && indicators.politicalStability < 50) suggestions.add(s.polStability);
   if (suggestions.size < MAX_SUGGESTIONS && currentLevel >= 2 && indicators.economicSecurity < 40) suggestions.add(s.econSecurity);
   if (suggestions.size < MAX_SUGGESTIONS && currentLevel >= 2 && indicators.ppAmbientalista > 65) suggestions.add(s.envPressure);

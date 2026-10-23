@@ -166,22 +166,50 @@ export const PARAMS_V2 = {
     zeroAnchor: 1e-6,
   },
 
-  /** 38 — carbon. Flux in tCO2e/ha/yr (+ emission), stock in Mg C/ha (biomass + soil relevant to conversion). Criterio experto. */
+  /**
+   * 38 — carbon (mejora-general/files/38 §2; prototype `carbon`). Flux in tCO2e/ha/yr (+ emission), stock in
+   * Mg C/ha (biomass + soil relevant to conversion). Stocks after the Atlantic Forest review (125 ± 40 Mg C/ha
+   * of above-ground biomass in mature forest, 83 ± 38 in secondary, 46 / 41 in pasture / cropland; Anais da ABC
+   * 2024) plus below-ground and soil; fluxes criterio experto. FAL (fallow, regrowing) −2.0 / 55 since phase 38
+   * (replaces the 1.1 bridge rates of phase 37).
+   */
   flux:  { BNP: -1.0, BNNP: 0.5, CA: 0.8, CC: 2.5, PF: -4.0, PRG: 3.0, HUM: -3.0, RES: -9.0, ENR: 0.1, FAL: -2.0 },
   stock: { BNP: 200, BNNP: 170, CA: 60, CC: 45, PF: 90, PRG: 50, HUM: 250, RES: 70, ENR: 40, FAL: 55 },
+  /**
+   * 38 — policy multipliers of the land flux: f_i ×= Π (1 + coef·η_p^channel) (spec 38 §2: CC ×(1 + 0.3·η_PAI^prod),
+   * PRG ×(1 − 0.35·η_GS^land), CA ×(1 − 0.4·η_AS^land), BNNP ×(1 + 1.0·η_FRA^land)(1 − 0.6·η_CR^land)).
+   * Dimensionless per unit of effective efficiency. Criterio experto (prototype inline coefficients).
+   */
+  fluxPolicy: {
+    CC: [{ pid: 'PAI', coef: 0.3, channel: 'prod' }],
+    PRG: [{ pid: 'GS', coef: -0.35, channel: 'land' }],
+    CA: [{ pid: 'AS', coef: -0.4, channel: 'land' }],
+    BNNP: [{ pid: 'FRA', coef: 1.0, channel: 'land' }, { pid: 'CR', coef: -0.6, channel: 'land' }],
+  } as Partial<Record<LandCode, { pid: Pid; coef: number; channel: 'land' | 'prod' }[]>>,
   energy: {
-    /** Energy tCO2/cap/yr at start, per level (calibrated so c0 ≈ 5.9 / 7.1 / 5.7 with the land flux). */
+    /** Energy tCO2/cap/yr at start, per level (calibrated so c0 = 5.947 / 7.135 / 5.733 with the land flux). */
     eps0: { 1: 4.0, 2: 5.0, 3: 4.6 } as Record<number, number>,
-    /** Electric share of energy emissions; annual adjustment fraction of renewables/efficiency. */
-    electricShare: 0.35, adjust: 0.15,
-    /** Share of the territory under energy parks that fully decarbonises electricity. */
+    /** Electric share of energy emissions (dimensionless). Criterio experto. */
+    electricShare: 0.35,
+    /** Annual adjustment fraction k of the renewable share and the efficiency gain (infrastructure inertia, relax). */
+    adjust: 0.15,
+    /** Share of the territory under energy parks that fully decarbonises electricity (a_full; a lot is a portfolio). */
     parksFullShare: 0.04,
-    /** Income elasticity of energy emissions per capita. */
+    /** Income elasticity of energy emissions per capita (dimensionless). Criterio experto. */
     incomeElasticity: 0.3,
-    /** Maximum renewables share / efficiency gain that Carbon Neutrality reaches at full effect. */
+    /** Maximum renewables share / efficiency gain that Carbon Neutrality reaches at full effect (elec / other channels). */
     renewablesMaxCN: 0.60, efficiencyMaxCN: 0.35,
-    /** Carbon budget: cut by 2054 relative to the starting emissions path. */
+    /**
+     * Caps of the targets s* (renewable share of electricity) and u* (non-electric efficiency gain), 0-1. The
+     * prototype also clamps s* at 0.95 inside `relax`: redundant after the 0.9 cap, not ported (log, phase 38).
+     */
+    renewablesCap: 0.9, efficiencyCap: 0.6,
+    /** Energy emissions × (1 + boost·η_SE^land): Energy Subsidies (fossil). Criterio experto. */
+    subsidyBoost: 0.15,
+    /** Carbon budget: cut by 2054 of the linear reference path, relative to the starting emissions. 🟧 editable. */
     budgetCut2054: 0.30,
+    /** Years of the budget's reference path (2024 → 2054). */
+    budgetYears: 30,
   },
 
   /** 40 — habitat affinity (countryside species-area, 0-1 per land use) and z exponent. Criterio experto. */

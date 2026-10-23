@@ -30,6 +30,9 @@ export interface PredictionResult {
 // for the worst strategies tried, so 15 keeps the flat band meaningfully narrow without being so
 // tight that ordinary yearly noise never counts as "flat". Documented rather than derived from a
 // real theoretical maximum, which the simulation doesn't define.
+// v6 phase 38: with the physical carbon c moves between ~3.7 and ~8.5 t (c0 = 5.95 / 7.13 / 5.73), so the
+// flat band (0.15 t/yr) is ~2 % of c0 and "no change" is more frequent (55–63 % of years in sim:check).
+// Still a sensible order of magnitude; it stays at 15 until phase 48 recalibrates the prediction bands.
 const RANGE: Record<PredictedIndicatorKey, number> = {
   biodiversity: 100,
   co2EqEmissionsPerCapita: 15,

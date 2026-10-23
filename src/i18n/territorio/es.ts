@@ -224,7 +224,7 @@ export const TERRITORIO_ES = {
     worn: 'Desgastada: si descansa, se recupera',
     instrumentsLocked: 'Desde {year} vas a poder repartir el esfuerzo entre sus instrumentos. Por ahora se reparte en partes iguales.',
     effortTitle: 'Esfuerzo por instrumento',
-    hintsNote: 'Cada instrumento pesa distinto sobre suelo, producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo, concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. En esta versión en desarrollo los indicadores leen el canal de producción; Renovables y Captura además actúan directo sobre el CO₂.',
+    hintsNote: 'Cada instrumento pesa distinto sobre suelo, producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo, concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. En esta versión en desarrollo los indicadores leen el canal de producción; el CO₂ lee además la electricidad renovable (sobre todo Renovables) y la eficiencia del resto de la energía (sobre todo Eficiencia), que avanzan con inercia.',
   },
   finance: {
     reserves: 'Reservas del tesoro',

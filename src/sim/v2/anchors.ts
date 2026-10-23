@@ -7,24 +7,21 @@
  * the first year's land flows for the starting CO2 (`carbon(s, flows_ha=land_step(deepcopy(s), 1))`).
  * At level start no policy and no pact is active, so every effective efficiency is 0, the renewable
  * share and efficiency gain are 0 and income per capita equals its reference: the dry run below is the
- * prototype's land_step / carbon evaluated at that point. The land matrix is the one of advance()
- * (src/sim/v2/land.ts, phase 37); phase 38 does the same for the carbon model (same numbers at t = 0,
- * covered by core.spec.ts).
+ * prototype's land_step / carbon evaluated at that point. The land matrix (src/sim/v2/land.ts, phase 37) and
+ * the carbon model (src/sim/v2/carbon.ts, phase 38) are the ones advance() runs.
  *
- * Population: the anchors use CP.Poblacion_Inicial (400 000, decision 4), not the 1.1 Poblacion_Total
- * (10 million), which the 1.1 engine still reads until phase 38 switches it.
+ * Population: CP.Poblacion_Inicial (400 000, decision 4); since phase 38 Poblacion_Total starts there too.
  */
 import type { ControlParams, GameState, LandUseType, ModelAnchors, ModelState } from '../../types';
 import { MODEL_VERSION } from '../version';
 import { logit } from './math';
 import { AGRI_CODES, PARAMS_V2, type LandCode } from './params';
-import { HA_PER_KHA, landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
+import { landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
+import { computeEmissions } from './carbon';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
 const LAND_CODES: LandCode[] = ['BNNP', 'BNP', 'CA', 'CC', 'PF', 'PRG', 'HUM', 'RES', 'ENR', 'FAL'];
-/** Molar mass ratio CO2 / C. */
-const CO2_PER_C = 44 / 12;
 
 type Areas = Record<LandCode, number>;
 
@@ -47,20 +44,17 @@ export function dryRunLandFlows(landUses: GameState['landUses'], CP: ControlPara
   return realiseLandFlows(landUses, landFlows({ landUses }, {}, CP), 1);
 }
 
-/** Starting emissions (tCO2e/yr) by source: energy at the level's eps0, AFOLU flux and LUC of the dry run. */
+/**
+ * Starting emissions (tCO2e/yr) by source: the carbon model of advance() (src/sim/v2/carbon.ts) at level start —
+ * no policy or pact active, renewables and efficiency at 0, income per capita at its reference — over the dry
+ * run's land flows (the prototype's `carbon(s, flows_ha=land_step(deepcopy(s), 1), update=False)`).
+ */
 export function startingEmissions(level: number, landUses: GameState['landUses'], population: number, CP: ControlParams): ModelState['emissions'] {
-  const A = areasByCode(landUses);
-  const e = PARAMS_V2.energy;
-  // No renewables or efficiency yet and income = reference: the electric/other split weighs 1, so
-  // energy per capita is the level's eps0 (phase 38 adds the split, renewables and efficiency).
-  const eps = e.eps0[level] ?? e.eps0[1];
-  const energy = eps * population;
-  const afolu = LAND_CODES.reduce((sum, k) => sum + PARAMS_V2.flux[k] * A[k] * HA_PER_KHA, 0);
-  let luc = 0;
-  dryRunLandFlows(landUses, CP).forEach((f) => {
-    luc += f.ha * Math.max(0, PARAMS_V2.stock[f.from as LandCode] - PARAMS_V2.stock[f.to as LandCode]) * CO2_PER_C;
-  });
-  return { energy, afolu, luc, total: energy + afolu + luc };
+  const r = computeEmissions(
+    { level, landUses, population, gdp: 1, anchors: { gdp0: 1, pop0: population }, energy: { renewableShare: 0, efficiency: 0 } },
+    {}, dryRunLandFlows(landUses, CP), 1,
+  );
+  return { energy: r.energy, afolu: r.afolu, luc: r.luc, total: r.total };
 }
 
 /** Anchors of the starting state of a level (see the module comment). */
@@ -116,6 +110,7 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
     pressureSpread0: Math.max(...pressures) - Math.min(...pressures),
     pressureEnv0: st.PP_AMBIENTALISTA,
     gdp0: st.PBI_Real,
+    pop0: pop,
     agriAreas0,
   };
   return { anchors, emissions };

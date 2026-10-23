@@ -13,7 +13,7 @@
  */
 import type { GameState } from '../types';
 import { LandUseType, Policy } from '../types';
-import { declaredProtectedOf, evaluateRoute, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
+import { carbonTechEffort, declaredProtectedOf, evaluateRoute, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
 
 const totalArea = (s: GameState) => (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
 
@@ -42,14 +42,6 @@ const productivePolicyActive = (s: GameState) => {
   return families.some((id) => s.policies[id]?.isActive) ? 1 : 0;
 };
 
-/** Effort on the two carbon-neutrality instruments that actually move the CO2 formula. */
-const carbonTechEffort = (s: GameState) => {
-  const instruments = s.policies[Policy.CarbonNeutrality]?.instruments;
-  if (!instruments) return 0;
-  const ren = instruments['C_Fomento_Energias_Renovables_No_Convencionales']?.effortPercentage ?? 0;
-  const ccs = instruments['C_Investigacion_Desarrollo_Captura_Carbono']?.effortPercentage ?? 0;
-  return (ren + ccs) / 2;
-};
 
 export const TERRITORIO_FLOORS: RouteCondition[] = [
   { labelKey: 'routes.floor.biodiversity', read: (s) => s.indicators.biodiversity, target: 25, dir: 'min' },
@@ -63,6 +55,9 @@ export const TERRITORIO_FLOORS: RouteCondition[] = [
 // conservation and innovation unwinnable in the harness even when they governed well otherwise.
 // Political stability already carries the pressures inside it, through political collapse.
 
+// Phase 38 (provisional, phase 49 recalibrates): `cond.emissions` ceilings on the physical carbon scale
+// (Territorio starts at level 2's c0 = 7.13 t; 1.1 had ~17.4): conservation 6.2 and innovation 4.8 are the
+// prototype's TERR_ROUTES; production, which has none there, keeps one at 1.09·c0 = 7.8 (was 15).
 export const TERRITORIO_ROUTES: WinRoute[] = [
   {
     // Wins by what the state put under protection and what that does to the carbon balance. The
@@ -76,7 +71,7 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
       // (20 seeds) the conservation strategy ends at 4.7–8.9 % and do_nothing at 0 %; the spec
       // expected ≈ 7 %, but 7 would leave conservation at 9/20 (docs/DESIGN_DECISIONS_LOG.md).
       { labelKey: 'cond.publicNature', read: publicNaturePct, target: 4.5, dir: 'min' },
-      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6, dir: 'max' },
+      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.2, dir: 'max' },
     ],
   },
   {
@@ -92,7 +87,7 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
       // Relative to the economy, not a fixed 1.000: with a treasury that grows with GDP, a fixed
       // target was met by doing nothing at all (decisión del usuario, 2026-09-19).
       { labelKey: 'cond.treasuryPct', read: treasuryPctOfGdp, target: 8, dir: 'min' },
-      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 15, dir: 'max' },
+      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
     ],
   },
   {
@@ -100,7 +95,7 @@ export const TERRITORIO_ROUTES: WinRoute[] = [
     id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
     descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
     conditions: [
-      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.2, dir: 'max' },
+      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.8, dir: 'max' },
       { labelKey: 'cond.energyPark', read: energyParkPct, target: 1.6, dir: 'min' },
       { labelKey: 'cond.techEffort', read: carbonTechEffort, target: 25, dir: 'min' },
       { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 30, dir: 'min' },

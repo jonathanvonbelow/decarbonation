@@ -43,7 +43,7 @@ export const UI_EN: UIShape = {
     efficiencyTitle: 'Efficiency: {value}%',
   },
   instruments: {
-    hintsNote: 'Each instrument weighs differently on land, production and society, with diminishing returns: an even split gives the full effect; concentrating strengthens one channel and weakens the others. Cost follows total effort. In this development version the indicators read the production channel; Renewables and Capture also act directly on CO₂.',
+    hintsNote: 'Each instrument weighs differently on land, production and society, with diminishing returns: an even split gives the full effect; concentrating strengthens one channel and weakens the others. Cost follows total effort. In this development version the indicators read the production channel; CO₂ also reads the renewable share of electricity (mostly Renewables) and the efficiency of the rest of energy (mostly Efficiency), which move with inertia.',
   },
   routes: {
     panelTitle: 'Win routes',

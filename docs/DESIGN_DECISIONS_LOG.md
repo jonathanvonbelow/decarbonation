@@ -2299,3 +2299,102 @@ efecto suelto sobre FAL hacia FAL no mueve nada, por definición.
 **Deudas.** Carbono 1.1 sobre la matriz 2.0 (38; ver arriba). Los multiplicadores de pactos sobre la frontera siguen
 siendo los 1.1 (43). El evento de sequía todavía usa el sorteo 1.1 (46). La cantidad de parcelas que el mapa mueve por
 pool (ida y vuelta neteado) queda sin medir en pantalla; los tests verifican que solo dibuja transiciones del modelo.
+
+## 2026-10-22 — v6 fase 38: carbono en unidades físicas
+
+**Qué se hizo** (`mejora-general/files/38_carbono_unidades_fisicas.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/carbon.ts` (port de `carbon` y `budget` del prototipo): `energyTargets` (s* = min(0,9; 0,60·η_CN^elec +
+  min(1; a_ENR/0,04) + Σ pactos.renewables), u* = min(0,6; 0,35·η_CN^other + Σ pactos.efficiency)), `updateEnergyState`
+  (`relax` con k = 0,15: igual anual y mensual), `fluxOf` (multiplicadores de política `PARAMS_V2.fluxPolicy`),
+  `computeEmissions` → `{energy, afolu, luc, total, perCapita}` en tCO₂e/año (LUC = Σ ha realizadas ÷ dt ·
+  max(0, C_i − C_j)·44/12), `budgetPath` / `carbonBudgetIndex` (B_t, `budgetCut2054` = 0,30 🟧, `budgetYears` = 30).
+  Los coeficientes que el prototipo escribe en línea pasan a `PARAMS_V2` (`fluxPolicy`, `energy.subsidyBoost`,
+  `renewablesCap`, `efficiencyCap`).
+- `advance()` paso 7.5 (2.0 paso 7), después de la economía y antes de los indicadores 1.1 (como el prototipo): actualiza
+  `model.energy`, `model.emissions`, `model.cumulativeEmissions += total·dt` y `co2EqEmissionsPerCapita`. Población
+  `(1 + g)^dt` (antes `1 + g·dt`; el paso anual no cambia). Un estado sin `model` se ancla en `advance`; uno de las fases
+  35–37 sin `pop0` (y con la población 1.1 de 10 M) se re-ancla a `CP.Poblacion_Inicial`.
+- Anclas: `startingEmissions` usa `computeEmissions` (mismos números: c₀ = 5,947 / 7,135 / 5,733 t); `ModelAnchors.pop0`.
+  `createInitialState`: `Poblacion_Total = CP.Poblacion_Inicial` (400 000) y CO₂ inicial = `anchors.c0`.
+- Se borran `src/sim/carbon.ts` (`computeCarbonBalance`; `index.ts` reexporta `v2/carbon`), `LandUse.emissionRate` /
+  `sequestrationRate` (y los overrides de N2), `CO2_EMISSIONS_SCALING_FACTOR`, `FACTOR_C_A_CO2EQ`,
+  `Factor_Reduccion_Emisiones_Renovables_PCN`, `Factor_Aumento_Secuestro_CAC_PCN`, `Factor_Aumento_Emisiones_Fosiles_PSE`,
+  `Factor_Aumento_Emisiones_AgroIntensivo_PPAI`, `Factor_Desplazamiento_Emisiones_Parque_Energetico` y el −5 % / −10 %
+  de CO₂ de los pactos Acuerdo de Carbono / Transferencia Tecnológica (ahora `renewables`/`efficiency` sobre s*/u*).
+  FAL: flujo −2,0 / stock 55 (reemplaza la tasa provisoria de la 37).
+- Consumidores: manual de ecuaciones (tabla flujo/stock, fórmula nueva), manual del facilitador, descripciones, grupos
+  de parámetros, capa "Carbono" del mapa de Territorio (−flujo), insignias (comentario: c ≤ 0 ahora es posible),
+  sugerencias de DecarboNito (CO₂ > c₀ del nivel; antes > 10 t), aviso de instrumentos (es/en), hoja docente de
+  ecuaciones (balance, cartera de parques, criterio experto; tabla de rutas regenerada con `scripts/routes-table-html.ts`).
+  Puntaje: la parte de carbono se acota también a 100 (c puede ser negativo). `Poblacion_Total` no lo leía ningún
+  consumidor de UI, Gemini ni puntaje.
+- Rutas (provisorio y mínimo; recalibra la 49): topes de `cond.emissions` a la escala física anclados a c₀ como
+  `ROUTES3`/`TERR_ROUTES` del prototipo — N1 5,2 / 6,5 / 4,6; N2 6,5 / 7,8 / 5,5; N3 5,4 / 6,3 / 4,5 y equilibrio 2 → 4,5
+  (también `winConditions` N3); Territorio 6,2 / 7,8 / 4,8. Producción N2/N3/Territorio (sin tope en el prototipo):
+  1,09·c₀ (la razón 6,5/5,95 de N1). `carbonTechEffort` = (Renovables + Eficiencia)/2 (antes Renovables + Captura): con el
+  carbono físico la captura pesa 0,5 solo en el canal no eléctrico; salda la deuda 33/38/49 (innovación de Territorio).
+- Tests: `tests/sim/carbon.v2.spec.ts` (c₀ ±0,02 por nivel; población desde CP; energía per cápita constante y AFOLU per
+  cápita ∝ 1/P con suelo congelado; CR en su quinto año, η = 0,763, baja E_luc ≥ 70 % (≈ 78 %); 4 % de parques ⇒ s* = 0,9;
+  inercia anual = 12 meses; LUC solo pérdidas, ÷ dt; sin pares bilaterales (fast-check); flujos con política y AFOLU < 0;
+  B_t = 1 sobre la trayectoria de referencia; acumulado en `advance`; re-anclaje de un estado viejo; recorrido N2 ≥ 3 t).
+  `deferred.spec.ts`: los pactos se verifican sobre s/u (0,15·Δs*). Trayectorias de `core.spec.ts` regeneradas (fase 38).
+
+**Desvíos y discrepancias** (filas 38 de `docs/v6-spec-vs-motor.md`).
+- Innovación N2 a 30 años: prototipo 4,75 (la spec decía "≈ 4,9"): texto de la spec corregido. Motor: 4,84 (mediana con
+  eventos); extractiva 8,05 ⇒ recorrido 3,2 t ≥ 3.
+- Claves de pactos `s`/`u` del prototipo = `renewables`/`efficiency` de la spec (`PARAMS_V2.pacts`).
+- El prototipo acota s dos veces (`min(0,9)` en s* y `min(0,95)` en el `relax`): el segundo es redundante y no se porta.
+- La docstring de `budget()` del prototipo decía −50 %: corregida a −30 % (`budget_cut`). Ninguna ecuación del prototipo
+  cambió: `golden_v2.csv` idéntico.
+- Canales de la spec (η_PAI^prod en CC; η^land en PRG/CA/BNNP y SE); el prototipo usa el `eta` uniforme (iguales con
+  reparto parejo).
+- LUC cuenta solo los flujos de la matriz, como el prototipo: lo que mueve un evento (suelo → FAL) o una declaración de
+  uso público de Territorio no emite por cambio de uso (fases 46/47; lo señaló la revisión de código).
+- Quedan en la escala vieja, anotados: presión ambientalista por CO₂ (umbral 8 t; pe de `do_nothing` N2 a 30 años
+  65 → 21, prototipo 24,6; fase 42); escrutinio internacional `c > 12`, inalcanzable (máximo ~8,5 t), y boom verde −5 %
+  diferido (fase 46); `RANGE.co2 = 15` de las predicciones (umbral "sin cambio" 0,15 t ≈ 2 % de c₀, razonable; fase 48);
+  puntaje `100 − c/12·100` (los puntajes de N2/N3 suben ~80–120; fase 49). Se actualizó el comentario de `index.ts`
+  ("N1 arranca en ~9,4 t").
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la fase 37:
+
+| Criterio | 37 (quick) | 38 (quick) | 38 (completo) |
+|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | FAIL 0,100 | FAIL 0,075 |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,000 | FAIL 0,100 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 0,200 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | FAIL 1 | FAIL 3 | FAIL 2 |
+| C6 recorrido ≥ 15 | FAIL 0,911 | FAIL 0,911 | FAIL 0,911 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 | FAIL 0,670 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 1,775 | **PASS 0,710** | PASS 0,710 |
+
+Rutas dirigidas (quick): vuelven N1 conservación 0 → 100 % e innovación 0 → 100 %, N2 conservación 0 → 90 % e innovación
+0 → 80 %, N3 conservación e innovación 0 → 100 %, Territorio conservación 60 → 100 % e innovación 0 → 100 %; producción
+sigue baja (N1 20 %, N2 0 %, N3 20 %, Territorio 60 %: deuda 47/49). Completo: N1 100 / 22,5 / 100, N2 87,5 / 10 / 72,5,
+N3 100 / 15 / 100, Territorio 95 / 35 / 100. C9 pasa (peor c Δ 0,02 t; peor W 0,71). Lo que empeora respecto de la 37 no
+viene del carbono sino de que en la 37 todas las rutas con tope de CO₂ estaban bloqueadas: (a) C1: `do_nothing` cumple
+**producción** en N3 1/10 (quick) y en el completo N1 7,5 %, N2 2,5 %, N3 7,5 %, en semillas con eventos que suben E/F; el
+tope de CO₂ no puede separarlos (la estrategia de producción emite más que `do_nothing`) y en 1.1 ya pasaba (N3 7,5 %);
+(b) C4: `tech_tax` N1 gana innovación 100 % porque en N1 el esfuerzo es parejo y `tech_tax` es "Neutralidad de Carbono
+sola" (misma c que `innovation`); `tech_tax` N2/N3 10–20 % por producción. Las dos son condiciones de E/F/puntaje: fase 49.
+Contra `reports/balance-latest.json` (1.1) el quick sale 0. Se agrega `reports/balance-2.0-dev.{md,json}` (completo); no
+se corrió `--update-latest`.
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm run build`, `npm run i18n:audit` limpios; `npm test` en verde salvo el
+test inestable preexistente de abajo. E2E con navegador (dev server en :3138 con `GEMINI_API_KEY` de relleno):
+`/play?demo=1` N1 arranca en 5,95 t; activar Neutralidad de Carbono y simular un año → 5,86 t. `/territorio` arranca en
+7,1 t, la capa "Carbono" del mapa se dibuja; activar Neutralidad de Carbono y correr ×4 hasta 2025 → 6,9 t (−0,1). Sin
+errores de consola.
+
+**Revisión de código** (aplicada): tope 100 de la parte de carbono del puntaje (c puede ser < 0); re-anclaje de un estado
+anterior a la 38 (sin `pop0`, población 10 M); `carbon.ts` usa `LAND_USE_TYPES` en lugar de otra lista de códigos; campos
+`flux`/`stock` (no `emissionRate`/`sequestrationRate`) en el manual, con color por signo. No aplicadas (documentadas
+arriba): LUC de eventos/declaraciones (prototipo; 46/47), umbral 8 t de presión (42), `c > 12` del escrutinio (46), topes
+de producción sobre c₀ (provisorio, 49), cambio de `carbonTechEffort` (decisión de la fase).
+
+**Deudas.** Fases 42/46/48/49 según lo anotado. **Test inestable preexistente** (fase 37): `territory.spec.ts` "keeps every
+use within a few parcels…" usa semillas aleatorias de fast-check y falla ~2 de cada 5 corridas (p. ej. `[3, []]` → CA a
+3,06 parcelas del objetivo; `[991752, [GS]]` → PRG a 3,41; cota 3). Da lo mismo con el HEAD de la fase 37: no lo toca el
+carbono (el suelo no lee CO₂). Queda para revisar el retardo del mapa (37/47).
