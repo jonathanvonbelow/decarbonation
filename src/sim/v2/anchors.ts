@@ -7,8 +7,9 @@
  * the first year's land flows for the starting CO2 (`carbon(s, flows_ha=land_step(deepcopy(s), 1))`).
  * At level start no policy and no pact is active, so every effective efficiency is 0, the renewable
  * share and efficiency gain are 0 and income per capita equals its reference: the dry run below is the
- * prototype's land_step / carbon evaluated at that point. Phases 37–38 port the full matrix and carbon
- * model; they should call those functions here instead (same numbers at t = 0, covered by core.spec.ts).
+ * prototype's land_step / carbon evaluated at that point. The land matrix is the one of advance()
+ * (src/sim/v2/land.ts, phase 37); phase 38 does the same for the carbon model (same numbers at t = 0,
+ * covered by core.spec.ts).
  *
  * Population: the anchors use CP.Poblacion_Inicial (400 000, decision 4), not the 1.1 Poblacion_Total
  * (10 million), which the 1.1 engine still reads until phase 38 switches it.
@@ -17,18 +18,17 @@ import type { ControlParams, GameState, LandUseType, ModelAnchors, ModelState } 
 import { MODEL_VERSION } from '../version';
 import { logit } from './math';
 import { AGRI_CODES, PARAMS_V2, type LandCode } from './params';
+import { HA_PER_KHA, landFlows, realiseLandFlows, type RealisedLandFlow } from './land';
 
 export type AnchorInput = Pick<GameState, 'currentLevel' | 'landUses' | 'indicators' | 'stellaSpecificState'>;
 
 const LAND_CODES: LandCode[] = ['BNNP', 'BNP', 'CA', 'CC', 'PF', 'PRG', 'HUM', 'RES', 'ENR', 'FAL'];
 /** Molar mass ratio CO2 / C. */
 const CO2_PER_C = 44 / 12;
-/** kHa → ha. */
-const HA_PER_KHA = 1000;
 
 type Areas = Record<LandCode, number>;
 
-/** Areas in kHa by land code; FAL (fallow, phase 37) is 0 until the code has it. */
+/** Areas in kHa by land code (a use the state lacks counts as 0). */
 export function areasByCode(landUses: GameState['landUses']): Areas {
   const out = {} as Areas;
   LAND_CODES.forEach((k) => { out[k] = landUses[k as LandUseType]?.area ?? 0; });
@@ -38,53 +38,18 @@ export function areasByCode(landUses: GameState['landUses']): Areas {
 const totalOf = (A: Areas): number => LAND_CODES.reduce((sum, k) => sum + A[k], 0);
 
 /**
- * Realised land flows (ha) of one year from `A` with every efficiency at 0 and no pacts: `land_step` of
- * the prototype at level start (base rates, fallow, anchored-rent reallocation pool, bilateral netting,
- * scaling so no use goes below zero). `A` is not modified.
+ * Realised land flows of one year from the level's starting areas with every efficiency at 0 and no pacts:
+ * the prototype's `land_step(deepcopy(s), 1)` at level start, through the same matrix advance() runs
+ * (src/sim/v2/land.ts; phase 37 replaced the copy of the matrix phase 35 kept here). At t = 0 the anchored
+ * agricultural mix is the current one. `landUses` is not modified.
  */
-export function dryRunLandFlows(A: Areas): Map<string, number> {
-  const d = PARAMS_V2.land;
-  const flows = new Map<string, number>();
-  const key = (i: LandCode, j: LandCode) => `${i}>${j}`;
-  const add = (i: LandCode, j: LandCode, f: number) => flows.set(key(i, j), (flows.get(key(i, j)) ?? 0) + f);
-  add('BNNP', 'BNP', A.BNNP * d.BNNP_BNP);
-  add('BNNP', 'CC', A.BNNP * d.BNNP_CC);
-  add('BNNP', 'CA', A.BNNP * d.BNNP_CA);
-  add('CA', 'BNNP', A.CA * d.CA_BNNP);
-  add('RES', 'BNP', A.RES * d.RES_BNP);
-  add('FAL', 'BNNP', A.FAL * d.fallowRegen);
-  // Reallocation pool: anchored rents are log(A0), so at the anchor the weights are proportional to area.
-  const w = {} as Record<string, number>;
-  AGRI_CODES.forEach((k) => { w[k] = Math.exp(d.rentBeta * Math.log(Math.max(A[k], 1e-6))); });
-  const tw = AGRI_CODES.reduce((sum, k) => sum + w[k], 0);
-  const poolFrom: [LandCode, number][] = AGRI_CODES.map((k) => [k, A[k] * d.poolShare] as [LandCode, number]);
-  poolFrom.push(['FAL', A.FAL * d.fallowReentry]);
-  poolFrom.forEach(([src, amt]) => {
-    AGRI_CODES.forEach((k) => { if (k !== src) add(src, k, amt * w[k] / tw); });
-  });
-  // Net bilateral flows: the pool is an allocation device, only net transitions are real.
-  [...flows.keys()].forEach((k) => {
-    const [i, j] = k.split('>') as [LandCode, LandCode];
-    const back = key(j, i);
-    if (flows.has(back) && i < j) {
-      const net = flows.get(k)! - flows.get(back)!;
-      flows.set(k, Math.max(net, 0));
-      flows.set(back, Math.max(-net, 0));
-    }
-  });
-  const out = {} as Record<string, number>;
-  flows.forEach((f, k) => { const i = k.split('>')[0]; out[i] = (out[i] ?? 0) + f; });
-  const realised = new Map<string, number>();
-  flows.forEach((f, k) => {
-    const i = k.split('>')[0] as LandCode;
-    const scale = out[i] > 0 ? Math.min(1, A[i] / out[i]) : 1;
-    realised.set(k, f * scale * HA_PER_KHA);
-  });
-  return realised;
+export function dryRunLandFlows(landUses: GameState['landUses'], CP: ControlParams): RealisedLandFlow[] {
+  return realiseLandFlows(landUses, landFlows({ landUses }, {}, CP), 1);
 }
 
 /** Starting emissions (tCO2e/yr) by source: energy at the level's eps0, AFOLU flux and LUC of the dry run. */
-export function startingEmissions(level: number, A: Areas, population: number): ModelState['emissions'] {
+export function startingEmissions(level: number, landUses: GameState['landUses'], population: number, CP: ControlParams): ModelState['emissions'] {
+  const A = areasByCode(landUses);
   const e = PARAMS_V2.energy;
   // No renewables or efficiency yet and income = reference: the electric/other split weighs 1, so
   // energy per capita is the level's eps0 (phase 38 adds the split, renewables and efficiency).
@@ -92,9 +57,8 @@ export function startingEmissions(level: number, A: Areas, population: number): 
   const energy = eps * population;
   const afolu = LAND_CODES.reduce((sum, k) => sum + PARAMS_V2.flux[k] * A[k] * HA_PER_KHA, 0);
   let luc = 0;
-  dryRunLandFlows(A).forEach((amt, k) => {
-    const [i, j] = k.split('>') as [LandCode, LandCode];
-    luc += amt * Math.max(0, PARAMS_V2.stock[i] - PARAMS_V2.stock[j]) * CO2_PER_C;
+  dryRunLandFlows(landUses, CP).forEach((f) => {
+    luc += f.ha * Math.max(0, PARAMS_V2.stock[f.from as LandCode] - PARAMS_V2.stock[f.to as LandCode]) * CO2_PER_C;
   });
   return { energy, afolu, luc, total: energy + afolu + luc };
 }
@@ -118,10 +82,10 @@ function anchorsAndEmissions(state: AnchorInput, CP: ControlParams): { anchors: 
   const y = PARAMS_V2.food.yield;
   // food_production at t = 0 with no policies and no yield shock, net of the starting export share.
   const food0 = (A.CC * y.CC + A.CA * y.CA + A.PRG * y.PRG) * (1 - PARAMS_V2.food.export0);
-  const emissions = startingEmissions(state.currentLevel, A, pop);
+  const emissions = startingEmissions(state.currentLevel, state.landUses, pop, CP);
   const pressures = [st.PP_AGRICOLA, st.PP_AMBIENTALISTA, st.PP_SOCIAL];
   const agriAreas0 = {} as ModelAnchors['agriAreas0'];
-  AGRI_CODES.forEach((k) => { agriAreas0[k] = Math.max(A[k], 1e-6); });
+  AGRI_CODES.forEach((k) => { agriAreas0[k] = Math.max(A[k], PARAMS_V2.land.zeroAnchor); });
 
   const anchors: ModelAnchors = {
     l: {

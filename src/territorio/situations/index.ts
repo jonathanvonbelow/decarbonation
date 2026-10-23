@@ -8,7 +8,7 @@
  * Pure functions over plain values, so the rules are testable without a browser.
  */
 import type { ControlParams, GameState, Indicators, RandomEventEffect, StellaStocks } from '../../types';
-import { applyRandomEventEffects, type DeferredAdjustment, type Rng } from '../../sim';
+import { applyRandomEventEffects, toMapFlow, type DeferredAdjustment, type LandFlow, type Rng } from '../../sim';
 import { CLIMATE_SITUATIONS } from './climate';
 import { ECONOMY_SITUATIONS } from './economy';
 import { PRODUCTION_SITUATIONS } from './production';
@@ -130,6 +130,8 @@ export interface ResolutionResult {
   deferred: DeferredAdjustment[];
   cost: number;
   ok: boolean;
+  /** Land the option moved (phase 37: ± pairs are transfers, loose losses go to fallow), for the map. */
+  flows: LandFlow[];
 }
 
 /**
@@ -158,10 +160,10 @@ export function resolveSituation(
 ): ResolutionResult {
   const def = SITUATION_BY_ID[defId];
   const option = def?.options.find((o) => o.id === optionId) ?? def?.options[def.options.length - 1];
-  if (!def || !option) return { state, deferred: [], cost: 0, ok: false };
+  if (!def || !option) return { state, deferred: [], cost: 0, ok: false, flows: [] };
 
   const cost = situationCost(option.cost ?? 0, state);
-  if (cost > state.stellaSpecificState.Reservas_del_Tesoro) return { state, deferred: [], cost, ok: false };
+  if (cost > state.stellaSpecificState.Reservas_del_Tesoro) return { state, deferred: [], cost, ok: false, flows: [] };
 
   const next: GameState = JSON.parse(JSON.stringify(state));
   next.pacts = state.pacts; // JSON round-trip strips the pact effect functions
@@ -169,9 +171,10 @@ export function resolveSituation(
 
   const deferred: DeferredAdjustment[] = [];
   const logs: string[] = [];
-  applyRandomEventEffects(
+  const transfers = applyRandomEventEffects(
     scaleEffects(option.effects), next.indicators, next.stellaSpecificState, next.landUses, logs, language, deferred,
   );
+  const flows: LandFlow[] = transfers.map(toMapFlow);
   // Effects on indicators the next month recomputes from scratch (CO2, stability, money, pressures)
   // are NOT applied here: they would be erased by that recomputation (phase 34, T-12). They go back
   // to the caller, which queues them in `Session.pendingDeferred` for the next `stepMonth`.
@@ -180,7 +183,7 @@ export function resolveSituation(
   next.indicators.ppAgricola = next.stellaSpecificState.PP_AGRICOLA;
   next.indicators.ppAmbientalista = next.stellaSpecificState.PP_AMBIENTALISTA;
   next.indicators.ppSocial = next.stellaSpecificState.PP_SOCIAL;
-  return { state: next, deferred, cost, ok: true };
+  return { state: next, deferred, cost, ok: true, flows };
 }
 
 /** The option that applies when nobody decided: the last one in the list. */

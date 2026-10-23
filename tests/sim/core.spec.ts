@@ -97,11 +97,12 @@ describe('advance', () => {
    * Phase 36 changes the policy equations on purpose (ramp, fatigue with floor, channels, cost by effort;
    * docs/audit-equations.md), so the numbers were regenerated with `advance` at phase 36: this is now a
    * regression pin of the 2.0-dev engine. Each later phase that changes an equation regenerates it and says
-   * so in docs/DESIGN_DECISIONS_LOG.md.
+   * so in docs/DESIGN_DECISIONS_LOG.md. Phase 37 regenerated them (land matrix 2.0: the 1.1 CC→CA flow is
+   * replaced by the agricultural pool, so CC keeps more area and the 1.1 carbon balance reads more CO2).
    */
-  it('reproduces the phase-36 reference trajectories (annual and monthly)', () => {
+  it('reproduces the phase-37 reference trajectories (annual and monthly)', () => {
     type Ref = [Record<string, number>, number, number];
-    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":42.97959812534434,"foodSecurity":32.74601047477445,"economicSecurity":28.466015314015213,"socialWellbeing":38.73483093454838,"co2EqEmissionsPerCapita":10.11434024660862,"politicalStability":67.33000000000001,"generalScore":508.2317026281901,"pbi":14362.986473223866,"treasuryReserves":-4426.870883463552,"debt":139.25048800470103,"ppAgricola":34.0326067492703,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},139.25048800470103,106.9096694312025],"annual3":[{"biodiversity":43.43044543276577,"foodSecurity":40.4196030109348,"economicSecurity":35.22917878777957,"socialWellbeing":39.460314646698606,"co2EqEmissionsPerCapita":5.777649534864579,"politicalStability":67.03,"generalScore":634.5176881985929,"pbi":17769.021640101357,"treasuryReserves":-3584.297629818493,"debt":1586.4869024549994,"ppAgricola":20.59590381532266,"ppAmbientalista":0,"ppSocial":0.04009569662489598,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1586.4869024549994,73.57153307509047],"monthly":[{"biodiversity":40.56636235431898,"foodSecurity":42.4380133334736,"economicSecurity":27.069298581890013,"socialWellbeing":53.709892160267124,"co2EqEmissionsPerCapita":14.968750275909011,"politicalStability":69.80000000000004,"generalScore":505.79710328174156,"pbi":10964.353398467998,"treasuryReserves":-147.50903381984065,"debt":213.1659681816877,"ppAgricola":17.428643214950355,"ppAmbientalista":4.376196571871164,"ppSocial":2.137654029092321,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,140.17288669929025]};
+    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":42.79827749875433,"foodSecurity":32.74810653080398,"economicSecurity":28.466550075908152,"socialWellbeing":38.72124596973849,"co2EqEmissionsPerCapita":13.856487062284842,"politicalStability":67.33000000000001,"generalScore":476.52458748151645,"pbi":14362.986473223866,"treasuryReserves":-4426.870883463552,"debt":139.25048800470103,"ppAgricola":34.0304935210094,"ppAmbientalista":0,"ppSocial":0,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},139.25048800470103,141.4522622638243],"annual3":[{"biodiversity":43.32153836674381,"foodSecurity":40.42168686155007,"economicSecurity":35.22957891178414,"socialWellbeing":39.45162120166837,"co2EqEmissionsPerCapita":7.96157509079871,"politicalStability":67.03,"generalScore":607.1048084715319,"pbi":17769.021640101357,"treasuryReserves":-3584.297629818493,"debt":1586.4869024549994,"ppAgricola":20.593959876594425,"ppAmbientalista":0,"ppSocial":0.04357307463699245,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1586.4869024549994,95.36683584161274],"monthly":[{"biodiversity":40.55535115665586,"foodSecurity":42.43816551437388,"economicSecurity":27.069333039816907,"socialWellbeing":53.708819884259995,"co2EqEmissionsPerCapita":16.072305354543637,"politicalStability":69.80000000000004,"generalScore":505.5746788026607,"pbi":10964.353398467998,"treasuryReserves":-147.50903381984065,"debt":213.1659681816877,"ppAgricola":17.428604169649866,"ppAmbientalista":4.581368367225352,"ppSocial":2.137654029092321,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,149.5913851147525]};
     const fresh = (level: number) => {
       const s = withActivePolicies(freshState(level), BALANCED);
       s.pacts.biodiversityTreaty.isActive = true;
@@ -224,12 +225,12 @@ describe('anchors', () => {
   });
 
   it('the dry run of the land matrix conserves area and never sends a use below zero', () => {
-    const A = areasByCode(createInitialState(2).gameStatePatch.landUses);
+    const landUses = createInitialState(2).gameStatePatch.landUses;
+    const A = areasByCode(landUses);
     const out: Record<string, number> = {};
     const inn: Record<string, number> = {};
-    dryRunLandFlows(A).forEach((ha, k) => {
+    dryRunLandFlows(landUses, CONTROL_PARAMS).forEach(({ from: i, to: j, ha }) => {
       expect(ha).toBeGreaterThanOrEqual(0);
-      const [i, j] = k.split('>');
       out[i] = (out[i] ?? 0) + ha / 1000;
       inn[j] = (inn[j] ?? 0) + ha / 1000;
     });

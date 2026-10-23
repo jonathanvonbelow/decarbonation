@@ -9,7 +9,7 @@ import { useT, type TranslationKey } from '../i18n';
 import { evaluateTerritorio, leadingRouteId } from './routes';
 import { artRoute, newsArtUrl, themeForNews, themeForSituationNews } from './newsArt';
 import { portraitUrl, type PortraitActor } from './sprites';
-import { canDeclare, lotFor, parcelAt, policyCostOf, policyStatus, publicUseCost, PUBLIC_USES, isProductive, regionAt, type PublicUse } from '../sim';
+import { canDeclare, lotFor, parcelAt, policyCostOf, policyStatus, publicUseCost, PUBLIC_USES, isProductive, landUseOfKind, parcelKindOf, regionAt, type PublicUse } from '../sim';
 import { costShareOf, PID_OF } from '../sim/v2/policies';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
@@ -333,15 +333,16 @@ export function RoutesPanel({ session }: { session: Session }) {
         <h3 className="label-eyebrow mb-1 !text-[11px]">{c.legend.title}</h3>
         <ul className="space-y-1">
           {(Object.values(LandUseType) as LandUseType[])
-            .filter((lu) => session.game.landUses[lu].area > 0)
+            .filter((lu) => (session.game.landUses[lu]?.area ?? 0) > 0)
             .sort((a, b) => session.game.landUses[b].area - session.game.landUses[a].area)
             .map((lu) => {
               const share = (session.game.landUses[lu].area / total) * 100;
+              const kind = parcelKindOf(lu); // FAL is the `fallow` kind of the map
               return (
                 <li key={lu} className="flex items-center gap-2">
-                  <span className="w-24 shrink-0 truncate text-[11px] text-ash">{c.kinds[lu as keyof Copy['kinds']]}</span>
+                  <span className="w-24 shrink-0 truncate text-[11px] text-ash">{c.kinds[kind as keyof Copy['kinds']]}</span>
                   <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-basalt-700">
-                    <span className="block h-full rounded-full" style={{ width: `${share}%`, background: SWATCH[lu] ?? 'var(--color-ash)' }} />
+                    <span className="block h-full rounded-full" style={{ width: `${share}%`, background: SWATCH[kind] ?? 'var(--color-ash)' }} />
                   </span>
                   <span className="tnum w-10 shrink-0 text-right text-[11px] text-bone">{fmt.pct(share, 0)}</span>
                 </li>
@@ -435,7 +436,6 @@ export function NewsPanel({ session }: { session: Session }) {
 
 /* ── Parcel card ───────────────────────────────────────────────────────────────────────────── */
 
-const LAND_USES = Object.values(LandUseType) as LandUseType[];
 
 function Effect({ label, value }: { label: string; value: number }) {
   const arrows = Math.abs(value) < 0.05 ? '·' : (value > 0 ? '▲' : '▼').repeat(Math.abs(value) >= 0.3 ? 2 : 1);
@@ -454,7 +454,8 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
   const parcel = parcelAt(session.territory, at.x, at.y);
   if (!parcel) return null;
   const kind = parcel.kind;
-  const lu = LAND_USES.includes(kind as LandUseType) ? (kind as LandUseType) : null;
+  // Fallow parcels read the model's fallow land (FAL, phase 37).
+  const lu = isProductive(kind) ? landUseOfKind(kind) : null;
   const hint = (c.kindHints as Record<string, string>)[kind] ?? c.kindHints.context;
   const carbon = lu ? rawCoefficient('carbon', lu, session.game.landUses) : 0;
   const region = regionAt(session.territory, at.x, at.y);

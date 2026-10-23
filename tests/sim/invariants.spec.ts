@@ -20,6 +20,8 @@ import type { Pact, PactImpulses, PolicyState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
 const ALL_POLICY_IDS = Object.values(Policy);
+const totalArea = (s: { landUses: Record<string, { area: number }> }) =>
+  Object.values(s.landUses).reduce((sum, lu) => sum + lu.area, 0);
 const YEARS = 20;
 const RUNS = 30;
 
@@ -43,7 +45,7 @@ function runStrategy(seed: number, activationPlan: { year: number; policy: Polic
 /**
  * Same as `runStrategy`, but with random events suppressed (rng pinned near 1, so every
  * `triggerRoll < triggerChance` comparison fails). Isolates the deterministic transition core
- * from event-driven shocks — see the INV-01 note below for why that split matters.
+ * from event-driven shocks (since phase 37 INV-01 holds with events too).
  */
 function runDeterministicStrategy(activationPlan: { year: number; policy: Policy }[]) {
   let state = freshState(1);
@@ -58,32 +60,39 @@ function runDeterministicStrategy(activationPlan: { year: number; policy: Policy
 }
 
 describe('sim invariants', () => {
-  // INV-01 is checked against the *deterministic* transition core (no random events), not the
-  // full model. With real randomness enabled, a fast-check run turned up a genuine ~16 kHa area
-  // loss (seed 525859253, do-nothing strategy) that traces to a random event's `landUseChange`
-  // effect moving area on one land use with no paired transfer elsewhere — the transition matrix
-  // itself conserves area exactly (confirmed algebraically: the four transfer terms cancel to
-  // zero across BNNP/BNP/CA/CC, see landUse.ts) and a manual trace confirmed the loss happens
-  // once, early, and total area is exactly conserved before/after. This is docs/audit-equations.md
-  // candidate item L-1 ("¿Toda tasa A→B resta de A exactamente lo que suma a B?") — the random
-  // events' land-use effects need the same audit as the core transitions, out of scope for the
-  // phase-2 extraction itself. Logged in docs/DESIGN_DECISIONS_LOG.md.
-  // Model 1.1 (phase 34, N-09/T-08): the severe drought is the documented case — the area it takes
-  // from CC and CA still has no destination in 1.1 (phase 37's fallow resolves it); its chance now
-  // reads the level's own total area instead of level 1's fixed 500 kHa.
-  it('INV-01: total land area is conserved (±0.01 kHa) on the deterministic transition core', () => {
+  // INV-01 (model 2.0, phase 37): every land transition is a transfer — the matrix, the events (losses go
+  // to fallow) and the situations — so total area is conserved to rounding *with random events active*.
+  // Until phase 36 this was checked only on the deterministic core: the severe drought removed CC and CA
+  // area with no destination (docs/audit-equations.md L-1, the ±0.01 kHa exception this test used to have).
+  it('INV-01: total land area is conserved (1e-9 kHa) every year for 30 years, with random events, 50 seeds', () => {
     fc.assert(
       fc.property(
+        fc.integer({ min: 1, max: 1_000_000 }),
+        fc.constantFrom(1, 2, 3),
         fc.array(fc.constantFrom(...ALL_POLICY_IDS), { minLength: 0, maxLength: 5 }),
-        (policies) => {
-          const plan = policies.map((policy, i) => ({ year: i, policy }));
-          const state = runDeterministicStrategy(plan);
-          const total = (Object.values(state.landUses) as { area: number }[]).reduce((s, lu) => s + lu.area, 0);
-          expect(Math.abs(total - TOTAL_LAND_AREA)).toBeLessThan(0.01);
+        (seed, level, policies) => {
+          let state = withActivePolicies(freshState(level), policies);
+          const total0 = totalArea(state);
+          for (let y = 0; y < 30; y++) {
+            state = stepYear(state, makeRng(seed, state.year + 1)).next;
+            expect(Math.abs(totalArea(state) - total0)).toBeLessThan(1e-9);
+          }
         },
       ),
-      { numRuns: RUNS },
+      { numRuns: 50 },
     );
+  });
+
+  it('INV-01: area is conserved when an event fires every year (rng pinned at 0) and on the deterministic core', () => {
+    [() => 0, () => 0.999].forEach((rng) => {
+      [1, 2, 3].forEach((level) => {
+        let state = withActivePolicies(freshState(level), [Policy.IntensiveAgriculture, Policy.Agroecological]);
+        const total0 = totalArea(state);
+        for (let y = 0; y < 30; y++) state = stepYear(state, rng).next;
+        expect(Math.abs(totalArea(state) - total0)).toBeLessThan(1e-9);
+      });
+    });
+    expect(Math.abs(totalArea(runDeterministicStrategy([])) - TOTAL_LAND_AREA)).toBeLessThan(1e-9);
   });
 
   it('INV-02: no land use area is ever negative (deterministic core and with random events)', () => {

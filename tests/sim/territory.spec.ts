@@ -44,11 +44,15 @@ function runMonthsWithMap(state: GameState, territory: Territory, months: number
 }
 
 /** Transitions the model makes (landUse.ts) plus drought losses; nothing else may appear on the map. */
+// Transitions of the model-2.0 matrix (src/sim/v2/land.ts, phase 37): frontier, fallow regrowth, the
+// agricultural pool among CC/CA/PRG/PF and from fallow, and drought losses to fallow.
+const POOL = [LU.ConventionalCrops, LU.AgroecologicalCrops, LU.GrasslandsPastures, LU.ForestPlantations];
 const MODEL_TRANSITIONS = new Set([
   `${LU.UnprotectedNativeForest}>${LU.ProtectedNativeForest}`, `${LU.UnprotectedNativeForest}>${LU.ConventionalCrops}`,
   `${LU.UnprotectedNativeForest}>${LU.AgroecologicalCrops}`, `${LU.AgroecologicalCrops}>${LU.UnprotectedNativeForest}`,
-  `${LU.ConventionalCrops}>${LU.AgroecologicalCrops}`, `${LU.ConventionalCrops}>fallow`, `${LU.AgroecologicalCrops}>fallow`,
+  `${LU.ConventionalCrops}>fallow`, `${LU.AgroecologicalCrops}>fallow`, `fallow>${LU.UnprotectedNativeForest}`,
   `${LU.RestorationForest}>${LU.ProtectedNativeForest}`,
+  ...POOL.flatMap((i) => [`fallow>${i}`, ...POOL.filter((j) => j !== i).map((j) => `${i}>${j}`)]),
 ]);
 
 describe('territory layout', () => {
@@ -368,5 +372,43 @@ describe('developTerritory (towns follow the model)', () => {
     expect(dev.dirty).toBeLessThanOrEqual(1);
     const richer = { ...state, indicators: { ...state.indicators, pbi: state.indicators.pbi * 1.5 } };
     expect(developmentOf(richer).growth).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('fallow is model area (phase 37 §5)', () => {
+  /** Level 2 with `kHa` of conventional crops already in fallow, and a map that shows it. */
+  const withFallow = (kHa: number) => {
+    const state = freshState(2);
+    state.landUses[LU.ConventionalCrops].area -= kHa;
+    state.landUses[LU.Fallow].area += kHa;
+    return { state, territory: createTerritory(state.landUses, 4) };
+  };
+
+  it('parcelTargets reads the fallow parcels from FAL and keeps the map total', () => {
+    const { state, territory } = withFallow(10);
+    const target = parcelTargets(state.landUses, PRODUCTIVE_PARCELS, territory.kHaPerParcel);
+    expect(target.fallow).toBeCloseTo(10 / territory.kHaPerParcel, 9);
+    expect(Object.values(target).reduce((s, n) => s + n, 0)).toBeCloseTo(PRODUCTIVE_PARCELS, 6);
+    expect(kindsCount(territory, 'fallow')).toBe(Math.round(10 / territory.kHaPerParcel));
+  });
+
+  it('declaring a public use on fallow takes the area out of FAL', () => {
+    const { state, territory } = withFallow(10);
+    const p = territory.parcels.find((q) => q.kind === 'fallow')!;
+    const r = expectOk(declarePublicUse(state, territory, p.x, p.y, 'restoration', CONTROL_PARAMS));
+    const fromFallow = r.cells.filter((i) => territory.parcels[i].kind === 'fallow').length * territory.kHaPerParcel;
+    expect(fromFallow).toBeGreaterThan(0);
+    expect(r.state.landUses[LU.Fallow].area).toBeCloseTo(10 - fromFallow, 9);
+    const total = (s: GameState) => (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0);
+    expect(total(r.state)).toBeCloseTo(total(state), 9);
+  });
+
+  it('fallow regrows on the map: fallow parcels turn into forest and farmland as the model moves them', () => {
+    const { state, territory } = withFallow(20);
+    const before = kindsCount(territory, 'fallow');
+    const { state: end, territory: t, changes } = runMonthsWithMap(state, territory, 60);
+    expect(end.landUses[LU.Fallow].area).toBeLessThan(20 * 0.3);
+    expect(kindsCount(t, 'fallow')).toBeLessThan(before * 0.4);
+    expect(changes.some((c) => c.from === 'fallow' && c.to === LU.UnprotectedNativeForest)).toBe(true);
   });
 });

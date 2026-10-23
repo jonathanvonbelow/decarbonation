@@ -209,6 +209,16 @@ export const INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
     emissionRate: 0.2, sequestrationRate: 0.3,
     document: "Solar, eolica y almacenamiento en tierra publica. El suelo en si es casi neutro en carbono (mantenimiento contra cobertura vegetal bajo los paneles); su efecto real es desplazar generacion fosil, que el balance de carbono aplica aparte en proporcion al area."
   },
+  // ── Barbecho (modelo 2.0, fase 37, mejora-general/files/37 §1) ─────────────────────────────
+  // Arranca en 0 kHa en los tres niveles: lo crean los eventos y situaciones que sacan tierra de uso
+  // (la sequía ya no hace desaparecer área). Rebrota hacia BNNP (5 %/año) y vuelve al pool agrícola
+  // (25 %/año), src/sim/v2/land.ts. Tasas 1.1 de puente hasta el carbono físico de la fase 38 (que usa
+  // PARAMS_V2.flux.FAL = −2,0 tCO2e/ha/año): emite poco y rebrota más que un cultivo. Criterio experto.
+  [LandUseType.Fallow]: {
+    name: "Barbecho / tierra degradada", area: 0, stellaName: "Barbecho_(FAL)",
+    emissionRate: 1.0, sequestrationRate: 2.5,
+    document: "Tierra que una sequia, una crisis o una decision dejo fuera de uso. No produce alimentos ni ingresos; rebrota de a poco hacia bosque nativo y vuelve a cultivarse cuando las rentas agricolas la atraen."
+  },
 };
 export const TOTAL_LAND_AREA = Object.values(INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -223,6 +233,7 @@ export const LEVEL_2_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.PublicWetland]: { ...INITIAL_LAND_USES[LandUseType.PublicWetland] },
   [LandUseType.RestorationForest]: { ...INITIAL_LAND_USES[LandUseType.RestorationForest] },
   [LandUseType.EnergyPark]: { ...INITIAL_LAND_USES[LandUseType.EnergyPark] },
+  [LandUseType.Fallow]: { ...INITIAL_LAND_USES[LandUseType.Fallow] },
 };
 export const LEVEL_2_TOTAL_LAND_AREA = Object.values(LEVEL_2_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -237,6 +248,7 @@ export const LEVEL_3_INITIAL_LAND_USES: Record<LandUseType, LandUse> = {
   [LandUseType.PublicWetland]: { ...INITIAL_LAND_USES[LandUseType.PublicWetland] },
   [LandUseType.RestorationForest]: { ...INITIAL_LAND_USES[LandUseType.RestorationForest] },
   [LandUseType.EnergyPark]: { ...INITIAL_LAND_USES[LandUseType.EnergyPark] },
+  [LandUseType.Fallow]: { ...INITIAL_LAND_USES[LandUseType.Fallow] },
 };
 export const LEVEL_3_TOTAL_LAND_AREA = Object.values(LEVEL_3_INITIAL_LAND_USES).reduce((sum, lu) => sum + lu.area, 0);
 
@@ -406,7 +418,8 @@ export const CONTROL_PARAMS: ControlParams = {
   Tasa_de_BNNP_a_CA_Base: 0.002,
   Tasa_de_BNNP_a_CC_Base: 0.01,
   Tasa_de_CA_a_BNNP_Base: 0.001,
-  Tasa_de_CC_a_CA_Base: 0.005,
+  // (Tasa_de_CC_a_CA_Base, 0,005, se borró en la fase 37: el pool agrícola por renta de src/sim/v2/land.ts
+  // reemplaza el flujo CC→CA de 1.1.)
 
   // --- REBALANCEO DE DINÁMICAS (v3) ---
   // Sistema de Presión por Impulso/Disipación y rebalanceo de impactos.
@@ -462,8 +475,9 @@ export const CONTROL_PARAMS: ControlParams = {
   PPSocial_Increase_Factor_Per_Tax_Point: 0.4,
   CO2_EMISSIONS_SCALING_FACTOR: 40000,
 
-  // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Una parcela son 5 kHa, así que
-  // proteger sale 100 (un mes de recaudación del Nivel 2) y el parque energético 400. El orden
+  // Territorio preview (21_fusion_ecosim.md §5), costos por kHa. Un lote declarado son 5 kHa (LOT_KHA,
+  // 50 parcelas de 0,1 kHa del mapa; src/sim/territory.ts), así que proteger un lote
+  // sale 100 (un mes de recaudación del Nivel 2) y el parque energético 400. El orden
   // refleja lo que cuesta cada cosa: declarar protección sobre bosque que ya no produce es barato;
   // comprar tierra productiva para restaurar o para un parque, no.
   Costo_Declaracion_Area_Protegida_por_kHa: 20,
@@ -474,13 +488,14 @@ export const CONTROL_PARAMS: ControlParams = {
   // Sólo lo lee stepMonth con `publicUseUpkeep`; el juego de 3 niveles nunca lo aplica.
   Costo_Mantenimiento_Uso_Publico_por_kHa_Anual: 0.8,
   // Sacar tierra productiva de producción tensiona al gremio agrícola: 0,08 por kHa = 0,4 puntos
-  // de presión por parcela convertida. Proteger bosque no aplica este impulso.
+  // de presión por lote de 5 kHa convertido. Proteger bosque no aplica este impulso.
   Impulso_PP_Agricola_por_kHa_Convertida: 0.08,
   // Si todo el territorio fuera parque energético desplazaría el 60 % de las emisiones totales; el
   // efecto entra en proporción al área (10 % del territorio => -6 %).
   Factor_Desplazamiento_Emisiones_Parque_Energetico: 0.6,
-  // La restauración madura hacia bosque nativo: 4 % del área por año, ~25 años para convertirse.
-  Tasa_de_RES_a_BNNP_Base: 0.04,
+  // La restauración madura hacia bosque nativo *protegido* (BNP, fase F8-1): 4 % del área por año, ~25 años
+  // para convertirse. Hasta la fase 37 se llamaba Tasa_de_RES_a_BNNP_Base aunque el destino ya era BNP.
+  Tasa_de_RES_a_BNP_Base: 0.04,
 
   // --- Modelo 2.0 (fase 35, 35_motor_v2_estructura.md §5) ---
   // Escalares que el facilitador podrá mover en vivo (los expone la fase 50). En la fase 35 todavía no
@@ -909,6 +924,9 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.PublicWetland]: 0.55,
       [LandUseType.RestorationForest]: 0.30,
       [LandUseType.EnergyPark]: -0.05,
+      // Barbecho (fase 37): hábitat bajo pero no nulo (rebrote), entre el cultivo agroecológico y la
+      // plantación (PARAMS_V2.habitat.FAL = 0,3 en el modelo 2.0, fase 40). Puente 1.1, criterio experto.
+      [LandUseType.Fallow]: 0.05,
     }
   },
   FOOD_SECURITY: {
@@ -937,6 +955,8 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.PublicWetland]: -0.15,
       [LandUseType.RestorationForest]: -0.15,
       [LandUseType.EnergyPark]: -0.10,
+      // Barbecho (fase 37): peso productivo 0 (no produce alimentos).
+      [LandUseType.Fallow]: 0,
     },
     BIODIVERSITY_IMPACT_ON_FOOD_SECURITY: 0.005, // e.g., 0.5% FS change per 10 points of biodiversity
     ECONOMIC_SECURITY_IMPACT_ON_FOOD_SECURITY: 0.008, // e.g., 0.8% FS change per 10 points of econ security
@@ -966,6 +986,8 @@ export const INDICATOR_IMPACT_WEIGHTS = {
       [LandUseType.PublicWetland]: -0.02,
       [LandUseType.RestorationForest]: -0.04,
       [LandUseType.EnergyPark]: 0.12,
+      // Barbecho (fase 37): peso productivo 0 (no genera ingresos).
+      [LandUseType.Fallow]: 0,
     },
     BIODIVERSITY_IMPACT_ON_ECONOMIC_SECURITY: 0.002, // e.g. Eco-tourism, genetic resources
     VOLATILITY_FACTOR: -0.01, // e.g. if food security is very low, econ security takes a hit

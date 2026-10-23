@@ -10,9 +10,10 @@
  * Phase 36 replaces steps 2 and 4 of 2.0 (policy clocks, efficiency per channel, cost by effort; see
  * src/sim/v2/policies.ts): from here on the numbers differ from 1.1 on purpose (docs/audit-equations.md).
  *
- * Known cost kept from 1.1: computeLandUseFlows runs twice per step (once for `flows`, once inside
- * updateLandUse); phase 37 replaces both with the transition matrix. Each later phase replaces one step with its 2.0 equation; see
- * src/sim/v2/README.md for which phase implements what.
+ * Phase 37 replaces step 5 (land use): the conservative transition matrix with fallow and the agricultural
+ * pool by anchored rents (src/sim/v2/land.ts), applied exactly with dt (no Euler `toward`), and event /
+ * situation land effects become transfers (losses to fallow). Each later phase replaces one step with its
+ * 2.0 equation; see src/sim/v2/README.md for which phase implements what.
  *
  * Order of model 2.0 (target; each step reads what the previous ones already updated):
  *  1. population            P *= (1 + g_P)^dt
@@ -27,7 +28,8 @@
  *
  * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
  *  0 population, 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event roll, 3 policy
- *  efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact costs, 5 pact effects, 6 land use, 7 finances, 8 indicators B -> F -> E -> C -> Pc,
+ *  efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact costs, 5 pact
+ *  effects, 6 land use (2.0 step 5, phase 37), 7 finances, 8 indicators B -> F -> E -> C -> Pc,
  *  9 CO2 per capita, 10 pressures, 11 sync + clamp, 11.5 deferred effects, 12 score, 13 game over,
  *  14 fatigue warning (phase 36).
  *
@@ -45,7 +47,7 @@
  * Pure: never mutates its input; deterministic for a given (state, dt, rng, CP, opts). Nothing here
  * imports React or uses Math.random / Date.now.
  */
-import { ALL_RANDOM_EVENTS } from '../../constants';
+import { ALL_RANDOM_EVENTS, INITIAL_LAND_USES } from '../../constants';
 import type { ControlParams, GameState, Indicators, Pact, PolicyState, RandomEvent, StellaStocks } from '../../types';
 import { LandUseType } from '../../types';
 import type { Language } from '../../hooks/useLanguage';
@@ -59,14 +61,17 @@ import {
   calculateBiodiversityChange, calculateEconomicSecurityChange, calculateFoodSecurityChange,
   calculatePoliticalCollapseChange, calculateSocialConflictChange,
 } from '../indicators';
-import { computeLandUseFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, updateLandUse, type LandUseChangeFactors } from '../landUse';
+import {
+  applyLandFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
+  type TransitionFlow,
+} from './land';
 import { checkEfficiencyWarning } from '../policies';
 import { computeEfficiencies, policyCost, tickPolicyClocks, type PolicyEfficiency } from './policies';
 import type { Pid } from './params';
 import { updatePressures } from '../pressures';
 import type { Rng } from '../rng';
 import { computeScore } from '../score';
-import type { LandFlow } from '../territory';
+import { toMapFlow, type LandFlow } from '../territory';
 import { buildTrace, type SimTrace } from '../trace';
 
 export const MONTHS_PER_YEAR = 12;
@@ -117,10 +122,15 @@ export interface AdvanceResult {
   /** Random event that fired this step, if any (its effects are already applied). */
   event: RandomEvent | null;
   /**
-   * Land transfers of this step, one per edge of the transition matrix (× dt), plus area removed by
-   * an event (to 'fallow'). The Territorio map moves parcels along these.
+   * Land transfers of this step as the Territorio map draws them: what an event moved (losses to
+   * 'fallow') and every realised edge of the transition matrix (kHa this step). The map moves parcels
+   * along these.
    */
   flows: LandFlow[];
+  /** Realised transitions of the matrix this step, in kHa and ha (phase 37; the carbon of phase 38 reads them). */
+  landFlowsRealised: RealisedLandFlow[];
+  /** Land transfers an event made this step (phase 37 section 3). */
+  eventLandTransfers: TransitionFlow[];
   /** Upkeep charged this step for the land under public use (0 unless `publicUseUpkeep`). */
   upkeep: number;
   /** Area change per land use this step, after − before, in kHa. */
@@ -155,7 +165,7 @@ export function rollMonthlyEvent(
   month: number,
   language: Language = 'es',
   deferred?: DeferredAdjustment[],
-): { event: RandomEvent | null; logs: string[]; chatMessage: string | null } {
+): { event: RandomEvent | null; logs: string[]; chatMessage: string | null; landTransfers: TransitionFlow[] } {
   const logs: string[] = [];
   for (const event of events) {
     if (event.minLevel && workingState.currentLevel < event.minLevel) continue;
@@ -164,13 +174,13 @@ export function rollMonthlyEvent(
     const description = getEventDescription(event.id, language, event.description);
     const stamp = `${String(month + 1).padStart(2, '0')}/${workingState.year}`;
     logs.push(language === 'en' ? `EVENT (${stamp}): ${name} - ${description}` : `EVENTO (${stamp}): ${name} - ${description}`);
-    applyRandomEventEffects(
+    const landTransfers = applyRandomEventEffects(
       event.effects(workingState), workingState.indicators, workingState.stellaSpecificState,
       workingState.landUses, logs, language, deferred,
     );
-    return { event, logs, chatMessage: `${name}: ${description}` };
+    return { event, logs, chatMessage: `${name}: ${description}`, landTransfers };
   }
-  return { event: null, logs, chatMessage: null };
+  return { event: null, logs, chatMessage: null, landTransfers: [] };
 }
 
 /** Protected forest the player declared, never more than the protected forest that exists. */
@@ -180,9 +190,11 @@ export function declaredProtectedOf(state: GameState): number {
 
 function areasOf(state: GameState): Record<LandUseType, number> {
   const out = {} as Record<LandUseType, number>;
-  (Object.values(LandUseType) as LandUseType[]).forEach((k) => { out[k] = state.landUses[k].area; });
+  LAND_USE_TYPES.forEach((k) => { out[k] = state.landUses[k]?.area ?? 0; });
   return out;
 }
+
+
 
 /**
  * One step of the model. dt = 1 (3-level game, `stepYear`) or 1/12 (Territorio, `stepMonth`).
@@ -198,6 +210,8 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
 
   const next: GameState = JSON.parse(JSON.stringify(state));
   restorePactFunctions(next.pacts);
+  // A state built before phase 37 has no fallow entry: it starts at 0 kHa (the area is unchanged).
+  if (!next.landUses[LandUseType.Fallow]) next.landUses[LandUseType.Fallow] = { ...INITIAL_LAND_USES[LandUseType.Fallow] };
 
   const logs: string[] = [];
   const chatMessages: StepYearChatMessage[] = [];
@@ -241,19 +255,14 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   next.currentEvent = null;
   const deferred: DeferredAdjustment[] = [];
   const events = opts.events ?? ALL_RANDOM_EVENTS;
-  const areasBeforeEvent = areasOf(next);
   const rolled = annual
     ? rollEvent(next, events, next.yearsSimulatedInCurrentLevel - 1, draw, language, deferred)
     : rollMonthlyEvent(next, events, draw, month, language, deferred);
   logs.push(...rolled.logs);
   if (rolled.chatMessage) chatMessages.push({ text: rolled.chatMessage, emphasisType: 'game_event' });
   if (rolled.event) next.currentEvent = rolled.event;
-  const flows: LandFlow[] = [];
-  const areasAfterEvent = areasOf(next);
-  (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
-    const lost = areasBeforeEvent[k] - areasAfterEvent[k];
-    if (lost > 0) flows.push({ from: k, to: 'fallow', kHa: lost });
-  });
+  // Land an event moved (phase 37: transfers, losses to fallow), drawn on the map with the matrix flows.
+  const flows: LandFlow[] = rolled.landTransfers.map(toMapFlow);
 
   // 3 (2.0 step 4). Effective efficiency per policy and channel (phase 36): stores the base η in
   //    `currentEfficiency`; the 1.1 submodels read `eff[pid].prod` through getPolicyEfficiency.
@@ -293,30 +302,21 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
         tasa_BNNP_a_CC: landUseChangeFactors.tasa_BNNP_a_CC * (f.tasa_BNNP_a_CC ?? 1),
         tasa_BNNP_a_CA: landUseChangeFactors.tasa_BNNP_a_CA * (f.tasa_BNNP_a_CA ?? 1),
         tasa_CA_a_BNNP: landUseChangeFactors.tasa_CA_a_BNNP * (f.tasa_CA_a_BNNP ?? 1),
-        tasa_CC_a_CA: landUseChangeFactors.tasa_CC_a_CA * (f.tasa_CC_a_CA ?? 1),
       };
     }
   });
 
-  // 6. Land-use transitions: the annual transfer × dt.
-  const annualFlows = computeLandUseFlows(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
-  flows.push(
-    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ProtectedNativeForest, kHa: annualFlows.BNNP_to_BNP * dt },
-    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.ConventionalCrops, kHa: annualFlows.BNNP_to_CC * dt },
-    { from: LandUseType.UnprotectedNativeForest, to: LandUseType.AgroecologicalCrops, kHa: annualFlows.BNNP_to_CA * dt },
-    { from: LandUseType.AgroecologicalCrops, to: LandUseType.UnprotectedNativeForest, kHa: annualFlows.CA_to_BNNP * dt },
-    { from: LandUseType.ConventionalCrops, to: LandUseType.AgroecologicalCrops, kHa: annualFlows.CC_to_CA * dt },
-    { from: LandUseType.RestorationForest, to: LandUseType.ProtectedNativeForest, kHa: annualFlows.RES_to_BNP * dt },
-  );
-  const annualLandUses = updateLandUse(next.landUses, next.policies, currentLevel, landUseChangeFactors, CP);
-  (Object.values(LandUseType) as LandUseType[]).forEach((k) => {
-    next.landUses[k].area = Math.max(0, toward(next.landUses[k].area, annualLandUses[k].area, dt));
-  });
+  // 6 (2.0 step 5). Land use: the conservative transition matrix of model 2.0 (phase 37, src/sim/v2/land.ts):
+  //    frontier flows (η^land), fallow regrowth, agricultural pool by anchored rents (η^prod), netted, applied
+  //    exactly with dt and scaled so no use goes below zero. Σ A is conserved.
+  const realised: RealisedLandFlow[] = applyLandFlows(next.landUses, landFlows(next, eff, CP, landUseChangeFactors), dt);
+  realised.forEach((f) => { if (f.kHa > 0) flows.push(toMapFlow(f)); });
   // Public restoration that matures into protected forest stays public (model 1.1, phase 34, T-07),
   // kept within the protected forest that exists. Monthly step only, as in 1.1 (the old stepYear never
   // touched it; Territorio is the only game with declared land).
   if (!annual) {
-    if (annualFlows.RES_to_BNP > 0) next.declaredProtectedArea = (next.declaredProtectedArea ?? 0) + annualFlows.RES_to_BNP * dt;
+    const resToBnp = realised.find((f) => f.from === LandUseType.RestorationForest && f.to === LandUseType.ProtectedNativeForest)?.kHa ?? 0;
+    if (resToBnp > 0) next.declaredProtectedArea = (next.declaredProtectedArea ?? 0) + resToBnp;
     if (next.declaredProtectedArea !== undefined) {
       next.declaredProtectedArea = Math.min(next.declaredProtectedArea, next.landUses[LandUseType.ProtectedNativeForest].area);
     }
@@ -452,12 +452,14 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
 
   const areasAfter = areasOf(next);
   const landUseDelta = {} as Record<LandUseType, number>;
-  (Object.values(LandUseType) as LandUseType[]).forEach((k) => { landUseDelta[k] = areasAfter[k] - areasBefore[k]; });
+  LAND_USE_TYPES.forEach((k) => { landUseDelta[k] = areasAfter[k] - areasBefore[k]; });
 
   return {
     next,
     event: rolled.event,
     flows,
+    landFlowsRealised: realised,
+    eventLandTransfers: rolled.landTransfers,
     upkeep,
     landUseDelta,
     month: nextMonth,

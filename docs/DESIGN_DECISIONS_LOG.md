@@ -2200,3 +2200,102 @@ firma.
 
 **Deudas.** Escala del costo (44). Los submodelos 1.1 leen solo el canal `prod` (y CN sus instrumentos de renovables y
 captura directamente en `carbon.ts`); `land`, `social`, `elec`/`other`/`tax` todavía no tienen lector (37–45).
+
+
+## 2026-10-22 — v6 fase 37: uso del suelo — matriz conservativa y barbecho
+
+**Qué se hizo** (`mejora-general/files/37_uso_del_suelo_matriz.md`; rama `v6-modelo-v2`).
+- `LandUseType.Fallow` (`'FAL'`): 0 kHa en los tres niveles (`INITIAL_LAND_USES` y variantes N2/N3), nombre
+  "Barbecho / tierra degradada" / "Fallow / degraded land" (`gameData.ts`, que además gana HUM/RES/ENR, que faltaban),
+  pesos 1.1 de puente (biodiversidad 0,05; alimentos y economía 0 = peso productivo 0) y tasas 1.1 de carbono de puente
+  (1,0 / 2,5) hasta la fase 38, que usa `PARAMS_V2.flux.FAL` (−2,0). `advance()` agrega la entrada FAL a un estado viejo.
+- `src/sim/v2/land.ts` (port de `land_step`, `move_land`, `apply_land_effects`): `landFlows` (frontera 1.1 con η^land,
+  RES→BNP, FAL→BNNP 0,05, pool agrícola 0,02·A_k + 0,25·A_FAL con rentas ancladas `ln A_k,0 + Δr_k(η^prod)` y β = 1, CN
+  vía η_CN^tax, neteo de todos los pares), `realiseLandFlows` / `applyLandFlows` (dt exacto, escala por fuente, flujos
+  en kHa y ha), `transferArea`, `applyLandEffects`. Coeficientes en `PARAMS_V2.land` (`frontier`, `rent`,
+  `rentCarbonTaxCC`, `zeroAnchor`); las tasas base de frontera siguen en `CONTROL_PARAMS`.
+- `advance()` paso 5 usa la matriz 2.0 (sin `toward`); `AdvanceResult.landFlowsRealised` (kHa + ha, para la fase 38) y
+  `eventLandTransfers`; `flows` del mapa = transferencias del evento + flujos realizados. Se borra `src/sim/landUse.ts`
+  (nadie más lo usaba; `index.ts` reexporta `v2/land`). `restoración → BNP declarada` lee el flujo realizado.
+- Eventos y situaciones: `applyRandomEventEffects` devuelve las transferencias; los efectos de suelo pasan por
+  `applyLandEffects` (pares ± directos; suelto negativo → FAL; suelto positivo desde FAL, PRG, CC). `rollEvent` /
+  `rollMonthlyEvent` devuelven `landTransfers`; `resolveSituation` devuelve `flows` y la sesión de Territorio los pasa
+  a `syncTerritory` (al decidir y al vencer).
+- Anclas: `dryRunLandFlows(landUses, CP)` = `realiseLandFlows(landFlows(...), 1)` (deuda de la fase 35 saldada; c₀ igual
+  al prototipo, `core.spec.ts`). `startingEmissions` recibe `landUses` y `CP`.
+- Territorio (`territory.ts`): `ProductiveKind` = usos del mapa (`MapLandUse`, todos menos FAL) + `'fallow'`;
+  `parcelKindOf` / `landUseOfKind`; `parcelTargets` lee `fallow` de FAL (más la diferencia si el mapa es mayor que el
+  área del modelo); `createTerritory` asigna barbecho inicial si lo hay; `SOURCES` agrega el pool, BNNP ← barbecho;
+  `declarePublicUse` sobre barbecho descuenta de FAL. HUD, panel de rutas, ficha de parcela, capa de calor y contexto
+  del asesor leen FAL. Textos de barbecho es/en actualizados.
+- `Tasa_de_RES_a_BNNP_Base` → `Tasa_de_RES_a_BNP_Base` (comentado); se borran `Tasa_de_CC_a_CA_Base` (y su descripción)
+  y `tasa_CC_a_CA` de los multiplicadores de pactos. Comentario de costos por "parcela" de `constants.ts` corregido (lote).
+- Tests: `tests/sim/land.v2.spec.ts` (prototipo: N1/N2 sin políticas, AS, PAI+PEA a 2 decimales; AS ≥ 3 y PAI+PEA ≥ 7
+  puntos; equilibrio anclado < 0,1 con la frontera apagada vía `CP`; neteo con fast-check; conservación y no
+  negatividad para cualquier dt; pactos; sequía → FAL → BNNP/pool; pares; `transferArea`). INV-01 con eventos a 1e-9
+  (50 semillas × 30 años, tres niveles) y con un evento por año; se borra la excepción ±0,01. `territory.spec.ts`:
+  transiciones del modelo 2.0 y bloque "barbecho es área del modelo". Trayectorias de referencia de `core.spec.ts`
+  regeneradas (fase 37; cambian a propósito).
+
+**Verificación contra el prototipo.** Participación en lo agrícola a 30 años sin eventos, TS = prototipo a 2 decimales:
+N1 sin políticas CC 25,0 → 27,94; AS → CA 29,48 (N1) / 17,66 (N2); PAI+PEA → CC 35,26 (N1) / 38,15 (N2). Coinciden con
+la spec (27,9; 29,5 / 17,7; 35,3 / 38,2).
+
+**Desvíos y discrepancias** (filas 37 de `docs/v6-spec-vs-motor.md`).
+- *Neteo*: el prototipo netea todos los pares (también BNNP⇄CA), la spec decía "del pool". Se sigue el prototipo y se
+  corrigió el texto de la spec §2.
+- *Situaciones*: pares ± = transferencia directa (regla del prototipo de la fase 32); texto de la spec §3 corregido.
+- *Tasas base*: la spec las pone en `PARAMS_V2.land`; ya estaban en `CONTROL_PARAMS` con los mismos valores. Se deja una
+  sola fuente (`CONTROL_PARAMS`); el test de "PARAMS_V2.land modificado" apaga la frontera pasando un `CP`.
+- *Canales*: frontera con η^land y rentas con η^prod (spec); el prototipo usa el `eta` uniforme. Con reparto parejo dan
+  lo mismo, de ahí la coincidencia exacta.
+- *m_protect / m_deforest*: se leen del `landUseChangeFactors` 1.1 del tratado (×1,5 / ×0,5, iguales a
+  `PARAMS_V2.pacts`); la fase 43 los muda.
+- *Mapa*: ampliar `SOURCES` con el pool hacía que el desempate "déficit más restringido primero" de `syncTerritory`
+  eligiera usos dentro del redondeo (BNP) antes que el déficit real; el puntaje ahora prioriza el par donde ambos lados
+  están más lejos de su área (`offBoth`), y después la cantidad de fuentes.
+
+**`npm run sim:check -- --quick`** (sale 0) contra la fase 36 (corrida en el mismo equipo, mismo commit base):
+
+| Criterio | 36 (quick) | 37 (quick) |
+|---|---|---|
+| C1 do_nothing nunca gana | FAIL 0,100 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,000 | FAIL 0,000 |
+| C3 ninguna gana todas | PASS 0,200 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 0,600 | FAIL 0,200 |
+| C5 la estrategia decide | FAIL 3 | FAIL 1 |
+| C6 recorrido ≥ 15 | FAIL 0,911 | FAIL 0,911 |
+| C7 banda de predicción | FAIL 0,670 | FAIL 0,670 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 1,790 | FAIL 1,775 |
+
+Ningún criterio empeora, **pero las mejoras de C1/C3/C4/C5 son en buena parte porque casi nadie gana**: las rutas
+dirigidas de los 3 niveles caen a 0 % (N1 conservación e innovación 100 → 0, N2 conservación 90 → 0, N3 conservación e
+innovación 100 → 0) y en Territorio conservación 100 → 60 %, producción 60 → 0 %. Causa: sin el flujo CC→CA de 1.1
+(0,5 %/año + 3 %·η_AS, que en 30 años vaciaba buena parte del CC) el CC conserva área, y el balance de carbono 1.1 —
+donde CC emite 8,0 contra 0,5 de CA— sube: c a 30 años de `conservation` N1 1,32 → 5,07 t, N2 5,72 → 12,11 t, y las
+rutas con tope de emisiones dejan de cumplirse. Es transitorio y esperable por el orden del plan: la matriz es la del
+prototipo (verificada), el carbono que la lee todavía es el 1.1; la fase 38 lo reemplaza por el carbono físico del
+prototipo (con LUC de `landFlowsRealised`). Recorridos de F y E (máx − mín de medianas) 36 → 37: N1 F 16,8 → 16,8,
+E 0,9 → 0,9; N2 F 22,3 → 16,8, E 8,0 → 8,0; N3 F 14,0 → 14,0, E 10,0 → 10,0; Territorio F 27,7 → 23,8, E 16,7 → 16,5.
+No se corrió el arnés completo ni `--update-latest`.
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm test`, `npm run build`, `npm run i18n:audit` limpios. E2E con
+navegador (dev server con `GEMINI_API_KEY` de relleno): `/territorio`, activar Políticas Agroecológicas y correr ×4 hasta
+nov 2026 → la leyenda "Uso del suelo del modelo" y el panel de rutas muestran "Barbecho / tierra degradada 3" kHa; sin
+errores de consola. `/play?demo=1` N1: activar Agroecológicas, simular dos años → "En marcha (74 %)", gráfico de uso
+del suelo sin barbecho (0 kHa); sin errores de consola.
+
+**Revisión de código** (aplicada): en `syncTerritory` un par que el modelo no hace nunca le gana a un flujo del modelo
+(penalización 1e6, antes 100 podía perder contra `10·offBoth`), y el error por uso se calcula una vez por iteración (no
+por par); `SOURCES.fallow` agrega BNNP, PRG y PF (las situaciones pueden mandar cualquier uso al barbecho); declarar
+sobre barbecho vuelve a admitir el excedente del mapa sobre el modelo de una partida anterior a 37 (sin restar de FAL
+lo que FAL no tiene); `toMapFlow` único en `territory.ts`; rama muerta de `applyRandomEventEffects` eliminada; `heat.ts`
+usa `LAND_USE_TYPES`. No aplicadas: (a) rutas de 3 niveles en 0 % — transitorio documentado arriba, lo cierra la 38;
+(b) en un par ± con origen corto el destino recibe solo lo que había y no se completa desde FAL/PRG/CC — es la regla del
+prototipo (`apply_land_effects`, fase 32: "the destination's unmet part is not taken from anywhere else"); (c) un
+efecto suelto sobre FAL hacia FAL no mueve nada, por definición.
+
+**Deudas.** Carbono 1.1 sobre la matriz 2.0 (38; ver arriba). Los multiplicadores de pactos sobre la frontera siguen
+siendo los 1.1 (43). El evento de sequía todavía usa el sorteo 1.1 (46). La cantidad de parcelas que el mapa mueve por
+pool (ida y vuelta neteado) queda sin medir en pantalla; los tests verifican que solo dibuja transiciones del modelo.

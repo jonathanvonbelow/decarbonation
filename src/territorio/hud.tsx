@@ -151,7 +151,10 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
   const { c, fmt } = useCopy();
   const toolsRef = useAnchor<HTMLDivElement>(ANCHOR.tools, 'usos publicos');
   const modelArea = (Object.values(session.game.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0);
-  const fallowKHa = Math.max(0, productiveCount(session.territory) * session.territory.kHaPerParcel - modelArea);
+  // Fallow is a land use of the model since phase 37 (FAL); a map larger than the model's area (a game
+  // that lost area before phase 37) shows the difference as fallow too, like parcelTargets does.
+  const fallowKHa = (session.game.landUses[LandUseType.Fallow]?.area ?? 0)
+    + Math.max(0, productiveCount(session.territory) * session.territory.kHaPerParcel - modelArea);
   // 10.000 parcels: walk the map once per month, not once per render.
   const { fallowParcels, declarable } = useMemo(() => {
     const t = session.territory;

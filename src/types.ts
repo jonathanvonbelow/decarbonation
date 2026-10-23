@@ -63,6 +63,10 @@ export enum LandUseType {
   PublicWetland = "HUM",
   RestorationForest = "RES",
   EnergyPark = "ENR",
+  // Fallow / degraded land (model 2.0, mejora-general/files/37 §1): land an event or a situation took
+  // out of use. It starts at 0 kHa in every level, regenerates to BNNP and re-enters the agricultural
+  // pool (src/sim/v2/land.ts). In Territorio it is the `fallow` parcel kind.
+  Fallow = "FAL",
 }
 
 
@@ -120,7 +124,6 @@ export interface Pact {
         tasa_BNNP_a_CC?: number; // Multiplier
         tasa_BNNP_a_CA?: number; // Multiplier
         tasa_CA_a_BNNP?: number; // Multiplier
-        tasa_CC_a_CA?: number;   // Multiplier
     };
   };
   costToJoin?: number;
@@ -422,7 +425,6 @@ export interface ControlParams {
   Tasa_de_BNNP_a_CA_Base: number;
   Tasa_de_BNNP_a_CC_Base: number;
   Tasa_de_CA_a_BNNP_Base: number;
-  Tasa_de_CC_a_CA_Base: number;
 
   // Political Pressure Policy Effects (Negative values decrease pressure, positive values increase pressure)
   Factor_Presion_Agricola_PAS: number; 
@@ -487,7 +489,8 @@ export interface ControlParams {
   /** Share of total emissions displaced if the whole territory were a public energy park. */
   Factor_Desplazamiento_Emisiones_Parque_Energetico: number;
   /** Annual share of restoration area that matures into unprotected native forest. */
-  Tasa_de_RES_a_BNNP_Base: number;
+  /** Restoration maturing into protected native forest (RES → BNP), fraction of RES per year. */
+  Tasa_de_RES_a_BNP_Base: number;
 
   // Model 2.0 scalars (phase 35, 35_motor_v2_estructura.md §5). Declared now; each one starts acting in the
   // phase that ports its equation (the facilitator panel exposes them in phase 50).

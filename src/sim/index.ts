@@ -43,7 +43,7 @@ export { MODEL_VERSION, MODEL_VERSION_BY_GAME } from './version';
 export type { SimTrace } from './trace';
 export * from './policies';
 export * from './indicators';
-export * from './landUse';
+export * from './v2/land';
 export * from './carbon';
 export * from './pressures';
 export * from './economy';

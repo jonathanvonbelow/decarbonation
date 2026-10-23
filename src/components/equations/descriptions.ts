@@ -201,10 +201,6 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Tasa de conversión anual base (reforestación) de Cultivos Agroecológicos a Bosque Nativo No Protegido.",
     en: "Base annual conversion rate (reforestation) from Agro-ecological Crops to Unprotected Native Forest.",
   },
-  Tasa_de_CC_a_CA_Base: {
-    es: "Tasa de conversión anual base de Cultivos Convencionales a Cultivos Agroecológicos.",
-    en: "Base annual conversion rate from Conventional Crops to Agro-ecological Crops.",
-  },
   Factor_Presion_Agricola_PAS: {
     es: "Impacto de la política Agroecológica sobre la presión del sector agrícola (positivo = aumenta la presión).",
     en: "Impact of the Agro-ecological policy on agricultural sector pressure (positive = increases pressure).",

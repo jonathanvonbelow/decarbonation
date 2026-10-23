@@ -39,10 +39,14 @@ Reasignación agrícola (reemplaza a CC→CA de 1.1):
   F(i→k) = (contribución de i al pool) · e^{β r_k} / Σ_j e^{β r_j},   β = 1,   k ≠ i
 ```
 
-`m_protect`, `m_deforest` vienen de pactos (fase 43; 1 por defecto). Antes de aplicar, **netear los flujos
-bilaterales** del pool: si existen F(i→j) y F(j→i), queda solo la diferencia positiva. El pool es un mecanismo de
-asignación; lo real es la transición neta, y sin netear el ida y vuelta generaría emisiones de cambio de uso
-espurias en la fase 38.
+`m_protect`, `m_deforest` vienen de pactos (fase 43; 1 por defecto). Antes de aplicar, **netear todos los flujos
+bilaterales** (los del pool y también el par de frontera BNNP⇄CA, como hace el prototipo): si existen F(i→j) y
+F(j→i), queda solo la diferencia positiva. El pool es un mecanismo de asignación; lo real es la transición neta, y
+sin netear el ida y vuelta generaría emisiones de cambio de uso espurias en la fase 38 (c₀ de las anclas depende de
+este neteo). *Corregido en la fase 37: el texto original decía "del pool"; ver `docs/v6-spec-vs-motor.md`.*
+
+Las tasas base de frontera (0,008, 0,010, 0,002, 0,001, 0,04) son las de `CONTROL_PARAMS`
+(`Tasa_de_BNNP_a_BNP_Base`, …, `Tasa_de_RES_a_BNP_Base`); el resto de los coeficientes vive en `PARAMS_V2.land`.
 
 Aplicación con `dt` y sin negativos:
 
@@ -56,9 +60,11 @@ mapa de Territorio (`stepMonth().flows`).
 
 ## 3. Eventos que quitan área
 
-Todo efecto `landUseChange` de eventos y situaciones con signo negativo se convierte en transferencia **al barbecho**
-(`target → FAL`); con signo positivo, en transferencia **desde** el barbecho (si no alcanza, desde PRG y luego CC,
-en ese orden). Implementarlo en `applyRandomEventEffects` (`src/sim/events.ts`) con un helper:
+Los efectos `landUseChange` de signo opuesto dentro de una misma lista (las situaciones los escriben como pares ±,
+p. ej. CA +6 / CC −6) son **una transferencia directa** origen → destino. Lo que queda suelto: con signo negativo se
+convierte en transferencia **al barbecho** (`target → FAL`); con signo positivo, en transferencia **desde** el
+barbecho (si no alcanza, desde PRG y luego CC, en ese orden). *Corregido en la fase 37 (regla del prototipo,
+`apply_land_effects`, fase 32): sin el emparejamiento el resultado dependía del orden de la lista.* Implementarlo en `applyRandomEventEffects` (`src/sim/events.ts`) con un helper:
 
 ```ts
 /** Moves `kHa` from `from` to `to`, clamped to what `from` holds. Returns the amount moved. */

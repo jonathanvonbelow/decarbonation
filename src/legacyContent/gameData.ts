@@ -96,6 +96,11 @@ export const LAND_USE_NAMES: Record<string, Record<Language, string>> = {
   'CC':   { es: 'Cultivos Convencionales',                       en: 'Conventional Crops' },
   'PF':   { es: 'Plantaciones Forestales',                       en: 'Forest Plantations' },
   'PRG':  { es: 'Praderas y Pasturas para Ganadería',           en: 'Grasslands & Pastures for Livestock' },
+  'HUM':  { es: 'Humedal Protegido',                             en: 'Protected Wetland' },
+  'RES':  { es: 'Restauración de Bosque Nativo',                 en: 'Native Forest Restoration' },
+  'ENR':  { es: 'Parque Energético Público',                     en: 'Public Energy Park' },
+  // Model 2.0, phase 37 (mejora-general/files/37 §1).
+  'FAL':  { es: 'Barbecho / tierra degradada',                   en: 'Fallow / degraded land' },
 };
 
 // ─── Random events ───────────────────────────────────────────────────────────

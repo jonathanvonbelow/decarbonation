@@ -13,6 +13,7 @@ calibración.**
 | `params.ts` | `PARAMS_V2`: tablas del modelo (copia fiel de `P` del prototipo), `PID` (códigos cortos → enum `Policy`) |
 | `anchors.ts` | `computeAnchors` / `createModelState`: anclas del estado inicial de cada nivel (`GameState.model`) |
 | `policies.ts` | fase 36: `tickPolicyClocks`, `baseEfficiency`, `channelStrength`, `computeEfficiencies` (η base + canales `land`/`prod`/`social`, y `elec`/`other`/`tax` de CN), `policyCost` (por esfuerzo), `policyStatus` ("en marcha" / "desgastada" para la UI) |
+| `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
 `stepYear` (`src/sim/index.ts`) es `advance(…, dt = 1)`; `stepMonth` (`src/sim/monthly.ts`) es
@@ -42,7 +43,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 |---|---|---|
 | 35 | estructura, `math`, `params`, `anchors`, `advance` con funciones 1.1, golden test apagado | hecho |
 | 36 | pasos 2 y 4: puesta en marcha, fatiga, recuperación, instrumentos (`rampYears`, `fatigueYears`, `INSTRUMENT_CHANNELS`, costo por esfuerzo) | hecho (costo con la escala puente `costShareBridge` hasta la 44) |
-| 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | pendiente |
+| 37 | paso 5: matriz conservativa, barbecho, reasignación por renta (`land`, `agriAreas0`) | hecho (tasas base de frontera en `CONTROL_PARAMS`) |
 | 38 | paso 7: carbono físico, energía, LUC (`flux`, `stock`, `energy`; `Poblacion_Total` = `Poblacion_Inicial`) | pendiente |
 | 39 | paso 8: marco logístico, E, conflicto, colapso (`Velocidad_Ajuste_*`) | pendiente |
 | 40 | B por especies-área (`habitat`, `zSAR`, `qB`) | pendiente |
@@ -80,3 +81,7 @@ gasto público base de la fase 44, que todavía no existe; con κ el tesoro nunc
 C3 (`buy_everything` de Territorio y `green` de N1 ganan todas las rutas). La fase 44 cambia `costShareOf` a κ.
 Los submodelos 1.1 leen la eficiencia por `getPolicyEfficiency` = `eff[pid].prod`; cada fase 37–45 pasa su submodelo
 a su canal (`land`, `social`, `elec`/`other`/`tax`).
+
+Fase 37: ningún recorte de la spec. Las tasas base de frontera quedan en `CONTROL_PARAMS` (no se duplican en
+`PARAMS_V2.land`). Hasta la fase 38 el carbono 1.1 lee la matriz 2.0, y sin el flujo CC→CA de 1.1 las emisiones
+suben (rutas dirigidas de los 3 niveles en 0 % en `sim:check --quick`): transitorio, documentado en el log.

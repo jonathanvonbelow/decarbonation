@@ -19,7 +19,7 @@ import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURA
 import {
   createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
   evenEffort, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
-  type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
+  type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
 import { Policy } from '../types';
@@ -232,6 +232,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   });
   const pendingDeferred: DeferredAdjustment[] = [];
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
+  const situationFlows: LandFlow[] = [];
   const monthIndex = s.monthIndex + 1;
 
   let game = r.next;
@@ -258,6 +259,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
       if (applied.ok) {
         game = applied.state;
         pendingDeferred.push(...applied.deferred);
+        situationFlows.push(...applied.flows);
       }
       situationNews.push({
         ...stamp, id: `${item.id}-expired`, kind: 'situation', tone: 'bad',
@@ -279,7 +281,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   }
 
   // Decided or expired situations can move land too: the map follows the model's final areas.
-  const settled = game.landUses === r.next.landUses ? synced : syncTerritory(synced.territory, game.landUses);
+  const settled = game.landUses === r.next.landUses ? synced : syncTerritory(synced.territory, game.landUses, situationFlows);
   const developed = developTerritory(settled.territory, developmentOf(game));
   const territory = developed.territory;
   const changes = [...synced.changes, ...(settled === synced ? [] : settled.changes), ...developed.changes];
@@ -350,10 +352,13 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
     kind: 'situation', tone: 'good', key: 'situation.resolved',
     values: { situation: def.id, option: optionId },
   };
+  // An option that moves land shows on the map right away, along the transfers it made (phase 37).
+  const synced = applied.flows.length ? syncTerritory(s.territory, applied.state.landUses, applied.flows) : null;
   return {
     session: {
       ...s,
       game: applied.state,
+      ...(synced ? { territory: synced.territory, lastChanges: { tick: s.lastChanges.tick + 1, list: synced.changes } } : {}),
       pendingDeferred: [...(s.pendingDeferred ?? []), ...applied.deferred],
       open: s.open.filter((o) => o.id !== openId),
       resolvedCount: s.resolvedCount + 1,

@@ -7,7 +7,7 @@
  *
  * Mapping to the prototype's `P` (name here ← name there):
  *   rampYears ← lam, fatigueYears ← delta, costShare ← kappa, costFixedShare ← cost_fixed_share,
- *   effortE0 ← e0, land.* ← deforest / mu_ag / beta_rent / fallow_*, flux / stock, energy.* ← el_share,
+ *   effortE0 ← e0, land.* ← mu_ag / beta_rent / fallow_* + the inline coefficients of land_step (deforest → CP Tasa_de_*_Base), flux / stock, energy.* ← el_share,
  *   k_energy, a_full_parks, elasticity_income, ren_max_cn, eff_max_cn, budget_cut (+ eps0 of LEVELS),
  *   habitat ← h, zSAR ← z_sar, qB, food.* ← yield / yield_trend / export0 / kappa1 / kappa2, bE,
  *   productiveValue ← value, conflict ← cC, greenRelief ← greenC, conflictWeights ← wF_C / wE_C / wPe_C /
@@ -24,8 +24,8 @@
  * `s` / `u` keys are `renewables` / `efficiency` and `m_protect` / `m_deforest` are protectFactor /
  * deforestFactor. Unlock years stay in INITIAL_PACTS (2030 / 2035 / 2038, same as the prototype).
  *
- * Land-use keys are the values of the LandUseType enum (BNNP, BNP, CA, CC, PF, PRG, HUM, RES, ENR) plus
- * FAL (fallow), which the code does not have yet: it arrives with the transition matrix of phase 37.
+ * Land-use keys are the values of the LandUseType enum (BNNP, BNP, CA, CC, PF, PRG, HUM, RES, ENR, FAL);
+ * FAL (fallow) arrived with the transition matrix of phase 37.
  */
 import { Policy } from '../../types';
 
@@ -39,7 +39,7 @@ export const PID = {
 export type Pid = keyof typeof PID;
 export const PIDS = Object.keys(PID) as Pid[];
 
-/** Land-use codes of the 2.0 tables (LandUseType values + FAL, phase 37). */
+/** Land-use codes of the 2.0 tables (the LandUseType values; FAL since phase 37). */
 export type LandCode = 'BNNP' | 'BNP' | 'CA' | 'CC' | 'PF' | 'PRG' | 'HUM' | 'RES' | 'ENR' | 'FAL';
 /** Agricultural reallocation pool of the transition matrix (37). */
 export const AGRI_CODES = ['CC', 'CA', 'PRG', 'PF'] as const;
@@ -140,15 +140,30 @@ export const PARAMS_V2 = {
   /** 36 — instrument channels (alias of INSTRUMENT_CHANNELS, the spec's `PARAMS_V2.instruments`). */
   instruments: INSTRUMENT_CHANNELS,
 
-  /** 37 — land: base annual rates (fraction of the source area per year, v1 values) and the agricultural pool. */
+  /**
+   * 37 — land-use transition matrix (mejora-general/files/37 §2; prototype `land_step`). The base rates of
+   * the frontier flows are the facilitator's CONTROL_PARAMS (`Tasa_de_BNNP_a_BNP_Base` … `Tasa_de_RES_a_BNP_Base`,
+   * the prototype's `deforest`, same values); everything else of the matrix is here. Criterio experto (v1 values).
+   */
   land: {
-    BNNP_BNP: 0.008, BNNP_CC: 0.010, BNNP_CA: 0.002, CA_BNNP: 0.001, RES_BNP: 0.04,
-    /** Share of each agricultural use that re-enters the reallocation pool each year. */
+    /** Policy terms of the frontier flows: fraction of the source area per year per unit of η^land. */
+    frontier: {
+      BNNP_BNP: { CR: 0.05 }, BNNP_CC: { PAI: 0.04, FRA: 0.01 }, BNNP_CA: { AS: 0.02 }, CA_BNNP: { AS: 0.01 },
+    } as Record<'BNNP_BNP' | 'BNNP_CC' | 'BNNP_CA' | 'CA_BNNP', Partial<Record<'CR' | 'PAI' | 'FRA' | 'AS', number>>>,
+    /** Share of each agricultural use that re-enters the reallocation pool each year (μ, prototype mu_ag). */
     poolShare: 0.02,
-    /** Sensitivity of the allocation to rents (logit units per unit of log-rent). */
+    /** Sensitivity of the allocation to rents (β, logit units per unit of log-rent). */
     rentBeta: 1.0,
     /** Share of fallow that re-enters the agricultural pool / regenerates to BNNP each year. */
     fallowReentry: 0.25, fallowRegen: 0.05,
+    /** Rent shifts Δr_k of each agricultural use, log-rent units per unit of η^prod. */
+    rent: {
+      CC: { PAI: 0.6, PEA: 0.3, AS: -0.25 }, CA: { AS: 0.8, PAI: -0.2 }, PRG: { GS: 0.4, PEA: 0.1 }, PF: { PIE: 0.2, FRA: 0.15 },
+    } as Record<'CC' | 'CA' | 'PRG' | 'PF', Partial<Record<'AS' | 'PAI' | 'PEA' | 'GS' | 'PIE' | 'FRA', number>>>,
+    /** Rent shift of CC per unit of Carbon Neutrality's carbon-tax channel (η_CN^tax). */
+    rentCarbonTaxCC: -0.2,
+    /** Area (kHa) used for an agricultural anchor that starts at 0, so its log-rent is finite (§4). */
+    zeroAnchor: 1e-6,
   },
 
   /** 38 — carbon. Flux in tCO2e/ha/yr (+ emission), stock in Mg C/ha (biomass + soil relevant to conversion). Criterio experto. */

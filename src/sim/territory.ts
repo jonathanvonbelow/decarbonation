@@ -26,8 +26,9 @@
  * settlements appear when social wellbeing collapses, and heavy industry reads cleaner as
  * emissions fall. They grow into lots reserved for them, never into productive land.
  *
- * Area the model stops accounting for (a drought event removes crop area with no paired transfer —
- * docs/audit-equations.md item L-1) is shown honestly as `fallow` parcels rather than hidden.
+ * Fallow parcels are the model's fallow land (`LandUseType.Fallow`, FAL, since model 2.0 phase 37): area a
+ * drought or a situation took out of use, which regrows into native forest and re-enters the agricultural
+ * pool. Total area is conserved, so the map always holds exactly the model's area.
  *
  * Pure and deterministic: no React, no Math.random; layout noise and tie-breaks come from `seed`.
  */
@@ -48,7 +49,9 @@ export const LOT_KHA = 5;
 /** A use changes parcels only when it is off by more than this (in parcels, summed both ways). */
 const HYSTERESIS = 1.2;
 
-export type ProductiveKind = LandUseType | 'fallow';
+/** Land uses drawn with their own code on the map: every use except fallow, which is the `fallow` kind. */
+export type MapLandUse = Exclude<LandUseType, LandUseType.Fallow>;
+export type ProductiveKind = MapLandUse | 'fallow';
 export type ParcelKind = ProductiveKind | ContextKind;
 
 export interface Parcel {
@@ -89,8 +92,16 @@ export interface ParcelChange {
   to: ParcelKind;
 }
 
-const LAND_USES = Object.values(LandUseType) as LandUseType[];
+const LAND_USES = (Object.values(LandUseType) as LandUseType[]).filter((k): k is MapLandUse => k !== LandUseType.Fallow);
 const PRODUCTIVE_KINDS: ProductiveKind[] = [...LAND_USES, 'fallow'];
+
+/** Parcel kind of a model land use (FAL is drawn as `fallow`). */
+export const parcelKindOf = (k: LandUseType): ProductiveKind => (k === LandUseType.Fallow ? 'fallow' : k);
+/** A model transfer as the map draws it (FAL → `fallow`). */
+export const toMapFlow = (f: { from: LandUseType; to: LandUseType; kHa: number }): LandFlow =>
+  ({ from: parcelKindOf(f.from), to: parcelKindOf(f.to), kHa: f.kHa });
+/** Model land use of a productive parcel kind. */
+export const landUseOfKind = (k: ProductiveKind): LandUseType => (k === 'fallow' ? LandUseType.Fallow : k);
 const CONTEXT_SET = new Set<ParcelKind>(CONTEXT_KINDS);
 
 export const isProductive = (kind: ParcelKind): kind is ProductiveKind => !CONTEXT_SET.has(kind);
@@ -127,9 +138,10 @@ function neighbors8(t: Territory, i: number): number[] {
 /* ── Quantisation ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Area of each productive kind, in parcels. The `fallow` share is whatever part of the
- * productive map the model no longer accounts for. If the model ever held *more* area than the
- * map (no current event does that), every use is scaled down to fit.
+ * Area of each productive kind, in parcels. `fallow` is the model's fallow area (FAL, phase 37); the map
+ * holds the model's total area, so the targets add up to `productiveCount`. A map bigger than the model's
+ * area (a state that lost area before phase 37) shows the difference as fallow too; a model holding *more*
+ * area than the map scales every use down to fit.
  */
 export function parcelTargets(
   landUses: Record<LandUseType, LandUse>,
@@ -138,15 +150,14 @@ export function parcelTargets(
 ): Record<ProductiveKind, number> {
   const raw = {} as Record<ProductiveKind, number>;
   let total = 0;
-  LAND_USES.forEach((k) => {
-    raw[k] = Math.max(0, landUses[k].area) / kHaPerParcel;
+  PRODUCTIVE_KINDS.forEach((k) => {
+    raw[k] = Math.max(0, landUses[landUseOfKind(k)]?.area ?? 0) / kHaPerParcel;
     total += raw[k];
   });
   if (total > productiveCount) {
-    LAND_USES.forEach((k) => { raw[k] = (raw[k] * productiveCount) / total; });
-    raw.fallow = 0;
+    PRODUCTIVE_KINDS.forEach((k) => { raw[k] = (raw[k] * productiveCount) / total; });
   } else {
-    raw.fallow = productiveCount - total;
+    raw.fallow += productiveCount - total;
   }
   return raw;
 }
@@ -185,7 +196,8 @@ export function productiveCount(t: Territory): number {
   return n;
 }
 
-const totalArea = (landUses: Record<LandUseType, LandUse>) => LAND_USES.reduce((sum, k) => sum + Math.max(0, landUses[k].area), 0);
+const totalArea = (landUses: Record<LandUseType, LandUse>) =>
+  PRODUCTIVE_KINDS.reduce((sum, k) => sum + Math.max(0, landUses[landUseOfKind(k)]?.area ?? 0), 0);
 
 /* ── Layout ────────────────────────────────────────────────────────────────────────────────── */
 
@@ -195,7 +207,7 @@ const totalArea = (landUses: Record<LandUseType, LandUse>) => LAND_USES.reduce((
  * horticulture around the metropolis, native forest and plantations in the south, pastures and
  * mixed farming on the coast.
  */
-const REGION_AFFINITY: Record<LandUseType, [number, number, number, number]> = {
+const REGION_AFFINITY: Record<ProductiveKind, [number, number, number, number]> = {
   [LandUseType.ProtectedNativeForest]: [0.05, 0, 1, 0.45],
   [LandUseType.UnprotectedNativeForest]: [0.2, 0.05, 1, 0.5],
   [LandUseType.ForestPlantations]: [0.25, 0.2, 0.85, 0.75],
@@ -205,9 +217,11 @@ const REGION_AFFINITY: Record<LandUseType, [number, number, number, number]> = {
   [LandUseType.PublicWetland]: [0, 0, 0, 0],
   [LandUseType.RestorationForest]: [0, 0, 0, 0],
   [LandUseType.EnergyPark]: [0, 0, 0, 0],
+  // A game that starts with fallow (FAL > 0, phase 37): degraded land sits where farming is, mostly north.
+  fallow: [0.9, 0.45, 0.15, 0.55],
 };
 
-function suitability(geo: Geography, i: number, k: LandUseType, seed: number): number {
+function suitability(geo: Geography, i: number, k: ProductiveKind, seed: number): number {
   const x = i % geo.size;
   const y = (i / geo.size) | 0;
   const w = regionWeights(x, y, geo.size, geo.seed);
@@ -215,7 +229,7 @@ function suitability(geo: Geography, i: number, k: LandUseType, seed: number): n
   const town = Math.min(1, geo.townDistance[i] / 22);
   const wet = geo.waterDistance[i] <= 3 ? 1 : 0;
   let s = a[0] * w[0] + a[1] * w[1] + a[2] * w[2] + a[3] * w[3];
-  s += 0.55 * fbm(x, y, 7, seed + 300 + LAND_USES.indexOf(k) * 31);
+  s += 0.55 * fbm(x, y, 7, seed + 300 + PRODUCTIVE_KINDS.indexOf(k) * 31);
   switch (k) {
     case LandUseType.ProtectedNativeForest: s += 1.1 * fbm(x, y, 16, seed + 400) + 0.35 * town + 0.3 * geo.interior[i]; break;
     case LandUseType.UnprotectedNativeForest: s += 0.45 * town; break;
@@ -223,6 +237,7 @@ function suitability(geo: Geography, i: number, k: LandUseType, seed: number): n
     case LandUseType.ConventionalCrops: s += 0.25 * (1 - town); break;
     case LandUseType.AgroecologicalCrops: s += 0.6 * (1 - town); break;
     case LandUseType.GrasslandsPastures: s += 0.3 * wet; break;
+    case 'fallow': s += 0.25 * (1 - town); break;
     default: s -= 10;
   }
   return s;
@@ -235,7 +250,7 @@ function suitability(geo: Geography, i: number, k: LandUseType, seed: number): n
  * An exact repair and a count-preserving smoothing pass finish it.
  */
 function allocate(geo: Geography, cells: number[], counts: Record<ProductiveKind, number>, seed: number): Map<number, ProductiveKind> {
-  const uses = LAND_USES.filter((k) => counts[k] > 0);
+  const uses = PRODUCTIVE_KINDS.filter((k) => counts[k] > 0);
   const score = uses.map((k) => cells.map((i) => suitability(geo, i, k, seed)));
   const price = uses.map(() => 0);
   const pick = new Int32Array(cells.length);
@@ -375,16 +390,22 @@ export function createTerritory(landUses: Record<LandUseType, LandUse>, seed = 1
 /* ── Model → map ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Where each use can grow from, following the model's own flows (landUse.ts: BNNP→BNP, BNNP→CC,
- * BNNP→CA, CA→BNNP, CC→CA, RES→BNP; drought events remove CC and CA area → fallow). Pairing
- * deficits with these sources keeps the map from showing transitions the model never makes.
+ * Where each use can grow from, following the model's own flows (src/sim/v2/land.ts, phase 37: BNNP→BNP,
+ * BNNP→CC, BNNP→CA, CA→BNNP, RES→BNP, fallow→BNNP, the agricultural pool among CC/CA/PRG/PF and from
+ * fallow; droughts send CC and CA area to fallow). Pairing deficits with these sources keeps the map from
+ * showing transitions the model never makes.
  */
 const SOURCES: Partial<Record<ProductiveKind, ProductiveKind[]>> = {
   [LandUseType.ProtectedNativeForest]: [LandUseType.UnprotectedNativeForest, LandUseType.RestorationForest],
-  [LandUseType.ConventionalCrops]: [LandUseType.UnprotectedNativeForest],
-  [LandUseType.AgroecologicalCrops]: [LandUseType.ConventionalCrops, LandUseType.UnprotectedNativeForest],
-  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops],
-  fallow: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops],
+  [LandUseType.ConventionalCrops]: [LandUseType.UnprotectedNativeForest, LandUseType.AgroecologicalCrops, LandUseType.GrasslandsPastures, LandUseType.ForestPlantations, 'fallow'],
+  [LandUseType.AgroecologicalCrops]: [LandUseType.ConventionalCrops, LandUseType.UnprotectedNativeForest, LandUseType.GrasslandsPastures, LandUseType.ForestPlantations, 'fallow'],
+  [LandUseType.GrasslandsPastures]: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops, LandUseType.ForestPlantations, 'fallow'],
+  [LandUseType.ForestPlantations]: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops, LandUseType.GrasslandsPastures, 'fallow'],
+  // Natural regrowth: fallow land returns to native forest.
+  [LandUseType.UnprotectedNativeForest]: [LandUseType.AgroecologicalCrops, 'fallow'],
+  // Losses of events (droughts: CC, CA) and situations (any use, e.g. a forest fire) go to fallow.
+  fallow: [LandUseType.ConventionalCrops, LandUseType.AgroecologicalCrops, LandUseType.UnprotectedNativeForest,
+    LandUseType.GrasslandsPastures, LandUseType.ForestPlantations],
   // Public uses only ever grow because the player declared them (declarePublicUse below), but the
   // safety net still needs to know where their area came from.
   [LandUseType.PublicWetland]: [LandUseType.ConventionalCrops, LandUseType.GrasslandsPastures, 'fallow'],
@@ -475,19 +496,27 @@ export function syncTerritory(
     const [from, to] = key.split('>');
     return sum + (to === k ? kHa : 0) - (from === k ? kHa : 0);
   }, 0) / t.kHaPerParcel;
-  const error = (k: ProductiveKind) => target[k] - counts[k] - inFlight(k);
+  // In-flight area only changes with the flows above, so it is computed once; the error per use once
+  // per iteration (not per pair).
+  const flight = {} as Record<ProductiveKind, number>;
+  PRODUCTIVE_KINDS.forEach((k) => { flight[k] = inFlight(k); });
+  const err = {} as Record<ProductiveKind, number>;
   for (let guard = 0; guard < 200; guard++) {
+    PRODUCTIVE_KINDS.forEach((k) => { err[k] = target[k] - counts[k] - flight[k]; });
     // Every (deficit, surplus) pair far enough apart to justify moving parcels. Model flows win
-    // over any other pairing; among flows, the most constrained deficit (fewest sources) goes
-    // first so it is not starved by a use that had alternatives; then the widest gap.
+    // over any other pairing; among flows, the pair where both sides are furthest off goes first
+    // (a use within rounding of its area is not a real deficit), then the most constrained deficit
+    // (fewest sources) so it is not starved by a use that had alternatives.
     let best: { deficit: ProductiveKind; surplus: ProductiveKind; score: number; gap: number } | null = null;
     for (const deficit of PRODUCTIVE_KINDS) {
       for (const surplus of PRODUCTIVE_KINDS) {
         if (deficit === surplus || counts[surplus] === 0) continue;
-        const gap = error(deficit) - error(surplus);
+        const gap = err[deficit] - err[surplus];
         if (gap <= HYSTERESIS) continue;
         const sources = SOURCES[deficit] ?? [];
-        const score = (sources.includes(surplus) ? 0 : 100) + sources.length - gap * 0.0001;
+        const offBoth = Math.min(err[deficit], -err[surplus]);
+        // A model flow always beats a pairing the model never makes, however far off the latter is.
+        const score = (sources.includes(surplus) ? 0 : 1e6) - 10 * offBoth + sources.length - gap * 0.0001;
         if (!best || score < best.score) best = { deficit, surplus, score, gap };
       }
     }
@@ -550,7 +579,7 @@ export const PUBLIC_USES: PublicUse[] = ['protected', 'restoration', 'wetland', 
 
 interface PublicUseRule {
   /** Land use the parcel becomes. */
-  target: LandUseType;
+  target: MapLandUse;
   /** Parcel kinds that can be declared into it. */
   from: ProductiveKind[];
   cost: (CP: ControlParams) => number;
@@ -605,7 +634,7 @@ export function publicUseCost(use: PublicUse, CP: ControlParams, kHa = LOT_KHA):
 }
 
 /** Land use a parcel becomes under `use`. */
-export const publicUseTarget = (use: PublicUse): LandUseType => RULES[use].target;
+export const publicUseTarget = (use: PublicUse): MapLandUse => RULES[use].target;
 
 const eligible = (p: Parcel, rule: PublicUseRule) => rule.from.includes(p.kind as ProductiveKind) && !p.declared;
 
@@ -661,9 +690,8 @@ export function lotFor(territory: Territory, x: number, y: number, use: PublicUs
  * Declares the lot around (x, y) as a public use: moves its area in the model, pays the cost
  * (per kHa actually moved) from Reservas_del_Tesoro, and — for the part that was farmland — adds
  * the agricultural-pressure impulse that taking land out of production causes. Parcels whose area
- * the model no longer holds are left out, and fallow can only be declared up to the area the map
- * holds beyond the model's, so a declaration never creates land. Pure: returns new state and
- * territory, or the reason it is not possible.
+ * the model no longer holds are left out (fallow parcels draw on the model's fallow area, FAL), so a
+ * declaration never creates land. Pure: returns new state and territory, or the reason it is not possible.
  */
 export function declarePublicUse(
   state: GameState,
@@ -681,12 +709,14 @@ export function declarePublicUse(
   if (rule.requiresWater && !nearWater(territory, idx(territory, x, y))) return { ok: false, reason: 'needs-water' };
 
   const kHa = territory.kHaPerParcel;
-  const fallowArea = Math.max(0, productiveCount(territory) * kHa - totalArea(state.landUses));
-  const available: Record<string, number> = { fallow: fallowArea };
-  LAND_USES.forEach((k) => { available[k] = state.landUses[k].area; });
+  const available = {} as Record<ProductiveKind, number>;
+  PRODUCTIVE_KINDS.forEach((k) => { available[k] = state.landUses[landUseOfKind(k)]?.area ?? 0; });
+  // A map larger than the model's area (a game that lost area before phase 37) shows the excess as
+  // fallow too; it stays declarable, as before.
+  available.fallow += Math.max(0, productiveCount(territory) * kHa - totalArea(state.landUses));
   const cells = lotFor(territory, x, y, use).filter((i) => {
-    const k = territory.parcels[i].kind as string;
-    if (available[k] < kHa - 1e-9) return false;
+    const k = territory.parcels[i].kind as ProductiveKind;
+    if (!(available[k] >= kHa - 1e-9)) return false;
     available[k] -= kHa;
     return true;
   });
@@ -700,8 +730,11 @@ export function declarePublicUse(
   cells.forEach((i) => {
     const source = territory.parcels[i].kind as ProductiveKind;
     if (PRODUCTIVE_SOURCES.has(source)) farmland++;
-    if (source === 'fallow') return;
-    landUses[source] = { ...landUses[source], area: landUses[source].area - kHa };
+    // Fallow parcels come out of the model's fallow area (phase 37; before, they subtracted nothing).
+    // The pre-37 excess shown as fallow holds no model area: only FAL's part is subtracted.
+    const lu = landUseOfKind(source);
+    const take = source === 'fallow' ? Math.min(kHa, Math.max(0, landUses[lu]?.area ?? 0)) : kHa;
+    if (take > 0) landUses[lu] = { ...landUses[lu], area: landUses[lu].area - take };
   });
   landUses[rule.target] = { ...landUses[rule.target], area: landUses[rule.target].area + kHa * cells.length };
 

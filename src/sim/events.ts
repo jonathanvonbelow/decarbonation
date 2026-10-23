@@ -12,6 +12,7 @@ import type { Rng } from './rng';
 import { isDerivedIndicator, type DeferredAdjustment } from './deferred';
 import type { Language } from '../hooks/useLanguage';
 import { getEventName, getEventDescription, getLandUseName } from '../legacyContent/gameData';
+import { applyLandEffects, type LandEffect, type TransitionFlow } from './v2/land';
 
 // Phase 12 (12_i18n_completo.md, Capa B/C): `event.name`/`event.description` on the RandomEvent
 // objects themselves (constants.ts's ALL_RANDOM_EVENTS) are Spanish-only source content, same
@@ -29,12 +30,15 @@ export interface EventRollResult {
   logs: string[];
   /** Chat message to surface (level-3 "unexpected event" banner), if any. */
   chatMessage: string | null;
+  /** Land transfers the event made (phase 37: losses go to fallow). Empty without an event. */
+  landTransfers: TransitionFlow[];
 }
 
 /**
  * Applies the effects of a triggered event to `indicators`/`stellaState`/`landUses` in place
  * (same mutation style as the original `processRandomEventEffects`), including the derived
  * re-sync of socialWellbeing/politicalStability/pbi/etc. when the underlying Stella stock moved.
+ * Returns the land transfers it made (phase 37), for the Territorio map and the carbon of phase 38.
  */
 export function applyRandomEventEffects(
   effects: RandomEventEffect[],
@@ -49,21 +53,29 @@ export function applyRandomEventEffects(
    * Callers that pass nothing keep the old behaviour of applying them in place.
    */
   deferred?: DeferredAdjustment[],
-): void {
+): TransitionFlow[] {
+  // Land effects are transfers (model 2.0, phase 37 §3): ± pairs move area origin → destination, a loose
+  // loss goes to fallow and a loose gain comes from fallow, then PRG, then CC. Total area is conserved.
+  const landEffects: LandEffect[] = [];
   effects.forEach((eff) => {
-    if (eff.landUseChange) {
-      const { target, changeAbsolute_kHa } = eff.landUseChange;
-      if (landUses[target]) {
-        const originalArea = landUses[target].area;
-        landUses[target].area = Math.max(0, originalArea + changeAbsolute_kHa);
-        const landUseName = getLandUseName(target, language);
-        logs.push(
-          language === 'en'
-            ? `Event effect: '${landUseName}' area changed by ${changeAbsolute_kHa.toFixed(1)} kHa.`
-            : `Efecto de evento: Área de '${landUseName}' cambió en ${changeAbsolute_kHa.toFixed(1)} kHa.`
-        );
-      }
-    } else if (eff.indicator) {
+    if (eff.landUseChange && landUses[eff.landUseChange.target]) {
+      landEffects.push({ target: eff.landUseChange.target, kHa: eff.landUseChange.changeAbsolute_kHa });
+    }
+  });
+  const transfers = landEffects.length ? applyLandEffects(landUses, landEffects) : [];
+  transfers.forEach((t) => {
+    const fromName = getLandUseName(t.from, language);
+    const toName = getLandUseName(t.to, language);
+    logs.push(
+      language === 'en'
+        ? `Event effect: ${t.kHa.toFixed(1)} kHa moved from '${fromName}' to '${toName}'.`
+        : `Efecto de evento: ${t.kHa.toFixed(1)} kHa pasaron de '${fromName}' a '${toName}'.`
+    );
+  });
+
+  // Indicator effects (land effects were applied above as transfers).
+  effects.filter((eff) => !eff.landUseChange).forEach((eff) => {
+    if (eff.indicator) {
       let currentValue: number | boolean;
       let targetObject: any;
       let targetKey: string | number | symbol;
@@ -128,6 +140,7 @@ export function applyRandomEventEffects(
   if (effects.some((e) => e.indicator === 'stella.PP_AGRICOLA')) indicators.ppAgricola = stellaState.PP_AGRICOLA;
   if (effects.some((e) => e.indicator === 'stella.PP_AMBIENTALISTA')) indicators.ppAmbientalista = stellaState.PP_AMBIENTALISTA;
   if (effects.some((e) => e.indicator === 'stella.PP_SOCIAL')) indicators.ppSocial = stellaState.PP_SOCIAL;
+  return transfers;
 }
 
 /**
@@ -156,11 +169,11 @@ export function rollEvent(
         const { name, description } = eventLabel(event, language);
         logs.push(language === 'en' ? `EVENT (Year ${workingState.year}): ${name} - ${description}` : `EVENTO (Año ${workingState.year}): ${name} - ${description}`);
         const effects = event.effects(workingState);
-        applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
-        return { event, logs, chatMessage };
+        const landTransfers = applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
+        return { event, logs, chatMessage, landTransfers };
       }
     }
-    return { event: null, logs, chatMessage };
+    return { event: null, logs, chatMessage, landTransfers: [] };
   }
 
   // Level 3: dynamic, weighted event roll.
@@ -174,11 +187,11 @@ export function rollEvent(
   const finalEventChance = Math.min(0.6, eventTriggerProbability);
 
   if (rng() >= finalEventChance) {
-    return { event: null, logs, chatMessage };
+    return { event: null, logs, chatMessage, landTransfers: [] };
   }
 
   const eligibleEvents = allEvents.filter((e) => e.minLevel === undefined || e.minLevel <= currentLevel);
-  if (eligibleEvents.length === 0) return { event: null, logs, chatMessage };
+  if (eligibleEvents.length === 0) return { event: null, logs, chatMessage, landTransfers: [] };
 
   const totalWeight = eligibleEvents.reduce((sum, event) => sum + event.triggerChance(workingState), 0);
   if (totalWeight <= 0) {
@@ -187,7 +200,7 @@ export function rollEvent(
         ? 'Level 3: Dynamic event attempt failed. No eligible event had >0 trigger weight.'
         : 'Nivel 3: Intento de evento dinámico fallido. Ningún evento elegible tenía >0 peso de activación.'
     );
-    return { event: null, logs, chatMessage };
+    return { event: null, logs, chatMessage, landTransfers: [] };
   }
 
   let randomNum = rng() * totalWeight;
@@ -212,7 +225,7 @@ export function rollEvent(
   );
   chatMessage = language === 'en' ? `Unexpected Event! ${chosenName}: ${chosenDescription}` : `¡Evento Inesperado! ${chosenName}: ${chosenDescription}`;
   const effects = chosenEvent.effects(workingState);
-  applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
+  const landTransfers = applyRandomEventEffects(effects, workingState.indicators, workingState.stellaSpecificState, workingState.landUses, logs, language, deferred);
 
-  return { event: chosenEvent, logs, chatMessage };
+  return { event: chosenEvent, logs, chatMessage, landTransfers };
 }
