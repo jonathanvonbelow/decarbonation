@@ -73,13 +73,17 @@ describe('model 1.1 §3: pacts are impulses, not level jumps (N-03, T-03)', () =
   // (PARAMS_V2.pacts.biodiversityTreaty.B; tests/sim/biodiversity.v2.spec.ts).
 });
 
-describe('model 1.1 §4: pacts keep their functions from the first year (N-14)', () => {
-  it('createInitialState restores effects()', () => {
+// Model 1.1 §4 (N-14) restored the pacts' `effects` functions after every JSON clone; phase 43 made pacts plain data,
+// so a JSON clone of a level's state is complete (src/sim/v2/pacts.ts).
+describe('model 1.1 §4 / phase 43: pacts survive a JSON clone (N-14)', () => {
+  it('createInitialState pacts are plain data', () => {
     [1, 2, 3].forEach((level) => {
       const { pacts } = createInitialState(level).gameStatePatch;
-      Object.keys(INITIAL_PACTS).forEach((id) => expect(typeof pacts[id].effects, `${level}/${id}`).toBe('function'));
+      Object.keys(INITIAL_PACTS).forEach((id) => {
+        expect(JSON.parse(JSON.stringify(pacts[id])), `${level}/${id}`).toEqual(pacts[id]);
+        expect('effects' in pacts[id], `${level}/${id}`).toBe(false);
+      });
     });
-    expect(typeof createInitialState(2).gameStatePatch.pacts.biodiversityTreaty.effects).toBe('function');
   });
 });
 

@@ -24,7 +24,8 @@ import { LandUseType } from '../../types';
 import { target100 } from './math';
 import { PARAMS_V2, type LandCode, type Pid } from './params';
 import type { PolicyEfficiency } from './policies';
-import { capImpulses, impulseSum, pactShift, stepIndicator, type IndicatorState } from './indicators';
+import { capImpulses, impulseSum, stepIndicator, type IndicatorState } from './indicators';
+import { pactShift } from './pacts';
 
 type Eff = Partial<Record<Pid, PolicyEfficiency>>;
 

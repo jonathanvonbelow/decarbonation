@@ -4,13 +4,14 @@
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { pactShift } from '../../src/sim/v2/pacts';
 import { CONTROL_PARAMS } from '../../src/constants';
 import { makeRng, stepMonth, stepYear } from '../../src/sim';
 import { logit, sigmoid } from '../../src/sim/v2/math';
 import { PARAMS_V2, PIDS, type Pid } from '../../src/sim/v2/params';
 import type { PolicyEfficiency } from '../../src/sim/v2/policies';
 import {
-  capImpulses, driveC, fiscalStressOf, impulseSum, interestBurdenOf, pactShift, productiveValue, stepIndicator, targetC, targetE, targetPc,
+  capImpulses, driveC, fiscalStressOf, impulseSum, interestBurdenOf, productiveValue, stepIndicator, targetC, targetE, targetPc,
   updateRelaxedIndicators, type IndicatorState,
 } from '../../src/sim/v2/indicators';
 import { LandUseType, Policy, type GameState } from '../../src/types';

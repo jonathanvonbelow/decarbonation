@@ -4,6 +4,11 @@ import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, LEVEL_CONFIGS } fr
 import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
 import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
+
+/** Pact costs of PARAMS_V2.pacts as "a % / b % / c %" (treaty / carbon accord / tech transfer), phase 43. */
+const pactPcts = (key: 'entry' | 'annual'): string =>
+  [PARAMS_V2.pacts.biodiversityTreaty, PARAMS_V2.pacts.globalCarbonAccord, PARAMS_V2.pacts.techTransferInitiative]
+    .map((p) => `${(p[key] * 100).toLocaleString('es', { maximumFractionDigits: 1 })} %`).join(' / ');
 import { costShareOf, PID_OF } from '../../sim/v2/policies';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const EQ_UI = {
@@ -264,7 +269,7 @@ Objetivo:  π* = 100 · σ( logit(π₀/100) + D_π )      Dinámica:  π ← π
             <Formula>ΔPBI = <Param>PBI_Actual</Param> * (<Param>TasaBase</Param> + Σ(<Param>Efectos Políticas</Param>))
 ΔReservas = <Param>Ingresos</Param> - <Param>Egresos</Param></Formula>
             <p className="text-sm"><Code>Ingresos</Code> = Impuestos sobre PBI (con tasa base + tasa adicional en N3) + Préstamos solicitados.</p>
-            <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (<Code>κ · PBI · (0,3 + 0,7 · esfuerzo)</Code>) + Costos Anuales de Pactos + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
+            <p className="text-sm"><Code>Egresos</Code> = Costos de Políticas (<Code>κ · PBI · (0,3 + 0,7 · esfuerzo)</Code>) + Costos Anuales de Pactos (fracción del PBI: {pactPcts('annual')}; la adhesión, {pactPcts('entry')}) + Pago Intereses Deuda + Pago de Capital de la Deuda.</p>
 
             <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
             <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>

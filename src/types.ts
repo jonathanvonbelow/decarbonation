@@ -103,21 +103,11 @@ export interface Pact {
   name: string;
   description: string;
   isActive: boolean;
-  effects: (currentIndicators: Indicators, currentStellaStocks: StellaStocks) => {
-    indicators?: Partial<Indicators>;
-    stellaStocks?: Partial<StellaStocks>;
-    landUseChangeFactors?: {
-        tasa_BNNP_a_BNP?: number; // Multiplier
-        tasa_BNNP_a_CC?: number; // Multiplier
-        tasa_BNNP_a_CA?: number; // Multiplier
-        tasa_CA_a_BNNP?: number; // Multiplier
-    };
-  };
-  costToJoin?: number;
-  annualCost?: number;
   unlockYear?: number;
   // Model 1.1 (phase 34) had `impulses` (B, F, E inside the 1.1 indicator functions); phases 39–41 replaced them with
-  // shifts of the logistic targets (PARAMS_V2.pacts.*.B / E / Pc) and the field was deleted in phase 41.
+  // shifts of the logistic targets (PARAMS_V2.pacts.*.B / E / Pc) and the field was deleted in phase 41. Phase 43 deleted
+  // `effects` (a function, lost on every JSON clone), `costToJoin` and `annualCost`: what a pact does and costs is data in
+  // PARAMS_V2.pacts keyed by `id` (src/sim/v2/pacts.ts; costs as fractions of GDP).
 }
 
 // Helper to filter keys of an object to only those that point to a 'number' type value.

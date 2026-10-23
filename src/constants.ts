@@ -312,57 +312,29 @@ export const INITIAL_FINANCES = {
   debt: INITIAL_STELLA_STOCKS.Deuda,
 };
 
+// Fase 43: un pacto es datos. Lo que hace mientras está activo (desplazamientos de B, E, Pc; s*, u*; factores de la
+// frontera) y lo que cuesta (entrada y anual como fracción del PBI) vive en PARAMS_V2.pacts por id
+// (src/sim/v2/pacts.ts). Se borraron `effects` (funciones que se perdían en cada clon JSON), `costToJoin` (300 / 500 /
+// 1000) y `annualCost` (30 / 50 / 100).
 export const INITIAL_PACTS: Record<string, Pact> = {
   globalCarbonAccord: {
     id: 'globalCarbonAccord', name: "Acuerdo Global de Carbono",
     description: "Comprometerse con metas globales de reducción de carbono, mejorando los esfuerzos de secuestro y la reputación internacional, pero puede requerir ajustes económicos.",
     isActive: false,
     unlockYear: 2035,
-    costToJoin: 500,
-    annualCost: 50,
-    effects: (indicators, stellaStocks) => ({
-      // Fase 38: el −5 % de CO2 de 1.1 pasa al carbono físico (PARAMS_V2.pacts.globalCarbonAccord.renewables /
-      // efficiency suman 0,05 a s* y u*, src/sim/v2/carbon.ts).
-      // Fase 39: el +3 de estabilidad política (aplicado después del recálculo, deferred.ts) pasa a un
-      // desplazamiento del objetivo del colapso, PARAMS_V2.pacts.globalCarbonAccord.Pc = −0,15 logit (≈ −3 puntos
-      // cerca de Pc = 30), y su −0,10 sobre E a PARAMS_V2.pacts.globalCarbonAccord.E (src/sim/v2/indicators.ts).
-      stellaStocks: {}
-    }),
   },
   biodiversityTreaty: {
     id: 'biodiversityTreaty', name: "Tratado de Preservación de la Biodiversidad",
     description: "Unirse a esfuerzos internacionales para proteger la biodiversidad, impulsando la conservación pero potencialmente limitando algunas actividades económicas.",
     isActive: false,
     unlockYear: 2030,
-    costToJoin: 300,
-    annualCost: 30,
-    effects: (indicators, stellaStocks) => ({
-      stellaStocks: {},
-      landUseChangeFactors: {
-        tasa_BNNP_a_BNP: 1.5, // Aumenta la tasa de protección de bosque en un 50%
-        tasa_BNNP_a_CC: 0.5, // Reduce la tasa de deforestación para cultivos convencionales en un 50%
-      }
-    }),
-    // Model 1.1 (phase 34, N-03/T-03) replaced +5 B and −1 E per year (a level jump in effects(): B went 40 → 100
-    // in 13 years) with impulses of +0,40 / −0,05. Fase 39: el −0,05 sobre E es PARAMS_V2.pacts.biodiversityTreaty.E;
-    // fase 40: el +0,40 sobre B es PARAMS_V2.pacts.biodiversityTreaty.B = +0,25 logit (desplazamiento de B*).
-
   },
   techTransferInitiative: {
     id: 'techTransferInitiative', name: "Iniciativa de Transferencia Tecnológica",
     description: "Participar en un programa de intercambio de tecnología para energía limpia y prácticas sostenibles, mejorando la eficiencia pero requiriendo inversión inicial.",
     isActive: false,
     unlockYear: 2038,
-    costToJoin: 1000,
-    annualCost: 100,
-    // Fase 38: el −10 % de CO2 de 1.1 pasa al carbono físico (PARAMS_V2.pacts.techTransferInitiative.renewables
-    // 0,10 / efficiency 0,05 sobre s* y u*, src/sim/v2/carbon.ts).
-    effects: () => ({
-      stellaStocks: {}
-    }),
-    // Model 1.1 (phase 34) replaced +2 E per year with an impulse of 0,15; since phase 39 it is the target
-    // shift PARAMS_V2.pacts.techTransferInitiative.E = +0,15 logit (src/sim/v2/indicators.ts).
-  }
+  },
 };
 
 export const CONTROL_PARAMS: ControlParams = {

@@ -32,7 +32,6 @@ import { Policy } from '../types';
 import type { Rng } from './rng';
 import { computeScore } from './score';
 import type { SimTrace } from './trace';
-import { restorePactFunctions } from './deferred';
 import type { Language } from '../hooks/useLanguage';
 import { advance, type StepYearChatMessage } from './v2/core';
 import { createModelState } from './v2/anchors';
@@ -45,6 +44,7 @@ export * from './v2/land';
 export * from './v2/carbon';
 export { drivePressures, productiveShare, sectorSize, targetPressures, updatePressures, type PressureTargets, type PressureWear } from './v2/pressures';
 export * from './economy';
+export { pactAnnualCost, pactEnergyShift, pactEntryCost, pactLandFactors, pactParams, pactShift, pactYearlyCostOf, type PactId } from './v2/pacts';
 export * from './score';
 export * from './events';
 export * from './winRoutes';
@@ -72,7 +72,7 @@ export interface StepYearResult {
  * Advances `state` by exactly one simulated year: a thin wrapper of `advance(state, 1, …)`
  * (src/sim/v2/core.ts, phase 35), which holds the body, the order of operations and its history.
  * Pure: never mutates its input, and — for a given `(state, rng, CP)` — always produces the same
- * `next`/`trace`. Pact `effects` functions are restored after the internal JSON clone.
+ * `next`/`trace`.
  *
  * `CP` defaults to the static `CONTROL_PARAMS` but is a parameter, not a hardcoded import: the
  * app reads `controlParamsRef.current` here (see App.tsx and CLAUDE.md's "CP alias" pattern),
@@ -103,9 +103,7 @@ export interface LevelInitializationResult {
  * pre-extraction src/App.tsx — used whenever the game resets to a level's starting conditions
  * (starting the next level after a win, jumping to a level manually, retrying after a loss).
  *
- * `JSON.parse(JSON.stringify(INITIAL_PACTS))` strips the pacts' `effects` functions; since model 1.1
- * (phase 34, N-14) they are restored right here with `restorePactFunctions`, so a level never starts
- * with pacts that cannot be evaluated.
+ * Pacts are plain data since phase 43 (src/sim/v2/pacts.ts): a JSON clone of INITIAL_PACTS is complete.
  */
 export function createInitialState(levelNumber: number, CP: ControlParams = CONTROL_PARAMS): LevelInitializationResult {
   const newLevelConfig = LEVEL_CONFIGS.find((lc) => lc.levelNumber === levelNumber);
@@ -180,7 +178,7 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
       landUses: newLandUses,
       indicators: newIndicators,
       stellaSpecificState: newStellaState,
-      pacts: restorePactFunctions(JSON.parse(JSON.stringify(INITIAL_PACTS)) as Record<string, Pact>),
+      pacts: JSON.parse(JSON.stringify(INITIAL_PACTS)) as Record<string, Pact>,
       activeLevelConfig: newLevelConfig,
       yearsSimulatedInCurrentLevel: 0,
       level3EventsTriggeredCount: 0,

@@ -39,7 +39,7 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogDrawer from './components/GameLogDrawer';
-import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, restorePactFunctions } from './sim';
+import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost } from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -915,8 +915,7 @@ export const App = () => {
     setGameState(prev => {
       const newPacts = { ...prev.pacts };
       if (!newPacts[pactId]) return prev;
-      // Clone just this pact (not JSON deep-clone: `effects` is a function and would be
-      // stripped) before mutating it below — same shared-reference/StrictMode issue as
+      // Clone just this pact before mutating it below — same shared-reference/StrictMode issue as
       // togglePolicy above.
       const pactToggled = { ...newPacts[pactId] };
       newPacts[pactId] = pactToggled;
@@ -936,14 +935,17 @@ export const App = () => {
       let toastMsg = "";
       let toastType: 'info' | 'warning' | 'error' = 'info';
 
-      if (pactToggled.isActive && !wasActive && pactToggled.costToJoin) {
-        if (newTreasuryReserves >= pactToggled.costToJoin) {
-          newTreasuryReserves -= pactToggled.costToJoin;
-          logMsg = `Se unió al pacto '${pactToggled.name}'. Costo: ${pactToggled.costToJoin}.`;
+      // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry).
+      // TODO(v6 fase 44): pay it with the public-investment rule of phase 44; until then it comes out of the reserves.
+      const costToJoin = pactEntryCost(pactId, prev.stellaSpecificState.PBI_Real);
+      if (pactToggled.isActive && !wasActive && costToJoin > 0) {
+        if (newTreasuryReserves >= costToJoin) {
+          newTreasuryReserves -= costToJoin;
+          logMsg = `Se unió al pacto '${pactToggled.name}'. Costo: ${costToJoin.toFixed(0)}.`;
           toastMsg = logMsg;
         } else {
           pactToggled.isActive = false; 
-          logMsg = `Fondos insuficientes para unirse a '${pactToggled.name}'. Se necesitan ${pactToggled.costToJoin} y solo tienes ${prev.stellaSpecificState.Reservas_del_Tesoro.toFixed(0)}.`;
+          logMsg = `Fondos insuficientes para unirse a '${pactToggled.name}'. Se necesitan ${costToJoin.toFixed(0)} y solo tienes ${prev.stellaSpecificState.Reservas_del_Tesoro.toFixed(0)}.`;
           toastMsg = logMsg;
           toastType = 'error';
         }
@@ -1063,8 +1065,6 @@ export const App = () => {
     if (tempGameState.activeLevelConfig) {
         tempGameState.activeLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === tempGameState.currentLevel);
     }
-    // Restore pact functions lost during JSON serialization to prevent runtime crashes.
-    if (tempGameState.pacts) restorePactFunctions(tempGameState.pacts);
 
 
     let concludedLevelInfoForUpdate: GameState['lastConcludedLevelInfo'] = null;

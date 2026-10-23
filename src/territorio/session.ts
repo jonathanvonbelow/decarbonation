@@ -18,7 +18,7 @@
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
   changesTouchForest, createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
-  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, stepMonth, syncTerritory, type DeferredAdjustment,
+  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, stepMonth, syncTerritory, type DeferredAdjustment,
   type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -470,9 +470,12 @@ export function togglePact(s: Session, pactId: string, CP: ControlParams = CONTR
   if (!unlocks(s, CP).pact(pactId)) return { session: s, error: 'not-unlocked', detail: { year: pact.unlockYear ?? 0 } };
   const reserves = s.game.stellaSpecificState.Reservas_del_Tesoro;
   let nextReserves = reserves;
-  if (!pact.isActive && pact.costToJoin) {
-    if (reserves < pact.costToJoin) return { session: s, error: 'insufficient-funds', detail: { cost: pact.costToJoin } };
-    nextReserves -= pact.costToJoin;
+  // Phase 43: the entry cost is a fraction of the current GDP (PARAMS_V2.pacts.*.entry).
+  // TODO(v6 fase 44): pay it with the public-investment rule of phase 44; until then it comes out of the reserves.
+  const costToJoin = pactEntryCost(pactId, s.game.stellaSpecificState.PBI_Real);
+  if (!pact.isActive && costToJoin > 0) {
+    if (reserves < costToJoin) return { session: s, error: 'insufficient-funds', detail: { cost: costToJoin } };
+    nextReserves -= costToJoin;
   }
   const game: GameState = {
     ...s.game,

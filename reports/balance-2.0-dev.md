@@ -1,6 +1,6 @@
 # Balance del modelo 2.0-dev (full)
 
-Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-23, en 350 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
+Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-23, en 693 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
 
 ## Criterios
 
@@ -72,9 +72,9 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-23, en 350 s.
 - N3 E: 21.8 (tech_tax → extractive)
 - N3 W: 23.3 (extractive → green)
 - Territorio B: 30.7 (extractive → conservation)
-- Territorio F: 13.5 (conservation → production) ✗
+- Territorio F: 13.7 (conservation → production) ✗
 - Territorio E: 21.8 (buy_everything → extractive)
-- Territorio W: 28.8 (do_nothing → innovation)
+- Territorio W: 28.1 (do_nothing → production)
 
 </details>
 
@@ -173,15 +173,15 @@ Tasa de victoria con intervalo de Wilson al 95 %; rutas = % de semillas que cump
 | Estrategia | Victoria | cons / prod / inno | todas | B | F | E | W | St | c | D/Y | Puntaje | Fin (p50) | Derrotas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | do_nothing | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 36.9 (33.4–38.8) | 37.6 (34.7–41.2) | 30.5 (28.5–32.0) | 48.0 (40.0–54.3) | 52.8 (44.9–65.1) | 6.77 (6.68–6.90) | 0.00 (0.00–0.00) | 521 | 2054.0 | — |
-| conservation | 100 % [84 %–100 %] | 100 % / 0 % / 0 % | 0 % | 62.8 (61.6–63.5) | 30.9 (28.5–34.9) | 28.7 (26.7–30.6) | 74.3 (70.0–79.1) | 82.3 (78.8–87.2) | 5.54 (5.03–5.82) | 0.00 (0.00–0.03) | 656 | 2054.0 | — |
+| conservation | 100 % [84 %–100 %] | 100 % / 0 % / 0 % | 0 % | 62.8 (61.5–63.8) | 30.8 (27.9–34.9) | 28.6 (26.2–30.1) | 74.2 (68.7–78.1) | 82.3 (77.7–87.2) | 5.54 (4.94–5.77) | 0.00 (0.00–0.03) | 654 | 2054.0 | — |
 | production | 30 % [15 %–52 %] | 0 % / 30 % / 0 % | 0 % | 38.4 (34.7–40.3) | 44.5 (41.3–47.9) | 49.4 (48.1–51.9) | 76.1 (72.2–81.0) | 88.8 (86.9–91.9) | 7.25 (6.70–7.70) | 0.00 (0.00–0.01) | 619 | 2054.0 | — |
-| innovation | 100 % [84 %–100 %] | 0 % / 0 % / 100 % | 0 % | 45.5 (44.2–48.1) | 35.7 (31.3–37.9) | 32.9 (31.3–34.9) | 76.9 (70.5–81.2) | 86.8 (82.7–89.5) | 3.95 (3.82–4.02) | 0.00 (0.00–0.03) | 674 | 2054.0 | — |
+| innovation | 100 % [84 %–100 %] | 0 % / 0 % / 100 % | 0 % | 45.6 (44.1–48.2) | 35.4 (31.7–37.7) | 32.7 (31.2–35.1) | 75.7 (70.1–80.2) | 87.1 (82.6–89.7) | 3.98 (3.87–4.07) | 0.01 (0.00–0.03) | 673 | 2054.0 | — |
 | settle_only | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 42.0 (40.1–44.0) | 36.8 (32.6–40.4) | 31.1 (29.4–32.8) | 64.6 (59.5–71.1) | 76.4 (71.6–82.1) | 6.46 (5.99–6.85) | 0.00 (0.00–0.03) | 588 | 2054.0 | — |
 | cheap_production | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 41.5 (39.6–44.3) | 31.9 (28.5–35.4) | 35.9 (34.0–37.5) | 63.9 (59.1–68.1) | 77.7 (73.4–82.9) | 6.72 (5.96–7.06) | 0.00 (0.00–0.01) | 581 | 2054.0 | — |
 | extractive | 20 % [8 %–42 %] | 0 % / 20 % / 0 % | 0 % | 32.1 (28.4–34.6) | 43.6 (38.3–48.6) | 50.2 (48.0–53.5) | 61.3 (55.6–66.2) | 66.9 (57.5–74.2) | 7.51 (6.90–7.95) | 0.00 (0.00–0.01) | 545 | 2054.0 | — |
 | buy_everything | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 53.9 (53.0–54.0) | 32.6 (30.0–35.6) | 28.4 (27.0–30.5) | 69.7 (66.2–73.5) | 78.9 (73.3–81.6) | 4.43 (4.37–4.51) | 0.00 (0.00–0.00) | 652 | 2054.0 | — |
 
-Recorrido entre estrategias (máx − mín de las medianas): B 30.7, F 13.5, E 21.8, W 28.8.
+Recorrido entre estrategias (máx − mín de las medianas): B 30.7, F 13.7, E 21.8, W 28.1.
 
 ## Banda de predicción (jugadores sintéticos)
 

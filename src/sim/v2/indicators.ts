@@ -20,11 +20,12 @@
  *
  * Pure: no React, no randomness, no mutation.
  */
-import type { ControlParams, GameState, ModelIndicatorKey, ModelState, Pact } from '../../types';
+import type { ControlParams, GameState, ModelIndicatorKey, ModelState } from '../../types';
 import { LandUseType } from '../../types';
 import { relax, sHigh, sLow, target100 } from './math';
 import { PARAMS_V2, type Pid } from './params';
 import type { PolicyEfficiency } from './policies';
+import { pactShift } from './pacts';
 
 type Eff = Partial<Record<Pid, PolicyEfficiency>>;
 type Channel = 'prod' | 'social' | 'tax';
@@ -73,13 +74,6 @@ export function impulseSum(model: Pick<ModelState, 't' | 'impulses'>, X: ModelIn
 
 /** Situation impulses are capped at ±impulseCap logit units per indicator (spec 39 §1). */
 export const capImpulses = (v: number): number => Math.max(-R.impulseCap, Math.min(R.impulseCap, v));
-
-/** Target shift (logit) of the active pacts on B, E or Pc (PARAMS_V2.pacts; phase 43 makes every pact data). */
-export function pactShift(pacts: Record<string, Pact> | undefined, X: 'B' | 'E' | 'Pc'): number {
-  if (!pacts) return 0;
-  const table = PARAMS_V2.pacts as Record<string, Partial<Record<'B' | 'E' | 'Pc', number>>>;
-  return (Object.values(pacts) as Pact[]).reduce((sum, p) => sum + (p.isActive ? table[p.id]?.[X] ?? 0 : 0), 0);
-}
 
 const totalArea = (s: Pick<GameState, 'landUses'>): number =>
   (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + (lu?.area ?? 0), 0) || 1;

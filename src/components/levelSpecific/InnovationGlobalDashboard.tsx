@@ -5,6 +5,7 @@ import { CONTROL_PARAMS } from '../../constants';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 import { getPactName, INNOVATION_DATA_NAMES } from '../../legacyContent/gameData';
 import { ANCHORS, useAnchor } from '../decarbonito/anchors';
+import { pactEntryCost, pactParams, pactYearlyCostOf } from '../../sim/v2/pacts';
 
 interface InnovationGlobalDashboardProps {
   levelConfig: LevelConfig;
@@ -22,7 +23,7 @@ const T = {
     pacts: (n: number) => `Pactos Internacionales (${n} Activos)`,
     noPacts: 'No hay pactos internacionales disponibles o aplicables actualmente.',
     join: 'Unirse', leave: 'Salir',
-    costJoin: 'Costo Adhesión:', costAnnual: 'Anual:',
+    costJoin: 'Costo Adhesión:', costAnnual: 'Anual:', ofGdp: 'del PBI',
     note: 'Nota: Los datos de innovación y pactos globales son ilustrativos. Sus políticas en I+D, diplomacia y fortaleza económica influyen en estos resultados.',
     fiscalTools: 'Herramientas Fiscales Avanzadas',
     loanAmount: 'Monto del Préstamo',
@@ -49,7 +50,7 @@ const T = {
     pacts: (n: number) => `International Pacts (${n} Active)`,
     noPacts: 'No international pacts are currently available or applicable.',
     join: 'Join', leave: 'Leave',
-    costJoin: 'Joining Cost:', costAnnual: 'Annual:',
+    costJoin: 'Joining Cost:', costAnnual: 'Annual:', ofGdp: 'of GDP',
     note: 'Note: Innovation and global pact data is illustrative. Your R&D, diplomacy, and economic strength policies influence these outcomes.',
     fiscalTools: 'Advanced Fiscal Tools',
     loanAmount: 'Loan Amount',
@@ -78,6 +79,8 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
   const t = T[language];
   const inn = INNOVATION_DATA_NAMES[language];
   const { indicators, year, pacts, additionalTaxPressurePercentage, currentLevel } = gameState;
+  const gdp = gameState.stellaSpecificState.PBI_Real;
+  const fmtPct = (x: number) => `${(x * 100).toLocaleString(language, { maximumFractionDigits: 1 })} %`;
   const [loanAmount, setLoanAmount] = useState(100000);
   const pactListRef = useAnchor<HTMLDivElement>(ANCHORS.pactList, t.pacts(0));
   const loanRef = useAnchor<HTMLDivElement>(ANCHORS.loanControl, t.loanAmount);
@@ -148,10 +151,12 @@ const InnovationGlobalDashboard: React.FC<InnovationGlobalDashboardProps> = ({
                         {pact.isActive ? t.leave : t.join}
                       </button>
                     </div>
-                    {(pact.costToJoin || pact.annualCost) && (
+                    {pactParams(pact.id) && (
+                      // Phase 43: costs are fractions of the current GDP (PARAMS_V2.pacts).
                       <p className="text-xs text-gray-400 mt-1">
-                        {pact.costToJoin ? `${t.costJoin} ${pact.costToJoin} ` : ''}
-                        {pact.annualCost ? `${t.costAnnual} ${pact.annualCost}` : ''}
+                        {/* the entry is charged once, at the GDP of the moment of joining: shown only before joining */}
+                        {pact.isActive ? '' : `${t.costJoin} ${pactEntryCost(pact.id, gdp).toFixed(0)} (${fmtPct(pactParams(pact.id)!.entry)} ${t.ofGdp}) `}
+                        {`${t.costAnnual} ${pactYearlyCostOf(pact.id, gdp).toFixed(0)} (${fmtPct(pactParams(pact.id)!.annual)})`}
                       </p>
                     )}
                   </div>

@@ -18,6 +18,7 @@ calibración.**
 | `biodiversity.ts` | fase 40: `habitatIndex` (H = Σ h·a, también el ancla H₀), `driveB` / `targetB` (especies-área en logit, γ_H = z/(1 − B₀/100), calidad de manejo qB·η^land, sinergias continuas, conectividad γ_K·ln(K/K₀) solo con mapa, pactos), `connectivityTerm`, `updateBiodiversity` (paso 8, primero) |
 | `food.ts` | fase 41: `exportShare` (x = 0,30 + 0,20·η_PEA), `domesticSupply` (Q, también el ancla ρ₀), `foodPerCapita` (ρ con piso 0,001·ρ₀), `meanYield` (capa del mapa), `driveF` / `targetF` (2,5·ln(ρ/ρ₀) + 0,6·(E − E₀)/50), `updateFoodSecurity` (paso 8, segundo; lee la E del paso anterior) |
 | `pressures.ts` | fase 42: `productiveShare` (a_prod = (CC + CA + PRG)/ΣA, PF fuera), `sectorSize` (σ_prod), `drivePressures` / `targetPressures` (φ·η^social/15, σ_prod solo sobre la suma de políticas de π_a, desvíos de E, F, a_prod, B, c, W y τ, desgaste, impulsos con tope), `updatePressures` (paso 8, último) |
+| `pacts.ts` | fase 43: `pactParams`, `pactShift` (B / E / Pc, logit), `pactEnergyShift` (s* / u*), `pactLandFactors` (frontera BNNP → BNP / CC), `pactAnnualCost` / `pactEntryCost` / `pactYearlyCostOf` (fracciones del PBI) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
 
@@ -54,7 +55,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 40 | paso 8: B por especies-área (`habitat`, `zSAR`, `qB`, `biodiversity`, `Velocidad_Ajuste_Biodiversidad`; conectividad K del mapa vía `AdvanceOptions.connectivity`) | hecho (FAL sigue con su peso 1.1 en F hasta la 41) |
 | 41 | paso 8: F por balance oferta/demanda (`food`, `foodPerCapita0`, `Velocidad_Ajuste_Seg_Alimentaria`; choque ε = `model.yieldShock`, 0 hasta la 46) | hecho (`src/sim/indicators.ts`, `INDICATOR_IMPACT_WEIGHTS` y `Pact.impulses` borrados) |
 | 42 | paso 8, último: presiones en logit, ancladas (`pressure`, `Velocidad_Ajuste_Presiones`) | hecho (desgaste de situaciones como desplazamiento hasta la 47) |
-| 43 | pactos como desplazamiento de objetivo (`pacts`) | pendiente |
+| 43 | pasos 4, 5, 7.5 y 8: pactos como datos (`pacts`): desplazamientos, frontera, costos ∝ PBI | hecho (entrada pagada de las reservas hasta la 44) |
 | 44 | paso 6: gasto base, deuda automática, quiebra (`finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge` | pendiente |
 | 45 | conflicto distributivo (`conflict`, `greenRelief`, `conflictWeights`) | pendiente |
 | 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
@@ -131,3 +132,8 @@ situaciones abiertas es un desplazamiento de los objetivos de C y de las tres pr
 wear)` no recibe `CP` (ningún término lo lee; k_π en `updatePressures`), como `targetF`. (3) Un choque de evento sobre una presión (stock o indicador diferido) es un salto del stock que la
 relajación disipa (como W/St desde la 39). Con esto todo indicador acotado y las presiones relajan exacto; queda en 1.1 +
 `toward` solo el dinero (44).
+
+Fase 43: sin recortes de ecuación. Desvíos: (1) la entrada se paga de las reservas (como 1.1) hasta que la 44 traiga la regla
+de inversión pública (TODO en los dos `togglePact`). (2) La cuota anual se cobra sobre el PBI antes del crecimiento del paso
+(orden 1.1 de los costos; el prototipo, después) hasta la 44. (3) Las funciones reciben `pacts`, no el estado. Con esto
+ningún `GameState` lleva funciones: un clon JSON es completo.

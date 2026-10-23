@@ -9,7 +9,7 @@ import { useT, type TranslationKey } from '../i18n';
 import { evaluateTerritorio, leadingRouteId } from './routes';
 import { artRoute, newsArtUrl, themeForNews, themeForSituationNews } from './newsArt';
 import { portraitUrl, type PortraitActor } from './sprites';
-import { canDeclare, lotFor, parcelAt, policyCostOf, policyStatus, publicUseCost, PUBLIC_USES, isProductive, landUseOfKind, parcelKindOf, regionAt, type PublicUse } from '../sim';
+import { canDeclare, lotFor, pactEntryCost, pactYearlyCostOf, parcelAt, policyCostOf, policyStatus, publicUseCost, PUBLIC_USES, isProductive, landUseOfKind, parcelKindOf, regionAt, type PublicUse } from '../sim';
 import { costShareOf, PID_OF } from '../sim/v2/policies';
 import { EffortSlider } from '../components/ui/EffortSlider';
 import { Button } from '../components/ui/Button';
@@ -235,11 +235,11 @@ export function FinancePanel({ session, onPact, onTax, onLoan }: {
                   <div className="min-w-0">
                     <p className="text-[14px] text-bone">{getPactName(pact.id, locale)}</p>
                     <p className="tnum text-[11px] text-ash">
-                      {open ? fill(c.finance.annualCost, { cost: fmt.big(pact.annualCost ?? 0) }) : fill(c.finance.availableFrom, { year: pact.unlockYear ?? 0 })}
+                      {open ? fill(c.finance.annualCost, { cost: fmt.big(pactYearlyCostOf(pact.id, s.PBI_Real)) }) : fill(c.finance.availableFrom, { year: pact.unlockYear ?? 0 })}
                     </p>
                   </div>
                   <Button size="sm" variant={pact.isActive ? 'ghost' : 'secondary'} disabled={!open} onClick={() => onPact(pact.id)}>
-                    {pact.isActive ? c.finance.leave : fill(c.finance.join, { cost: fmt.big(pact.costToJoin ?? 0) })}
+                    {pact.isActive ? c.finance.leave : fill(c.finance.join, { cost: fmt.big(pactEntryCost(pact.id, s.PBI_Real)) })}
                   </Button>
                 </div>
               </div>

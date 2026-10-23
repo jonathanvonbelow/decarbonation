@@ -15,6 +15,7 @@
  */
 import type { GameState, LandUseType, ModelAnchors, ModelState, Pact } from '../../types';
 import { relax } from './math';
+import { pactEnergyShift } from './pacts';
 import { PARAMS_V2, type LandCode } from './params';
 import { HA_PER_KHA, LAND_USE_TYPES, type LandEfficiencies } from './land';
 
@@ -39,13 +40,6 @@ const areaHa = (landUses: GameState['landUses'], k: LandCode): number =>
 const totalArea = (landUses: GameState['landUses']): number =>
   LAND_CODES.reduce((sum, k) => sum + Math.max(0, landUses[k as LandUseType]?.area ?? 0), 0);
 
-/** Σ of a pact key over the active pacts of PARAMS_V2.pacts (the prototype's `s` / `u` = `renewables` / `efficiency`). */
-function pactSum(pacts: Record<string, Pact> | undefined, key: 'renewables' | 'efficiency'): number {
-  if (!pacts) return 0;
-  const table = PARAMS_V2.pacts as Record<string, Partial<Record<'renewables' | 'efficiency', number>>>;
-  return Object.keys(table).reduce((sum, id) => sum + (pacts[id]?.isActive ? table[id][key] ?? 0 : 0), 0);
-}
-
 /** Targets s* and u* of the energy state for the current land, policies and pacts. */
 export function energyTargets(
   landUses: GameState['landUses'], eff: LandEfficiencies, pacts?: Record<string, Pact>,
@@ -54,8 +48,8 @@ export function energyTargets(
   const total = totalArea(landUses);
   const parkShare = total > 0 ? Math.max(0, landUses['ENR' as LandUseType]?.area ?? 0) / total : 0;
   const renewableShare = Math.min(e.renewablesCap,
-    e.renewablesMaxCN * (eff.CN?.elec ?? 0) + Math.min(1, parkShare / e.parksFullShare) + pactSum(pacts, 'renewables'));
-  const efficiency = Math.min(e.efficiencyCap, e.efficiencyMaxCN * (eff.CN?.other ?? 0) + pactSum(pacts, 'efficiency'));
+    e.renewablesMaxCN * (eff.CN?.elec ?? 0) + Math.min(1, parkShare / e.parksFullShare) + pactEnergyShift(pacts, 'renewables'));
+  const efficiency = Math.min(e.efficiencyCap, e.efficiencyMaxCN * (eff.CN?.other ?? 0) + pactEnergyShift(pacts, 'efficiency'));
   return { renewableShare, efficiency };
 }
 

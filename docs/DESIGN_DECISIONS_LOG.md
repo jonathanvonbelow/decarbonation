@@ -2713,3 +2713,74 @@ prototipo para el primero; la 46 unifica los eventos); firma sin `CP` (documenta
 
 **Deudas.** C9 (46); F N3 (44/46); Territorio `extractive`/producción y la decisión del escritorio abandonado (47/49); π_s y W
 (45).
+
+## 2026-10-22 — v6 fase 43: pactos internacionales como desplazamiento del objetivo
+
+**Qué se hizo** (`mejora-general/files/43_pactos_internacionales.md`; rama `v6-modelo-v2`).
+- `src/sim/v2/pacts.ts`: un pacto es datos (`PARAMS_V2.pacts`, por el id del código; el prototipo y la spec §4 usan
+  treaty / accord / tech, y sus claves s / u / m_protect / m_deforest son renewables / efficiency / protectFactor /
+  deforestFactor). `pactShift` (B / E / Pc, logit; mudado de `indicators.ts`), `pactEnergyShift` (s* / u*; antes `pactSum` en
+  `carbon.ts`), `pactLandFactors` (frontera BNNP → BNP ×protectFactor, BNNP → CC ×deforestFactor; **m_protect / m_deforest
+  dejan de leer los factores 1.1 del tratado**), `pactAnnualCost` / `pactEntryCost` / `pactYearlyCostOf` (fracciones del PBI).
+- Costos: entrada 0,03 / 0,05 / 0,10·PBI, cuota 0,002 / 0,004 / 0,008·PBI por año (× dt). El código 1.1 cobraba 300 / 500 /
+  1000 y 30 / 50 / 100 = 0,03 / 0,05 / 0,10 y 0,003 / 0,005 / 0,010 del PBI inicial de 10 000: **la spec baja la cuota anual
+  sin decirlo**; se adopta la de la spec y se documenta. La entrada se calcula con el PBI del momento de adherir (en N3 cuesta
+  más que el fijo de 1.1).
+- `advance`: el paso 5 ya no evalúa funciones (ni su `toward` mensual) y el 11.5 ya no reaplica pactos; la cuota se cobra en el
+  paso 4 sobre el PBI antes del crecimiento (orden 1.1 de los costos; el prototipo, después: 44).
+- Se borran `Pact.effects`, `costToJoin`, `annualCost` (tipo e `INITIAL_PACTS`, que queda con id, name, description, unlockYear,
+  isActive), `restorePactFunctions` (y sus usos en `advance`, `createInitialState` y `App.tsx`), `applyPactEffectsOnDerived`,
+  `computeTotalPactCost`. `GameState` vuelve a ser JSON puro (N-14).
+- Entrada: **la regla de inversión pública de la 44 no existe todavía** → se paga de las reservas como antes (`togglePact` de
+  App.tsx y de `territorio/session.ts`, validación de DecarboNito `toggle_pact`, `joinPacts` del arnés), con TODO(v6 fase 44).
+- UI: `InnovationGlobalDashboard` (N3) muestra entrada (solo antes de adherir) y cuota en función del PBI actual, con el %
+  (es/en); Territorio, los montos al PBI actual; manual del facilitador (pactos desde `PARAMS_V2.pacts`) y de ecuaciones
+  (costos interpolados). DecarboNito / `geminiService` no leían `effects` ni costos: sin cambios.
+- Tests: `tests/sim/pacts.v2.spec.ts` (tratado D_B +0,25 y D_E −0,05 exactos para t = 0…30; acuerdo E −0,10 / Pc −0,15; tech
+  E +0,15; s*/u*; factores 1,5 / 0,5; id desconocido; costos ∝ PBI y la cuota sale del tesoro; clon JSON completo — anual y
+  mensual idénticos —; `INITIAL_PACTS` solo con datos; prototipo N2 año 30 sin eventos: tratado solo B 45,4 (45,42),
+  conservación con / sin tratado 60,3 / 54,2 (60,30 / 54,24), efecto estacionario; pactos solos sin ruta con eventos).
+  INV-16 reescrito sobre `PARAMS_V2.pacts` (E ≤ máx bE, B ≤ máx qB, Pc ≤ máx peso de conflicto, s/u ≤ lo que da CN, costos
+  positivos; ningún pacto con funciones, impulsos o costos 1.1). `model11.spec` (N-14: clon JSON completo en lugar de
+  "restaura effects"), `core.spec` (trayectorias regeneradas: solo cambian las reservas por la cuota del tratado, 30 → 0,002·PBI),
+  `indicators.v2.spec` (importa `pactShift` de `pacts.ts`).
+
+**Desvíos y discrepancias** (filas 43 de `docs/v6-spec-vs-motor.md`).
+- Firmas: las funciones reciben `pacts`, no el estado; `pactCosts` es `pactAnnualCost` + `pactEntryCost`.
+- Entrada pagada de las reservas hasta la 44; cuota sobre el PBI previo al crecimiento hasta la 44.
+- Spec §4 "los tres pactos juntos, sin políticas, tampoco ganan": con eventos ganan `conservation` en N2 (3/5 semillas) y N3
+  (5/5). No es el pacto (B ≈ 45,6, prototipo 45,4) sino las rutas de conservación provisorias del código (B ≥ 41–42 y c ≤
+  5,4–6,5; prototipo B ≥ 52) más la baja de c de los pactos de energía → recalibración de rutas (49). El tratado solo no gana
+  ninguna.
+
+**`npm run sim:check`** (quick sale 0; completo sale 1, como todo completo con FAIL), contra la 42:
+
+| Criterio | 42 (quick) | 42 (completo) | 43 (quick) | 43 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C2 dirigida gana su ruta | FAIL 0,200 | FAIL 0,300 | FAIL 0,200 | FAIL 0,300 |
+| C3 ninguna gana todas | PASS 0,000 | PASS 0,000 | PASS 0,000 | PASS 0,000 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 la estrategia decide | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C6 recorrido ≥ 15 | FAIL 3,616 | FAIL 3,327 | FAIL 3,616 | FAIL 3,327 |
+| C7 banda de predicción | FAIL 0,593 | FAIL 0,599 | FAIL 0,593 | FAIL 0,599 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 2,473 | FAIL 2,473 | FAIL 2,473 | FAIL 2,473 |
+
+Sin cambios de criterio respecto de la 42 (los desplazamientos y factores de los pactos ya eran `PARAMS_V2`; solo cambian las
+cuotas y el monto de entrada en N3).
+
+**E2E con navegador** (fases 42 y 43; dev server :3143, `GEMINI_API_KEY` de relleno). `/territorio`: Conservación activada,
+×4 hasta mar 2026 → presiones 26 / 21 / 20 (en el interior del rango), con dos situaciones abiertas el bienestar baja 60 →
+46,9 (desgaste como desplazamiento), panel de pactos con adhesión al PBI actual (PBI 10 442: tratado 313, acuerdo 522,
+transferencia 1 044). `/play?demo=1` → Nivel 3, Agroecológicas, 7 años → en 2031 el tratado aparece con "Costo Adhesión: 414
+(3 % del PBI) Anual: 28 (0,2 %)"; adherir baja las reservas 7 299 → 6 885 (▼ 414); un año más con el pacto: B 43,0, presiones
+21,5 / 15,9 / 15,3. Sin errores de consola, sin alert/confirm.
+
+**Revisión de código** (aplicada): fila de auditoría corregida (la entrada sube con el PBI de N3, una adhesión puede ser
+rechazada); la tarjeta de pacto activo ya no muestra la entrada; manual de ecuaciones interpola `PARAMS_V2.pacts`;
+`pactLandFactors` parte de `DEFAULT_LAND_USE_CHANGE_FACTORS`; sin reexport de `pactShift` en `indicators.ts`; import sin uso en
+`core.ts`; comentarios de `deferred.ts` y del arnés (el prototipo debita la entrada sin verificar reservas).
+
+**Deudas.** Entrada con la regla de inversión de la 44 y cuota sobre el PBI posterior al crecimiento (44); rutas de
+conservación que los pactos solos alcanzan (49).

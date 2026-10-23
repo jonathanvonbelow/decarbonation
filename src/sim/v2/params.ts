@@ -328,7 +328,14 @@ export const PARAMS_V2 = {
     },
   },
 
-  /** 43 — pacts as target shifts while active (logit units); entry and annual costs as fractions of GDP. */
+  /**
+   * 43 — pacts as shifts while active: B / E / Pc in logit units of the targets, renewables / efficiency added to s* / u*,
+   * protectFactor / deforestFactor multiplying BNNP → BNP / BNNP → CC (the prototype's m_protect / m_deforest); entry
+   * (one-off) and annual costs as fractions of GDP (prototype; 1.1 charged 300 / 500 / 1000 and 30 / 50 / 100, i.e. 0.03 /
+   * 0.05 / 0.10 and 0.003 / 0.005 / 0.010 of the starting GDP of 10 000: the annual cost falls to 0.002 / 0.004 / 0.008).
+   * Ids of the code (prototype treaty / accord / tech). Criterio experto. No pact beats the strongest policy on the same
+   * indicator (INV-16).
+   */
   pacts: {
     biodiversityTreaty:     { entry: 0.03, annual: 0.002, B: 0.25, E: -0.05, protectFactor: 1.5, deforestFactor: 0.5 },
     globalCarbonAccord:     { entry: 0.05, annual: 0.004, E: -0.10, Pc: -0.15, renewables: 0.05, efficiency: 0.05 },

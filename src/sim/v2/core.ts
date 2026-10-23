@@ -35,9 +35,9 @@
  * Order of model 1.1 that this file runs today (numbering of the old stepYear, kept in the comments):
  *  0 population (2.0 step 1, phase 38), 1 activation year, [2.0 step 2: policy clocks, phase 36], 2 event
  *  roll, 3 policy efficiency per channel (2.0 step 4, phase 36), 4 policy (by effort, phase 36) and pact
- *  costs, 5 pact effects, 6 land use (2.0 step 5, phase 37), 7 finances, 7.5 carbon (2.0 step 7, phase 38;
+ *  costs (fraction of GDP, phase 43), 5 pact land factors (phase 43: pacts are data), 6 land use (2.0 step 5, phase 37), 7 finances, 7.5 carbon (2.0 step 7, phase 38;
  *  was step 9 of 1.1), 8 indicators B -> F -> E -> C -> Pc, 10 pressures, 11 sync + clamp, 11.5 deferred
- *  effects, 12 score, 13 game over, 14 fatigue warning (phase 36).
+ *  event effects, 12 score, 13 game over, 14 fatigue warning (phase 36).
  *
  * What still depends on `dt` being the annual step, because 1.1 had two different bodies and this
  * phase must not change a number (each goes away in the phase noted):
@@ -55,21 +55,22 @@
  * imports React or uses Math.random / Date.now.
  */
 import { ALL_RANDOM_EVENTS, INITIAL_LAND_USES } from '../../constants';
-import type { ControlParams, GameState, Indicators, Pact, PolicyState, RandomEvent, StellaStocks } from '../../types';
+import type { ControlParams, GameState, Indicators, PolicyState, RandomEvent, StellaStocks } from '../../types';
 import { LandUseType } from '../../types';
 import type { Language } from '../../hooks/useLanguage';
 import { getEventDescription, getEventName, getPolicyName } from '../../legacyContent/gameData';
 import { updateEnergyState, computeEmissions } from './carbon';
 import { createModelState } from './anchors';
-import { applyDeferredAdjustments, applyPactEffectsOnDerived, isDerivedIndicator, restorePactFunctions, type DeferredAdjustment } from '../deferred';
-import { computeTotalPactCost, updateEconomy } from '../economy';
+import { applyDeferredAdjustments, type DeferredAdjustment } from '../deferred';
+import { updateEconomy } from '../economy';
+import { pactAnnualCost, pactLandFactors } from './pacts';
 import { applyRandomEventEffects, rollEvent } from '../events';
 import { evaluateGameOver } from '../gameOver';
 import { updateBiodiversity, type Connectivity } from './biodiversity';
 import { updateFoodSecurity } from './food';
 import { fiscalStressOf, interestBurdenOf, updateRelaxedIndicators } from './indicators';
 import {
-  applyLandFlows, DEFAULT_LAND_USE_CHANGE_FACTORS, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
+  applyLandFlows, LAND_USE_TYPES, landFlows, type LandUseChangeFactors, type RealisedLandFlow,
   type TransitionFlow,
 } from './land';
 import { checkEfficiencyWarning } from '../policies';
@@ -228,7 +229,6 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const draw = rng ?? NO_EVENTS;
 
   const next: GameState = JSON.parse(JSON.stringify(state));
-  restorePactFunctions(next.pacts);
   // A state built before phase 37 has no fallow entry: it starts at 0 kHa (the area is unchanged).
   if (!next.landUses[LandUseType.Fallow]) next.landUses[LandUseType.Fallow] = { ...INITIAL_LAND_USES[LandUseType.Fallow] };
 
@@ -300,41 +300,13 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
   const stella: StellaStocks = next.stellaSpecificState;
 
   // 4. Annual costs (policy + pacts), on PBI_Real before this step's growth (× dt in step 7). Policy
-  //    cost by effort, κ·Y·(0.3 + 0.7·ē) (phase 36).
+  //    cost by effort, κ·Y·(0.3 + 0.7·ē) (phase 36); pacts annual·Y (phase 43, src/sim/v2/pacts.ts).
   const totalPolicyCost = policyCost(next.policies, stella.PBI_Real);
-  const totalPactCost = computeTotalPactCost(next.pacts);
+  const totalPactCost = pactAnnualCost(next.pacts, stella.PBI_Real);
 
-  // 5. Pact effects: each returns the value one full year of the pact would reach (moved × dt), and the
-  //    land-use change-factor multipliers. No pact writes B, F or E here (B and E: target shifts, PARAMS_V2.pacts; F: none).
-  let landUseChangeFactors: LandUseChangeFactors = { ...DEFAULT_LAND_USE_CHANGE_FACTORS };
-  (Object.values(next.pacts) as Pact[]).forEach((pact) => {
-    if (!pact.isActive) return;
-    const effects = pact.effects(next.indicators, stella);
-    if (effects.indicators) {
-      (Object.keys(effects.indicators) as (keyof Indicators)[]).forEach((k) => {
-        const value = effects.indicators![k];
-        // Derived indicators are applied after the recomputation, at step 11.5 (src/sim/deferred.ts).
-        if (typeof value === 'number' && !isDerivedIndicator(k as string)) next.indicators[k] = toward(next.indicators[k], value, dt);
-      });
-    }
-    if (effects.stellaStocks) {
-      (Object.keys(effects.stellaStocks) as (keyof StellaStocks)[]).forEach((k) => {
-        const value = effects.stellaStocks![k];
-        const current = stella[k];
-        // Annual step: the old `{ ...stella, ...effects.stellaStocks }` merge (a pact may set a key the state lacks).
-        if (typeof value === 'number' && (annual || typeof current === 'number')) (stella as any)[k] = annual ? value : toward(current as number, value, dt);
-      });
-    }
-    if (effects.landUseChangeFactors) {
-      const f = effects.landUseChangeFactors;
-      landUseChangeFactors = {
-        tasa_BNNP_a_BNP: landUseChangeFactors.tasa_BNNP_a_BNP * (f.tasa_BNNP_a_BNP ?? 1),
-        tasa_BNNP_a_CC: landUseChangeFactors.tasa_BNNP_a_CC * (f.tasa_BNNP_a_CC ?? 1),
-        tasa_BNNP_a_CA: landUseChangeFactors.tasa_BNNP_a_CA * (f.tasa_BNNP_a_CA ?? 1),
-        tasa_CA_a_BNNP: landUseChangeFactors.tasa_CA_a_BNNP * (f.tasa_CA_a_BNNP ?? 1),
-      };
-    }
-  });
+  // 5. Pacts (phase 43): data, not functions. While active they shift the targets of B, E and Pc (step 8), the energy
+  //    targets (step 7.5) and the frontier flows of the land matrix (here: protectFactor / deforestFactor).
+  const landUseChangeFactors: LandUseChangeFactors = pactLandFactors(next.pacts);
 
   // 6 (2.0 step 5). Land use: the conservative transition matrix of model 2.0 (phase 37, src/sim/v2/land.ts):
   //    frontier flows (η^land), fallow regrowth, agricultural pool by anchored rents (η^prod), netted, applied
@@ -436,15 +408,8 @@ export function advance(state: GameState, dt: number, rng: Rng | null, CP: Contr
     }
   });
 
-  // 11.5 Pact and event effects on the indicators this step recomputed (src/sim/deferred.ts). A pact's
-  //      effect is a rate per year of membership (× dt); an event's is a one-off shock and lands whole.
-  const beforePacts: Indicators = { ...next.indicators };
-  applyPactEffectsOnDerived(next.pacts, next.indicators, stella);
-  if (!annual) {
-    (Object.keys(next.indicators) as (keyof Indicators)[]).forEach((k) => {
-      if (isDerivedIndicator(k as string)) next.indicators[k] = toward(beforePacts[k], next.indicators[k], dt) as never;
-    });
-  }
+  // 11.5 Event effects on the indicators this step recomputed (src/sim/deferred.ts): a one-off shock that lands whole.
+  //      (Pacts no longer act here since phase 43: they are target shifts.)
   applyDeferredAdjustments(next.indicators, deferred);
   if (opts.extraDeferred?.length) applyDeferredAdjustments(next.indicators, opts.extraDeferred);
   // A shock to W or St is a level jump on its stock (phase 39), and so is a shock to a pressure (phase 42, the

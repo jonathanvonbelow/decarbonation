@@ -6,11 +6,13 @@
  * Player actions mirror what App.tsx lets a player do, not what the prototype does:
  *   - a policy is switched on like `togglePolicy` (isActive + its base efficiency from the clocks; at most
  *     MAX_ACTIVE_POLICIES), with instrument effort set like the instrument panel;
- *   - a pact is joined like `togglePact`: only once `year ≥ unlockYear`, paying `costToJoin` from
- *     reserves and only if reserves cover it (the prototype charges entry × GDP and may borrow);
+ *   - a pact is joined like `togglePact`: only once `year ≥ unlockYear`, paying entry·GDP (phase 43) from
+ *     reserves and only if reserves cover it (the prototype's `play_level` debits entry·Y unconditionally: its
+ *     reserves may go below zero, and its automatic financing turns that into debt);
  *   - the level-3 extra tax is `additionalTaxPressurePercentage`.
  * Events are drawn with `makeRng(seed, year)`, so a (strategy, level, seed) run is reproducible.
  */
+import { pactEntryCost } from '../../src/sim/v2/pacts';
 import { CONTROL_PARAMS, INITIAL_YEAR, MAX_ACTIVE_POLICIES, YEARS_PER_LEVEL } from '../../src/constants';
 import { baseEfficiency, createInitialState, evaluateLevel, fatigueFactor, gameOverKind, makeRng, stepMonth, stepYear, type Rng } from '../../src/sim';
 import type { ControlParams, GameState, PolicyInstrument, PolicyState } from '../../src/types';
@@ -80,7 +82,7 @@ export function joinPacts(state: GameState, strategy: NivelesStrategy, level: nu
   (strategy.pacts ?? []).forEach((code) => {
     const pact = state.pacts[PACT_BY_CODE[code]];
     if (!pact || pact.isActive || state.year < (pact.unlockYear ?? 0)) return;
-    const cost = pact.costToJoin ?? 0;
+    const cost = pactEntryCost(pact.id, state.stellaSpecificState.PBI_Real);
     if (state.stellaSpecificState.Reservas_del_Tesoro < cost) return;
     pact.isActive = true;
     state.stellaSpecificState.Reservas_del_Tesoro -= cost;

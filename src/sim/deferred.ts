@@ -9,31 +9,14 @@
  * meant the Global Carbon Accord's −5% CO2 and +3 political stability, the Technology Transfer
  * Initiative's −10% CO2 and the "green tech boom" event's −5% CO2 never reached the player.
  *
- * The fix keeps each effect's own meaning:
- *   - pacts:  their `effects(...)` function is pure, so it is re-evaluated once the year's values
- *             exist and only the derived keys are taken from that second call. "5% less than what
- *             this year produced" is exactly what the pact says it does.
- *   - events: a `changePercentage` is remembered as a factor and a `changeAbsolute` as a delta,
- *             then re-applied to the recomputed value. No re-evaluation, no double counting.
+ * The fix keeps each effect's own meaning: an event's `changePercentage` is remembered as a factor and a
+ * `changeAbsolute` as a delta, then re-applied to the recomputed value. No re-evaluation, no double counting.
+ * Pacts used this path too (their `effects` function was re-evaluated once the year's values existed) until
+ * phase 43 made them target shifts with no functions (src/sim/v2/pacts.ts).
  */
-import type { Indicators, Pact, StellaStocks } from '../types';
-import { INITIAL_PACTS } from '../constants';
+import type { Indicators } from '../types';
 
-/**
- * Puts back the `effects` functions a JSON round-trip strips from cloned pacts (mutates `pacts`).
- * Used by `stepYear`, `stepMonth` and `createInitialState` (model 1.1, phase 34, N-14): before, the
- * three restorations were inline and `createInitialState` had none, so a level could start with
- * pacts whose `effects` was missing. Phase 43 replaces pact functions with data and removes this.
- */
-export function restorePactFunctions<T extends Record<string, Pact>>(pacts: T): T {
-  Object.keys(pacts).forEach((pactId) => {
-    const original = INITIAL_PACTS[pactId];
-    if (original && typeof original.effects === 'function') pacts[pactId].effects = original.effects;
-  });
-  return pacts;
-}
-
-/** Indicator keys recomputed after pact/event effects run, and therefore applied again at the end. */
+/** Indicator keys recomputed after event effects run, and therefore applied again at the end (pacts no longer use this path, phase 43). */
 export const DERIVED_INDICATORS = [
   'co2EqEmissionsPerCapita', 'socialWellbeing', 'politicalStability',
   'pbi', 'treasuryReserves', 'debt', 'ppAgricola', 'ppAmbientalista', 'ppSocial',
@@ -61,22 +44,5 @@ export function applyDeferredAdjustments(indicators: Indicators, adjustments: De
     if (factor !== undefined) value *= factor;
     if (delta !== undefined) value += delta;
     indicators[indicator] = BOUNDED.has(indicator) ? Math.max(0, Math.min(100, value)) : value;
-  });
-}
-
-/**
- * Re-evaluates each active pact against the year's recomputed values and applies only what the
- * pact says about derived indicators. Everything else the pact does was already applied earlier.
- */
-export function applyPactEffectsOnDerived(pacts: Record<string, Pact>, indicators: Indicators, stella: StellaStocks): void {
-  (Object.values(pacts) as Pact[]).forEach((pact) => {
-    if (!pact.isActive || typeof pact.effects !== 'function') return;
-    const effects = pact.effects(indicators, stella);
-    if (!effects.indicators) return;
-    (Object.keys(effects.indicators) as (keyof Indicators)[]).forEach((key) => {
-      const value = effects.indicators![key];
-      if (typeof value !== 'number' || !isDerivedIndicator(key as string)) return;
-      indicators[key] = BOUNDED.has(key as string) ? Math.max(0, Math.min(100, value)) : value;
-    });
   });
 }

@@ -4,23 +4,15 @@
  * plus the pact-cost accumulation that precedes it) as part of the phase-2 extraction
  * (mejora-general/files/16_auditoria_ecuaciones.md). No formula changed.
  *
- * Call order matters and must match the original: `computeTotalPactCost` is read using the
- * *pre-growth* `PBI_Real` (same as the original, where policy/pact costs are tallied before the
- * "3. Financial Calculations" block runs), then `updateEconomy` grows PBI and settles the books.
+ * Call order matters and must match the original: the policy and pact costs are tallied on the
+ * *pre-growth* `PBI_Real` (src/sim/v2/core.ts step 4; pacts as annual·Y since phase 43), then
+ * `updateEconomy` grows PBI and settles the books.
  */
-import type { ControlParams, Pact, StellaStocks } from '../types';
+import type { ControlParams, StellaStocks } from '../types';
 import { getPolicyEfficiency } from './policies';
 import { Policy } from '../types';
 import type { PolicyState } from '../types';
 import type { Language } from '../hooks/useLanguage';
-
-export function computeTotalPactCost(pacts: Record<string, Pact>): number {
-  let totalPactCost = 0;
-  (Object.values(pacts) as Pact[]).forEach((pact) => {
-    if (pact.isActive && pact.annualCost) totalPactCost += pact.annualCost;
-  });
-  return totalPactCost;
-}
 
 export interface EconomyResult {
   stella: Pick<StellaStocks, 'PBI_Real' | 'Reservas_del_Tesoro' | 'Deuda'>;

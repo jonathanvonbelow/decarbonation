@@ -43,9 +43,9 @@ export interface RealisedLandFlow extends TransitionFlow {
 }
 
 /**
- * Multipliers of the frontier flows that active pacts set (the 1.1 `landUseChangeFactors` of a pact's
- * `effects`): `tasa_BNNP_a_BNP` is the prototype's m_protect, `tasa_BNNP_a_CC` its m_deforest. 1 by default.
- * Phase 43 replaces them with `PARAMS_V2.pacts.*.protectFactor / deforestFactor`.
+ * Multipliers of the frontier flows that active pacts set (`pactLandFactors`, src/sim/v2/pacts.ts, phase 43):
+ * `tasa_BNNP_a_BNP` is the prototype's m_protect (Π protectFactor), `tasa_BNNP_a_CC` its m_deforest (Π deforestFactor);
+ * the CA flows stay 1. 1 by default.
  */
 export interface LandUseChangeFactors {
   tasa_BNNP_a_BNP: number;

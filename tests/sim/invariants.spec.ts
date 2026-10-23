@@ -191,19 +191,29 @@ describe('sim invariants', () => {
   });
 
   // Model 1.1 (phase 34, N-03/T-03): a pact is at most as strong as the strongest policy on the same indicator.
-  // Phase 41: the 1.1 `impulses` (B, F) are gone; every pact effect on an indicator is a target shift (PARAMS_V2.pacts).
-  it('INV-16: no pact shift exceeds the largest policy weight on the same indicator', () => {
-    (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => expect('impulses' in pact, pact.id).toBe(false));
-    // Phase 39: E is a logistic target; a pact's shift on it is at most the largest policy weight bE (logit units).
-    const maxBE = Math.max(...(Object.values(PARAMS_V2.bE) as number[]).map(Math.abs));
-    (Object.values(PARAMS_V2.pacts) as { E?: number }[]).forEach((p) => expect(Math.abs(p.E ?? 0)).toBeLessThanOrEqual(maxBE));
-    // Phase 40: same for B, against the largest policy weight qB.
-    const maxQB = Math.max(...(Object.values(PARAMS_V2.qB) as number[]).map(Math.abs));
-    (Object.values(PARAMS_V2.pacts) as { B?: number }[]).forEach((p) => expect(Math.abs(p.B ?? 0)).toBeLessThanOrEqual(maxQB));
-    // And no pact writes B, F, E or political stability as a level any more.
+  // Phase 43 (rewritten over PARAMS_V2.pacts): every pact is data — target shifts of B, E and Pc in logit units, shifts of
+  // the energy targets s* / u*, factors of the land frontier — and none beats the strongest policy on the same quantity.
+  it('INV-16: no pact shift exceeds the largest policy weight on the same indicator (PARAMS_V2.pacts)', () => {
+    const pacts = Object.entries(PARAMS_V2.pacts) as [string, Record<string, number>][];
+    const maxAbs = (o: Record<string, number>) => Math.max(...Object.values(o).map(Math.abs));
+    // every pact of the game has its data, and nothing else (no functions, no 1.1 costs or impulses)
     (Object.values(INITIAL_PACTS) as Pact[]).forEach((pact) => {
-      const out = pact.effects(freshState(2).indicators, freshState(2).stellaSpecificState).indicators ?? {};
-      ['biodiversity', 'foodSecurity', 'economicSecurity', 'politicalStability'].forEach((k) => expect(k in out, `${pact.id}.${k}`).toBe(false));
+      expect(PARAMS_V2.pacts[pact.id as keyof typeof PARAMS_V2.pacts], pact.id).toBeTruthy();
+      ['effects', 'impulses', 'costToJoin', 'annualCost'].forEach((k) => expect(k in pact, `${pact.id}.${k}`).toBe(false));
+      expect(JSON.parse(JSON.stringify(pact))).toEqual(pact);
+    });
+    pacts.forEach(([id, p]) => {
+      // E: against the largest bE; B: against the largest qB (logit units of the same target)
+      expect(Math.abs(p.E ?? 0), `${id}.E`).toBeLessThanOrEqual(maxAbs(PARAMS_V2.bE));
+      expect(Math.abs(p.B ?? 0), `${id}.B`).toBeLessThanOrEqual(maxAbs(PARAMS_V2.qB));
+      // Pc: no policy weighs on Pc directly; against the largest policy weight on the conflict it follows (logit units)
+      expect(Math.abs(p.Pc ?? 0), `${id}.Pc`).toBeLessThanOrEqual(Math.max(maxAbs(PARAMS_V2.conflict), maxAbs(PARAMS_V2.greenRelief)));
+      // energy: against what Carbon Neutrality reaches at full effect
+      expect(p.renewables ?? 0, `${id}.renewables`).toBeLessThanOrEqual(PARAMS_V2.energy.renewablesMaxCN);
+      expect(p.efficiency ?? 0, `${id}.efficiency`).toBeLessThanOrEqual(PARAMS_V2.energy.efficiencyMaxCN);
+      // costs: positive fractions of GDP, the entry larger than the yearly fee
+      expect(p.entry, `${id}.entry`).toBeGreaterThan(p.annual);
+      expect(p.annual, `${id}.annual`).toBeGreaterThan(0);
     });
   });
 });

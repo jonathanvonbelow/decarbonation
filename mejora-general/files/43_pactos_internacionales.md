@@ -48,7 +48,9 @@ fuente de errores (N-14).
 
 ## 4. Verificación
 
-- [ ] `npm run sim:check -- --quick`: la estrategia `innovation` (accord + tech) y `conservation` (treaty) no ganan
+- [x] `npm run sim:check -- --quick`: la estrategia `innovation` (accord + tech) y `conservation` (treaty) no ganan
       por el pacto solo: probar en el arnés la variante “solo pacto” y confirmar que no gana ninguna ruta.
-- [ ] La UI de pactos muestra el costo en función del PBI actual (es/en).
-- [ ] `npx tsc --noEmit`, `npm test`, `npm run build` limpios.
+      (v6/43: el tratado solo no gana ninguna; los tres pactos juntos ganan `conservation` en algunas semillas por las
+      rutas provisorias del código — B ≥ 41–42 —, no por el pacto: B ≈ 45,6; ver `docs/v6-spec-vs-motor.md`, fila 43/49.)
+- [x] La UI de pactos muestra el costo en función del PBI actual (es/en).
+- [x] `npx tsc --noEmit`, `npm test`, `npm run build` limpios.
