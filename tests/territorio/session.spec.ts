@@ -274,26 +274,27 @@ describe('model 1.1 in Territorio', () => {
     expect(p.previousFatigueFactor).toBeLessThan(1);
   });
 
-  it('T-12: a situation that cuts CO2 by 5 % cuts the next month by about 5 %', () => {
-    const id = 'test_co2_cut';
+  it('phase 46: a situation effect on a derived indicator (W) is a jump of its stock; one on CO2 is skipped', () => {
+    const id = 'test_derived';
     SITUATION_BY_ID[id] = {
       id, actor: 'government', category: 'climate', tone: 'good', deadline: 6, weight: 0, wear: {},
       es: { title: 't', body: 'b' }, en: { title: 't', body: 'b' },
-      // SITUATION_EFFECT_SCALE halves it: −10 % written, −5 % applied.
-      options: [{ id: 'a', es: 'a', en: 'a', effects: [{ indicator: 'co2EqEmissionsPerCapita', changePercentage: -0.10 }] },
-        { id: 'z', es: 'z', en: 'z', effects: [] }],
+      // SITUATION_EFFECT_SCALE halves it: +10 written, +5 applied.
+      options: [{ id: 'a', es: 'a', en: 'a', effects: [
+        { indicator: 'socialWellbeing', changeAbsolute: 10 }, { indicator: 'co2EqEmissionsPerCapita', changePercentage: -0.10 },
+      ] }, { id: 'z', es: 'z', en: 'z', effects: [] }],
     };
     try {
       const s0 = createSession(4);
       const opened: Session = { ...s0, open: [{ id: 'x1', defId: id, openedAt: 0, expiresAt: 6, worn: 0 }] };
       const decided = decideSituation(opened, 'x1', 'a').session;
-      expect(decided.pendingDeferred).toEqual([{ indicator: 'co2EqEmissionsPerCapita', factor: 0.95 }]);
-      const withCut = advanceMonth(decided);
-      const without = advanceMonth({ ...decided, pendingDeferred: [] });
-      expect(withCut.game.indicators.co2EqEmissionsPerCapita / without.game.indicators.co2EqEmissionsPerCapita).toBeCloseTo(0.95, 6);
-      expect(withCut.pendingDeferred).toEqual([]);
+      const C0 = s0.game.stellaSpecificState.Conflicto_social;
+      expect(decided.game.stellaSpecificState.Conflicto_social).toBeCloseTo(C0 - 5, 9);
+      expect(decided.game.indicators.socialWellbeing).toBeCloseTo(100 - (C0 - 5), 9);
+      expect(decided.game.indicators.co2EqEmissionsPerCapita).toBe(s0.game.indicators.co2EqEmissionsPerCapita);
     } finally {
       delete SITUATION_BY_ID[id];
     }
   });
+
 });

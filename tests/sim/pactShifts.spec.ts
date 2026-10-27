@@ -1,6 +1,6 @@
 /**
- * Pact and event effects on the indicators the year recomputes (src/sim/deferred.ts).
- * Before this fix they were applied early and overwritten, so they never reached the player.
+ * Pact effects on CO2 and the targets (moved here from tests/sim/deferred.spec.ts when phase 46 deleted
+ * src/sim/deferred.ts: pacts are target shifts since phase 43 and no event writes CO2 any more).
  */
 import { describe, expect, it } from 'vitest';
 import { stepMonth, stepYear } from '../../src/sim';
@@ -10,13 +10,12 @@ import { Policy, type GameState } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
 const noEventRng = () => 0.999;
-const allEventsRng = () => 0;
 
 function withPact(state: GameState, pactId: string): GameState {
   return { ...state, pacts: { ...state.pacts, [pactId]: { ...INITIAL_PACTS[pactId], isActive: true } } };
 }
 
-describe('deferred pact and event effects', () => {
+describe('pact shifts on carbon and the targets', () => {
   // Phase 38: the 1.1 pacts cut CO2 by a flat −5 % / −10 % after the recomputation; in the physical carbon
   // they shift the renewables / efficiency targets (PARAMS_V2.pacts.*.renewables / efficiency), which the
   // energy state follows with inertia (k = 0.15 per year): after one year s = 0.15·Δs*, u = 0.15·Δu*.
@@ -32,13 +31,14 @@ describe('deferred pact and event effects', () => {
     expect(with_.indicators.co2EqEmissionsPerCapita).toBeLessThan(without.indicators.co2EqEmissionsPerCapita);
     const lg = (x: number) => Math.log(x / (100 - x));
     const t = (g: GameState) => g.model!.targets;
-    // E*: exactly the pact's shift (nothing else E reads differs in the first year).
-    expect(lg(t(with_).E!) - lg(t(without).E!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.E, 9);
-    // Pc*: the pact's shift plus what the lower E and W of this year add (spec 39 §4).
+    // E*: the pact's shift (phase 46: after 11 monthly sub-steps B, F and growth differ by a hair, |Δ| < 1e-4 logit).
+    expect(lg(t(with_).E!) - lg(t(without).E!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.E, 3);
+    // Pc*: the pact's shift plus what the lower E and W of this year add (spec 39 §4); phase 46: the pressures of the
+    // sub-steps also differ a little (|Δ| ≈ 0.001 logit), hence 2 decimals.
     const r = PARAMS_V2.relaxation.Pc;
     const viaE = r.econ * (without.indicators.economicSecurity - with_.indicators.economicSecurity) / r.econScale;
     const viaW = r.wellbeing * (without.indicators.socialWellbeing - with_.indicators.socialWellbeing) / r.wellbeingScale;
-    expect(lg(t(with_).Pc!) - lg(t(without).Pc!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.Pc + viaE + viaW, 9);
+    expect(lg(t(with_).Pc!) - lg(t(without).Pc!)).toBeCloseTo(PARAMS_V2.pacts.globalCarbonAccord.Pc + viaE + viaW, 2);
     expect(with_.indicators.politicalStability).toBeGreaterThan(without.indicators.politicalStability);
   });
 
@@ -50,19 +50,6 @@ describe('deferred pact and event effects', () => {
     expect(with_.model!.energy.renewableShare - without.model!.energy.renewableShare).toBeCloseTo(k * 0.10, 9);
     expect(with_.model!.energy.efficiency - without.model!.energy.efficiency).toBeCloseTo(k * 0.05, 9);
     expect(with_.indicators.co2EqEmissionsPerCapita).toBeLessThan(without.indicators.co2EqEmissionsPerCapita);
-  });
-
-  it("the green-tech boom event's −5% CO2 survives the year's carbon recomputation", () => {
-    // With every draw at 0 the first eligible event fires; on level 2 that pool includes the boom.
-    const base = withActivePolicies(freshState(2), [Policy.CarbonNeutrality, Policy.ForeignInvestment]);
-    const quiet = stepYear(base, noEventRng).next;
-    const shocked = stepYear(base, allEventsRng).next;
-    expect(shocked.currentEvent).not.toBeNull();
-    // Whatever event fired, an event that declares a CO2 percentage must move CO2 off the quiet path.
-    const co2Effects = shocked.currentEvent!.effects(base).filter((e) => e.indicator === 'co2EqEmissionsPerCapita');
-    if (co2Effects.length > 0) {
-      expect(shocked.indicators.co2EqEmissionsPerCapita).toBeLessThan(quiet.indicators.co2EqEmissionsPerCapita);
-    }
   });
 
   it('a pact moves a derived indicator gradually in the monthly engine, not in one jump', () => {

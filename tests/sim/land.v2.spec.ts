@@ -6,7 +6,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { ALL_RANDOM_EVENTS, CONTROL_PARAMS } from '../../src/constants';
-import { applyRandomEventEffects, stepYear } from '../../src/sim';
+import { advance, applyRandomEventEffects, stepYear } from '../../src/sim';
 import {
   applyLandEffects, applyLandFlows, landFlows, realiseLandFlows, totalLandArea, transferArea,
 } from '../../src/sim/v2/land';
@@ -31,14 +31,16 @@ const NO_FRONTIER: ControlParams = {
 };
 
 describe('land matrix 2.0 against the prototype', () => {
-  // `play(level, ids)` of the prototype, 30 years without events, share of each use in the agricultural area.
+  // `play(level, ids)` of the prototype, 30 years without events, share of each use in the agricultural area. Phase 46:
+  // 30 × 12 monthly steps (the annual step of the 3-level game is 12 sub-steps); with 30 annual steps the values were
+  // 27.94 / 31.76 / 29.48 / 17.66 / 35.26 / 38.15.
   const PROTOTYPE: [number, Policy[], LU, number][] = [
-    [1, [], LU.ConventionalCrops, 27.94],
-    [2, [], LU.ConventionalCrops, 31.76],
-    [1, [Policy.Agroecological], LU.AgroecologicalCrops, 29.48],
-    [2, [Policy.Agroecological], LU.AgroecologicalCrops, 17.66],
-    [1, [Policy.IntensiveAgriculture, Policy.AgriculturalExports], LU.ConventionalCrops, 35.26],
-    [2, [Policy.IntensiveAgriculture, Policy.AgriculturalExports], LU.ConventionalCrops, 38.15],
+    [1, [], LU.ConventionalCrops, 27.90],
+    [2, [], LU.ConventionalCrops, 31.74],
+    [1, [Policy.Agroecological], LU.AgroecologicalCrops, 29.42],
+    [2, [Policy.Agroecological], LU.AgroecologicalCrops, 17.60],
+    [1, [Policy.IntensiveAgriculture, Policy.AgriculturalExports], LU.ConventionalCrops, 35.16],
+    [2, [Policy.IntensiveAgriculture, Policy.AgriculturalExports], LU.ConventionalCrops, 38.07],
   ];
   it.each(PROTOTYPE)('level %s with %j: %s ends at %s %% of the agricultural area', (level, policies, use, share) => {
     expect(shares(play(level, policies))[use]).toBeCloseTo(share, 1);
@@ -127,8 +129,8 @@ describe('fallow and land effects (spec 37 §3)', () => {
     const flows = landFlows(s, {}, CONTROL_PARAMS).filter((f) => f.from === LU.Fallow);
     expect(flows.find((f) => f.to === LU.UnprotectedNativeForest)!.kHa).toBeCloseTo(0.05 * fal, 12);
     expect(flows.filter((f) => AGRI.includes(f.to)).reduce((sum, f) => sum + f.kHa, 0)).toBeCloseTo(0.25 * fal, 12);
-    // One year later 30 % of the fallow has left (5 % to forest, 25 % to the pool).
-    expect(stepYear(s, noEvents).next.landUses[LU.Fallow].area).toBeCloseTo(0.7 * fal, 9);
+    // One annual step (dt = 1) later 30 % of the fallow has left (5 % to forest, 25 % to the pool).
+    expect(advance(s, 1, null, CONTROL_PARAMS).next.landUses[LU.Fallow].area).toBeCloseTo(0.7 * fal, 9);
   });
 
   it('± pairs are direct transfers; a loose loss goes to fallow, a loose gain comes from FAL, then PRG, then CC', () => {

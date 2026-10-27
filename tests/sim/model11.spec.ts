@@ -106,13 +106,5 @@ describe('model 1.1 §5: drought reads the level area (N-09, T-08)', () => {
 // §6 (T-06, efficiencyFromCounter) was retired in phase 36: the 2.0 clocks replace the counter and
 // re-activation is covered by tests/sim/policies.v2.spec.ts ("re-activation keeps the wear").
 
-describe('model 1.1 §8: deferred effects decided outside the step (T-12)', () => {
-  it('stepMonth applies extraDeferred after recomputing CO2', () => {
-    const s = freshState(2);
-    const plain = stepMonth(s, 0, noEventRng).next.indicators.co2EqEmissionsPerCapita;
-    const cut = stepMonth(s, 0, noEventRng, undefined, 'es', {
-      extraDeferred: [{ indicator: 'co2EqEmissionsPerCapita', factor: 0.95 }],
-    }).next.indicators.co2EqEmissionsPerCapita;
-    expect(cut).toBeCloseTo(plain * 0.95, 6);
-  });
-});
+// §8 (T-12, deferred effects decided outside the step) was retired in phase 46 with src/sim/deferred.ts: an effect on a
+// derived indicator is a jump of its stock (tests/sim/events.v2.spec.ts, tests/territorio/session.spec.ts).

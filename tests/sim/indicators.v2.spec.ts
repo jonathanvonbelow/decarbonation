@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { pactShift } from '../../src/sim/v2/pacts';
 import { CONTROL_PARAMS } from '../../src/constants';
-import { makeRng, stepMonth, stepYear } from '../../src/sim';
+import { advance, makeRng, stepMonth, stepYear } from '../../src/sim';
 import { logit, sigmoid } from '../../src/sim/v2/math';
 import { PARAMS_V2, PIDS, type Pid } from '../../src/sim/v2/params';
 import type { PolicyEfficiency } from '../../src/sim/v2/policies';
@@ -130,7 +130,7 @@ describe('exact relaxation', () => {
 
   it('advance records E*, C*, Pc* in model.targets and relaxes toward them (annual and monthly)', () => {
     const s0 = withActivePolicies(freshState(2), [Policy.ForeignInvestment]);
-    const y = stepYear(s0, noEventRng).next;
+    const y = advance(s0, 1, null, CP).next; // one step of dt = 1 (stepYear is 12 monthly sub-steps since phase 46)
     const t = y.model!.targets;
     // One annual step covers k of the way to this step's target.
     expect(y.indicators.economicSecurity).toBeCloseTo(30 + CP.Velocidad_Ajuste_Seg_Economica * (t.E! - 30), 9);

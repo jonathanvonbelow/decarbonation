@@ -33,7 +33,7 @@ import type { Rng } from './rng';
 import { computeScore } from './score';
 import type { SimTrace } from './trace';
 import type { Language } from '../hooks/useLanguage';
-import { advance, type StepYearChatMessage } from './v2/core';
+import { advanceYear, type AdvanceOptions, type StepYearChatMessage } from './v2/core';
 import { createModelState } from './v2/anchors';
 
 export { makeRng, type Rng } from './rng';
@@ -52,10 +52,9 @@ export * from './score';
 export * from './events';
 export * from './winRoutes';
 export * from './gameOver';
-export * from './deferred';
 export * from './monthly';
 export * from './territory';
-export { advance, MONTHLY_DT, type AdvanceOptions, type AdvanceResult, type StepYearChatMessage } from './v2/core';
+export { advance, advanceYear, MONTHLY_DT, stepInPlace, type AdvanceOptions, type AdvanceResult, type StepYearChatMessage } from './v2/core';
 export { computeAnchors, createModelState } from './v2/anchors';
 export {
   baseEfficiency, channelStrength, computeEfficiencies, costShareOf, effortShare, fatigueFactor, INSTRUMENT_CHANNELS, PID_OF,
@@ -72,8 +71,8 @@ export interface StepYearResult {
 }
 
 /**
- * Advances `state` by exactly one simulated year: a thin wrapper of `advance(state, 1, …)`
- * (src/sim/v2/core.ts, phase 35), which holds the body, the order of operations and its history.
+ * Advances `state` by exactly one simulated year: a thin wrapper of `advanceYear` (src/sim/v2/core.ts), which runs
+ * 12 monthly sub-steps of the single integrator `advance` (phase 46; phase 35 had one step of dt = 1).
  * Pure: never mutates its input, and — for a given `(state, rng, CP)` — always produces the same
  * `next`/`trace`.
  *
@@ -82,10 +81,15 @@ export interface StepYearResult {
  * which the Facilitator panel can override live. Hardcoding the import would silently break that
  * override the moment `runSimulationRound` switched to calling this function.
  */
-export function stepYear(state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): StepYearResult {
-  const { next, trace, logs, chatMessages } = advance(state, 1, rng, CP, { language });
+export function stepYear(
+  state: GameState, rng: Rng, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es', options: StepYearOptions = {},
+): StepYearResult {
+  const { next, trace, logs, chatMessages } = advanceYear(state, rng, CP, { ...options, language });
   return { next, trace, logs, chatMessages };
 }
+
+/** Options of the annual step: `noShocks` holds the yield shock at 0 (the golden test, phase 46). */
+export type StepYearOptions = Pick<AdvanceOptions, 'events' | 'noShocks'>;
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 

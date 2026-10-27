@@ -37,3 +37,8 @@ El paquete original traía cuatro errores que se corrigieron antes de usarlo com
 `golden_v2.csv` no cambió con estas correcciones (es de 3 niveles sin eventos, donde ninguna de ellas actúa).
 
 Regla: si una fase cambia una ecuación o un parámetro, se actualiza este prototipo y se regenera el golden en el mismo commit.
+
+Fase 46: el juego de 3 niveles integra cada año con 12 sub-pasos mensuales (`SUBSTEPS_PER_YEAR` en `play_level`; con un paso
+de dt = 1 los impulsores se evaluaban una vez por año y anual y mensual diferían hasta 2,05 puntos en St). El calendario de
+desbloqueo de pactos en `play_level` sale del número de paso (con t acumulado en floats, 2029,9999… < 2030). `golden_v2.csv`
+regenerado (cambios de hasta 3 puntos al año 1, ≤ 0,5 al año 30).

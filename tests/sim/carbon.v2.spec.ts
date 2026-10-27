@@ -159,7 +159,7 @@ describe('carbon 2.0 — budget', () => {
 
   it('advance() accumulates total emissions × dt and reports the components in model.emissions', () => {
     const s0 = withActivePolicies(freshState(2), [Policy.CarbonNeutrality]);
-    const y = stepYear(s0, () => 0.999).next;
+    const y = advance(s0, 1, null, CONTROL_PARAMS).next; // one step of dt = 1
     const m = y.model!;
     expect(m.cumulativeEmissions).toBeCloseTo(m.emissions.total, 6);
     expect(y.indicators.co2EqEmissionsPerCapita).toBeCloseTo(m.emissions.total / y.stellaSpecificState.Poblacion_Total, 9);

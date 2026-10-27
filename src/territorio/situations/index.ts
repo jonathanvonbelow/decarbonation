@@ -8,7 +8,7 @@
  * Pure functions over plain values, so the rules are testable without a browser.
  */
 import type { ControlParams, GameState, Indicators, RandomEventEffect, StellaStocks } from '../../types';
-import { applyRandomEventEffects, payPublicInvestment, toMapFlow, type DeferredAdjustment, type LandFlow, type Rng } from '../../sim';
+import { applyRandomEventEffects, payPublicInvestment, toMapFlow, type LandFlow, type Rng } from '../../sim';
 import { PARAMS_V2 } from '../../sim/v2/params';
 import { CLIMATE_SITUATIONS } from './climate';
 import { ECONOMY_SITUATIONS } from './economy';
@@ -141,8 +141,6 @@ export function wearTally(open: OpenSituation[], monthIndex: number): Record<str
 
 export interface ResolutionResult {
   state: GameState;
-  /** Deferred effects on recomputed indicators, to apply after the next month's recomputation. */
-  deferred: DeferredAdjustment[];
   cost: number;
   ok: boolean;
   /** Land the option moved (phase 37: ± pairs are transfers, loose losses go to fallow), for the map. */
@@ -175,33 +173,26 @@ export function resolveSituation(
 ): ResolutionResult {
   const def = SITUATION_BY_ID[defId];
   const option = def?.options.find((o) => o.id === optionId) ?? def?.options[def.options.length - 1];
-  if (!def || !option) return { state, deferred: [], cost: 0, ok: false, flows: [] };
+  if (!def || !option) return { state, cost: 0, ok: false, flows: [] };
 
   const cost = situationCost(option.cost ?? 0, state);
   // Phase 44: a paid option is a public investment — reserves above the floor, then debt while D/Y ≤ 0.6
   // (src/sim/v2/finance.ts); otherwise it is refused ('no-fiscal-space' in the session).
   const paid = payPublicInvestment(state, cost);
-  if (!paid.ok) return { state, deferred: [], cost, ok: false, flows: [] };
+  if (!paid.ok) return { state, cost, ok: false, flows: [] };
 
   const next: GameState = JSON.parse(JSON.stringify(paid.state));
   next.pacts = state.pacts; // keep the caller's pact objects (plain data since phase 43)
 
-  const deferred: DeferredAdjustment[] = [];
   const logs: string[] = [];
   const transfers = applyRandomEventEffects(
-    scaleEffects(option.effects), next.indicators, next.stellaSpecificState, next.landUses, logs, language, deferred,
+    scaleEffects(option.effects), next.indicators, next.stellaSpecificState, next.landUses, logs, language,
   );
   const flows: LandFlow[] = transfers.map(toMapFlow);
-  // Effects on indicators the next month recomputes from scratch (CO2, stability, money, pressures)
-  // are NOT applied here: they would be erased by that recomputation (phase 34, T-12). They go back
-  // to the caller, which queues them in `Session.pendingDeferred` for the next `stepMonth`.
-  next.indicators.treasuryReserves = next.stellaSpecificState.Reservas_del_Tesoro;
-  next.indicators.debt = next.stellaSpecificState.Deuda;
-  next.indicators.socialWellbeing = Math.max(0, Math.min(100, 100 - next.stellaSpecificState.Conflicto_social));
-  next.indicators.ppAgricola = next.stellaSpecificState.PP_AGRICOLA;
-  next.indicators.ppAmbientalista = next.stellaSpecificState.PP_AMBIENTALISTA;
-  next.indicators.ppSocial = next.stellaSpecificState.PP_SOCIAL;
-  return { state: next, deferred, cost, ok: true, flows };
+  // Effects are level jumps (phase 46, src/sim/events.ts): an effect on a derived indicator (W, St, a pressure, money)
+  // is written on its stock, which the next month relaxes from; the derived indicators are re-synced there. Phase 47
+  // ports the situations as decaying target impulses.
+  return { state: next, cost, ok: true, flows };
 }
 
 /** The option that applies when nobody decided: the last one in the list. */

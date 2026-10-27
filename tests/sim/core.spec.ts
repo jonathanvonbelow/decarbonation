@@ -128,10 +128,14 @@ describe('advance', () => {
    * portfolio restricts (CR 1.0 + CN tax 0.5) more than it supports (AS 0.5): J ≈ 0.25 and 0.6·(1 − J)·R_load ≈ 0.6
    * logit, so W falls ≈ 10 points (76.5 → 66.6 on N2, 73.5 → 62.6 on N3, 66.1 → 60.5 monthly) and St, the social
    * pressure and the score follow. B, F, E, CO2, money and CC are unchanged.
+   * Phase 46 regenerated them: the annual trajectories run `stepYear` (12 monthly sub-steps, one rng per year drawn in
+   * sequence) instead of one step of dt = 1, events are independent monthly draws (several can fire, N3 has no special
+   * branch, the boom no longer cuts CO2) with level shocks, and the AR(1) yield shock moves F. N2 ends F 32.5 (was 31.0),
+   * W 67.3, GDP 13 822; N3 F 34.9, W 61.3, St 74.1; the monthly run only moves through the yield shock (F 32.9 → 33.2).
    */
-  it('reproduces the phase-45 reference trajectories (annual and monthly)', () => {
+  it('reproduces the phase-46 reference trajectories (annual and monthly)', () => {
     type Ref = [Record<string, number>, number, number];
-    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":56.782650702129544,"foodSecurity":30.993687925488246,"economicSecurity":44.22595443348783,"socialWellbeing":66.61233258700088,"co2EqEmissionsPerCapita":4.780762158681803,"politicalStability":84.55502071355946,"generalScore":676.6941777895647,"pbi":14351.02572562926,"treasuryReserves":287.02051451258524,"debt":971.0697258446528,"ppAgricola":14.99940363543518,"ppAmbientalista":3.1713936608639544,"ppSocial":8.718252858061385,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},971.0697258446528,141.4522622638243],"annual3":[{"biodiversity":56.713818266670835,"foodSecurity":32.88769405681349,"economicSecurity":41.576855292178124,"socialWellbeing":62.574848252466424,"co2EqEmissionsPerCapita":3.8928855498125263,"politicalStability":77.48351957156987,"generalScore":675.0535420627058,"pbi":17277.257832951218,"treasuryReserves":1081.4159781362496,"debt":1649.1342946645157,"ppAgricola":18.707206655300773,"ppAmbientalista":2.1230850388971,"ppSocial":15.774394395600407,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1649.1342946645157,95.36683584161274],"monthly":[{"biodiversity":45.351135608783686,"foodSecurity":32.945450141911756,"economicSecurity":41.01430222728577,"socialWellbeing":60.49612974550593,"co2EqEmissionsPerCapita":5.823223432968098,"politicalStability":73.56422873522632,"generalScore":614.8320547317348,"pbi":10961.671908143933,"treasuryReserves":745.4930026705119,"debt":213.1659681816877,"ppAgricola":12.195296555514856,"ppAmbientalista":13.058596127931045,"ppSocial":12.904629108881736,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,149.5913851147525]};
+    const REF: Record<string, Ref> = {"annual2":[{"biodiversity":56.512801008078455,"foodSecurity":32.54058260316528,"economicSecurity":44.57566382049935,"socialWellbeing":67.29242865719687,"co2EqEmissionsPerCapita":4.766431579860919,"politicalStability":83.39337777582062,"generalScore":665.463718970928,"pbi":13821.93009166621,"treasuryReserves":276.43860183332424,"debt":1084.9495307036902,"ppAgricola":13.93079677628411,"ppAmbientalista":10.78158252015239,"ppSocial":14.479373163334685,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1084.9495307036902,144.70186638227972],"annual3":[{"biodiversity":56.48302134332697,"foodSecurity":34.88450623484773,"economicSecurity":40.130273967935146,"socialWellbeing":61.26357470123982,"co2EqEmissionsPerCapita":3.8678720074218993,"politicalStability":74.05847620863264,"generalScore":662.6234756412886,"pbi":16547.53857751359,"treasuryReserves":837.6512393315269,"debt":1791.7067653472184,"ppAgricola":18.591271616484445,"ppAmbientalista":2.660957270609427,"ppSocial":17.060963090162055,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},1791.7067653472184,95.66736902374589],"monthly":[{"biodiversity":45.351135608783686,"foodSecurity":33.23581430810854,"economicSecurity":41.021031955468274,"socialWellbeing":60.56496672794161,"co2EqEmissionsPerCapita":5.823223432968098,"politicalStability":73.56904580879397,"generalScore":615.1771205271555,"pbi":10961.671908143933,"treasuryReserves":745.4930026705119,"debt":213.1659681816877,"ppAgricola":12.178487139754933,"ppAmbientalista":13.058596127931045,"ppSocial":12.900777185805682,"cumplimientoNivel1":0,"cumplimientoNivel2":0,"cumplimientoNivel3":0},213.1659681816877,149.5913851147525]};
     const fresh = (level: number) => {
       const s = withActivePolicies(freshState(level), BALANCED);
       s.pacts.biodiversityTreaty.isActive = true;
@@ -147,7 +151,7 @@ describe('advance', () => {
       s.additionalTaxPressurePercentage = level === 3 ? 4 : 0;
       for (let y = 0; y < 12; y++) {
         if (y === 1) s.loanRequestedThisRound = 500;
-        s = advance(s, 1, makeRng(11, s.year + 1), CONTROL_PARAMS).next;
+        s = stepYear(s, makeRng(11, s.year + 1), CONTROL_PARAMS).next;
       }
       check(s, REF[`annual${level}`]);
     });
@@ -162,14 +166,20 @@ describe('advance', () => {
     check(m, REF.monthly);
   });
 
-  it('dt = 1 is stepYear and dt = 1/12 is stepMonth, step for step', () => {
+  it('stepYear is 12 monthly steps sharing one rng, and stepMonth is advance(dt = 1/12), step for step (phase 46)', () => {
     let a = state();
     let m = state();
     let month = 0;
     for (let i = 0; i < 24; i++) {
-      const rng = makeRng(3, i);
-      expect(JSON.stringify(advance(a, 1, rng, CONTROL_PARAMS).next)).toBe(JSON.stringify(stepYear(a, makeRng(3, i)).next));
-      a = stepYear(a, makeRng(3, i)).next;
+      // Annual: advanceYear = the activation log, then months 0–11 with the same rng drawn in sequence.
+      const yearly = stepYear(a, makeRng(3, i)).next;
+      let byMonths = a;
+      const shared = makeRng(3, i);
+      for (let k = 0; k < 12; k++) byMonths = advance(byMonths, MONTHLY_DT, shared, CONTROL_PARAMS, { month: k }).next;
+      // The months log the activation in Territorio's wording and with the year being simulated (not + 1), and keep
+      // the last fired event in currentEvent only for that month: compare the model state.
+      expect(JSON.stringify({ ...yearly, policies: null, currentEvent: null })).toBe(JSON.stringify({ ...byMonths, policies: null, currentEvent: null }));
+      a = yearly;
       const r = advance(m, MONTHLY_DT, makeRng(3, i), CONTROL_PARAMS, { month });
       const s = stepMonth(m, month, makeRng(3, i));
       expect(JSON.stringify(r.next)).toBe(JSON.stringify(s.next));
@@ -197,7 +207,10 @@ describe('advance', () => {
     const s = state();
     expect(advance(s, 1, null, CONTROL_PARAMS).next.model?.t).toBe(1);
     expect(advance(s, MONTHLY_DT, null, CONTROL_PARAMS).next.model?.t).toBeCloseTo(1 / 12, 12);
-    expect(JSON.stringify(advance(s, 1, null, CONTROL_PARAMS).next)).toBe(JSON.stringify(stepYear(s, noEvents).next));
+    // No rng: no events and no yield shock (ε = 0), the same as a no-event draw with noShocks.
+    expect(JSON.stringify(advance(s, MONTHLY_DT, null, CONTROL_PARAMS).next))
+      .toBe(JSON.stringify(advance(s, MONTHLY_DT, noEvents, CONTROL_PARAMS, { noShocks: true }).next));
+    expect(stepYear(s, noEvents).next.model?.t).toBeCloseTo(1, 12);
   });
 
   it('rejects a step outside (0, 1]', () => {

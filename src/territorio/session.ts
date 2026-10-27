@@ -18,7 +18,7 @@
 import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import {
   changesTouchForest, createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
-  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, payPublicInvestment, stepMonth, syncTerritory, type DeferredAdjustment,
+  evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, payPublicInvestment, stepMonth, syncTerritory,
   type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
@@ -92,11 +92,6 @@ export interface Session {
   landTally: Record<string, number>;
   /** Consecutive months each sustained-breach condition has been failing (see `BREACHES`). */
   breach: Record<string, number>;
-  /**
-   * Effects of decided or expired situations on indicators the month recomputes (CO2, stability,
-   * money, pressures). Handed to the next `stepMonth` as `extraDeferred`, then emptied (phase 34, T-12).
-   */
-  pendingDeferred: DeferredAdjustment[];
   /**
    * Landscape connectivity of the map (model 2.0, phase 40 §3): K0 when the game started, K of the map as of
    * `tick` (the `lastChanges.tick` it was computed at). `advanceMonth` hands {K, K0} to the model and recomputes
@@ -195,7 +190,6 @@ export function createSession(seed: number): Session {
     borrowed: { year: game.year, amount: 0 },
     landTally: {},
     breach: {},
-    pendingDeferred: [],
     connectivity: { K0, K: K0, tick: 0 },
   };
 }
@@ -246,13 +240,12 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   const monthIndex = s.monthIndex + 1;
   const r = stepMonth(s.game, s.month, makeRng(s.seed, s.monthIndex), CP, language, {
     publicUseUpkeep: true,
-    extraDeferred: s.pendingDeferred ?? [],
+    seasonality: true,
     connectivity: { K: conn.K, K0: conn.K0 },
     // Everything still on the desk wears the government down this month: a shift of the targets of conflict and of
     // the pressures while it stays open (phase 42, the prototype's `wear`).
     wear: wearShift(s.open, monthIndex),
   });
-  const pendingDeferred: DeferredAdjustment[] = [];
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
   const situationFlows: LandFlow[] = [];
 
@@ -279,7 +272,6 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
       const applied = resolveSituation(game, item.defId, fallback.id, CP, language);
       if (applied.ok) {
         game = applied.state;
-        pendingDeferred.push(...applied.deferred);
         situationFlows.push(...applied.flows);
       }
       situationNews.push({
@@ -326,7 +318,6 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     wearTotal: s.wearTotal + wornTotal,
     expiredCount,
     lastEvent: r.event,
-    pendingDeferred,
   };
 
   const land = tallyLand(s.landTally, changes, territory.kHaPerParcel);
@@ -338,6 +329,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     simulatedMonth: s.month,
     monthIndex,
     event: r.event,
+    events: r.events,
     land: land.report,
     engineMessages: r.chatMessages.filter((m) => m.emphasisType === 'policy_efficiency_warning').map((m) => m.text),
     yearRolled: r.yearRolled,
@@ -386,7 +378,6 @@ export function decideSituation(s: Session, openId: string, optionId: string, CP
       ...s,
       game: applied.state,
       ...(synced ? { territory: synced.territory, lastChanges: { tick: s.lastChanges.tick + 1, list: synced.changes } } : {}),
-      pendingDeferred: [...(s.pendingDeferred ?? []), ...applied.deferred],
       open: s.open.filter((o) => o.id !== openId),
       resolvedCount: s.resolvedCount + 1,
       news: pushNews(s.news, [news]),

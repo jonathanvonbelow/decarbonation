@@ -5,7 +5,8 @@
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { makeRng, monthlyTriggerChance, stepMonth, stepYear, MONTHS_PER_YEAR } from '../../src/sim';
+import { ALL_RANDOM_EVENTS } from '../../src/constants';
+import { eventStepChance, makeRng, stepMonth, stepYear, MONTHS_PER_YEAR } from '../../src/sim';
 import { Policy, type GameState, type LandUseType } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
@@ -118,7 +119,7 @@ describe('stepMonth', () => {
 
   it('monthly event chance keeps the annual probability', () => {
     [0, 0.03, 0.09, 0.5, 1].forEach((p) => {
-      const m = monthlyTriggerChance(p);
+      const m = eventStepChance(p, 1 / MONTHS_PER_YEAR);
       expect(1 - Math.pow(1 - m, MONTHS_PER_YEAR)).toBeCloseTo(p, 10);
     });
   });
@@ -126,7 +127,12 @@ describe('stepMonth', () => {
   it('a triggered event applies its full effect in its month', () => {
     const state = freshState(2);
     const quiet = stepMonth(state, 0, noEventRng);
-    const shocked = stepMonth(state, 0, () => 0); // every draw fires: first eligible event (drought)
+    // Every draw fires; phase 46: the draws are independent, so every eligible event fires (drought first, then the
+    // bumper harvest): the pool is narrowed to the drought to see its own effect.
+    const drought = ALL_RANDOM_EVENTS.filter((e) => e.id === 'drought_severe');
+    const all = stepMonth(state, 0, () => 0, undefined, 'es', { noShocks: true });
+    expect(all.events.map((e) => e.id)).toEqual(ALL_RANDOM_EVENTS.filter((e) => (e.minLevel ?? 1) <= 2 && e.triggerChance(state) > 0).map((e) => e.id));
+    const shocked = stepMonth(state, 0, () => 0, undefined, 'es', { events: drought, noShocks: true });
     expect(shocked.event?.id).toBe('drought_severe');
     expect(quiet.event).toBeNull();
     // Drought: foodSecurity −12% — far more than a month of the model's own dynamics moves it.

@@ -625,6 +625,13 @@ STRATEGIES = {
 }
 
 
+# v6/46: the annual step of the 3-level game integrates the year with 12 monthly sub-steps (dt = 1/12 each), so the
+# 3-level game and Territorio run the same discretisation. With one step of dt = 1 the drivers (policy ramp, the
+# pressures read by C and Pc) were evaluated once per year: `extractive` N2 year 10 gave St 2.05 points away from the
+# monthly engine (criterion C9 of the harness asks <= 1). Golden regenerated.
+SUBSTEPS_PER_YEAR = 12
+
+
 def play_level(level, strat, seed=None, years=30, dt=1.0, tax=None):
     s = new_state(level)
     rng = random.Random(seed) if seed is not None else None
@@ -632,13 +639,18 @@ def play_level(level, strat, seed=None, years=30, dt=1.0, tax=None):
     activate(s, st.get("ids", []), st.get("effort"))
     s["tax"] = tax if tax is not None else (2.0 if level == 3 and st.get("ids") else 0.0)
     steps = int(round(years / dt))
+    sub = SUBSTEPS_PER_YEAR if dt == 1.0 else 1
     for n in range(steps):
-        yr = 2024 + s["t"]
+        # v6/46: calendar from the step count (t accumulates 1/12 as a float: 2029.9999... < 2030 missed the unlock)
+        yr = 2024 + n * dt
         for pk in st.get("pacts", []):
             if not s["pacts"][pk] and yr >= P["pacts"][pk]["unlock"] and level >= 2:
                 s["pacts"][pk] = True
                 s["R"] -= P["pacts"][pk]["entry"] * s["Y"]
-        step(s, dt, rng)
+        for _ in range(sub):
+            step(s, dt / sub, rng)
+            if s["over"]:
+                break
         if (n + 1) % int(round(1 / dt)) == 0:
             s["hist"].append(snapshot(s))
         if s["over"]:

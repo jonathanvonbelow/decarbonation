@@ -55,7 +55,7 @@ export function playLevel(
   state.additionalTaxPressurePercentage = nivelesTax(strategy, level);
   for (let y = 0; y < years && !state.gameOverReason; y++) {
     joinPacts(state, strategy, level);
-    state = stepYear(state, () => 0.999, CP).next;
+    state = stepYear(state, () => 0.999, CP, 'es', { noShocks: true }).next;
     onYear?.(state);
   }
   return state.indicators;

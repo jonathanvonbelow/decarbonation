@@ -292,3 +292,19 @@ diferían hasta 13 / 11 puntos.
 | ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
 |---|---|---|---|
 | Propuesta de conflicto distributivo | D_C += 3,0·(G − G₀) + 0,6·(1 − J)·R_load; G = (CC + PF)/(CC + CA + PRG + PF); R_load = Σ w^R·η·χ^R sobre los instrumentos `restriction` (w^R: CR 1,0, CN 0,5, AGUA 0,3), Support = Σ w^S·η·χ^S sobre los `support` (AS 0,5, GS 0,5), χ con la máscara de etiquetas (reparto parejo ⇒ constantes del prototipo); J = S/(S + R) (1 si ambos son 0). El término 2,0·Δa_CC + 1,0·Δa_PF ya estaba desde la 39 | `src/sim/v2/social.ts`, `indicators.ts`, `params.ts`, `anchors.ts`, `types.ts` | Las carteras que restringen sin acompañar pierden bienestar: `green` N2 año 10 W 76 → 64 (prototipo 64,3), la balanceada con tratado N2 76,5 → 66,6; `extractive` sigue con el W más bajo de N2 (51, prototipo 47–55); `tech_tax` no gana en N2/N3 |
+
+## Modelo 2.0-dev — eventos 2.0 y paso mensual exacto (fase 46, 2026-10-27)
+
+Spec: `mejora-general/files/46_eventos_y_paso_mensual.md`; prototipo: `EVENTS`, `events_step` y `play_level` (sub-pasos).
+Código: `src/sim/events.ts` (`rollEvents`, `eventStepChance`, `seasonalWeight`, `applyRandomEventEffects`, `standardNormal`,
+`nextYieldShock`), `PARAMS_V2.events`, `src/sim/v2/core.ts` (`advance`, `advanceYear`, `stepInPlace`), `ALL_RANDOM_EVENTS`.
+Verificado: golden activo (`tests/sim/golden.v2.spec.ts`, 27 filas, B/F/E/W/St/c coinciden, máx |Δ| < 5e-4),
+`tests/sim/events.v2.spec.ts` (frecuencias, estacionalidad, efectos, ε, C9 en N2), INV-11 en `tests/sim/invariants.spec.ts`.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| N-10 / T-09 | Sorteo independiente por evento: p_paso = 1 − (1 − p)^(w·dt), un rng() por evento elegible en el orden de la lista; varios eventos por paso; se borra la rama del Nivel 3 (probabilidad global creciente + elección ponderada) | `src/sim/events.ts`, `core.ts` | Sin sesgo por el orden de la lista; en N3 cada evento sale con su propia p (antes, hasta 60 % de chance global); los eventos de todos los niveles llegan al chat |
+| — | Sequía: p = 0,03·(1 + 0,5·t/30)·(1 + 0,6·max(0, 1 − bosque/bosque₀)) + 0,04 sin agua + 0,02 si CC > 25 % del área vigente; boom verde sin efecto sobre CO₂; escrutinio c > 1,5·c₀ (antes 12 t, inalcanzable); el movimiento por la justicia lee `model.t` | `constants.ts`, `PARAMS_V2.events` | Más sequías hacia el final y donde se deforestó; el escrutinio vuelve a poder dispararse con `extractive` |
+| — | Efectos como saltos de nivel: F/E/B sobre el indicador; W/St/presiones/dinero sobre su stock; CO₂ y puntaje se omiten (se recalculan). Se borra `src/sim/deferred.ts` (y `pendingDeferred`/`extraDeferred` de Territorio) | `events.ts`, `situations/index.ts`, `territorio/session.ts` | Un choque se disipa con la relajación, como en el prototipo |
+| — | Choque de rendimiento ε AR(1): ε ← 0,5^dt·ε + 0,04·(1 − 0,5·η_AGUA^prod)·√dt·z, z por Box–Muller del rng; entra en la producción de alimentos (41) | `events.ts`, `core.ts`, `food.ts` | F fluctúa año a año (σ ≈ 4 % de la producción); el agua lo amortigua |
+| C9 | Paso anual = 12 sub-pasos mensuales (`advanceYear`); calendario único (12·dt meses); `monthlyTriggerChance`, `rollEvent`, `rollMonthlyEvent` y las ramas `dt` de core borradas; estacionalidad de la sequía solo en Territorio | `core.ts`, `index.ts`, `monthly.ts`, `modelo_v2.py` | Golden regenerado (hasta 3 puntos al año 1 en `extractive`, ≤ 0,5 al año 30); C9 = 0 |

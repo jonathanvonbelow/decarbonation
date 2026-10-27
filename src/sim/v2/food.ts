@@ -11,7 +11,7 @@
  *   F*  = 100·σ(ℓ_F0 + D_F);   F ← relax(F, F*, k_F = CP.Velocidad_Ajuste_Seg_Alimentaria, dt)
  *
  * t is the model time at the start of the step (`model.t`), P the population after this step's growth, and ε the
- * yield shock `model.yieldShock` (AR(1) of phase 46; 0 until then, the hook is here). E is the value of the previous
+ * yield shock `model.yieldShock` (AR(1), drawn by the events step since phase 46, src/sim/events.ts). E is the value of the previous
  * step: F is updated after B and before E (step 8: B → F → E → C → Pc), as in the prototype. No pact moves F.
  *
  * Pure: no React, no randomness, no mutation except `updateFoodSecurity`, which writes the copy advance() owns.

@@ -37,11 +37,10 @@ calibración.**
 8. indicadores B → F → E → C (W) → Pc (St) → presiones (39–42, 45)
 9. contabilidad: emisiones acumuladas, historia fiscal, años productivos, fin de partida
 
-Hoy (`MODEL_VERSION = '2.0-dev'`, fase 35) `advance` todavía ejecuta las funciones 1.1 en el orden 1.1 (pasos
-0–14 + 11.5 del viejo `stepYear`, ver el comentario de cabecera de `core.ts`): `stepYear` y `stepMonth` dan
-exactamente los números de antes. Lo único que todavía depende de que `dt` sea el paso anual — porque 1.1 tenía dos
-cuerpos distintos — es: el `toward` de Euler de los stocks 1.1 (con `dt = 1` toma el valor anual tal cual), el sorteo
-de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fases 39–46.
+Desde la fase 46 `advance` ejecuta este orden con un solo cuerpo para todo `dt` (sin ramas por `dt`: el calendario
+avanza 12·dt meses y cambia de año después de diciembre). `stepMonth` = `advance(…, 1/12)`; `stepYear` = `advanceYear`
+= 12 sub-pasos mensuales sobre una sola copia del estado (`stepInPlace`), igual que el prototipo (`play_level`,
+`SUBSTEPS_PER_YEAR`). Los dos juegos comparten la discretización: sin eventos, anual y mensual coinciden (C9 = 0).
 
 ## Qué fase implementa qué
 
@@ -58,7 +57,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 | 43 | pasos 4, 5, 7.5 y 8: pactos como datos (`pacts`): desplazamientos, frontera, costos ∝ PBI | hecho (entrada pagada de las reservas hasta la 44) |
 | 44 | paso 6: gasto base, deuda automática, quiebra (`finance.ts`, `PARAMS_V2.finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge`; `payPublicInvestment` | hecho (`src/sim/economy.ts` borrado; φ, B, F, E, c y D/Y coinciden con el golden ±5e-4 sin eventos) |
 | 45 | conflicto distributivo: G y J en D_C (`src/sim/v2/social.ts`, `conflictWeights.gini/just`, `justTransition`; `model.social`) | hecho (golden W/St coinciden) |
-| 46 | paso 3 y mensual exacto (`relax` en lugar de `toward`); `GOLDEN_ACTIVE = true` | pendiente |
+| 46 | paso 3: eventos con sorteo independiente, choques de nivel, ε AR(1) (`src/sim/events.ts`, `PARAMS_V2.events`); paso anual = 12 sub-pasos mensuales; `deferred.ts` borrado; `GOLDEN_ACTIVE = true` | hecho (golden activo y exacto) |
 
 ## Convenciones
 
@@ -71,7 +70,7 @@ de eventos (anual / mensual), el préstamo y el calendario. Lo eliminan las fase
 - Pactos con los IDs del código (`biodiversityTreaty`, `globalCarbonAccord`, `techTransferInitiative`), no los del
   prototipo (`treaty` / `accord` / `tech`).
 - Población: `CP.Poblacion_Inicial` (400 000) en las anclas (`pop0`) y como `Poblacion_Total` inicial (fase 38).
-- Golden: `tests/sim/golden.v2.spec.ts` (apagado con `GOLDEN_ACTIVE = false` hasta la fase 46) compara B, F, E, W, St
+- Golden: `tests/sim/golden.v2.spec.ts` (activo desde la fase 46; `playLevel` corre con `noShocks`) compara B, F, E, W, St
   y c de `playLevel` (`tests/sim/testHelpers.ts`, estrategias de `scripts/harness/strategies.ts`, sin eventos) con
   `golden_v2.csv`. Si una fase cambia una ecuación o un parámetro del prototipo, regenera el golden en el mismo commit
   (`python scripts/reference/modelo_v2.py --golden > scripts/reference/golden_v2.csv`).
@@ -152,3 +151,12 @@ Fase 45: sin recortes de ecuación. Concentración G y transición justa J entra
 ν_J 0,6). Desvío: la spec pide sumar η_j·e_jk/100 por instrumento etiquetado, que con reparto parejo no da las constantes del
 prototipo; se usa peso del prototipo × η × canal enmascarado por etiqueta (igual con reparto parejo, sensible al esfuerzo).
 G/J quedan en `model.social`; su presentación (panel social, DecarboNito) es de la fase 50 y los índices de investigación de la 48.
+
+Fase 46: sin recortes de ecuación. Decisiones: (1) el paso anual del juego de 3 niveles son 12 sub-pasos mensuales (también
+en el prototipo; golden regenerado): con un solo paso de dt = 1 los impulsores se evaluaban una vez por año y C9 quedaba en
+2,05 también en el prototipo. (2) ε se sortea después de los eventos y antes de las eficiencias (orden del prototipo) con
+η_AGUA^prod del paso anterior (la spec pide η^prod; el prototipo usa su η genérico, iguales con reparto parejo).
+(3) Estacionalidad de la sequía (solo Territorio, `seasonality`) como exponente del peligro: p_mes = 1 − (1 − p)^(w_m/12),
+que conserva p anual exacto (la spec dice "multiplicada por w_m"; con el producto la frecuencia anual cambia en segundo
+orden). (4) Sin multiplicador de estrés de N3 (🟧 opcional de la spec, no activado). (5) Escrutinio c > 1,5·c₀
+(prototipo; la spec no lo menciona). (6) `rng = null` o `noShocks` ⇒ ε = 0.

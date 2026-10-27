@@ -120,6 +120,12 @@ export const INSTRUMENT_CHANNELS: Record<Pid, {
   },
 };
 
+/** Scales a list of weights so their mean is exactly 1 (phase 46: seasonal weights keep the annual frequency). */
+function normaliseMean(w: number[]): number[] {
+  const mean = w.reduce((sum, x) => sum + x, 0) / w.length;
+  return w.map((x) => x / mean);
+}
+
 export const PARAMS_V2 = {
   /** 36 — years to reach 63 % of full effect after activation. Criterio experto. */
   rampYears:   { AS: 1.5, CR: 2.5, GS: 1.5, AGUA: 2.0, CN: 2.5, PAI: 1.0, PEA: 0.5, PIE: 1.5, FRA: 0.5, SE: 0.5 },
@@ -369,6 +375,28 @@ export const PARAMS_V2 = {
     stressMid: 0.20, stressWidth: 0.04,
     growthPIE: 0.01, growthPEA: 0.005, growthTaxDrag: 0.0002, growthStress: 0.01,
     carbonTaxRevenue: 0.005,
+  },
+
+  /**
+   * 46 — random events 2.0 (mejora-general/files/46 §1–4; prototype `EVENTS` and `events_step`).
+   * drought: p = base·(1 + trend·t/trendYears)·(1 + forestLoss·max(0, 1 − forest/forest0)) + noWater (no water policy) +
+   *   ccShare (CC above ccThreshold of the area in force) — the climate trend and the forest dependence are new in 2.0
+   *   (base / noWater / ccShare / ccThreshold were already the 1.1 numbers in ALL_RANDOM_EVENTS). Annual probabilities.
+   * scrutinyCO2Ratio: the international scrutiny adds its CO2 chance when c > ratio·c0 (prototype; 1.1 had c > 12 t,
+   *   unreachable with physical carbon). justiceAfterYears: years since level start after which the climate-justice
+   *   movement can appear (prototype `t > 5`).
+   * droughtSeasonality: monthly weights w_m of the drought hazard in Territorio (January … December), 🟧 criterio experto
+   *   (drier summers in La Niña years in the northeast), normalised below so their mean is exactly 1; they multiply the
+   *   hazard: p_month = 1 − (1 − p)^(w_m/12), so the 12 months keep the annual p exactly.
+   * yieldShock: persistent AR(1) yield shock ε ← persistence^dt·ε + N(0, σ²·dt), σ = sigma·(1 − waterDamping·η_AGUA^prod);
+   *   fraction of production (food.ts). Criterio experto (prototype values).
+   */
+  events: {
+    drought: { base: 0.03, trend: 0.5, trendYears: 30, forestLoss: 0.6, noWater: 0.04, ccShare: 0.02, ccThreshold: 0.25 },
+    scrutinyCO2Ratio: 1.5,
+    justiceAfterYears: 5,
+    droughtSeasonality: normaliseMean([1.6, 1.4, 1.0, 0.7, 0.6, 0.6, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4]),
+    yieldShock: { persistence: 0.5, sigma: 0.04, waterDamping: 0.5 },
   },
 } as const;
 

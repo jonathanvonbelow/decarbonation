@@ -12,7 +12,7 @@
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { costShareOf, makeRng, PID_OF, stepYear } from '../../src/sim';
+import { costShareOf, makeRng, PID_OF, stepMonth, stepYear } from '../../src/sim';
 import { PARAMS_V2 } from '../../src/sim/v2/params';
 import { Policy, type LandUseType } from '../../src/types';
 import { INITIAL_PACTS, INITIAL_POLICIES, TOTAL_LAND_AREA } from '../../src/constants';
@@ -195,6 +195,35 @@ describe('sim invariants', () => {
       ),
       { numRuns: RUNS },
     );
+  });
+
+  // INV-11 (spec 16 §3, named by spec 46 §7; not written as a test before phase 46): determinism with the 2.0 draws —
+  // the same (state, seed) gives byte-identical results in both games, whatever events and yield shocks fire.
+  it('INV-11: stepYear and stepMonth are deterministic for a given seed (independent draws, yield shock)', () => {
+    fc.assert(fc.property(
+      fc.integer({ min: 1, max: 3 }), fc.integer({ min: 0, max: 1e6 }), fc.subarray(ALL_POLICY_IDS, { maxLength: 5 }),
+      (level, seed, policies) => {
+        let a = withActivePolicies(freshState(level), policies);
+        let b = withActivePolicies(freshState(level), policies);
+        for (let y = 0; y < 5; y++) {
+          a = stepYear(a, makeRng(seed, a.year + 1)).next;
+          b = stepYear(b, makeRng(seed, b.year + 1)).next;
+        }
+        expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+        let m1 = a;
+        let m2 = b;
+        let month = 0;
+        for (let i = 0; i < 6; i++) {
+          const r1 = stepMonth(m1, month, makeRng(seed, i));
+          const r2 = stepMonth(m2, month, makeRng(seed, i));
+          expect(JSON.stringify(r1.next)).toBe(JSON.stringify(r2.next));
+          m1 = r1.next; m2 = r2.next; month = r1.month;
+        }
+      },
+    ), { numRuns: 20 });
+    // A different seed changes the draws (the yield shock moves every step).
+    const s = freshState(2);
+    expect(stepYear(s, makeRng(1, 2025)).next.model!.yieldShock).not.toBe(stepYear(s, makeRng(2, 2025)).next.model!.yieldShock);
   });
 
   it('INV-13: no game-over condition triggers on year 0 of a fresh game', () => {

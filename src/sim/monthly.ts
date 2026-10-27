@@ -1,32 +1,13 @@
 /**
  * Monthly step for the single-level Territorio preview (mejora-general/files/21_fusion_ecosim.md §3).
  *
- * Every state equation of the model is first order: x(t+1) = x(t) + f(x(t)) — biodiversity, the
- * food/economic securities, social conflict, political collapse, the three sectoral pressures,
- * land-use areas and the public finances. The monthly step is the Euler discretisation of those
- * same equations with Δt = 1/12: each stock moves 1/12 of the way the *annual* equation would move
- * it from the current state, `x + (F(x) − x) / 12`. No formula, weight or threshold changes, so:
- *   - the fixed points are identical (F(x*) = x* annually ⇔ monthly): a sustained strategy ends up
- *     in the same place in both games, only the trajectory is smoother;
- *   - total land area is conserved (the transition matrix conserves it; 1/12 of a zero-sum change
- *     is zero-sum), and a convex step between two values in [0,100] stays in [0,100].
- *
- * The body mirrors `stepYear` (src/sim/index.ts) step by step; the numbered comments match its own.
- * Deliberate differences, all covered by tests/sim/monthly.spec.ts:
- *   - Growth rates and money flows (population, GDP, taxes, policy/pact costs, interest, debt
- *     amortisation) are applied as annual/12 per month (simple, not compounded).
- *   - A requested loan is credited once, in full, the month it is requested — not spread.
- *   - Random events: an event's annual `triggerChance` p becomes 1 − (1 − p)^(1/12) per month, so
- *     each event keeps its calibrated yearly frequency; unlike `stepYear` (at most one event per
- *     year) several events can land in the same year. A triggered event applies its full effects:
- *     it is a shock, not a flow.
- *   - CO2eq per capita and the score are functions of the state, not stocks: recomputed monthly.
- *   - (Until phase 39 the fiscal-pressure terms were switched by `options.fiscalTermsActive`; since then the
- *     additional tax τ enters the targets of E and C in every level and game.)
- *
- * Since phase 35 (mejora-general/files/35_motor_v2_estructura.md) both bodies are one: `stepMonth` is
- * `advance(state, 1/12, …)` of src/sim/v2/core.ts plus the calendar it returns. The Euler `toward` of
- * the 1.1 stocks still lives there (E, C and Pc relax exactly since phase 39); phase 46 replaces the rest.
+ * `stepMonth` is `advance(state, 1/12, …)` of src/sim/v2/core.ts plus the calendar it returns (phase 35). Since
+ * phase 46 the discretisation is exact for every state variable: every bounded indicator and pressure relaxes with
+ * `relax(…, dt)` (12 monthly steps toward a fixed target are one annual step), every flow (land, money, emissions) is
+ * × dt and population compounds; random events fire with 1 − (1 − p)^(w_m/12) per month (independent draws, the
+ * drought weighted by the season, `seasonality`), so each keeps its calibrated yearly frequency. The 3-level game runs
+ * the same monthly step 12 times per year (`advanceYear`), so both games share one discretisation. The 1.1 Euler
+ * `toward` and `monthlyTriggerChance` are gone (phase 46).
  */
 import { CONTROL_PARAMS } from '../constants';
 import type { ControlParams, GameState, RandomEvent } from '../types';
@@ -37,10 +18,10 @@ import type { SimTrace } from './trace';
 import type { LandFlow } from './territory';
 import { advance, MONTHLY_DT, type AdvanceOptions, type StepYearChatMessage } from './v2/core';
 
-export { MONTHS_PER_YEAR, declaredProtectedOf, monthlyTriggerChance, rollMonthlyEvent } from './v2/core';
+export { MONTHS_PER_YEAR, declaredProtectedOf } from './v2/core';
 
 /** Options of the monthly step (the monthly subset of `AdvanceOptions`). */
-export type MonthlyOptions = Pick<AdvanceOptions, 'events' | 'publicUseUpkeep' | 'extraDeferred' | 'connectivity' | 'wear'>;
+export type MonthlyOptions = Pick<AdvanceOptions, 'events' | 'publicUseUpkeep' | 'connectivity' | 'wear' | 'seasonality' | 'noShocks'>;
 
 export interface StepMonthResult {
   next: GameState;
@@ -48,8 +29,10 @@ export interface StepMonthResult {
   month: number;
   /** True when this step closed December and advanced `next.year`. */
   yearRolled: boolean;
-  /** Random event that fired this month, if any (its effects are already applied). */
+  /** First random event that fired this month, if any (its effects are already applied). */
   event: RandomEvent | null;
+  /** Every random event that fired this month (phase 46: independent draws). */
+  events: RandomEvent[];
   /** Area change per land use this month, after − before, in kHa. */
   landUseDelta: Record<LandUseType, number>;
   /**
@@ -83,6 +66,7 @@ export function stepMonth(
     month: r.month,
     yearRolled: r.yearRolled,
     event: r.event,
+    events: r.events,
     landUseDelta: r.landUseDelta,
     flows: r.flows,
     upkeep: r.upkeep,

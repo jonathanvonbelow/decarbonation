@@ -48,6 +48,8 @@ export interface MonthNewsContext {
   simulatedMonth: number;
   monthIndex: number;
   event: RandomEvent | null;
+  /** Every event that fired this month (phase 46: independent draws; `event` is the first). Defaults to [event]. */
+  events?: RandomEvent[];
   /** Land that changed use and is worth a headline, km² per `from>to` transition (see `tallyLand`). */
   land: Record<string, number>;
   engineMessages: string[];
@@ -117,14 +119,14 @@ export function buildMonthNews(ctx: MonthNewsContext): NewsItem[] {
   const add = (item: Omit<NewsItem, 'id' | 'monthIndex' | 'year' | 'month'>) =>
     items.push({ ...base, ...item, id: `${ctx.monthIndex}-${items.length}-${item.key}` });
 
-  if (ctx.event) {
+  (ctx.events ?? (ctx.event ? [ctx.event] : [])).forEach((event) => {
     add({
       kind: 'event',
-      tone: ctx.event.type === 'positive' ? 'good' : ctx.event.type === 'negative' ? 'bad' : 'neutral',
+      tone: event.type === 'positive' ? 'good' : event.type === 'negative' ? 'bad' : 'neutral',
       key: 'event',
-      eventId: ctx.event.id,
+      eventId: event.id,
     });
-  }
+  });
 
   // Land that changed use, grouped by transition.
   Object.entries(ctx.land).forEach(([transition, n]) => {

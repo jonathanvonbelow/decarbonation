@@ -90,9 +90,10 @@ describe('costs as fractions of GDP', () => {
   it('the yearly fee leaves the treasury × dt in the step, on the grown GDP (prototype order)', () => {
     const base = freshState(2);
     const joined = withPacts(freshState(2), ['techTransferInitiative']);
-    const nextBase = stepYear(base, () => 0.999, CP).next.stellaSpecificState;
+    // One step of dt = 1 (the 3-level game runs 12 monthly sub-steps since phase 46; the order is the same).
+    const nextBase = advance(base, 1, null, CP).next.stellaSpecificState;
     const fee = pactAnnualCost(joined.pacts, nextBase.PBI_Real);
-    const b = stepYear(joined, () => 0.999, CP).next.stellaSpecificState.Reservas_del_Tesoro;
+    const b = advance(joined, 1, null, CP).next.stellaSpecificState.Reservas_del_Tesoro;
     expect(nextBase.Reservas_del_Tesoro - b).toBeCloseTo(fee, 6);
     const m = advance(base, 1 / 12, null, CP).next.stellaSpecificState;
     const mj = advance(joined, 1 / 12, null, CP).next.stellaSpecificState.Reservas_del_Tesoro;

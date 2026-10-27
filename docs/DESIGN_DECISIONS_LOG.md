@@ -2925,3 +2925,85 @@ prototipo, Δ St −2,05 en `extractive` N2 año 10; lo decide la 46).
 **UI.** Sin cambios: el panel social con G y J es de la fase 50 (spec §3); los índices de investigación, de la 48.
 
 **Deudas.** Presentación de G/J (50) e índices de investigación (48); C9 (46).
+
+## 2026-10-27 — v6 fase 46: eventos 2.0, choque de rendimiento y paso mensual exacto
+
+**Qué se hizo** (`mejora-general/files/46_eventos_y_paso_mensual.md`; rama `v6-modelo-v2`).
+- `src/sim/events.ts` reescrito: `rollEvents` sortea cada evento elegible en forma independiente, p_paso = 1 − (1 − p)^(w·dt),
+  un `rng()` por evento en el orden de `ALL_RANDOM_EVENTS`; varios eventos por paso, cada uno lee el estado que dejó el anterior.
+  Se borra la rama especial del Nivel 3 (probabilidad global creciente + elección ponderada). `eventStepChance`,
+  `seasonalWeight`, `standardNormal` (Box–Muller, rama seno) y `nextYieldShock` (AR(1)).
+- Efectos como saltos de nivel (como `events_step` del prototipo, py:487-516): F/E/B sobre el indicador, antes de las
+  eficiencias, el suelo y la relajación del paso; W/St/presiones/dinero sobre su stock; CO₂ y puntaje no se escriben (se
+  recalculan; aviso en el log). **`src/sim/deferred.ts` borrado** (y `tests/sim/deferred.spec.ts`, cuyas pruebas de pactos
+  pasan a `tests/sim/pactShifts.spec.ts`); las situaciones de Territorio aplican sus efectos con la misma regla y se borran
+  `Session.pendingDeferred` y `AdvanceOptions.extraDeferred`.
+- `ALL_RANDOM_EVENTS`: sequía con tendencia climática y dependencia del bosque perdido (área vigente; el área retirada de CC/CA
+  ya iba a barbecho desde la 37), boom verde sin efecto sobre el CO₂, escrutinio con c > 1,5·c₀ (la spec no lo menciona; es el
+  umbral del prototipo: c > 12 t era inalcanzable), movimiento por la justicia con `model.t > 5`. Números en `PARAMS_V2.events`.
+- Choque de rendimiento ε (AR(1), §3) sorteado después de los eventos y antes de las eficiencias (orden del prototipo) con
+  η_AGUA^prod del paso anterior; `noShocks` (y `rng = null`) lo fijan en 0. Entra en la producción de alimentos (fase 41).
+- Estacionalidad de la sequía, solo Territorio (`seasonality: true` en `advanceMonth`): pesos 🟧 de la spec normalizados a media 1,
+  aplicados como exponente del peligro (1 − (1 − p)^(w_m/12)), que conserva la p anual exacta.
+- **Paso anual = 12 sub-pasos mensuales.** `advanceYear` (core.ts) clona una vez y corre 12 `stepInPlace` de dt = 1/12 con el
+  mismo rng en secuencia; `stepYear` lo envuelve (nueva opción `StepYearOptions` con `events` / `noShocks`). Calendario único
+  (12·dt meses, cambio de año después de diciembre); se borran `monthlyTriggerChance`, `rollEvent`, `rollMonthlyEvent` y las
+  ramas `dt` de core.ts. `advance(state, 1, …)` sigue existiendo (un paso de un año) pero ningún juego lo usa.
+- Prototipo: `play_level` integra cada año con `SUBSTEPS_PER_YEAR = 12`; el desbloqueo de pactos usa el número de paso
+  (t acumulado en floats daba 2029,9999… < 2030). **`golden_v2.csv` regenerado** (hasta 3 puntos al año 1 en `extractive`,
+  ≤ 0,5 al año 30). `GOLDEN_ACTIVE = true`: los 27 puntos coinciden en B, F, E, W, St y c (máx |Δ| < 5e-4, sin agrandar
+  tolerancias; `playLevel` usa `noShocks`).
+
+**Decisión C9 (deuda de las fases 36–45).** Con un paso anual de dt = 1 el prototipo también falla C9 (Δ St −2,05 en
+`extractive` N2 año 10): los impulsores (rampa de las políticas, presiones que leen C y Pc del paso anterior) se evalúan una
+vez por año. Probé en el prototipo dos arreglos que no cambian la discretización: presiones antes de Pc (1,67) y reloj de
+rampa al punto medio (1,39); ninguno llega a ≤ 1. Se adopta la discretización única (sub-pasos mensuales) en el prototipo y en
+el código: C9 = 0 y los dos juegos comparten trayectorias sin eventos. Costo: el paso anual es ≈ 12× más caro (≈ 2 ms por año;
+`sim:check` completo 258 s → ~270 s; `testTimeout` de vitest a 20 s porque las invariantes de 30 años × 50 semillas pasan de 5 s
+con todos los archivos en paralelo).
+
+**Otros desvíos.** (1) Estacionalidad como exponente, no producto (conserva p). (2) Sin multiplicador de estrés de N3 (🟧
+opcional). (3) Se mantiene el orden de eventos del código y el −5 % de reservas de la recesión (el prototipo no lo tiene;
+deuda 47). (4) Box–Muller por la rama seno: las tiradas constantes de los tests (0 y 0,999) dan z ≈ 0 (con la rama coseno
+0,999 daba un sesgo sostenido de ε ≈ +0,9 %). (5) Los eventos de N1/N2 ahora llegan al chat (antes sólo N3) y el log del juego
+de 3 niveles conserva "EVENTO (Año Y+1)". (6) Fin de partida a mitad de año: corta los sub-pasos (como el prototipo) y el año
+igual cierra (year + 1); el chequeo es mensual (un choque tiene un mes para relajarse antes, como en Territorio). (7) INV-11
+(determinismo) no existía: creado. (8) `tests/sim/core.spec` regenerado (trayectorias con `stepYear` y eventos 2.0: N2 F 32,5
+/ W 67,3; N3 F 34,9 / W 61,3 / St 74,1; mensual F 33,2) y valores del prototipo actualizados en `land.v2.spec` (sub-pasos) y
+tests que medían un paso de dt = 1 pasan a `advance(…, 1, …)` (`carbon`, `indicators`, `pacts`, `land`).
+
+**Verificación.**
+- `tests/sim/events.v2.spec.ts` (20): frecuencia de cada evento en 10 000 años ±10 % (N3, sin rama especial); varios eventos por
+  paso; 12 meses conservan p exacto con y sin estacionalidad, y por simulación (60 000 años); sequía con tendencia y bosque;
+  escrutinio 1,5·c₀; boom sin CO₂; justicia por `model.t`; saltos de nivel y stocks; Box–Muller (media, varianza, tiradas
+  constantes); AR(1) y amortiguación del agua; `noShocks`; C9 en N2 (`do_nothing`/`green`/`extractive`, años 10 y 30,
+  |Δ| ≤ 1 y ≤ 0,1 t: da 0); fin de partida a mitad de año; logs por año / mes; `currentEvent` con funciones.
+- INV-11 en `tests/sim/invariants.spec.ts` (fast-check, ambos juegos). Golden activo.
+- `npx tsc --noEmit`, `npm test` (39 archivos, 657 tests), `npm run build`, `npm run i18n:audit` limpios.
+- E2E: la extensión de Chrome no estaba conectada; dev server en :3146 con `GEMINI_API_KEY` de relleno: `/play.html?demo=1`,
+  `/territorio.html` y los módulos `src/main.tsx`, `src/territorio/main.tsx`, `src/sim/events.ts`, `src/territorio/session.ts`,
+  `src/App.tsx` responden 200 (transformados sin error). No se probó la interacción en el navegador.
+
+**`npm run sim:check`** contra la 44 (completo) y la 45 (quick):
+
+| Criterio | 45 (quick) | 46 (quick) | 44 (completo) | 46 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C2 dirigida gana su ruta | FAIL 0,600 | PASS 0,800 | FAIL 0,300 | FAIL 0,400 (Territorio producción 40 %) |
+| C3 ninguna gana todas | PASS 0 | PASS 0 | PASS 0 | PASS 0,125 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 (N1 `tech_tax` 100 %) |
+| C5 la estrategia decide | FAIL 1 | PASS 0 | PASS 0 | FAIL 1 (Territorio producción 40 %, banda 30–70) |
+| C6 recorrido ≥ 15 | FAIL 4,817 | FAIL 4,458 | FAIL 3,357 | FAIL 4,929 (W N1 4,9; F N3 14,6) |
+| C7 banda de predicción | FAIL 0,592 | FAIL 0,597 | FAIL 0,599 | FAIL 0,604 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | FAIL 2,052 | **PASS 0** | FAIL 2,453 | **PASS 0** |
+
+C2–C5 dependen de rutas que recalibra la 49 (spec §8). `extractive` N2 completo: W 47,5 (el más bajo de N2), St 43,1.
+
+**Revisión de código** (aplicada): fin de partida a mitad de año cierra el año; noticias de Territorio con todos los eventos del
+mes (`MonthNewsContext.events`) y `currentEvent` = primer evento del paso (igual que `event`); log "Año Y+1" en el juego de 3
+niveles; Box–Muller por la rama seno (sin sesgo con la tirada 0,999). No aplicado: el cálculo de traza y Δ de áreas en cada
+sub-paso (costo menor); el −5 % de reservas de la recesión (deuda 47); la migración de `pendingDeferred` (siempre vacía).
+
+**Deudas.** Rutas (C2/C4/C5, 49); situaciones como impulsos (47); presentación de eventos múltiples en el juego de 3 niveles
+(panel de N3 muestra el último; 50); F N3 y W N1 (C6, 49).

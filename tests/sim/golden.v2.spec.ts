@@ -10,8 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { playLevel } from './testHelpers';
 
-/** Activated in phase 46, once every submodel of 2.0 is in place. */
-const GOLDEN_ACTIVE = false;
+/** Activated in phase 46: every submodel of 2.0 is in place (annual step = 12 monthly sub-steps, as the prototype). */
+const GOLDEN_ACTIVE = true;
 
 describe.skipIf(!GOLDEN_ACTIVE)('2.0 engine matches the reference prototype (no events)', () => {
   const rows = readFileSync('scripts/reference/golden_v2.csv', 'utf8').trim().split(/\r?\n/).slice(1).map((l) => l.split(','));

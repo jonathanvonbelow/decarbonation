@@ -5,6 +5,7 @@ import { Policy, PolicyState, LandUseType, LandUse, GameState, LevelConfig, Stel
 // imports LEVEL_CONFIGS/CONTROL_PARAMS from this file. src/sim/winRoutes.ts only depends on
 // ./types, so importing it directly here is safe.
 import { evaluateLevel } from './sim/winRoutes';
+import { PARAMS_V2 } from './sim/v2/params';
 
 export const INITIAL_YEAR = 2024;
 export const SIMULATION_YEARS_PER_ROUND = 1;
@@ -566,12 +567,19 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
     description: "Una sequía prolongada y severa afecta las cosechas y agota las reservas de agua, generando descontento social y estrés en el sector agrícola.",
     type: 'negative',
     category: 'environmental',
+    // Model 2.0 (phase 46 §2, prototype EVENTS["drought"]): climate trend over the 30 years and more droughts where the
+    // forest was lost (forest = BNNP + BNP over the area in force, against the level's start); + without a water policy,
+    // + when CC exceeds 25 % of the area in force (phase 34, N-09/T-08). Numbers in PARAMS_V2.events.drought.
     triggerChance: (gs) => {
-      let chance = 0.03;
-      if (!gs.policies[Policy.SustainableWaterManagement].isActive) chance += 0.04;
-      // Model 1.1 (phase 34, N-09/T-08): share of the level's own area, not of level 1's fixed 500 kHa.
-      const total = (Object.values(gs.landUses) as LandUse[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
-      if (gs.landUses[LandUseType.ConventionalCrops].area / total > 0.25) chance += 0.02;
+      const d = PARAMS_V2.events.drought;
+      const total = (Object.values(gs.landUses) as LandUse[]).reduce((sum, lu) => sum + (lu?.area ?? 0), 0) || 1;
+      const forest = ((gs.landUses[LandUseType.UnprotectedNativeForest]?.area ?? 0) + (gs.landUses[LandUseType.ProtectedNativeForest]?.area ?? 0)) / total;
+      const forest0 = gs.model?.anchors.forestShare0 ?? forest;
+      const t = gs.model?.t ?? gs.yearsSimulatedInCurrentLevel;
+      const forestLoss = forest0 > 0 ? Math.max(0, 1 - forest / forest0) : 0;
+      let chance = d.base * (1 + d.trend * t / d.trendYears) * (1 + d.forestLoss * forestLoss);
+      if (!gs.policies[Policy.SustainableWaterManagement].isActive) chance += d.noWater;
+      if (gs.landUses[LandUseType.ConventionalCrops].area / total > d.ccThreshold) chance += d.ccShare;
       return chance;
     },
     effects: (gs) => [
@@ -611,9 +619,10 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
     triggerChance: (gs) => {
       let chance = 0;
       if (gs.indicators.biodiversity < 30) chance += 0.05;
-      // Fase 38: con el carbono físico (c0 = 7,13 t en N2, máximo ~8,5 t) este umbral 1.1 queda inalcanzable;
-      // la fase 46 lo pasa a c > 1,5·c0 (docs/v6-spec-vs-motor.md).
-      if (gs.indicators.co2EqEmissionsPerCapita > 12) chance += 0.05;
+      // Phase 46 (prototype): c > 1.5·c0 of the level (the 1.1 threshold of 12 t was unreachable with physical carbon,
+      // maximum ~8.5 t; docs/v6-spec-vs-motor.md).
+      const c0 = gs.model?.anchors.c0;
+      if (c0 !== undefined && gs.indicators.co2EqEmissionsPerCapita > PARAMS_V2.events.scrutinyCO2Ratio * c0) chance += 0.05;
       if (gs.policies[Policy.FlexibleEnvironmentalRegulations].isActive) chance += 0.04;
       return chance;
     },
@@ -693,8 +702,9 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
       return chance;
     },
     effects: (gs) => [
+      // Phase 46: no direct effect on CO2 any more (it has infrastructure inertia since phase 38; the boom acts through
+      // E, GDP and the environmentalist pressure, as in the prototype).
       { indicator: 'economicSecurity', changePercentage: 0.10 },
-      { indicator: 'co2EqEmissionsPerCapita', changePercentage: -0.05 },
       { indicator: 'stella.PBI_Real', changePercentage: 0.025 },
       { indicator: 'stella.PP_AMBIENTALISTA', changeAbsolute: -4 },
     ],
@@ -708,7 +718,8 @@ export const ALL_RANDOM_EVENTS: RandomEvent[] = [
     description: "Un nuevo y vigoroso movimiento social emerge, demandando acciones más contundentes contra el cambio climático y por una transición justa.",
     type: 'neutral',
     category: 'social',
-    triggerChance: (gs) => (gs.currentLevel >= 2 && gs.yearsSimulatedInCurrentLevel > 5) ? 0.05 : 0,
+    // Years since level start from the 2.0 clock (prototype `t > 5`; the 1.1 year counter only moves in December monthly).
+    triggerChance: (gs) => (gs.currentLevel >= 2 && (gs.model?.t ?? gs.yearsSimulatedInCurrentLevel) > PARAMS_V2.events.justiceAfterYears) ? 0.05 : 0,
     effects: (gs) => [
       { indicator: 'stella.PP_AMBIENTALISTA', changeAbsolute: 7 },
       { indicator: 'stella.PP_SOCIAL', changeAbsolute: 5 },
