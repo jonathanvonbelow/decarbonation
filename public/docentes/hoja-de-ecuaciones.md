@@ -57,7 +57,7 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 | E-2 | ¿El tesoro puede quedar negativo? ¿Hay default? | DOCUMENTAR | Sí puede quedar negativo (no hay clamp en `Reservas_del_Tesoro`); el "default" es indirecto vía la condición de game over "Bancarrota Nacional" en `src/sim/index.ts` paso 13, no un mecanismo de default explícito. |
 | E-3 | Impuesto adicional: ¿óptimo trivial en 0% o 20%? | PENDIENTE | Requiere el barrido de sensibilidad del harness (Fase 5). |
 | E-4 | Crecimiento del PBI: ¿puede ser negativo indefinidamente? | PENDIENTE | La fórmula lo permite algebraicamente (`pbiGrowthRate` puede ser negativo con impuesto alto y sin políticas de inversión/exportación); no se verificó si el juego llega a una espiral sin salida antes del game over de bancarrota. |
-| S-1 | Puntaje: ¿pesos por nivel suman 1? ¿Componentes normalizados a [0,1]? | PENDIENTE | Pesos visualmente suman 1.00 en los tres niveles (`src/sim/score.ts`: 0.40+0.45+0.15; 0.15+0.20+0.30+0.35; 0.10+0.15+0.20+0.25+0.30) — confirmar con un test dedicado en la Fase 5 en vez de a mano. `pbiScore` con techo 25000 (nivel 3) no está documentado como valor defendible. |
+| S-1 | Puntaje: ¿pesos por nivel suman 1? ¿Componentes normalizados a [0,1]? | RESUELTO (v6 fase 49) | `src/sim/score.ts`: pesos en `SCORE_WEIGHTS`, test INV-14 en `tests/sim/score.spec.ts`. Componentes en [0, 100]: el carbono se ancla al CO₂ inicial del nivel, C_sc = 100·clip((1,25·c₀ − c)/c₀, 0, 1), y el PBI al inicial, Y_sc = min(100, 100·Y/(2·Y₀)) (antes, `c/12` y un techo fijo de 25 000). |
 
 ## Verificación de esta auditoría
 

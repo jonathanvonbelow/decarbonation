@@ -258,6 +258,31 @@ describe('sustained breaches (Territorio only)', () => {
     const s = govern(createSession(11), 12 * 12);
     expect(s.outcome).toBeNull();
   });
+
+  it('a government that settles about half of the desk survives to 2054 (phase 49: neglect calibration 1.2 / 3)', () => {
+    // Every other situation that reaches the desk is settled with its first affordable option; the rest expire.
+    for (const seed of [11, 3, 7]) {
+      let s = createSession(seed);
+      const seen = new Set<string>();
+      let n = 0;
+      let settled = 0;
+      for (let m = 0; m < TOTAL_MONTHS && !s.outcome; m++) {
+        s.open.forEach((item) => {
+          if (seen.has(item.id)) return;
+          seen.add(item.id);
+          if (n++ % 2 !== 0) return;
+          const def = SITUATION_BY_ID[item.defId];
+          const option = def?.options.find((o) => (o.cost ?? 0) <= s.game.stellaSpecificState.Reservas_del_Tesoro);
+          if (option) { s = decideSituation(s, item.id, option.id).session; settled++; }
+        });
+        s = advanceMonth(s);
+      }
+      expect(n).toBeGreaterThan(20);
+      expect(settled / n).toBeGreaterThan(0.4);
+      expect(s.outcome?.kind).not.toBe('collapse');
+      expect(s.game.indicators.politicalStability).toBeGreaterThan(25);
+    }
+  }, 60_000);
 });
 
 // Model 1.1 (phase 34, mejora-general/files/34_correcciones_modelo_1_1.md §6 and §8).

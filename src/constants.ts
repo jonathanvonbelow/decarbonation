@@ -343,7 +343,6 @@ export const CONTROL_PARAMS: ControlParams = {
   // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
   // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: 2035,
-  Referencia_Max_CO2_per_Capita_Puntaje: 12,  // Adjusted ceiling — keeps scoring meaningful with lower starting emissions
   Tasa_Impositiva_General_Sobre_PBI: 0.15,
   Tasa_Base_Crecimiento_PBI: 0.02,
   Tasa_Crecimiento_Poblacional_Base: 0.008,
@@ -476,8 +475,8 @@ Mantenlo simple y centrado en las políticas macro y sus efectos sobre el uso de
     // level's headline targets (LevelIntroModal reads it as a fallback) and feed the `equilibrium`
     // route in the levels that still have one.
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
+    // Phase 49: no score target (the 2.0 routes of level 1 do not use the score; 600 was out of reach of the new scale).
     winConditions: {
-      puntajeGeneralMin: 600,
       biodiversityMin: 40,
       co2EqEmissionsPerCapitaMax: 5,  // Fase 38: el nivel arranca en c0 = 5,95 t (carbono físico); hay que bajar ~16 %
       nativeForestTotalMinPercentage: 0.18,
@@ -500,8 +499,8 @@ El objetivo es mantener un equilibrio entre desarrollo económico, bienestar soc
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL, 
     // Phase 5: floors + (conservation | production | innovation) — see src/sim/winRoutes.ts.
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
+    // Phase 49: no score target (the 2.0 routes of level 2 do not use the score).
     winConditions: {
-      puntajeGeneralMin: 480,
       biodiversityMin: 45,
       co2EqEmissionsPerCapitaMax: 6,
       foodSecurityMin: 50,
@@ -526,22 +525,20 @@ Hay pactos internacionales más avanzados y eventos aleatorios más frecuentes e
 **REGLA ADICIONAL CLAVE PARA NIVEL 3:** Debes utilizar el 'Historial de Acciones Recientes' del jugador, proporcionado en el contexto, para dar consejos más personalizados y relevantes. Reconoce sus estrategias pasadas (ej. "Veo que has favorecido las políticas de conservación...") y enmarca tus recomendaciones en función de las decisiones que ha estado tomando. Discute las implicaciones a largo plazo de las decisiones financieras.
 El objetivo es demostrar un liderazgo integral. Ayuda al jugador a prepararse para el 'endgame', considerando todos los factores para un legado sostenible.`,
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL,
-    // Phase 5: floors + (conservation | production | innovation | equilibrium). The old "6 of 10"
-    // conjunctive logic lives on unchanged as the `equilibrium` route in src/sim/winRoutes.ts.
+    // Phase 5: floors + (conservation | production | innovation | equilibrium). Since phase 49 the
+    // `equilibrium` route of src/sim/winRoutes.ts asks for 7 of 9 thresholds (it was the old "6 of 10").
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
     winConditions: {
-      puntajeGeneralMin: 700,
-      // Fase 38 (provisorio, recalibra la 49): 2 → 4,5 t con el carbono físico (c0 = 5,73 t), igual que la ruta
-      // `equilibrium` de src/sim/winRoutes.ts (ROUTES3 del prototipo).
+      // Phase 49: the headline targets mirror the `equilibrium` route of src/sim/winRoutes.ts (7 of 9; ROUTES3 of the
+      // prototype). Its ninth condition, GDP ≥ 1.7·Y0, has no field here.
+      puntajeGeneralMin: 720,
       co2EqEmissionsPerCapitaMax: 4.5,
-      biodiversityMin: 55,
-      foodSecurityMin: 60,
-      economicSecurityMin: 50,
-      bienestarSocialMin: 60,
-      politicalStabilityMin: 50,
-      pbiMin: 14000,
-      deudaPbiMax: 0.7,
-      colapsoPoliticoMax: 50,
+      biodiversityMin: 50,
+      foodSecurityMin: 40,
+      economicSecurityMin: 38,
+      bienestarSocialMin: 65,
+      politicalStabilityMin: 75,
+      deudaPbiMax: 0.5,
     }
   }
 ];

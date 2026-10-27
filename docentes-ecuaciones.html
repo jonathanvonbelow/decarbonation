@@ -123,28 +123,28 @@
           <li><strong class="text-bone">Territorio espacial.</strong> Cada parcela de 1 km² refleja el uso del suelo que calcula el modelo; el jugador solo cambia a mano los usos públicos.</li>
           <li><strong class="text-bone">Tres usos públicos nuevos</strong> (humedal, restauración, parque energético), con tasas por criterio experto (entrada F5 del registro de decisiones).</li>
           <li><strong class="text-bone">Situaciones.</strong> 100 casos que desgastan al gobierno si no se resuelven a tiempo (entrada F6 del registro).</li>
-          <li><strong class="text-bone">Rutas de victoria propias,</strong> calibradas simulando estrategias completas hasta 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:territorio</code>).</li>
+          <li><strong class="text-bone">Rutas de victoria propias,</strong> calibradas simulando estrategias completas hasta 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>).</li>
         </ul>
         <ul class="text-sm text-ash space-y-2 mb-5 list-disc list-inside" data-lang="en" hidden>
           <li><strong class="text-bone">Monthly step.</strong> Same engine (<code class="text-xs bg-basalt-900 px-1 rounded">src/sim/</code>), but it advances with <code class="text-xs bg-basalt-900 px-1 rounded">stepMonth</code> instead of the yearly step, starting from the Level 2 formulas.</li>
           <li><strong class="text-bone">Spatial territory.</strong> Each 1 km² parcel reflects the land use the model computes; the player only changes public uses by hand.</li>
           <li><strong class="text-bone">Three new public uses</strong> (wetland, restoration, energy park), with rates set by expert judgment (entry F5 of the decision log).</li>
           <li><strong class="text-bone">Situations.</strong> 100 cases that wear the government down if they aren't settled in time (entry F6 of the log).</li>
-          <li><strong class="text-bone">Its own win routes,</strong> calibrated by simulating complete strategies to 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:territorio</code>).</li>
+          <li><strong class="text-bone">Its own win routes,</strong> calibrated by simulating complete strategies to 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>).</li>
         </ul>
         <h3 class="font-semibold text-hydro mb-2" data-lang="es">Condiciones de cada ruta (generadas desde el código)</h3>
         <h3 class="font-semibold text-hydro mb-2" data-lang="en" hidden>Conditions of each route (generated from the code)</h3>
           <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
             <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Biodiversidad mínima: ≥ 25; Seguridad alimentaria mínima: ≥ 20; Estabilidad política mínima: ≥ 25; Bienestar social mínimo: ≥ 12.</li>
-            <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 45,5; Bosque nativo: ≥ 15 %; Territorio declarado bajo uso público de conservación: ≥ 4,5 %; Emisiones CO₂eq/cápita: ≤ 6,2.</li>
-            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad alimentaria: ≥ 45; Seguridad económica: ≥ 36; Una política productiva activa; Saldo primario medio de 5 años (% del PBI): ≥ 0 %; Ratio deuda/PBI: ≤ 0,6; Emisiones CO₂eq/cápita: ≤ 7,8.</li>
-            <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 4,8; Territorio con parque energético público: ≥ 1,6 %; Esfuerzo en instrumentos tecnológicos: ≥ 25; Bienestar social: ≥ 30.</li>
+            <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 52; Bosque nativo: ≥ 15 %; Territorio declarado bajo uso público de conservación: ≥ 6 %; Emisiones CO₂eq/cápita: ≤ 6,2.</li>
+            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad alimentaria: ≥ 40,5; Seguridad económica: ≥ 40; Bienestar social: ≥ 55; Saldo primario medio de 5 años (% del PBI): ≥ 0 %; Ratio deuda/PBI: ≤ 0,6; Años con dos o más políticas productivas a la vez: ≥ 15.</li>
+            <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 4,8; Territorio con parque energético público: ≥ 1,6 %; Bienestar social: ≥ 55.</li>
           </ul>
           <ul data-lang="en" hidden class="text-sm text-ash space-y-3 list-none">
             <li><strong class="text-bone">Governance floors (all at once):</strong> Minimum biodiversity: ≥ 25; Minimum food security: ≥ 20; Minimum political stability: ≥ 25; Minimum social wellbeing: ≥ 12.</li>
-            <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 45.5; Native forest: ≥ 15 %; Territory declared under public conservation use: ≥ 4.5 %; CO₂eq emissions per capita: ≤ 6.2.</li>
-            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Food security: ≥ 45; Economic security: ≥ 36; A productive policy in force; 5-year mean primary balance (% of GDP): ≥ 0 %; Debt/GDP ratio: ≤ 0.6; CO₂eq emissions per capita: ≤ 7.8.</li>
-            <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.8; Territory with public energy park: ≥ 1.6 %; Effort on technological instruments: ≥ 25; Social wellbeing: ≥ 30.</li>
+            <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 52; Native forest: ≥ 15 %; Territory declared under public conservation use: ≥ 6 %; CO₂eq emissions per capita: ≤ 6.2.</li>
+            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Food security: ≥ 40.5; Economic security: ≥ 40; Social wellbeing: ≥ 55; 5-year mean primary balance (% of GDP): ≥ 0 %; Debt/GDP ratio: ≤ 0.6; Years with two or more productive policies at once: ≥ 15.</li>
+            <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.8; Territory with public energy park: ≥ 1.6 %; Social wellbeing: ≥ 55.</li>
           </ul>
         <p class="text-xs text-ash-dim mt-4" data-lang="es">Rigor: lo calibrado por simulación son los umbrales de las rutas; las tasas de los usos públicos nuevos son criterio experto, sin calibración empírica.</p>
         <p class="text-xs text-ash-dim mt-4" data-lang="en" hidden>Rigor: what is calibrated by simulation is the route thresholds; the rates of the new public uses are expert judgment, with no empirical calibration.</p>

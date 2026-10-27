@@ -148,28 +148,18 @@ describe('prototype references (N2, year 30, no events)', () => {
 
 describe('pacts alone win no route (spec §4, with events)', () => {
   ([2, 3] as const).forEach((level) => {
-    // Phase 44: with the 2.0 economy, N3 treaty-only meets the provisional conservation route of the code in 1 seed of 5
-    // (seed 4: B 45.6 ≥ 42, c 5.396 ≤ 5.4): the route, not the pact — the prototype's floor is B ≥ 52 (phase 49).
-    it(`N${level} with only the treaty: no route but the provisional conservation one, B far from 52`, () => {
-      const strategy: NivelesStrategy = { id: 'pacts_only', ids: [], pacts: ['treaty'] };
-      for (let seed = 1; seed <= 5; seed++) {
-        const r = runNiveles(level, strategy, seed, CP);
-        expect(r.met.filter((m) => m !== 'conservation'), `seed ${seed}`).toEqual([]);
-        expect(r.final.B, `seed ${seed}`).toBeLessThan(47);
-        if (level === 2) expect(r.won, `seed ${seed}`).toBe(false);
-      }
-    });
-
-    // The three pacts with no policy do win `conservation` in some seeds (N2 3/5, N3 5/5): not because of the pacts (B
-    // stays ≈ 45.6, as in the prototype's 45.4) but because the provisional conservation routes of the code ask B ≥ 41–42
-    // and c ≤ 5.4–6.5 (prototype: B ≥ 52). docs/v6-spec-vs-motor.md, phase 43 row; route calibration of phase 49.
-    it(`N${level} with all three pacts: B stays far from the prototype's conservation floor (52)`, () => {
-      const strategy: NivelesStrategy = { id: 'pacts_only', ids: [], pacts: ['treaty', 'accord', 'tech'] };
-      for (let seed = 1; seed <= 5; seed++) {
-        const r = runNiveles(level, strategy, seed, CP);
-        expect(r.final.B, `seed ${seed}`).toBeLessThan(47);
-        expect(r.met.filter((m) => m !== 'conservation'), `seed ${seed}`).toEqual([]);
-      }
+    // Phase 49: with the final routes (conservation B ≥ 52, ROUTES3) neither the treaty alone nor the three pacts win
+    // anything (before, the provisional B ≥ 41–42 let them win conservation in some seeds).
+    ([['treaty'], ['treaty', 'accord', 'tech']] as const).forEach((pacts) => {
+      it(`N${level} with only ${pacts.join(' + ')}: no route, B far from 52`, () => {
+        const strategy: NivelesStrategy = { id: 'pacts_only', ids: [], pacts: [...pacts] };
+        for (let seed = 1; seed <= 5; seed++) {
+          const r = runNiveles(level, strategy, seed, CP);
+          expect(r.met, `seed ${seed}`).toEqual([]);
+          expect(r.won, `seed ${seed}`).toBe(false);
+          expect(r.final.B, `seed ${seed}`).toBeLessThan(47);
+        }
+      });
     });
   });
 });

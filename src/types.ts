@@ -380,7 +380,6 @@ export interface ControlParams {
   // Peso_*_Ext, Punto_Inflexion_*, Capacidad_Maxima_*, per-level dissipation rates, Monto_del_Prestamo_Unico, …)
   // were deleted. Policy time constants live in PARAMS_V2 (rampYears, fatigueYears; phase 36).
   Ano_Activacion_Prestamo: number;
-  Referencia_Max_CO2_per_Capita_Puntaje: number;
   Tasa_Impositiva_General_Sobre_PBI: number;
   Tasa_Base_Crecimiento_PBI: number;
   Tasa_Crecimiento_Poblacional_Base: number;

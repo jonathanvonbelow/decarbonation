@@ -158,7 +158,7 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
   // per person in levels 1 / 2 / 3 (1.1, with the 40 000 scale factor: ~7.8 / 17.4 / 10.6). The
   // win-route baseline is taken from these values too.
   newIndicators.co2EqEmissionsPerCapita = model.anchors.c0;
-  newIndicators.generalScore = computeScore(newIndicators, levelNumber, CP);
+  newIndicators.generalScore = computeScore(newIndicators, levelNumber, model.anchors);
 
   const initialHistoricalDataPoint: HistoricalDataPoint = {
     year: INITIAL_YEAR,

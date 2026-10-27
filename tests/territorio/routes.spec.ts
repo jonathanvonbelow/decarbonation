@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TERRITORIO_FLOORS, TERRITORIO_ROUTES, evaluateTerritorio, publicNaturePct } from '../../src/territorio/routes';
-import { createSession } from '../../src/territorio/session';
-import { LandUseType } from '../../src/types';
+import { advanceMonth, createSession, togglePolicy } from '../../src/territorio/session';
+import { LandUseType, Policy } from '../../src/types';
 
 describe('Territorio win routes', () => {
   it('offers three distinct routes plus governance floors', () => {
@@ -58,5 +58,39 @@ describe('declared protected area', () => {
     const s = createSession(5);
     const bnp = s.game.landUses[LandUseType.ProtectedNativeForest].area;
     expect(publicNaturePct({ ...s.game, declaredProtectedArea: bnp + 500 })).toBeCloseTo((bnp / totalOf(s.game)) * 100, 6);
+  });
+});
+
+// Phase 49 (49 §3, T-05): the productive route asks for governed production over time, not a full treasury.
+describe('production route (phase 49)', () => {
+  const production = TERRITORIO_ROUTES.find((r) => r.id === 'production')!;
+  const healthy = (g: ReturnType<typeof createSession>['game'], years: number) => ({
+    ...g,
+    indicators: { ...g.indicators, foodSecurity: 60, economicSecurity: 60, socialWellbeing: 80 },
+    stellaSpecificState: { ...g.stellaSpecificState, Reservas_del_Tesoro: g.stellaSpecificState.PBI_Real * 0.5, Deuda: 0 },
+    model: { ...g.model!, productiveYears: years, fiscal: { ...g.model!.fiscal, primaryHistory: [[5, 0.02]] as [number, number][] } },
+  });
+
+  it('is not met with a single productive policy, however full the treasury', () => {
+    let s = createSession(5);
+    s = togglePolicy(s, Policy.AgriculturalExports).session;
+    for (let m = 0; m < 24; m++) s = advanceMonth(s);
+    expect(s.game.model!.productiveYears).toBe(0);
+    const game = healthy(s.game, s.game.model!.productiveYears);
+    const rp = evaluateTerritorio(game, { ...game, indicators: game.levelBaseline }).routes.find((r) => r.route.id === 'production')!;
+    expect(rp.met).toBe(false);
+    expect(rp.bottleneck?.labelKey).toBe('cond.productiveYears');
+  });
+
+  it('counts the years with two productive policies at once, and is met after 15 of them', () => {
+    let s = createSession(5);
+    s = togglePolicy(s, Policy.AgriculturalExports).session;
+    s = togglePolicy(s, Policy.SustainableLivestock).session;
+    for (let m = 0; m < 24; m++) s = advanceMonth(s);
+    expect(s.game.model!.productiveYears).toBeCloseTo(2, 9);
+    const game = healthy(s.game, 15);
+    const rp = evaluateTerritorio(game, { ...game, indicators: game.levelBaseline }).routes.find((r) => r.route.id === 'production')!;
+    expect(rp.met).toBe(true);
+    expect(production.conditions.map((c) => c.labelKey)).toContain('cond.primaryAvg');
   });
 });

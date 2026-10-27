@@ -54,7 +54,7 @@ import {
 import { checkEfficiencyWarning } from '../policies';
 import { updatePressures } from './pressures';
 import { computeEfficiencies, prodEfficiency, tickPolicyClocks, type PolicyEfficiency } from './policies';
-import type { Pid } from './params';
+import { PARAMS_V2, PID, type Pid } from './params';
 import type { Rng } from '../rng';
 import { computeScore } from '../score';
 import { toMapFlow, type LandFlow } from '../territory';
@@ -355,6 +355,10 @@ export function stepInPlace(next: GameState, dt: number, rng: Rng | null, CP: Co
   const fin = stepFinance(next as GameState & { model: typeof model }, eff, dt, CP, annualUpkeep);
   if (fin.loan > 0) logs.push(loanLog(fin.loan, language));
 
+  // Governed production (phase 49, prototype `prod_years`): years with at least two production policies on at once.
+  const productiveOn = PARAMS_V2.productive.policies.filter((code) => next.policies[PID[code]]?.isActive).length;
+  model.productiveYears = (model.productiveYears ?? 0) + (productiveOn >= PARAMS_V2.productive.minActive ? dt : 0);
+
   // 7. Carbon in physical units (phase 38, src/sim/v2/carbon.ts): renewables and efficiency move toward their targets
   //    with inertia, then energy + AFOLU flux + LUC from this step's realised flows (÷ dt, an annual rate).
   model.energy = updateEnergyState(model.energy, next.landUses, eff, next.pacts, dt);
@@ -388,7 +392,7 @@ export function stepInPlace(next: GameState, dt: number, rng: Rng | null, CP: Co
   });
 
   // Score.
-  next.indicators.generalScore = computeScore(next.indicators, currentLevel, CP);
+  next.indicators.generalScore = computeScore(next.indicators, currentLevel, model.anchors);
 
   // Game over. `gameOverReason` stays Spanish-only on purpose (compared as a string in App.tsx and
   // geminiService.ts; never rendered) — docs/DESIGN_DECISIONS_LOG.md, phase 12.

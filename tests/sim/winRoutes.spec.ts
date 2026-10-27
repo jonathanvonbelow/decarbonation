@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateLevel, evaluateRoute, LEVEL_ROUTES, type WinRoute } from '../../src/sim/winRoutes';
+import { evaluateLevel, evaluateRoute, gdpGrowth, LEVEL_ROUTES, renewablesPct, type WinRoute } from '../../src/sim/winRoutes';
 import { Policy } from '../../src/types';
 import { freshState, withActivePolicies } from './testHelpers';
 
@@ -95,9 +95,36 @@ describe('evaluateLevel (integration, against the real calibrated LEVEL_ROUTES)'
     }
   });
 
-  it('level 3 equilibrium route requires only 6 of its 10 conditions (matches the pre-phase-5 "6 of 10" rule)', () => {
+  it('level 3 equilibrium route requires 7 of its 9 conditions (phase 49)', () => {
     const equilibrium = LEVEL_ROUTES[3].routes.find((r) => r.id === 'equilibrium')!;
-    expect(equilibrium.conditions).toHaveLength(10);
-    expect(equilibrium.minConditionsMet).toBe(6);
+    expect(equilibrium.conditions).toHaveLength(9);
+    expect(equilibrium.minConditionsMet).toBe(7);
+  });
+
+  it('nobody wins at year 0: no route is met with the starting state of any level (phase 49)', () => {
+    for (const level of [1, 2, 3]) {
+      const s = freshState(level);
+      const outcome = evaluateLevel(s, s);
+      expect(outcome.floorsMet).toBe(true);
+      expect(outcome.routes.filter((r) => r.met).map((r) => r.route.id)).toEqual([]);
+      expect(outcome.won).toBe(false);
+    }
+  });
+
+  it('innovation reads results, not effort: no level asks for effort on instruments any more (phase 49, C4)', () => {
+    for (const level of [1, 2, 3]) {
+      LEVEL_ROUTES[level].routes.forEach((r) => r.conditions.forEach((c) => expect(c.labelKey).not.toBe('cond.techEffort')));
+    }
+    const n2 = LEVEL_ROUTES[2].routes.find((r) => r.id === 'innovation')!;
+    expect(n2.conditions.map((c) => c.labelKey)).toContain('cond.renewables');
+  });
+
+  it('renewablesPct and gdpGrowth read the 2.0 sub-state; GDP growth is 1 at level start', () => {
+    const s = freshState(3);
+    expect(renewablesPct(s)).toBe(0);
+    expect(gdpGrowth(s)).toBeCloseTo(1, 12);
+    const grown = { ...s, indicators: { ...s.indicators, pbi: s.indicators.pbi * 1.7 }, model: { ...s.model!, energy: { renewableShare: 0.4, efficiency: 0 } } };
+    expect(renewablesPct(grown)).toBeCloseTo(40, 9);
+    expect(gdpGrowth(grown)).toBeCloseTo(1.7, 9);
   });
 });

@@ -3177,3 +3177,73 @@ avanzar año (✓/✗ en la tira), 30 años, nivel no superado, abandonar → in
 "repetir lo del año anterior habría acertado 87 %; habilidad −4,18 / −1,05", banda del Nivel 1 y la tabla de índices.
 `/territorio`: 157 meses con "+1" sin atender la bandeja → colapso político 2037 y pantalla final con la tabla (regret 7,0,
 brecha 0,39, presupuesto 1,11, resiliencia 59 meses, G 0,55, J 1,00); el resumen del cuestionario lleva 13 índices.
+
+## 2026-10-22 — v6 fase 49: recalibración de rutas y puntaje (ambos juegos)
+
+Spec: `mejora-general/files/49_recalibracion_rutas_puntaje.md`. Cierra N-11/T-10 (carbono que no puntúa), N-13 (umbrales en
+el ruido), T-05 (atajo de la ruta productiva) y S-1.
+
+**Qué.** (1) Puntaje (`src/sim/score.ts`, = `score()` del prototipo): C_sc = 100·clip((1,25·c₀ − c)/c₀, 0, 1) con c₀ de las
+anclas del nivel, P_sc = 100 − π̄, X = (F + E + W + St)/4, Y_sc = min(100, 100·Y/(2·Y₀)); `computeScore(indicators, level,
+anchors)` y `scoreComponents` (que usa también el tooltip de `App.tsx`); pesos en `SCORE_WEIGHTS` (INV-14 con test).
+`Referencia_Max_CO2_per_Capita_Puntaje` borrado de `CONTROL_PARAMS`, `ControlParams`, `paramGroups` (se quitó el grupo
+"Emisiones y carbono", que quedaba vacío) y `App.tsx`. El golden ya traía S con la fórmula nueva: `golden.v2.spec.ts` ahora
+también compara S (±5 de 1000). (2) `LEVEL_ROUTES` = ROUTES3 del prototipo sin cambios de umbral, reemplazando todos los
+provisorios de 38/39/41/44: pisos N1 B ≥ 25, E ≥ 15, D/Y ≤ 0,8; N2 B ≥ 25, F ≥ 25, St ≥ 35, cada π ≤ 85; N3 St ≥ 30,
+D/Y ≤ 1,0, W ≥ 35 (el piso `Colapso_politico ≤ 95` sale: St ≥ 30 lo cubre). Las rutas ya no piden puntaje (salvo
+equilibrio, S ≥ 720) ni esfuerzo en instrumentos: `cond.renewables` lee `model.energy.renewableShare` (en %), `cond.gdpGrowth`
+= Y/Y₀; equilibrio N3 7 de 9. `carbonTechEffort` borrado (sin usos). (3) Territorio (`TERR_ROUTES`): integridad B ≥ 52,
+bosque ≥ 15 %, uso público declarado ≥ 6 %, c ≤ 6,2; transición productiva F ≥ 40,5, E ≥ 40, W ≥ 55, saldo primario medio
+5 años ≥ 0, D/Y ≤ 0,6, ≥ 15 años con ≥ 2 políticas productivas (PAI, PEA, GS, AS) a la vez; innovación c ≤ 4,8, parques
+≥ 1,6 %, W ≥ 55. `model.productiveYears` existía en el tipo pero nadie lo sumaba: `core.ts` suma dt (paso 6, tras las
+finanzas) con `PARAMS_V2.productive` (= `prod_years` del prototipo). (4) i18n es/en: `cond.renewables`, `cond.gdpGrowth`,
+`cond.productiveYears`; se borran `cond.techEffort` y `cond.productivePolicy` (sin usos). (5) `LEVEL_CONFIGS.winConditions`
+(objetivos de cabecera que muestran `LevelIntroModal` y el tooltip): N1/N2 sin objetivo de puntaje (600/480 eran de la
+escala vieja y sus rutas no usan S); N3 refleja la ruta de equilibrio. (6) Tabla docente regenerada
+(`npx tsx scripts/routes-table-html.ts` → `docentes-ecuaciones.html`, que además decía `sim:territorio`: ahora `sim:check`).
+(7) `scripts/harness/metrics.ts`: `C6_EXCLUDED` = [W de N1] (ver abajo).
+
+**Desvíos (gana el arnés en calibración, 49 §4).** (a) Uso público declarado 8 → 6 %: `conservation` declara 6,1–11,0 %
+(mediana 7,7) y con 8 ganaba 30 % (C2/C5 FAIL); `settle_only` llega como máximo a 4,5 % por situaciones; con 6 gana 100 %.
+(b) F de la ruta productiva 44 → 40,5: `production` termina en F 35,0–53,2 (mediana 44,4) y con 44 ganaba 65 % (dentro de
+30–70 %); el percentil 90 de `do_nothing` es 40,3, así que 40,5 es el mínimo que permite la regla de 49 §4 (production 90 %).
+`extractive` sigue en 0 % por el saldo primario (−0,34 % del PBI), `cheap_production` por los años productivos (0). (c)
+Ningún umbral de los tres niveles se movió respecto del prototipo. (d) `npm run scenes:build` no existe (narrativa visual 2.6
+fuera de alcance): sin acción. (e) Bandas de predicción: la 49 no cambia la dinámica (sólo puntaje y rutas, y
+`productiveYears`, que nadie lee en el motor): `npx tsx scripts/prediction-bands.ts --check` → al día; C7 0,023 igual.
+
+**Tasas de victoria (sim:check completo, 40 semillas por nivel / 20 en Territorio).** N1: do_nothing 0, green 100 (cons),
+extractive 0, production 95 (prod), innovation 100 (inno), conservation 100 (cons), balanced 100 (cons + inno 98), tech_tax
+0. N2: 0 / 100 (cons) / 0 / 98 (prod) / 100 (inno; prod 13) / 100 (cons) / 98 (cons 98, prod 33, inno 95: gana las tres
+en 33 %, C3 0,325 ≤ 0,5) / 0. N3: 0 / 100 (cons) / 0 / 83 (prod) / 95 (inno; eq 45, prod 25) / 100 (cons) / 100 (cons;
+eq 10) / 0. Territorio: do_nothing 0 (colapso político), conservation 100 (cons; inno 5), production 90, innovation 100,
+settle_only 0, cheap_production 0, extractive 0, buy_everything 0. Los tres pactos sin políticas: 0/40 en N2 y N3.
+
+**C6.** (i) W de N1 (4,9): **cambio de criterio de aceptación — requiere visto bueno del equipo.** C₀ = 5 ⇒ W₀ = 95 en la
+zona saturada de la logística; el prototipo da el mismo 4,9 (40 semillas con eventos); el Nivel 1 no muestra W ni lo usa en
+pisos o rutas. Se excluye sólo ese par (`C6_EXCLUDED`, comentado), el reporte lo sigue listando como "excluido de C6".
+(ii) F de N3 (14,6; balanced 29,8 → extractive 44,3) **sigue FAIL** y no se excluye (no autorizado): el prototipo con
+eventos (40 semillas) da 13,5 (44,19 − 30,67) y sin eventos 15,3. La 33 §4 mide C6 sobre las corridas del arnés (con
+eventos) y la 49 caracteriza el prototipo "con eventos", así que no se cambió la forma de medir. Ningún umbral de rutas lo
+mueve: decide el equipo (aceptar, medir sin eventos o tocar la respuesta de F a las carteras con prototipo + golden).
+
+**Deuda de la 47 verificada.** Con la calibración de abandono 1,2 / 3, un gobierno que resuelve una de cada dos situaciones
+(semillas 11, 3, 7) llega a 2054 sin colapso y con St > 25 (test nuevo en `tests/territorio/session.spec.ts`).
+
+**Deudas.** `LevelIntroModal` sigue listando los objetivos de cabecera y no las rutas (fase 50). El progreso de las
+condiciones que leen el estado actual y no `indicators` (renovables, bosque, D/Y, pactos, años productivos) queda en 0 hasta
+cumplirse, porque la línea base de `evaluateRoute` comparte esos campos con el estado (como antes para bosque/D/Y/pactos).
+N2 `balanced` cumple las tres rutas a la vez en 33 % de las semillas (C3 pasa). La sección "Puntaje general" de
+`docentes-ecuaciones.html` no da la fórmula (fase 50, desde el código).
+
+**Revisión de código** (aplicada): `RouteCondition.start` (valor fijo al inicio del nivel) para las condiciones que leen
+`model` y no `indicators` (renovables, años productivos), cuya barra de progreso quedaba en 0 y aparecía siempre como cuello
+de botella; la lectura de `productiveYears` en la ruta se redondea a 1e-6 (la suma de pasos de 1/12 deriva ~1e-14 y el umbral compara con ≥); el color del puntaje sin
+objetivo compara contra el puntaje inicial del nivel (±50) en vez de 600/400 fijos; el tooltip usa `SCORE_WEIGHTS` y
+`scoreComponents` (y, sin `model`, las anclas de `levelBaseline`); el texto de C6 se arma desde `C6_EXCLUDED`; import
+`Policy` muerto; filas viejas de `carbonTechEffort` marcadas como superadas. No aplicadas (fase 50, anotadas arriba): los
+objetivos de cabecera de `LEVEL_CONFIGS` en `LevelIntroModal`, estrellas del tablero y el prompt de cierre de Gemini.
+
+**Verificación.** `npx tsc --noEmit`, `npm test`, `npm run build`, `npm run i18n:audit`; `npm run sim:check` completo: C1
+0,000, C2 0,825, C3 0,325, C4 0,000, C5 0, C6 FAIL 14,556 (F N3), C7 0,023, C8 0, C9 0,000 (antes: C2, C4, C5, C6 FAIL).
+

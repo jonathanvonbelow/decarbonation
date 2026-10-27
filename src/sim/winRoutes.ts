@@ -29,7 +29,7 @@
  *    than left unchecked -- see reports/routes-calibration.md.
  */
 import type { GameState, LandUseType } from '../types';
-import { LandUseType as LU, Policy } from '../types';
+import { LandUseType as LU } from '../types';
 
 export type RouteId = 'conservation' | 'production' | 'innovation' | 'equilibrium';
 
@@ -41,6 +41,12 @@ export interface RouteCondition {
   dir: 'min' | 'max';
   /** Weight inside the route's progress bar. Defaults to 1. */
   weight?: number;
+  /**
+   * Fixed value at level start, for conditions that read the 2.0 sub-state (`model`) or the land rather than
+   * `indicators`: the routes' baseline only swaps the indicators, so reading it would give the current value and the
+   * progress would stay at 0 until met (phase 49, renewables / productive years).
+   */
+  start?: number;
 }
 
 export interface WinRoute {
@@ -56,8 +62,7 @@ export interface WinRoute {
   /**
    * How many of `conditions` must be met for the route itself to count as met. Defaults to
    * `conditions.length` (every condition, the normal case for conservation/production/innovation).
-   * The level-3 `equilibrium` route sets this to 6 of its 10 conditions, preserving the exact
-   * "6 de 10 objetivos" logic the game already had before this phase.
+   * The level-3 `equilibrium` route sets this to 7 of its 9 conditions (phase 49).
    */
   minConditionsMet?: number;
 }
@@ -102,7 +107,7 @@ function isConditionMet(c: RouteCondition, value: number): boolean {
  */
 function conditionProgress(c: RouteCondition, s: GameState, baseline: GameState): number {
   const value = c.read(s);
-  const start = c.read(baseline);
+  const start = c.start ?? c.read(baseline);
   if (c.dir === 'min') {
     if (value >= c.target) return 1;
     const span = c.target - start;
@@ -170,44 +175,45 @@ const nativeForestPct = (s: GameState): number => {
 export const debtToPbiRatio = (s: Pick<GameState, 'stellaSpecificState'>): number =>
   s.stellaSpecificState.PBI_Real > 0 ? s.stellaSpecificState.Deuda / s.stellaSpecificState.PBI_Real : Infinity;
 
-const activePactsCount = (s: GameState): number => Object.values(s.pacts).filter((p) => p.isActive).length;
+const activePactsCount = (s: GameState): number => (Object.values(s.pacts) as { isActive: boolean }[]).filter((p) => p.isActive).length;
 
-/** Average effort assigned to the two Carbon Neutrality instruments that move the CO2 formula most
- *  — the real-data stand-in for "tech instrument effort". Phase 38: renewables and efficiency, which
- *  lead the electric and non-electric channels of the physical carbon (src/sim/v2/carbon.ts); before,
- *  renewables and carbon capture (the 1.1 carbon). Capture now only weighs 0.5 on the non-electric
- *  channel, and the canonical innovation vector (20/40/40/0) gave 20 < 25 with the old pair. */
-export const carbonTechEffort = (s: GameState): number => {
-  const instruments = s.policies[Policy.CarbonNeutrality]?.instruments;
-  if (!instruments) return 0;
-  const ren = instruments['C_Fomento_Energias_Renovables_No_Convencionales']?.effortPercentage ?? 0;
-  const eff = instruments['C_Eficiencia_Energetica_Industrial_Residencial']?.effortPercentage ?? 0;
-  return (ren + eff) / 2;
+/** Renewable share of electricity, % (phase 49: a result of the model, `model.energy.renewableShare`; the 1.1
+ *  "effort on technological instruments ≥ 30" was met by the even split). 0 without a 2.0 sub-state. */
+export const renewablesPct = (s: Pick<GameState, 'model'>): number => 100 * (s.model?.energy.renewableShare ?? 0);
+
+/** GDP over the level's starting GDP (Y/Y₀, phase 49). Reads `indicators.pbi`, so the routes' baseline (the level-start
+ *  indicators) gives 1 and progress counts from there. */
+export const gdpGrowth = (s: Pick<GameState, 'indicators' | 'model'>): number => {
+  const y0 = s.model?.anchors.gdp0 ?? 0;
+  return y0 > 0 ? s.indicators.pbi / y0 : 1;
 };
+
+const B = (s: GameState) => s.indicators.biodiversity;
+const F = (s: GameState) => s.indicators.foodSecurity;
+const E = (s: GameState) => s.indicators.economicSecurity;
+const W = (s: GameState) => s.indicators.socialWellbeing;
+const St = (s: GameState) => s.indicators.politicalStability;
+const c = (s: GameState) => s.indicators.co2EqEmissionsPerCapita;
 
 /* ── Level configuration ─────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Phase 49 (mejora-general/files/49_recalibracion_rutas_puntaje.md §2; ROUTES3 of scripts/reference/modelo_v2.py),
+ * replacing every provisional threshold of phases 38/39/41/44. Calibrated with `npm run sim:check` (40 seeds per
+ * strategy and level): see reports/balance-2.0-dev.md and docs/DESIGN_DECISIONS_LOG.md (phase 49) for any move away
+ * from the prototype. The teaching sheet's table is generated from here (`npx tsx scripts/routes-table-html.ts`):
+ * never copy these numbers by hand.
+ *
+ * Conditions read results, not effort: the 1.1 `cond.techEffort` (met by the even split of a lone CN, the `tech_tax`
+ * shortcut) gave way to `cond.renewables` (the modelled renewable share) and, on level 1, which has no instrument
+ * panel, to a floor of economic security that a carbon tax alone does not reach (E ≥ 30).
+ */
 export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: WinRoute[] }> = {
-  // Phase 38 (provisional, phase 49 recalibrates): the `cond.emissions` ceilings moved to the physical
-  // carbon scale (c0 = 5.95 / 7.13 / 5.73 t in levels 1 / 2 / 3; 1.1 had ~7.8 / 17.4 / 10.6). They are
-  // the prototype's ROUTES3 values (scripts/reference/modelo_v2.py), anchored to c0 there; production of
-  // levels 2 and 3, which ROUTES3 leaves without a carbon condition, keeps one at level 1's ratio
-  // 6.5 / 5.95 ≈ 1.09·c0 (7.8 / 6.3). Level 3's equilibrium ceiling goes 2 → 4.5 (ROUTES3).
-  // Phase 39 (provisional, phase 49 recalibrates): economic security moves now (relaxation toward an anchored
-  // target), so the production floors of E calibrated for an E that never moved (25 / 32 / 30, two of them the
-  // starting value: `do_nothing` won N3 production in half the seeds) take the prototype's ROUTES3 values 36 / 40 / 36.
   // ─────────────────────────── LEVEL 1 ───────────────────────────
-  // Thresholds calibrated against scripts/simulate.ts (7 strategies, seed 1) rather than picked
-  // blind — see reports/routes-calibration.md and docs/DESIGN_DECISIONS_LOG.md. Real finding from
-  // that run: economicSecurity barely responds to any tested policy mix within a single level
-  // (stays ~25 regardless of strategy) -- see docs/audit-equations.md item P-1. Thresholds below
-  // reflect that reality rather than an aspirational number nothing can reach.
   1: {
     floors: [
-      { labelKey: 'routes.floor.biodiversity', read: (s) => s.indicators.biodiversity, target: 20, dir: 'min' },
-      { labelKey: 'routes.floor.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 15, dir: 'min' },
-      // Phase 44: reserves never go below 0.02·GDP any more (the deficit becomes debt), so the 1.1 floor "reserves ≥ −200"
-      // always held; replaced by the prototype's ROUTES3 N1 floor D/Y ≤ 0.8.
+      { labelKey: 'routes.floor.biodiversity', read: B, target: 25, dir: 'min' },
+      { labelKey: 'routes.floor.economicSecurity', read: E, target: 15, dir: 'min' },
       { labelKey: 'routes.floor.debtRatio', read: debtToPbiRatio, target: 0.8, dir: 'max' },
     ],
     routes: [
@@ -215,31 +221,26 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
         descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 42, dir: 'min' },
-          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.2, dir: 'max' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 480, dir: 'min' },
+          { labelKey: 'cond.biodiversity', read: B, target: 50, dir: 'min' },
+          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 20, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 5.2, dir: 'max' },
         ],
       },
       {
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
-          // Phase 41 (provisional, phase 49 recalibrates): 40 → 32 (ROUTES3 of the prototype). 40 was set for the 1.1 F;
-          // with F by supply/demand the production portfolio ends N1 at ≈ 36 and no seed reached 40.
-          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 32, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 400, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: E, target: 36, dir: 'min' },
+          { labelKey: 'cond.foodSecurity', read: F, target: 32, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 6.5, dir: 'max' },
         ],
       },
       {
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.6, dir: 'max' },
-          { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 38, dir: 'min' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 390, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 4.6, dir: 'max' },
+          { labelKey: 'cond.economicSecurity', read: E, target: 30, dir: 'min' },
         ],
       },
     ],
@@ -247,9 +248,9 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
   // ─────────────────────────── LEVEL 2 ───────────────────────────
   2: {
     floors: [
-      { labelKey: 'routes.floor.biodiversity', read: (s) => s.indicators.biodiversity, target: 25, dir: 'min' },
-      { labelKey: 'routes.floor.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 15, dir: 'min' },
-      { labelKey: 'routes.floor.politicalStability', read: (s) => s.indicators.politicalStability, target: 20, dir: 'min' },
+      { labelKey: 'routes.floor.biodiversity', read: B, target: 25, dir: 'min' },
+      { labelKey: 'routes.floor.foodSecurity', read: F, target: 25, dir: 'min' },
+      { labelKey: 'routes.floor.politicalStability', read: St, target: 35, dir: 'min' },
       { labelKey: 'routes.floor.pressureAgri', read: (s) => s.indicators.ppAgricola, target: 85, dir: 'max' },
       { labelKey: 'routes.floor.pressureEnv', read: (s) => s.indicators.ppAmbientalista, target: 85, dir: 'max' },
       { labelKey: 'routes.floor.pressureSocial', read: (s) => s.indicators.ppSocial, target: 85, dir: 'max' },
@@ -259,30 +260,27 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
         descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 41, dir: 'min' },
-          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.5, dir: 'max' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 350, dir: 'min' },
+          { labelKey: 'cond.biodiversity', read: B, target: 52, dir: 'min' },
+          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 16, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 6.5, dir: 'max' },
         ],
       },
       {
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 40, dir: 'min' },
-          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 300, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: E, target: 40, dir: 'min' },
+          { labelKey: 'cond.foodSecurity', read: F, target: 32, dir: 'min' },
+          { labelKey: 'cond.socialWellbeing', read: W, target: 60, dir: 'min' },
         ],
       },
       {
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.5, dir: 'max' },
-          { labelKey: 'cond.techEffort', read: carbonTechEffort, target: 30, dir: 'min' },
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 28, dir: 'min' },
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 300, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 5.5, dir: 'max' },
+          { labelKey: 'cond.renewables', read: renewablesPct, target: 30, dir: 'min', start: 0 },
+          { labelKey: 'cond.economicSecurity', read: E, target: 33, dir: 'min' },
         ],
       },
     ],
@@ -290,61 +288,55 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
   // ─────────────────────────── LEVEL 3 ───────────────────────────
   3: {
     floors: [
-      { labelKey: 'routes.floor.politicalCollapse', read: (s) => s.stellaSpecificState.Colapso_politico, target: 95, dir: 'max' },
-      { labelKey: 'routes.floor.debtRatio', read: debtToPbiRatio, target: 1.3, dir: 'max' },
-      { labelKey: 'routes.floor.politicalStability', read: (s) => s.indicators.politicalStability, target: 15, dir: 'min' },
+      { labelKey: 'routes.floor.politicalStability', read: St, target: 30, dir: 'min' },
+      { labelKey: 'routes.floor.debtRatio', read: debtToPbiRatio, target: 1.0, dir: 'max' },
+      { labelKey: 'routes.floor.socialWellbeing', read: W, target: 35, dir: 'min' },
     ],
     routes: [
       {
         id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
         descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 5.4, dir: 'max' },
-          { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 42, dir: 'min' },
-          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.1, dir: 'max' },
+          { labelKey: 'cond.biodiversity', read: B, target: 52, dir: 'min' },
+          { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 17, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 5.4, dir: 'max' },
+          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 0.6, dir: 'max' },
         ],
       },
       {
         id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
-          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 30, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.3, dir: 'max' },
-          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.1, dir: 'max' },
+          { labelKey: 'cond.economicSecurity', read: E, target: 36, dir: 'min' },
+          { labelKey: 'cond.foodSecurity', read: F, target: 33, dir: 'min' },
+          { labelKey: 'cond.socialWellbeing', read: W, target: 52, dir: 'min' },
         ],
       },
       {
         id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
         descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
         conditions: [
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.5, dir: 'max' },
-          // Untested by scripts/simulate.ts (none of its strategies join pacts) -- kept at a
-          // realistic-but-unverified target of 1. See docs/DESIGN_DECISIONS_LOG.md.
+          { labelKey: 'cond.emissions', read: c, target: 4.5, dir: 'max' },
+          { labelKey: 'cond.renewables', read: renewablesPct, target: 35, dir: 'min', start: 0 },
+          { labelKey: 'cond.economicSecurity', read: E, target: 30, dir: 'min' },
           { labelKey: 'cond.pactsActive', read: activePactsCount, target: 1, dir: 'min' },
-          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 1.2, dir: 'max' },
         ],
       },
       {
-        // Preserves the exact pre-phase-5 win condition: 6 of these 10 thresholds
-        // (LEVEL_CONFIGS[2].winConditions in constants.ts), unchanged. Whoever "played correctly"
-        // under the old design still wins by this route — and now knows they picked the hardest
-        // one (highest scoreMultiplier of the four).
+        // The hardest route (highest multiplier): a high, even performance in 7 of these 9 thresholds at once.
         id: 'equilibrium', nameKey: 'routes.equilibrium.name', taglineKey: 'routes.equilibrium.tagline',
         descriptionKey: 'routes.equilibrium.desc', accent: 'bone', scoreMultiplier: 1.35,
-        minConditionsMet: 6,
+        minConditionsMet: 7,
         conditions: [
-          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 700, dir: 'min' },
-          { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.5, dir: 'max' },
-          { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 55, dir: 'min' },
-          { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 60, dir: 'min' },
-          { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 50, dir: 'min' },
-          { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 60, dir: 'min' },
-          { labelKey: 'cond.politicalStability', read: (s) => s.indicators.politicalStability, target: 50, dir: 'min' },
-          { labelKey: 'cond.pbi', read: (s) => s.indicators.pbi, target: 14000, dir: 'min' },
-          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 0.7, dir: 'max' },
-          { labelKey: 'cond.politicalCollapse', read: (s) => s.stellaSpecificState.Colapso_politico, target: 50, dir: 'max' },
+          { labelKey: 'cond.biodiversity', read: B, target: 50, dir: 'min' },
+          { labelKey: 'cond.foodSecurity', read: F, target: 40, dir: 'min' },
+          { labelKey: 'cond.economicSecurity', read: E, target: 38, dir: 'min' },
+          { labelKey: 'cond.socialWellbeing', read: W, target: 65, dir: 'min' },
+          { labelKey: 'cond.politicalStability', read: St, target: 75, dir: 'min' },
+          { labelKey: 'cond.emissions', read: c, target: 4.5, dir: 'max' },
+          { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 0.5, dir: 'max' },
+          { labelKey: 'cond.gdpGrowth', read: gdpGrowth, target: 1.7, dir: 'min' },
+          { labelKey: 'cond.score', read: (s) => s.indicators.generalScore, target: 720, dir: 'min' },
         ],
       },
     ],

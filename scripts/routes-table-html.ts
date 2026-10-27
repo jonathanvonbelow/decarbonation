@@ -14,7 +14,6 @@ const PCT = new Set(['cond.nativeForest', 'cond.publicNature', 'cond.energyPark'
 
 function cond(c: { labelKey: string; target: number; dir: 'min' | 'max' }, dict: Dict): string {
   const label = get(dict, c.labelKey);
-  if (c.labelKey === 'cond.productivePolicy') return label;
   const num = String(c.target).replace('.', dict === UI_ES ? ',' : '.');
   return `${label}: ${c.dir === 'min' ? '≥' : '≤'} ${num}${PCT.has(c.labelKey) ? ' %' : ''}`;
 }

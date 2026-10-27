@@ -4,7 +4,7 @@
  * (3 levels × do_nothing / green / extractive × years 1, 10, 30, no events).
  *
  * The CSV has more columns than the test checks (pa, pe, ps, DY, S after c): only the nine the spec
- * names are compared; the rest are there for debugging a divergence.
+ * names are compared, plus the score S since phase 49; the rest are there for debugging a divergence.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -15,7 +15,7 @@ const GOLDEN_ACTIVE = true;
 
 describe.skipIf(!GOLDEN_ACTIVE)('2.0 engine matches the reference prototype (no events)', () => {
   const rows = readFileSync('scripts/reference/golden_v2.csv', 'utf8').trim().split(/\r?\n/).slice(1).map((l) => l.split(','));
-  it.each(rows)('L%s %s year %s', (level, strategy, year, B, F, E, W, St, c) => {
+  it.each(rows)('L%s %s year %s', (level, strategy, year, B, F, E, W, St, c, _pa, _pe, _ps, _DY, S) => {
     const h = playLevel(Number(level), strategy, Number(year));           // helper in tests/sim/testHelpers.ts
     expect(h.biodiversity).toBeCloseTo(Number(B), 0);                     // ±0.5 points
     expect(h.foodSecurity).toBeCloseTo(Number(F), 0);
@@ -23,6 +23,8 @@ describe.skipIf(!GOLDEN_ACTIVE)('2.0 engine matches the reference prototype (no 
     expect(h.socialWellbeing).toBeCloseTo(Number(W), 0);
     expect(h.politicalStability).toBeCloseTo(Number(St), 0);
     expect(Math.abs(h.co2EqEmissionsPerCapita - Number(c))).toBeLessThan(0.1);
+    // Phase 49: the score is the prototype's `score()` (C_sc anchored to c0, Y_sc = Y/(2·Y0)); ±5 of 1000.
+    expect(Math.abs(h.generalScore - Number(S))).toBeLessThan(5);
   });
 });
 

@@ -442,6 +442,15 @@ export const PARAMS_V2 = {
     shockMinDrop: 0.5,
     recovery: 0.9,
   },
+  /**
+   * Phase 49 (49 §3; prototype `step`, `prod_years`): governed production. `model.productiveYears` accumulates dt while at
+   * least `minActive` of `policies` are active at once; Territorio's production route asks for 15 such years.
+   * Policy list and minimum: spec 49 §3 (criterio experto).
+   */
+  productive: {
+    policies: ['PAI', 'PEA', 'GS', 'AS'] as const,
+    minActive: 2,
+  },
 } as const;
 
 export type ParamsV2 = typeof PARAMS_V2;

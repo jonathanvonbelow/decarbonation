@@ -43,6 +43,7 @@ import {
   stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost, payPublicInvestment,
   createResearchTracker, oneYearRegret, researchIndices, trackRegret, trackStep, type ResearchIndices, type ResearchTracker,
 } from './sim';
+import { CARBON_CEILING_FACTOR, GDP_FULL_MULTIPLE, SCORE_WEIGHTS, scoreComponents } from './sim/score';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -102,59 +103,60 @@ const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
     const { currentLevel, indicators, stellaSpecificState, activeLevelConfig } = gs;
     let text = `El Puntaje General (0-1000) refleja tu desempeño. Para el Nivel ${currentLevel}, se calcula así:\n\n`;
 
-    const carbonScoreComponentRaw = 100 - (indicators.co2EqEmissionsPerCapita / CP.Referencia_Max_CO2_per_Capita_Puntaje) * 100;
-    const carbonScoreComponent = Math.max(0, Math.min(100, carbonScoreComponentRaw));
+    // Phase 49: the same components the engine scores with (src/sim/score.ts), anchored to the level's c0 and Y0.
+    // Without a 2.0 sub-state, the level-start indicators hold the same anchors (c0 and Y0).
+    const anchors = gs.model?.anchors ?? { c0: gs.levelBaseline.co2EqEmissionsPerCapita, gdp0: gs.levelBaseline.pbi };
+    const components = scoreComponents(indicators, anchors);
+    const carbonScoreComponent = components.carbon;
 
     if (currentLevel === 1) {
-        const scoreWeightBiodiversityL1 = 0.40;
-        const scoreWeightCarbonL1 = 0.45;
-        const scoreWeightEconL1 = 0.15;
-        const econScoreComponent = Math.max(0, Math.min(100, indicators.economicSecurity));
+        const scoreWeightBiodiversityL1 = SCORE_WEIGHTS[1].biodiversity;
+        const scoreWeightCarbonL1 = SCORE_WEIGHTS[1].carbon;
+        const scoreWeightEconL1 = SCORE_WEIGHTS[1].economic;
+        const econScoreComponent = components.economic;
         text += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}% (Peso: ${(scoreWeightBiodiversityL1 * 100).toFixed(0)}%)\n`;
         text += `- Componente de Carbono: ${carbonScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightCarbonL1 * 100).toFixed(0)}%)\n`;
-        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab. Ref. máx. para puntaje: ${CP.Referencia_Max_CO2_per_Capita_Puntaje} t/hab)\n`;
+        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab; inicial del nivel ${anchors.c0.toFixed(2)} t/hab, el componente vale 0 en ${(CARBON_CEILING_FACTOR * anchors.c0).toFixed(2)} t/hab)\n`;
         text += `- Seguridad Económica: ${econScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightEconL1 * 100).toFixed(0)}%)\n`;
         text += `  (Un mínimo de viabilidad fiscal es necesario para sostener la transición ecológica)\n`;
     } else if (currentLevel === 2) {
-        const scoreWeightBiodiversityL2 = 0.15;
-        const scoreWeightCarbonL2 = 0.20;
-        const scoreWeightPolPressureL2 = 0.30;
-        const scoreWeightExternalitiesL2 = 0.35;
+        const scoreWeightBiodiversityL2 = SCORE_WEIGHTS[2].biodiversity;
+        const scoreWeightCarbonL2 = SCORE_WEIGHTS[2].carbon;
+        const scoreWeightPolPressureL2 = SCORE_WEIGHTS[2].pressure;
+        const scoreWeightExternalitiesL2 = SCORE_WEIGHTS[2].externalities;
 
-        const avgPressure = (indicators.ppAgricola + indicators.ppAmbientalista + indicators.ppSocial) / 3;
-        const polPressureScore = Math.max(0, 100 - avgPressure);
-        const avgExternalities = (indicators.foodSecurity + indicators.economicSecurity + indicators.socialWellbeing + indicators.politicalStability) / 4;
+        const polPressureScore = components.pressure;
+        const avgExternalities = components.externalities;
 
         text += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}% (Peso: ${(scoreWeightBiodiversityL2 * 100).toFixed(0)}%)\n`;
         text += `- Componente de Carbono: ${carbonScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightCarbonL2 * 100).toFixed(0)}%)\n`;
-        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab)\n`;
+        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab; inicial del nivel ${anchors.c0.toFixed(2)} t/hab, el componente vale 0 en ${(CARBON_CEILING_FACTOR * anchors.c0).toFixed(2)} t/hab)\n`;
         text += `- Desempeño Político (Presiones): ${polPressureScore.toFixed(1)}% (Peso: ${(scoreWeightPolPressureL2 * 100).toFixed(0)}%)\n`;
         text += `  (Mejor puntaje con presiones políticas bajas: Agrícola ${indicators.ppAgricola.toFixed(0)}%, Ambient. ${indicators.ppAmbientalista.toFixed(0)}%, Social ${indicators.ppSocial.toFixed(0)}%)\n`;
         text += `- Indicadores Socio-Económicos (Externalidades): ${avgExternalities.toFixed(1)}% (Peso: ${(scoreWeightExternalitiesL2 * 100).toFixed(0)}%)\n`;
         text += `  (Promedio de Seg. Alimentaria ${indicators.foodSecurity.toFixed(0)}%, Seg. Económica ${indicators.economicSecurity.toFixed(0)}%, Bienestar Social ${indicators.socialWellbeing.toFixed(0)}%, Estab. Política ${indicators.politicalStability.toFixed(0)}%)\n`;
 
     } else if (currentLevel === 3) {
-        const scoreWeightBiodiversityL3 = 0.10;
-        const scoreWeightCarbonL3 = 0.15;
-        const scoreWeightPolPressureL3 = 0.20;
-        const scoreWeightExternalitiesL3 = 0.25;
-        const scoreWeightPbiL3 = 0.30;
+        const scoreWeightBiodiversityL3 = SCORE_WEIGHTS[3].biodiversity;
+        const scoreWeightCarbonL3 = SCORE_WEIGHTS[3].carbon;
+        const scoreWeightPolPressureL3 = SCORE_WEIGHTS[3].pressure;
+        const scoreWeightExternalitiesL3 = SCORE_WEIGHTS[3].externalities;
+        const scoreWeightPbiL3 = SCORE_WEIGHTS[3].gdp;
         
-        const avgPressure = (indicators.ppAgricola + indicators.ppAmbientalista + indicators.ppSocial) / 3;
-        const polPressureScore = Math.max(0, 100 - avgPressure);
-        const avgExternalities = (indicators.foodSecurity + indicators.economicSecurity + indicators.socialWellbeing + indicators.politicalStability) / 4;
-        const pbiScoreReferenceMax = 25000; 
-        const pbiScore = Math.max(0, Math.min(100, (indicators.pbi / pbiScoreReferenceMax) * 100));
+        const polPressureScore = components.pressure;
+        const avgExternalities = components.externalities;
+        const pbiScoreReferenceMax = GDP_FULL_MULTIPLE * anchors.gdp0;
+        const pbiScore = components.gdp;
 
         text += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}% (Peso: ${(scoreWeightBiodiversityL3 * 100).toFixed(0)}%)\n`;
         text += `- Componente de Carbono: ${carbonScoreComponent.toFixed(1)}% (Peso: ${(scoreWeightCarbonL3 * 100).toFixed(0)}%)\n`;
-        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab)\n`;
+        text += `  (Basado en Emisiones CO2eq/cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab; inicial del nivel ${anchors.c0.toFixed(2)} t/hab, el componente vale 0 en ${(CARBON_CEILING_FACTOR * anchors.c0).toFixed(2)} t/hab)\n`;
         text += `- Desempeño Político (Presiones): ${polPressureScore.toFixed(1)}% (Peso: ${(scoreWeightPolPressureL3 * 100).toFixed(0)}%)\n`;
         text += `  (Mejor puntaje con presiones políticas bajas)\n`;
         text += `- Indicadores Socio-Económicos (Externalidades): ${avgExternalities.toFixed(1)}% (Peso: ${(scoreWeightExternalitiesL3 * 100).toFixed(0)}%)\n`;
         text += `  (Promedio de Seg. Alimentaria ${indicators.foodSecurity.toFixed(0)}%, Seg. Económica ${indicators.economicSecurity.toFixed(0)}%, Bienestar Social ${indicators.socialWellbeing.toFixed(0)}%, Estab. Política ${indicators.politicalStability.toFixed(0)}%)\n`;
         text += `- Desempeño PBI: ${pbiScore.toFixed(1)}% (Peso: ${(scoreWeightPbiL3 * 100).toFixed(0)}%)\n`;
-        text += `  (PBI Actual: ${indicators.pbi.toFixed(0)}, Ref. para 100% en este componente: ${pbiScoreReferenceMax})\n`;
+        text += `  (PBI Actual: ${indicators.pbi.toFixed(0)}, Ref. para 100% en este componente: ${pbiScoreReferenceMax.toFixed(0)}, el doble del PBI inicial)\n`;
     }
 
     text += `\nLa suma ponderada de estos componentes (0-100) se multiplica por 10 para el puntaje final.`;
@@ -167,12 +169,15 @@ const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
 };
 
 
-const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfig): string => {
+const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfig, startScore?: number): string => {
     const targetMinScore = activeLevelConfig?.winConditions?.puntajeGeneralMin;
 
     if (targetMinScore === undefined) {
-        if (score > 600) return 'text-green-400';
-        if (score > 400) return 'text-yellow-400';
+        // Phase 49: levels without a score target colour against the level's own starting score (the scale is anchored
+        // to the level start: c0 and Y0), not against fixed 600/400.
+        if (startScore === undefined) return 'text-yellow-400';
+        if (score >= startScore + 50) return 'text-green-400';
+        if (score >= startScore - 50) return 'text-yellow-400';
         return 'text-red-400';
     }
 
@@ -1317,7 +1322,7 @@ export const App = () => {
         gameOver={!!gameState.gameOverReason}
         setCurrentLevelManually={setCurrentLevelManually}
         scoreTooltipText={generateScoreTooltipText(gameState, controlParams)}
-        scoreColorClass={getDynamicScoreColorClass(gameState.indicators.generalScore, gameState.activeLevelConfig)}
+        scoreColorClass={getDynamicScoreColorClass(gameState.indicators.generalScore, gameState.activeLevelConfig, gameState.levelBaseline?.generalScore)}
         onShowTutorial={handleShowTutorial}
         onShowFacilitatorManual={handleToggleFacilitatorManual}
         onShowPlayerManual={handleTogglePlayerManual}

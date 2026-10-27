@@ -104,6 +104,15 @@ export function strategyStats(runs: RunResult[], routeIds: string[]): StrategySt
 export const RANGE_KEYS = ['B', 'F', 'E', 'W'] as const;
 export type RangeKey = typeof RANGE_KEYS[number];
 
+/**
+ * Pairs left out of C6 (phase 49). CHANGE OF ACCEPTANCE CRITERION — needs the team's sign-off (docs/v6-spec-vs-motor.md).
+ * W on level 1: the level starts at W0 = 95 (conflict 5, saturated near the top of the logistic), so no strategy can
+ * move it more than ~5 points; the reference prototype gives the same 4.9 (40 seeds with events). Level 1 neither
+ * shows W nor uses it in its floors or routes, so its spread says nothing about whether the strategy decides.
+ * Only this pair: every other scope/indicator still has to reach 15.
+ */
+export const C6_EXCLUDED: { scope: string; key: RangeKey }[] = [{ scope: 'N1', key: 'W' }];
+
 /** `max(median) − min(median)` between the strategies of one level, per indicator. */
 export function indicatorRange(stats: StrategyStats[]): Record<RangeKey, { range: number; min: string; max: string }> {
   const out = {} as Record<RangeKey, { range: number; min: string; max: string }>;
@@ -224,10 +233,13 @@ export function evaluateCriteria(input: CriteriaInput): Criterion[] {
   {
     const rows = input.scopes.flatMap((sc) => RANGE_KEYS.map((k) => ({
       label: `${sc.scope} ${k}`, r: sc.range[k].range, lo: sc.range[k].min, hi: sc.range[k].max,
+      excluded: C6_EXCLUDED.some((e) => e.scope === sc.scope && e.key === k),
     })));
-    const worst = rows.length ? Math.min(...rows.map((x) => x.r)) : 0;
-    out.push(crit('C6_indicator_range', worst >= T.rangeMin, worst, 'higher', `≥ ${T.rangeMin} puntos en B, F, E, W`,
-      rows.map((x) => `${x.label}: ${x.r.toFixed(1)} (${x.lo} → ${x.hi})${x.r >= T.rangeMin ? '' : ' ✗'}`)));
+    const counted = rows.filter((x) => !x.excluded);
+    const worst = counted.length ? Math.min(...counted.map((x) => x.r)) : 0;
+    out.push(crit('C6_indicator_range', worst >= T.rangeMin, worst, 'higher',
+      `≥ ${T.rangeMin} puntos en B, F, E, W${C6_EXCLUDED.length ? ` (excepto ${C6_EXCLUDED.map((e) => `${e.key} en ${e.scope}`).join(', ')}, ver C6_EXCLUDED)` : ''}`,
+      rows.map((x) => `${x.label}: ${x.r.toFixed(1)} (${x.lo} → ${x.hi})${x.excluded ? ' (excluido de C6)' : x.r >= T.rangeMin ? '' : ' ✗'}`)));
   }
 
   // C7 — prediction band: "no change" between 30 and 36 % for B, E and c.

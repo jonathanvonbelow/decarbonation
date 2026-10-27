@@ -7,13 +7,14 @@
  * three routes of which any one wins — but their thresholds are calibrated against this game:
  * monthly steps, situations, public uses, and a level-2 start that really emits ~17 t/cap.
  *
- * Thresholds come from `npm run sim:territorio` (scripts/simulate-territorio.ts), which plays five
- * strategies to 2054 and prints where each lands. The rule used to set them: each route is won by
- * the strategy that pursues it, doing nothing loses, and no single strategy wins all three.
+ * Thresholds come from the prototype's TERR_ROUTES and are calibrated with the balance harness
+ * (`npm run sim:check`, phase 49), which plays the canonical strategies to 2054. The rule: each route
+ * is won by the strategy that pursues it, doing nothing and the shortcuts lose, and no single strategy
+ * wins all three.
  */
 import type { GameState } from '../types';
-import { LandUseType, Policy } from '../types';
-import { carbonTechEffort, debtToPbiRatio, declaredProtectedOf, evaluateRoute, primaryBalanceAverage, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
+import { LandUseType } from '../types';
+import { debtToPbiRatio, declaredProtectedOf, evaluateRoute, primaryBalanceAverage, type LevelOutcome, type RouteCondition, type WinRoute } from '../sim';
 
 const totalArea = (s: GameState) => (Object.values(s.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
 
@@ -35,12 +36,9 @@ const energyParkPct = (s: GameState) => (s.landUses[LandUseType.EnergyPark].area
 /** Mean primary balance of the last 5 years, % of GDP (phase 44, `model.fiscal.primaryHistory`). */
 const primaryAvgPct = (s: GameState) => 100 * primaryBalanceAverage(s.model?.fiscal.primaryHistory ?? []);
 
-/** Any of the productive policy families actually switched on. */
-const productivePolicyActive = (s: GameState) => {
-  const families = [Policy.IntensiveAgriculture, Policy.AgriculturalExports, Policy.SustainableLivestock, Policy.Agroecological];
-  return families.some((id) => s.policies[id]?.isActive) ? 1 : 0;
-};
-
+/** Years with at least two production policies (PAI, PEA, GS, AS) active at once (phase 49, `model.productiveYears`). */
+const productiveYears = (s: GameState) => Math.round((s.model?.productiveYears ?? 0) * 1e6) / 1e6;
+// ↑ rounded: a sum of 1/12 steps drifts by ~1e-14 (180 months may give 14.999999999999…), and 15 compares with >=.
 
 export const TERRITORIO_FLOORS: RouteCondition[] = [
   { labelKey: 'routes.floor.biodiversity', read: (s) => s.indicators.biodiversity, target: 25, dir: 'min' },
@@ -54,53 +52,51 @@ export const TERRITORIO_FLOORS: RouteCondition[] = [
 // conservation and innovation unwinnable in the harness even when they governed well otherwise.
 // Political stability already carries the pressures inside it, through political collapse.
 
-// Phase 38 (provisional, phase 49 recalibrates): `cond.emissions` ceilings on the physical carbon scale
-// (Territorio starts at level 2's c0 = 7.13 t; 1.1 had ~17.4): conservation 6.2 and innovation 4.8 are the
-// prototype's TERR_ROUTES; production, which has none there, keeps one at 1.09·c0 = 7.8 (was 15).
+// Phase 49 (mejora-general/files/49_recalibracion_rutas_puntaje.md §3; TERR_ROUTES of scripts/reference/modelo_v2.py),
+// replacing the provisional thresholds of phases 34/38/44. Calibrated with `npm run sim:check` (20 seeds per strategy);
+// any move away from the prototype is logged in docs/DESIGN_DECISIONS_LOG.md (phase 49).
 export const TERRITORIO_ROUTES: WinRoute[] = [
   {
     // Wins by what the state put under protection and what that does to the carbon balance. The
-    // public-nature share is the condition no other strategy reaches without meaning to.
+    // public-nature share (declared, T-07) is the condition no other strategy reaches without meaning to.
     id: 'conservation', nameKey: 'routes.conservation.name', taglineKey: 'routes.conservation.tagline',
     descriptionKey: 'routes.conservation.desc', accent: 'chlorophyll', scoreMultiplier: 1.0,
     conditions: [
-      { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 45.5, dir: 'min' },
+      { labelKey: 'cond.biodiversity', read: (s) => s.indicators.biodiversity, target: 52, dir: 'min' },
       { labelKey: 'cond.nativeForest', read: nativeForestPct, target: 15, dir: 'min' },
-      // Model 1.1 (phase 34, T-07): 12 → 4.5 once only the declared forest counts. With the arnés
-      // (20 seeds) the conservation strategy ends at 4.7–8.9 % and do_nothing at 0 %; the spec
-      // expected ≈ 7 %, but 7 would leave conservation at 9/20 (docs/DESIGN_DECISIONS_LOG.md).
-      { labelKey: 'cond.publicNature', read: publicNaturePct, target: 4.5, dir: 'min' },
+      // 49: 8 % (TERR_ROUTES) → 6 %. With the harness (20 seeds) the conservation strategy declares 6.1–11.0 % (median
+      // 7.7, 25 % of the seeds ≥ 8) and settle_only, which never declares on purpose, reaches 4.5 % at most through
+      // situations; 6 keeps conservation at 100 % and every other strategy out (docs/DESIGN_DECISIONS_LOG.md).
+      { labelKey: 'cond.publicNature', read: publicNaturePct, target: 6, dir: 'min' },
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 6.2, dir: 'max' },
     ],
   },
   {
-    // Wins by feeding the region and arriving at 2054 with money in the bank. Conservation and
-    // innovation spend their treasury on the territory, which is exactly the trade-off.
+    // Wins by feeding the region with production it governed for years, on sound public finances. Before 49 it asked
+    // for "treasury ≥ 8 % of GDP" (met without governing) and a single productive policy (`cheap_production`).
     id: 'production', nameKey: 'routes.production.name', taglineKey: 'routes.production.tagline',
     descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
     conditions: [
-      { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 45, dir: 'min' },
-      { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 36, dir: 'min' },
-      // Producing is a decision, not a leftover: some productive family has to be governing.
-      { labelKey: 'cond.productivePolicy', read: productivePolicyActive, target: 1, dir: 'min' },
-      // Phase 44: with base public spending the reserves sit near their floor (2 % of GDP) and the deficit becomes debt,
-      // so "reserves ≥ 8 % of GDP" became unreachable (production 30 % → 0 %). Replaced by the prototype's fiscal
-      // conditions of the route (TERR_ROUTES): a non-negative 5-year primary balance and D/Y ≤ 0.6. The rest of the
-      // route (F, E thresholds, productive years) is phase 49's recalibration.
+      // 49: 44 (TERR_ROUTES) → 40.5. The production strategy ends at F 35.0–53.2 (median 44.4: 44 left it at 65 %, inside the
+      // 30–70 % band of C5); do_nothing's 90th percentile is 40.3, so 40.5 is the lowest value the procedure of 49 §4
+      // allows (production 90 %). Extractive still fails on the primary balance, cheap_production on the productive years.
+      { labelKey: 'cond.foodSecurity', read: (s) => s.indicators.foodSecurity, target: 40.5, dir: 'min' },
+      { labelKey: 'cond.economicSecurity', read: (s) => s.indicators.economicSecurity, target: 40, dir: 'min' },
+      { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 55, dir: 'min' },
       { labelKey: 'cond.primaryAvg', read: primaryAvgPct, target: 0, dir: 'min' },
       { labelKey: 'cond.debtRatio', read: debtToPbiRatio, target: 0.6, dir: 'max' },
-      { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 7.8, dir: 'max' },
+      { labelKey: 'cond.productiveYears', read: productiveYears, target: 15, dir: 'min', start: 0 },
     ],
   },
   {
-    // Wins by decarbonising hard with technology and public energy, without breaking society.
+    // Wins by decarbonising with technology and public energy, without breaking society. It asks for a result (CO₂)
+    // and parks, not for effort on instruments (1.1: met by the even split).
     id: 'innovation', nameKey: 'routes.innovation.name', taglineKey: 'routes.innovation.tagline',
     descriptionKey: 'routes.innovation.desc', accent: 'hydro', scoreMultiplier: 1.1,
     conditions: [
       { labelKey: 'cond.emissions', read: (s) => s.indicators.co2EqEmissionsPerCapita, target: 4.8, dir: 'max' },
       { labelKey: 'cond.energyPark', read: energyParkPct, target: 1.6, dir: 'min' },
-      { labelKey: 'cond.techEffort', read: carbonTechEffort, target: 25, dir: 'min' },
-      { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 30, dir: 'min' },
+      { labelKey: 'cond.socialWellbeing', read: (s) => s.indicators.socialWellbeing, target: 55, dir: 'min' },
     ],
   },
 ];

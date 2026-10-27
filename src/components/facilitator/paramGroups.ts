@@ -22,7 +22,6 @@ export interface ParamGroup { label: string; keys: NumericParamKey[] }
 
 export const PARAM_GROUPS_ES: ParamGroup[] = [
   { label: 'Crecimiento y población', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Emisiones y carbono', keys: ['Referencia_Max_CO2_per_Capita_Puntaje'] },
   { label: 'Velocidad de ajuste de los indicadores', keys: ['Velocidad_Ajuste_Biodiversidad', 'Velocidad_Ajuste_Seg_Alimentaria', 'Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso', 'Velocidad_Ajuste_Presiones'] },
   { label: 'Presupuesto y deuda', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3', 'Ano_Activacion_Prestamo'] },
   { label: 'Presión fiscal', keys: ['Max_Additional_Tax_Rate_Percentage'] },
@@ -30,7 +29,6 @@ export const PARAM_GROUPS_ES: ParamGroup[] = [
 
 export const PARAM_GROUPS_EN: ParamGroup[] = [
   { label: 'Growth & Population', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Emissions & Carbon', keys: ['Referencia_Max_CO2_per_Capita_Puntaje'] },
   { label: 'Indicator Adjustment Speed', keys: ['Velocidad_Ajuste_Biodiversidad', 'Velocidad_Ajuste_Seg_Alimentaria', 'Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso', 'Velocidad_Ajuste_Presiones'] },
   { label: 'Budget & Debt', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3', 'Ano_Activacion_Prestamo'] },
   { label: 'Fiscal Pressure', keys: ['Max_Additional_Tax_Rate_Percentage'] },
