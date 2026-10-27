@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { flushFeedbackQueue, sanitizeRow, submitFeedback } from '../../src/territorio/survey/feedbackService';
+import { flushFeedbackQueue, sanitizeIndices, sanitizeRow, submitFeedback } from '../../src/territorio/survey/feedbackService';
 import { resetModelVersionColumnCache } from '../../src/services/modelVersionColumn';
 import { CONTEXTOS, ELEMENTOS, FORMATOS, MEJORAS, ROLES, type TerritorioFeedbackRow } from '../../src/territorio/survey/types';
 
@@ -12,7 +12,7 @@ const base = (over: Partial<TerritorioFeedbackRow> = {}): TerritorioFeedbackRow 
   partida_estado: 'sin_partida', resultado: null, ruta_lograda: null, ruta_cercana: null, ruta_cercana_progreso: null,
   pisos_cumplidos: null, anio_alcanzado: null, meses_jugados: null, situaciones_resueltas: null,
   situaciones_vencidas: null, areas_declaradas: null, politicas_activas: null, indicadores_finales: null, seed: null,
-  model_version: '1.0',
+  model_version: '1.0', research_indices: null,
   ...over,
 });
 
@@ -94,6 +94,32 @@ describe('submitFeedback', () => {
     vi.stubGlobal('fetch', fetchMock);
     expect(await submitFeedback(base())).toEqual({ ok: false, reason: 'rejected' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // v6 / fase 48: research_indices, columna de supabase/research_indices_migration.sql.
+  it('envia research_indices y, si la columna falta, reintenta sin ella conservando model_version', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const MISSING_RI = { code: 'PGRST204', message: "Could not find the 'research_indices' column of 'territorio_feedback' in the schema cache" };
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, init: { body: string }) =>
+      ('research_indices' in JSON.parse(init.body)
+        ? { ok: false, status: 400, json: async () => MISSING_RI }
+        : { ok: true, status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await submitFeedback(base({ research_indices: { regret_mean: 1.2, safe_just_gap: null } }));
+    expect(out).toEqual({ ok: true, queued: false });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).research_indices).toEqual({ regret_mean: 1.2, safe_just_gap: null });
+    const retried = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(retried).not.toHaveProperty('research_indices');
+    expect(retried.model_version).toBe('1.0');
+  });
+
+  it('sanitizeIndices deja solo un objeto plano de números finitos o null, de hasta 4 KB', () => {
+    expect(sanitizeIndices({ a_b: 1, c: null, d: 'x', e: Infinity, 'Bad-Key': 2 })).toEqual({ a_b: 1, c: null });
+    expect(sanitizeIndices([1, 2])).toBeNull();
+    expect(sanitizeIndices('x')).toBeNull();
+    const big: Record<string, number> = {};
+    for (let i = 0; i < 400; i++) big[`k_${'x'.repeat(20)}${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}`] = i;
+    expect(sanitizeIndices(big)).toBeNull();
   });
 
   it('una fila encolada conserva model_version y flush la reenvia sin la columna si la base no la tiene', async () => {

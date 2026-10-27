@@ -21,6 +21,7 @@ calibración.**
 | `pacts.ts` | fase 43: `pactParams`, `pactShift` (B / E / Pc, logit), `pactEnergyShift` (s* / u*), `pactLandFactors` (frontera BNNP → BNP / CC), `pactAnnualCost` / `pactEntryCost` / `pactYearlyCostOf` (fracciones del PBI) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
 | `core.ts` | `advance(state, dt, rng, CP, opts)`: el integrador único de los dos juegos |
+| `research.ts` | fase 48: índices de investigación (no están en el prototipo): `brierDeterministic` / `brierProbabilistic` / `skillScore` / `predictionSkill`, `oneYearRegret` (cartera vs. vecinas, misma semilla), `safeJustGap`, `ResearchTracker` (`trackStep`, `trackRegret`), `policyEntropy`, `researchIndices` (objeto de `research_indices`) |
 
 `stepYear` (`src/sim/index.ts`) es `advance(…, dt = 1)`; `stepMonth` (`src/sim/monthly.ts`) es
 `advance(…, dt = 1/12, { month })`. `createInitialState` guarda las anclas en `gameStatePatch.model`.
@@ -59,6 +60,7 @@ avanza 12·dt meses y cambia de año después de diciembre). `stepMonth` = `adva
 | 45 | conflicto distributivo: G y J en D_C (`src/sim/v2/social.ts`, `conflictWeights.gini/just`, `justTransition`; `model.social`) | hecho (golden W/St coinciden) |
 | 46 | paso 3: eventos con sorteo independiente, choques de nivel, ε AR(1) (`src/sim/events.ts`, `PARAMS_V2.events`); paso anual = 12 sub-pasos mensuales; `deferred.ts` borrado; `GOLDEN_ACTIVE = true` | hecho (golden activo y exacto) |
 | 47 | Territorio: situaciones como impulsos del objetivo (`model.impulses`, vida media 18 meses, tope ±0,6, descarte a 6τ; `PARAMS_V2.situations`), descuido del escritorio sobre D_Pc (`AdvanceOptions.wear.Pc`), `investmentScale` √(Y/Y₀) en costos de situaciones y lotes | hecho (`SITUATION_EFFECT_SCALE` borrado; prototipo sin golden nuevo) |
+| 48 | fuera de `advance`: bandas de predicción por terciles (`scripts/prediction-bands.ts`), índices de investigación (`research.ts`, `PARAMS_V2.research`) | hecho (el modelo no cambia) |
 
 ## Convenciones
 
@@ -169,3 +171,7 @@ cargos fijos, % sobre el stock), PBI_Real como choque de nivel de Y (como el Y% 
 36 meses (las oportunidades, tono `good`, no cuentan); D_Pc += 1,2·max(0, N − 3) (sin tope, como el desgaste). Ignorar la bandeja cae por colapso político en 2036–2044.
 (3) El descarte de impulsos es a 6τ (prototipo; la spec dice "6 vidas medias"). (4) El −5 % de reservas de la recesión se
 mantiene y se agrega al prototipo (`R%`). (5) Solo `aquifer-drop` declara `halfLifeMonths` (60).
+
+Fase 48: sin recortes de la spec salvo §7 (predicción en Territorio, 🟧 no incluida por defecto). Desvíos: un "choque" para la
+resiliencia es un paso con evento donde F o E cae ≥ 0,5 puntos (el motor no expone los blancos del evento); el arrepentimiento
+de Territorio deja fuera bandeja y mapa (conectividad congelada) y sólo lo pide la UI (`advanceMonth(…, { regret: true })`).

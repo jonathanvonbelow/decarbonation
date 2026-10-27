@@ -83,4 +83,9 @@ export interface TerritorioFeedbackRow {
   seed: number | null;
   /** v6 / phase 32: model version (src/sim/version.ts) of the game summarised, or of this app when there is none. */
   model_version: string | null;
+  /**
+   * v6 / phase 48: research indices of the game summarised (src/sim/v2/research.ts; no personal data). Column added by
+   * supabase/research_indices_migration.sql; dropped on send if the project has not run it.
+   */
+  research_indices: Record<string, number | null> | null;
 }

@@ -20,7 +20,9 @@ import { generateClosingSynthesis, buildFallbackSynthesis } from '../../services
 import { evaluateLevel } from '../../sim';
 import { useDecarboNito } from '../decarbonito/DecarboNitoProvider';
 import { saveReflectionAnswers, type ReflectionAnswers } from '../../services/reflectionResponses';
-import type { PredictionResult } from './predictions';
+import { predictionBand, type PredictionResult } from './predictions';
+import type { ResearchIndices } from '../../sim';
+import ResearchIndicesTable from '../research/ResearchIndicesTable';
 import { logFunnelEvent } from '../../services/funnelTelemetry';
 
 const GEMINI_TIMEOUT_MS = 20000;
@@ -31,6 +33,8 @@ interface DebriefingModalProps {
   gameState: GameState;
   historicalData: HistoricalDataPoint[];
   predictionResults: PredictionResult[];
+  /** v6 / phase 48: research indices of the session (skill vs naive baselines, regret, safe-and-just gap…). */
+  researchIndices?: ResearchIndices | null;
   sessionId?: string | null;
   onClose: () => void;
   onRestart?: () => void;
@@ -39,7 +43,7 @@ interface DebriefingModalProps {
   isDemo?: boolean;
 }
 
-const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historicalData, predictionResults, sessionId, onClose, onRestart, isDemo }) => {
+const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historicalData, predictionResults, researchIndices, sessionId, onClose, onRestart, isDemo }) => {
   const { t, locale } = useT();
   const dn = useDecarboNito();
   const [tab, setTab] = useState<Tab>('evidence');
@@ -70,6 +74,9 @@ const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historical
   }, []);
 
   const outcome = useMemo(() => evaluateLevel(gameState, { ...gameState, indicators: gameState.levelBaseline }), [gameState]);
+
+  const fmtNum = (x: number, digits: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x);
+  const fmtSkill = (x: number | null) => (x === null ? t('debriefing.research.none') : fmtNum(x, 2));
 
   const predictionStats = useMemo(() => {
     if (predictionResults.length === 0) return null;
@@ -176,7 +183,34 @@ const DebriefingModal: React.FC<DebriefingModalProps> = ({ gameState, historical
                   <p className="text-sm text-gray-300 mt-1">
                     {predictionStats ? t('debriefing.predictionAccuracy', { correct: predictionStats.correct, total: predictionStats.total, pct: predictionStats.pct }) : t('debriefing.predictionNone')}
                   </p>
+                  {/* Phase 48 §5: skill against the naive rules, and what "no change" meant (the strip never shows the band). */}
+                  {predictionStats && researchIndices && researchIndices.accuracy_persistence !== null && (
+                    <p className="text-sm text-gray-300 mt-1" data-testid="prediction-skill">
+                      {t('debriefing.predictionSkill', {
+                        pct: Math.round(researchIndices.accuracy_persistence * 100),
+                        ss: fmtSkill(researchIndices.skill_persistence),
+                        ssc: fmtSkill(researchIndices.skill_climatology),
+                      })}
+                    </p>
+                  )}
+                  {/* One line per level predicted: each level classifies with its own band. */}
+                  {predictionStats && [...new Set(predictionResults.map((r) => r.level))].sort().map((level) => (
+                    <p key={level} className="text-xs text-gray-400 mt-1">
+                      {t('debriefing.predictionBand', {
+                        level,
+                        B: fmtNum(predictionBand('biodiversity', level), 2),
+                        E: fmtNum(predictionBand('economicSecurity', level), 2),
+                        c: fmtNum(predictionBand('co2EqEmissionsPerCapita', level), 3),
+                      })}
+                    </p>
+                  ))}
                 </div>
+                {researchIndices && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-300 mb-1">{t('debriefing.research.title')}</h3>
+                    <ResearchIndicesTable indices={researchIndices} />
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-semibold text-blue-300 mb-1">{t('debriefing.sectionDecisions')}</h3>
                   <p className="text-sm text-gray-200 whitespace-pre-line">{synthesis.decisionsTaken}</p>

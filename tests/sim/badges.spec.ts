@@ -112,7 +112,7 @@ describe('Pluralista (hasWonAllRoutesOnSomeLevel / recordRouteWin)', () => {
 });
 
 describe('Pronosticadora (forecastAccuracy / isSkilledForecaster)', () => {
-  const result = (correct: boolean): PredictionResult => ({ indicator: 'biodiversity', predicted: 'up', actual: correct ? 'up' : 'down', delta: 1, correct });
+  const result = (correct: boolean): PredictionResult => ({ indicator: 'biodiversity', predicted: 'up', actual: correct ? 'up' : 'down', delta: 1, correct, level: 1, band: 0.2, persistencePred: 'flat' });
 
   it('accuracy of an empty result set is 0', () => {
     expect(forecastAccuracy([])).toBe(0);

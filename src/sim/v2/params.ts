@@ -428,6 +428,20 @@ export const PARAMS_V2 = {
     droughtSeasonality: normaliseMean([1.6, 1.4, 1.0, 0.7, 0.6, 0.6, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4]),
     yieldShock: { persistence: 0.5, sigma: 0.04, waterDamping: 0.5 },
   },
+
+  /**
+   * 48 — research indices (mejora-general/files/48 §3; src/sim/v2/research.ts). Not in the prototype.
+   * safeJust: social floors F ≥ 40, E ≥ 35, W ≥ 55 and ecological ceilings B ≥ 45, c ≤ cRatio·c0 (points 0–100; cRatio
+   *   dimensionless) — 🟧 spec defaults, kept (criterio experto). The forest ceiling is the level's start (anchors).
+   * shockMinDrop: points of F or E a step with a random event must lose to open a shock episode (criterio experto: a
+   *   fall below 0.5 points is within the yearly noise of the relaxation). recovery: fraction of the fall that closes
+   *   the episode (spec: 90 %).
+   */
+  research: {
+    safeJust: { F: 40, E: 35, W: 55, B: 45, cRatio: 0.8 },
+    shockMinDrop: 0.5,
+    recovery: 0.9,
+  },
 } as const;
 
 export type ParamsV2 = typeof PARAMS_V2;

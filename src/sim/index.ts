@@ -201,3 +201,9 @@ export function createInitialState(levelNumber: number, CP: ControlParams = CONT
     initialHistoricalDataPoint,
   };
 }
+export {
+  brierDeterministic, brierProbabilistic, createResearchTracker, neighbourPolicies, oneYearRegret, policyEntropy,
+  predictionSkill, researchIndices, safeJustGap, SKILL_FLOOR, skillScore, togglePolicyIn, trackRegret, trackStep,
+  type Direction, type DirectionProbabilities, type PredictionItem, type PredictionSkill, type RegretOptions,
+  type RegretResult, type ResearchIndices, type ResearchTracker,
+} from './v2/research';

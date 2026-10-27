@@ -6,8 +6,9 @@
  */
 import type { Policy } from '../../types';
 import { MODEL_VERSION_BY_GAME } from '../../sim/version';
+import type { ResearchIndices } from '../../sim';
 import { evaluateTerritorio } from '../routes';
-import type { Session } from '../session';
+import { sessionResearch, type Session } from '../session';
 import type { RouteCode, TerritorioFeedbackRow } from './types';
 
 const KEY = 'dn_territorio_last_game_v1';
@@ -35,6 +36,8 @@ export interface GameSummary {
    * before phase 32 (still in localStorage, TTL 12 h) do not have it; those were played with 1.0.
    */
   modelVersion?: string;
+  /** v6 / phase 48: research indices of the game (optional: summaries saved before phase 48 lack them). */
+  researchIndices?: ResearchIndices;
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -73,6 +76,7 @@ export function buildSummary(session: Session, now: number = Date.now()): GameSu
     },
     seed: session.seed,
     modelVersion: MODEL_VERSION_BY_GAME.territorio,
+    researchIndices: sessionResearch(session),
   };
 }
 
@@ -95,7 +99,7 @@ export function loadSummary(now: number = Date.now()): GameSummary | null {
 type SummaryFields = Pick<TerritorioFeedbackRow,
   'partida_estado' | 'resultado' | 'ruta_lograda' | 'ruta_cercana' | 'ruta_cercana_progreso' | 'pisos_cumplidos'
   | 'anio_alcanzado' | 'meses_jugados' | 'situaciones_resueltas' | 'situaciones_vencidas' | 'areas_declaradas'
-  | 'politicas_activas' | 'indicadores_finales' | 'seed' | 'model_version'>;
+  | 'politicas_activas' | 'indicadores_finales' | 'seed' | 'model_version' | 'research_indices'>;
 
 export function toRowFields(s: GameSummary | null): SummaryFields {
   if (!s) {
@@ -105,6 +109,7 @@ export function toRowFields(s: GameSummary | null): SummaryFields {
       situaciones_vencidas: null, areas_declaradas: null, politicas_activas: null, indicadores_finales: null, seed: null,
       // No game to describe: the answers are about the app the respondent is using now.
       model_version: MODEL_VERSION_BY_GAME.territorio,
+      research_indices: null,
     };
   }
   return {
@@ -124,5 +129,6 @@ export function toRowFields(s: GameSummary | null): SummaryFields {
     seed: s.seed,
     // A summary without the field was saved before phase 32, i.e. by model 1.0.
     model_version: s.modelVersion ?? '1.0',
+    research_indices: s.researchIndices ? { ...s.researchIndices } : null,
   };
 }

@@ -5,7 +5,8 @@
  * (drawn uniformly) it changes 1 or 2 policies: switches one on (if fewer than MAX_ACTIVE_POLICIES
  * are active) or one off (if its lock-in has passed, as App.tsx `togglePolicy` enforces). Effort is
  * always even, there are no pacts and no extra tax. Every simulated year records the change of
- * B, E and c, classified with the game's own band (`actualDirection`, predictions.ts), so the
+ * B, E and c, classified with the game's own band of the level (`actualDirection`, predictions.ts; phase 48:
+ * the bands are the 33rd percentile of these same changes, scripts/prediction-bands.ts), so the
  * report can say how often the honest answer to the prediction strip is "no change".
  */
 import { CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../../src/constants';
@@ -16,6 +17,11 @@ import { activatePolicies, freshLevelState, levelTargetYear } from './runNiveles
 import { POLICY_BY_CODE, type PolicyCode } from './strategies';
 
 export const RANDOM_PLAYER_SEED_BASE = 10000;
+/**
+ * Phase 48: the prediction bands are measured on a held-out set of players (seeds 20000…), so C7 (measured on 10000…)
+ * is an out-of-sample check and not true by construction.
+ */
+export const BAND_PLAYER_SEED_BASE = 20000;
 
 export interface YearChange { B: number; E: number; c: number }
 
@@ -59,8 +65,8 @@ function randomToggle(state: GameState, level: number, rnd: () => number, skip: 
   else activatePolicies(state, [code], level);
 }
 
-export function runRandomPlayer(level: number, i: number, CP: ControlParams = CONTROL_PARAMS): RandomPlayerRun {
-  const seed = RANDOM_PLAYER_SEED_BASE + i;
+export function runRandomPlayer(level: number, i: number, CP: ControlParams = CONTROL_PARAMS, seedBase = RANDOM_PLAYER_SEED_BASE): RandomPlayerRun {
+  const seed = seedBase + i;
   const rnd = makeRng(seed, -1); // decisions; events use makeRng(seed, year) as in runNiveles
   let state = freshLevelState(level, CP);
   const target = levelTargetYear(state, level);
@@ -80,13 +86,13 @@ export function runRandomPlayer(level: number, i: number, CP: ControlParams = CO
     const change = {} as YearChange;
     KEYS.forEach(({ k, ind }) => {
       change[k] = after[ind] - before[ind];
-      run.directions[k].push(actualDirection(ind, before[ind], after[ind]));
+      run.directions[k].push(actualDirection(ind, before[ind], after[ind], level));
     });
     run.changes.push(change);
   }
   return run;
 }
 
-export function runRandomPlayers(level: number, count: number, CP: ControlParams = CONTROL_PARAMS): RandomPlayerRun[] {
-  return Array.from({ length: count }, (_, i) => runRandomPlayer(level, i, CP));
+export function runRandomPlayers(level: number, count: number, CP: ControlParams = CONTROL_PARAMS, seedBase = RANDOM_PLAYER_SEED_BASE): RandomPlayerRun[] {
+  return Array.from({ length: count }, (_, i) => runRandomPlayer(level, i, CP, seedBase));
 }

@@ -12,8 +12,11 @@
  * row is dropped (it is never queued), so only in that case the row is resent once without the
  * column (sendWithModelVersion): the answers matter more than the version tag. Any other 4xx (e.g.
  * the version failing the CHECK) is rejected as before. Queued rows keep their tag.
+ *
+ * v6 / phase 48: same for `research_indices` (supabase/research_indices_migration.sql): a flat object of finite numbers
+ * or nulls, at most 4 KB (the SQL CHECK), else it is dropped by `sanitizeRow`.
  */
-import { MODEL_VERSION_RE, sendWithModelVersion } from '../../services/modelVersionColumn';
+import { MODEL_VERSION_RE, sanitizeIndices, sendWithOptionalColumns } from '../../services/modelVersionColumn';
 import {
   CONTEXTOS, ELEMENTOS, FORMATOS, MAX_ELEMENTOS, MAX_ROL_OTRO, MAX_TEXT, MEJORAS, ROLES,
   type TerritorioFeedbackRow,
@@ -83,8 +86,11 @@ export function sanitizeRow(row: TerritorioFeedbackRow): TerritorioFeedbackRow {
     model_version: MODEL_VERSION_RE.test(row.model_version ?? '') && (row.model_version ?? '').length <= 16
       ? row.model_version
       : null,
+    research_indices: sanitizeIndices(row.research_indices),
   };
 }
+
+export { sanitizeIndices };
 
 function readQueue(): TerritorioFeedbackRow[] {
   try {
@@ -127,10 +133,10 @@ async function post(row: Record<string, unknown>): Promise<PostResult> {
   }
 }
 
-/** Posts a row tagged with its model_version; resends it once untagged only if the column is missing. */
+/** Posts a row with its model_version and research_indices; resends it without either only if that column is missing. */
 async function postTagged(row: TerritorioFeedbackRow): Promise<Attempt> {
-  const { model_version, ...rest } = row;
-  return (await sendWithModelVersion('territorio_feedback', rest, model_version ?? null, post)).attempt;
+  const { model_version, research_indices, ...rest } = row;
+  return (await sendWithOptionalColumns('territorio_feedback', rest, { model_version, research_indices }, post)).attempt;
 }
 
 export async function submitFeedback(input: TerritorioFeedbackRow): Promise<SubmitResult> {

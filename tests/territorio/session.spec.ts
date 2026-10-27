@@ -8,7 +8,7 @@ import { LandUseType, Policy } from '../../src/types';
 import { MAX_OPEN_SITUATIONS, SITUATION_BY_ID, SITUATIONS, wearShift } from '../../src/territorio/situations';
 import {
   advanceMonth, createSession, decideSituation, protectParcel, requestLoan, setInstrumentEffort, setTaxPressure,
-  togglePact, togglePolicy, unlocks, INSTRUMENTS_UNLOCK_YEAR, START_YEAR, SUSTAINED_REASONS, TOTAL_MONTHS, type Session,
+  togglePact, togglePolicy, unlocks, sessionResearch, yearRegret, INSTRUMENTS_UNLOCK_YEAR, START_YEAR, SUSTAINED_REASONS, TOTAL_MONTHS, type Session,
 } from '../../src/territorio/session';
 
 function advance(s: Session, months: number): Session {
@@ -301,4 +301,30 @@ describe('model 1.1 in Territorio', () => {
     }
   });
 
+});
+
+describe('research indices (phase 48)', () => {
+  it('track every month; regret only once per calendar year and only when asked', () => {
+    let s = togglePolicy(createSession(5), Policy.Agroecological).session;
+    let plain = s;
+    for (let i = 0; i < 13; i++) {
+      s = advanceMonth(s, CONTROL_PARAMS, 'es', { regret: true });
+      plain = advanceMonth(plain);
+    }
+    expect(s.research!.time).toBeCloseTo(13 / 12, 9);
+    expect(s.research!.regretCount).toBe(2); // January 2025 and January 2026
+    expect(plain.research!.regretCount).toBe(0);
+    // The regret is computed on the side: the game itself is identical.
+    expect(s.game.indicators).toEqual(plain.game.indicators);
+    const ind = sessionResearch(s);
+    expect(ind.regret_mean).not.toBeNull();
+    expect(ind.regret_mean!).toBeGreaterThanOrEqual(0);
+    expect(ind.skill_persistence).toBeNull(); // Territorio has no prediction (spec §7)
+    expect(ind.safe_just_gap).not.toBeNull();
+  });
+
+  it('yearRegret respects the month-based lock-in', () => {
+    const s = togglePolicy(createSession(5), Policy.Agroecological).session;
+    expect(yearRegret(s)).toBeGreaterThanOrEqual(0);
+  });
 });

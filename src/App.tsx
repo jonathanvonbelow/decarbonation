@@ -39,7 +39,10 @@ import PlayerManual from './components/player/PlayerManual';
 import EquationsManual from './components/equations/EquationsManual';
 import Toast from './components/common/Toast';
 import GameLogDrawer from './components/GameLogDrawer';
-import { stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost, payPublicInvestment } from './sim';
+import {
+  stepYear, createInitialState, evaluateLevel, baseEfficiency, fatigueFactor, evenEffort, pactEntryCost, payPublicInvestment,
+  createResearchTracker, oneYearRegret, researchIndices, trackRegret, trackStep, type ResearchIndices, type ResearchTracker,
+} from './sim';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
 import { useT } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
@@ -50,7 +53,10 @@ import type { Content } from '@google/genai';
 import TutorialRunner, { tutorialApiRef } from './components/tutorial/TutorialRunner';
 import LevelAmbience from './components/ui/LevelAmbience';
 import DebriefingModal from './components/tutorial/DebriefingModal';
-import { evaluatePredictions, type PredictedIndicatorKey, type PredictionResult, type PredictionSelections } from './components/tutorial/predictions';
+import {
+  directionsOf, evaluatePredictions, sessionPredictionSkill,
+  type PredictedIndicatorKey, type PredictionDirection, type PredictionResult, type PredictionSelections,
+} from './components/tutorial/predictions';
 import { logPrediction } from './services/predictionTelemetry';
 import {
   evaluateBadges, loadEarnedBadges, saveEarnedBadges, loadRoutesWonPerLevel, saveRoutesWonPerLevel,
@@ -239,6 +245,29 @@ export const App = () => {
   const [lastPredictionResults, setLastPredictionResults] = useState<PredictionResult[] | null>(null);
   const allPredictionResultsRef = useRef<PredictionResult[]>([]);
   const predictionStreakRef = useRef<Partial<Record<PredictedIndicatorKey, number>>>({});
+  // v6 / fase 48 (48_prediccion_e_indices.md §2–3): dirección real del último año (línea de base de persistencia, solo
+  // dentro del mismo nivel y si ese año terminó justo donde empieza la ronda), acumuladores de los índices de
+  // investigación de la sesión y la semilla de los contrafácticos del arrepentimiento (números aleatorios comunes: el
+  // juego en sí sigue usando Math.random).
+  const lastDirectionsRef = useRef<{ level: number; year: number; dirs: Record<PredictedIndicatorKey, PredictionDirection> } | null>(null);
+  const researchTrackerRef = useRef<ResearchTracker>(createResearchTracker());
+  const regretSeedRef = useRef<number>(Math.floor(Math.random() * 2 ** 31));
+  // Predictions of the current playthrough start here (the full list stays for the badges, which span playthroughs).
+  const sessionPredictionsFromRef = useRef(0);
+  const sessionResearchIndices = (state: GameState): ResearchIndices =>
+    researchIndices(researchTrackerRef.current, state, sessionPredictionSkill(allPredictionResultsRef.current.slice(sessionPredictionsFromRef.current)));
+  /** New playthrough ("Jugar de nuevo"): its research indices start from zero (one game_sessions row each). */
+  const resetResearch = () => {
+    researchTrackerRef.current = createResearchTracker();
+    lastDirectionsRef.current = null;
+    sessionPredictionsFromRef.current = allPredictionResultsRef.current.length;
+  };
+  // Computed once when the debriefing opens (not on every App render while it is open).
+  const debriefingIndices = React.useMemo(
+    () => (showClosingSynthesisModal ? sessionResearchIndices(gameState) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showClosingSynthesisModal],
+  );
   const lastPolicyChangeYearRef = useRef<number>(INITIAL_YEAR);
   // Fase 11 (§7): "first_decision — seconds_since_start", la métrica de tiempo-a-primera-acción
   // que la fase 9 (18_tutoriales_v3.md) nombra pero nunca terminó de cablear a telemetría — solo
@@ -472,7 +501,7 @@ export const App = () => {
       seg_economica_final: gameState.indicators.economicSecurity,
       score_final: gameState.indicators.generalScore,
     }, activePolicies);
-    endSession(resultadoFinal, gameState.currentLevel, gameState.year);
+    endSession(resultadoFinal, gameState.currentLevel, gameState.year, sessionResearchIndices(gameState));
     // This effect depends only on gameOverReason so it fires exactly once per game-over
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.gameOverReason]);
@@ -1112,8 +1141,15 @@ export const App = () => {
         // now locale-aware -- threading the active language through here is what actually makes
         // that translation reach the player (GameLogDrawer renders gameLog raw; the efficiency
         // warning goes straight to the chat).
+        // Fase 48: arrepentimiento de un año (cartera del jugador vs. carteras vecinas, misma semilla) y acumuladores de
+        // los índices de investigación. ~15 ms por año (11 pasos anuales).
+        const preStep = tempGameState;
+        const regret = oneYearRegret(preStep, regretSeedRef.current, CP);
         const stepResult = stepYear(tempGameState, Math.random, CP, getActiveLanguage());
         tempGameState = stepResult.next;
+        researchTrackerRef.current = trackRegret(
+          trackStep(researchTrackerRef.current, preStep, tempGameState, 1, !!tempGameState.currentEvent), regret.regret,
+        );
         stepResult.logs.forEach(msg => logEvent(msg));
         stepResult.chatMessages.forEach(msg => {
           addMessageToChat(msg.text, 'system', msg.emphasisType);
@@ -1139,7 +1175,13 @@ export const App = () => {
     // lo que realmente pasó. Solo tiene sentido si la ronda avanzó al menos un año (no si terminó
     // el nivel antes del primer stepYear real).
     if (tempGameState.year > gameStateRef.current.year) {
-      const results = evaluatePredictions(predictionSelections, beforeIndicators, tempGameState.indicators);
+      const level = gameStateRef.current.currentLevel;
+      const last = lastDirectionsRef.current;
+      const persistence = last && last.level === level && last.year === gameStateRef.current.year ? last.dirs : null;
+      const results = evaluatePredictions(predictionSelections, beforeIndicators, tempGameState.indicators, level, persistence);
+      lastDirectionsRef.current = level === tempGameState.currentLevel
+        ? { level, year: tempGameState.year, dirs: directionsOf(beforeIndicators, tempGameState.indicators, level) }
+        : null;
       results.forEach((r) => {
         logPrediction(r, tempGameState.year, tempGameState.currentLevel, sessionIdRef.current);
         const streakKey = r.indicator;
@@ -1363,6 +1405,7 @@ export const App = () => {
           gameState={gameState}
           historicalData={historicalData}
           predictionResults={allPredictionResultsRef.current}
+          researchIndices={debriefingIndices}
           sessionId={sessionIdRef.current}
           onClose={handleClosingSynthesisDismissed}
           onRestart={() => setCurrentLevelManually(gameState.currentLevel)}
@@ -1417,6 +1460,7 @@ export const App = () => {
             // New playthrough — a fresh game_sessions row should be created,
             // not reused/overwritten (see useSessionPersistence.resetSession).
             resetSession();
+            resetResearch();
             setCurrentLevelManually(1);
             sessionStorage.removeItem('decarbonationPreSurveyDone_v1');
           }}

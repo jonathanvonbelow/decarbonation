@@ -9,7 +9,8 @@ import { Button } from '../components/ui/Button';
 import type { Indicators } from '../types';
 import { fill, useCopy } from './copy';
 import { withWorkshopCode } from './survey/workshopCode';
-import { SUSTAINED_REASONS, type Session } from './session';
+import { sessionResearch, SUSTAINED_REASONS, type Session } from './session';
+import ResearchIndicesTable from '../components/research/ResearchIndicesTable';
 import { neglectShift } from './situations';
 
 /** Which end-of-game copy a collapse gets: the model's four reasons, plus the two sustained ones. */
@@ -101,6 +102,8 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
   const neglected = outcome.kind === 'collapse' && collapseKey(outcome.reason) === 'political'
     && neglectShift(session.expiredAt ?? [], session.monthIndex) > 0;
   const final = session.game.indicators;
+  // The session no longer changes once the game is over: computed once.
+  const research = React.useMemo(() => sessionResearch(session), [session]);
   return (
     <div className="absolute inset-0 z-50 overflow-y-auto bg-basalt-950/95 px-6 py-12 md:px-24" role="dialog" aria-modal="true" aria-labelledby="end-title">
       <div className="mx-auto max-w-3xl">
@@ -146,6 +149,18 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
               ))}
             </tbody>
           </table>
+        </div>
+        {/* Phase 48 §5: research indices of the game (regret, safe-and-just gap, carbon budget…). No prediction here (§7). */}
+        <h2 className="mt-8 text-[17px] text-bone">{t('debriefing.research.title')}</h2>
+        <div className="mt-3 overflow-x-auto">
+          <ResearchIndicesTable
+            indices={research}
+            className="w-full min-w-[420px] text-left text-[14px]"
+            rowClassName="border-t border-basalt-700"
+            labelClassName="py-2 pr-4 text-ash"
+            valueClassName="tnum py-2 text-right align-top text-bone"
+            hintClassName="block text-[12px] text-ash-dim"
+          />
         </div>
         <div className="mt-10 flex flex-wrap gap-3 pb-8">
           <a href={withWorkshopCode('/territorio/encuesta?origen=fin_partida')} className="inline-flex h-12 items-center justify-center rounded-md bg-chlorophyll px-6 text-[17px] font-medium text-basalt-950 hover:brightness-110">{c.end.survey}</a>

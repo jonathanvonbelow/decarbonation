@@ -50,4 +50,17 @@ describe('survey summary', () => {
     delete legacy.modelVersion;
     expect(toRowFields(legacy).model_version).toBe('1.0');
   });
+
+  it('el resumen lleva los índices de investigación (v6 / fase 48), sin datos personales', () => {
+    const sum = buildSummary(played(), 1000);
+    expect(sum.researchIndices).toBeDefined();
+    const row = toRowFields(sum).research_indices!;
+    expect(Object.keys(row)).toContain('safe_just_gap');
+    expect(Object.keys(row)).toContain('carbon_budget_used');
+    expect(JSON.stringify(row).length).toBeLessThan(4096);
+    // un resumen anterior a la fase 48 no los tiene
+    const legacy = { ...sum };
+    delete legacy.researchIndices;
+    expect(toRowFields(legacy).research_indices).toBeNull();
+  });
 });

@@ -61,10 +61,11 @@ export function useSessionPersistence(userId: string | null) {
   const endSession = async (
     resultado: 'victoria' | 'derrota' | 'abandono',
     nivelAlcanzado: number,
-    anioFin: number
+    anioFin: number,
+    researchIndices?: object | null,
   ) => {
     if (!sessionIdRef.current) return;
-    await finalizeGameSession(sessionIdRef.current, resultado, nivelAlcanzado, anioFin);
+    await finalizeGameSession(sessionIdRef.current, resultado, nivelAlcanzado, anioFin, researchIndices);
   };
 
   return {

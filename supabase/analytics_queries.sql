@@ -334,3 +334,91 @@ SELECT created_at, taller_codigo, rol, contexto_uso, aprendizaje_texto, mejoras_
 FROM public.territorio_feedback
 WHERE num_nonnulls(aprendizaje_texto, mejoras_texto, taller_conceptos_texto) > 0
 ORDER BY created_at;
+
+
+-- =============================================================================
+-- v6 / fase 48: predicción 2.0 — precisión y habilidad (skill) frente a líneas de base
+-- (mejora-general/files/48_prediccion_e_indices.md §2). Requiere supabase/model_version_migration.sql y
+-- supabase/research_indices_migration.sql. Estratificar SIEMPRE por model_version: las bandas de "sin cambio" del
+-- modelo 1.x (1 % del rango) y del 2.0 (terciles) no son comparables.
+--   Brier categórico de una predicción determinista: 0 si acierta, 2 si falla.
+--   SS_pers = 1 − Brier_jugador / Brier_persistencia;  SS_clim = 1 − Brier_jugador / Brier_climatología.
+-- La climatología son las proporciones a priori del nivel (src/components/tutorial/predictionBands.json, campo
+-- `climatology`); el bloque VALUES de abajo la copia para model_version '2.0-dev' y hay que regenerarlo
+-- cuando cambie el JSON (npx tsx scripts/prediction-bands.ts).
+-- =============================================================================
+
+-- Sesiones por versión del modelo y resultado (no mezclar 1.x y 2.0 en ningún análisis de aprendizaje)
+SELECT model_version, resultado, COUNT(*) AS n
+FROM public.game_sessions
+GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- Precisión cruda por versión del modelo, nivel e indicador
+SELECT model_version, level, indicator, COUNT(*) AS n,
+       ROUND(AVG(CASE WHEN correct THEN 1 ELSE 0 END), 3) AS precision,
+       -- sin persistence_pred (modelo 1.x o antes de la migración) la fila no cuenta: AVG ignora NULL
+       ROUND(AVG(CASE WHEN persistence_pred IS NULL THEN NULL WHEN persistence_pred = actual THEN 1 ELSE 0 END), 3) AS precision_persistencia,
+       ROUND(AVG(band), 4) AS banda
+FROM public.predictions
+GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
+
+-- SS_pers y SS_clim por versión del modelo, nivel e indicador (solo filas con persistence_pred: modelo 2.0)
+WITH clim(model_version, level, indicator, p_down, p_flat, p_up) AS (
+  VALUES
+    ('2.0-dev', 1, 'biodiversity', 0.3294, 0.3333, 0.3372),
+    ('2.0-dev', 1, 'economicSecurity', 0.2428, 0.3334, 0.4238),
+    ('2.0-dev', 1, 'co2EqEmissionsPerCapita', 0.5144, 0.3334, 0.1522),
+    ('2.0-dev', 2, 'biodiversity', 0.3204, 0.3338, 0.3458),
+    ('2.0-dev', 2, 'economicSecurity', 0.2553, 0.3333, 0.4113),
+    ('2.0-dev', 2, 'co2EqEmissionsPerCapita', 0.4956, 0.3334, 0.1711),
+    ('2.0-dev', 3, 'biodiversity', 0.3071, 0.3334, 0.3595),
+    ('2.0-dev', 3, 'economicSecurity', 0.323, 0.3333, 0.3437),
+    ('2.0-dev', 3, 'co2EqEmissionsPerCapita', 0.5033, 0.3333, 0.1634)
+), scored AS (
+  SELECT pr.model_version, pr.level, pr.indicator,
+         CASE WHEN pr.predicted = pr.actual THEN 0 ELSE 2 END AS brier_jugador,
+         CASE WHEN pr.persistence_pred = pr.actual THEN 0 ELSE 2 END AS brier_pers,
+         POWER(c.p_down - CASE WHEN pr.actual = 'down' THEN 1 ELSE 0 END, 2)
+       + POWER(c.p_flat - CASE WHEN pr.actual = 'flat' THEN 1 ELSE 0 END, 2)
+       + POWER(c.p_up   - CASE WHEN pr.actual = 'up'   THEN 1 ELSE 0 END, 2) AS brier_clim
+  FROM public.predictions pr
+  LEFT JOIN clim c ON c.model_version = pr.model_version AND c.level = pr.level AND c.indicator = pr.indicator
+  WHERE pr.persistence_pred IS NOT NULL
+)
+SELECT model_version, level, indicator, COUNT(*) AS n,
+       ROUND(1 - AVG(brier_jugador) / NULLIF(AVG(brier_pers), 0), 3) AS ss_persistencia,
+       ROUND((1 - AVG(brier_jugador) / NULLIF(AVG(brier_clim), 0))::numeric, 3) AS ss_climatologia
+FROM scored
+GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
+
+-- SS por sesión (la variable dependiente recomendada para el artículo), con su versión del modelo
+SELECT gs.id AS session_id, gs.model_version,
+       (gs.research_indices ->> 'skill_persistence')::numeric  AS ss_persistencia,
+       (gs.research_indices ->> 'skill_climatology')::numeric  AS ss_climatologia,
+       (gs.research_indices ->> 'n_predictions')::int          AS n_predicciones
+FROM public.game_sessions gs
+WHERE gs.research_indices IS NOT NULL
+ORDER BY gs.model_version, gs.started_at;
+
+-- Índices de sesión promedio por versión del modelo y resultado (3 niveles)
+SELECT model_version, resultado, COUNT(*) AS n,
+       ROUND(AVG((research_indices ->> 'regret_mean')::numeric), 2)        AS arrepentimiento,
+       ROUND(AVG((research_indices ->> 'safe_just_gap')::numeric), 3)      AS brecha_seguro_justo,
+       ROUND(AVG((research_indices ->> 'resilience_months')::numeric), 1)  AS resiliencia_meses,
+       ROUND(AVG((research_indices ->> 'carbon_budget_used')::numeric), 3) AS presupuesto_carbono,
+       ROUND(AVG((research_indices ->> 'policy_entropy')::numeric), 3)     AS entropia_politicas,
+       ROUND(AVG((research_indices ->> 'policy_reversals')::numeric), 2)   AS desactivaciones
+FROM public.game_sessions
+WHERE research_indices IS NOT NULL
+GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- Territorio: mismos índices desde el cuestionario anónimo (sin predicción, spec §7)
+SELECT model_version, resultado, COUNT(*) AS n,
+       ROUND(AVG((research_indices ->> 'regret_mean')::numeric), 2)        AS arrepentimiento,
+       ROUND(AVG((research_indices ->> 'safe_just_gap')::numeric), 3)      AS brecha_seguro_justo,
+       ROUND(AVG((research_indices ->> 'carbon_budget_used')::numeric), 3) AS presupuesto_carbono,
+       ROUND(AVG((research_indices ->> 'land_concentration')::numeric), 3) AS concentracion_g,
+       ROUND(AVG((research_indices ->> 'just_transition')::numeric), 3)    AS transicion_justa_j
+FROM public.territorio_feedback
+WHERE research_indices IS NOT NULL
+GROUP BY 1, 2 ORDER BY 1, 2;

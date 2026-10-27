@@ -323,3 +323,16 @@ Verificado: `tests/territorio/situations.spec.ts`, `tests/territorio/session.spe
 | T-07 / T-12 | Dinero inmediato: ingresos > 0 × √(Y/Y₀) (tope 2,5), cargos fijos; deuda y reservas en % sobre el stock; `PBI_Real` como choque de nivel de Y (5 efectos que el prototipo ignoraba). Costos de lotes 100/225/300/400 × √(Y/Y₀) (tope 2,5), pagados con `payPublicInvestment`; área declarada y conectividad sin cambio (fases 34/40/42/44) | `situations/index.ts`, `territory.ts`, `finance.ts`, `modelo_v2.py` | Ninguno |
 | Decisión 2026-09-19 | Descuido del escritorio: N = Σ e^(−Δm/τ_N) sobre las situaciones vencidas (vida media 36 meses); D_Pc += 1,2·max(0, N − 3) (sin tope); las oportunidades (tono `good`) que vencen no cuentan. Ignorar la bandeja cae por colapso político en 2036–2044 (10 semillas; prototipo `do_nothing` 2036,9–2040,3) | `session.ts`, `indicators.ts`, `core.ts` (`wear.Pc`), `modelo_v2.py` | Ninguno (`wear.Pc` = 0) |
 | — | Recesión global: el −5 % de reservas se mantiene y se agrega al prototipo (`R%`) | `modelo_v2.py` | Ninguno (golden sin eventos, sin cambios) |
+
+## Modelo 2.0-dev — predicción 2.0 e índices de investigación (fase 48, 2026-10-27)
+
+Spec: `mejora-general/files/48_prediccion_e_indices.md`. El prototipo no implementa bandas, Brier ni arrepentimiento: todo se
+mide con el motor TS. Código: `src/components/tutorial/predictions.ts`, `predictionBands.json`, `scripts/prediction-bands.ts`,
+`src/sim/v2/research.ts`, `PARAMS_V2.research`. Verificado: `tests/tutorial/predictions.spec.ts`,
+`tests/harness/predictionBands.spec.ts`, `tests/sim/research.v2.spec.ts`, `tests/tutorial/predictionTelemetry.spec.ts`; C7 PASS.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| N-04b | "Sin cambio" si \|ΔX\| < banda del nivel = percentil 33 de \|ΔX\| anual de 600 jugadores sintéticos apartados (N1 B 0,187 / E 0,353 / c 0,051 t; N2 0,186 / 0,466 / 0,050; N3 0,184 / 0,655 / 0,040). Se borran `RANGE` (100/15/100) y `FLAT_THRESHOLD_FRACTION` (1 %) | `predictions.ts`, `predictionBands.json` | "Sin cambio" pasa de 46–93 % a 31–35 % de los años; la predicción deja de estar resuelta de antemano. Insignia de pronosticador: la misma regla de aciertos sobre la banda nueva |
+| — | Brier categórico (0/2 determinista; Σ(p − o)² para la climatología), SS = 1 − Brier_jugador/Brier_base contra persistencia (dirección del año anterior, `'flat'` el primer año del nivel) y climatología (proporciones del JSON) | `research.ts`, `predictions.ts` (`sessionPredictionSkill`) | Sólo telemetría y debriefing |
+| — | Arrepentimiento: max(S de la cartera y de sus vecinas a un cambio) − S_jugador, un año, misma semilla; brecha seguro-y-justo Σ faltantes/excesos normalizados (pisos F 40, E 35, W 55; techos B 45, c 0,8·c₀, bosque₀), promedio en el tiempo; resiliencia (meses hasta recuperar 90 % de una caída ≥ 0,5 de F o E en un paso con evento); B_t final; G y J finales; entropía normalizada del tiempo activo por política; desactivaciones | `research.ts`, `App.tsx`, `territorio/session.ts` | Ninguno sobre el modelo (contrafácticos al costado, ~15 ms por año) |

@@ -19,7 +19,8 @@ import { CONTROL_PARAMS, LEVEL_CONFIGS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURA
 import {
   changesTouchForest, createInitialState, createTerritory, declarePublicUse, developmentOf, developTerritory, baseEfficiency, fatigueFactor, evaluateGameOver,
   evenEffort, forestConnectivity, makeRng, MONTHS_PER_YEAR, pactEntryCost, payPublicInvestment, stepMonth, syncTerritory,
-  type LandFlow, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
+  createResearchTracker, oneYearRegret, researchIndices, trackRegret, trackStep,
+  type LandFlow, type ResearchIndices, type ResearchTracker, type LevelOutcome, type ParcelChange, type PublicUse, type PublicUseError, type Territory,
 } from '../sim';
 import type { ControlParams, GameState, Indicators, PolicyInstrument, PolicyState, RandomEvent } from '../types';
 import { Policy } from '../types';
@@ -105,6 +106,12 @@ export interface Session {
    * Optional so a session built before phase 40 still runs (K0 is then taken from its current map).
    */
   connectivity?: { K0: number; K: number; tick: number };
+  /**
+   * Research indices accumulators (phase 48, src/sim/v2/research.ts): safe-and-just gap, shocks, policy time and
+   * reversals every month, regret once per calendar year (only when `advanceMonth` is asked for it). Optional so a
+   * session built before phase 48 still runs (it starts counting at its next month).
+   */
+  research?: ResearchTracker;
 }
 
 /** Connectivity of the session's current map: the cached K when the map has not changed since, else recomputed. */
@@ -198,6 +205,7 @@ export function createSession(seed: number): Session {
     landTally: {},
     breach: {},
     connectivity: { K0, K: K0, tick: 0 },
+    research: createResearchTracker(),
   };
 }
 
@@ -239,9 +247,48 @@ function pushNews(news: NewsItem[], items: NewsItem[]): NewsItem[] {
   return [...items.reverse(), ...news].slice(0, MAX_NEWS);
 }
 
+export interface AdvanceMonthOptions {
+  /**
+   * Phase 48: at the start of each calendar year (January), compute the one-year regret of the policy portfolio (§3:
+   * 1 + up to 10 counterfactual years of 12 months, ~15 ms). The UI asks for it; the harness and tests do not.
+   */
+  regret?: boolean;
+}
+
+/**
+ * One-year regret of the session's policies (phase 48 §3): the next 12 months of the player's portfolio vs. every
+ * portfolio one policy away (max active and the month-based lock-in respected), with the same seed. Only the model:
+ * the desk (situations, wear) and the map (connectivity frozen at its current value) are left out, as the spec asks.
+ */
+export function yearRegret(s: Session, CP: ControlParams = CONTROL_PARAMS): number {
+  const conn = currentConnectivity(s);
+  const canDeactivate = (_: GameState, p: PolicyState): boolean => {
+    const since = s.policyActivatedAt[p.id];
+    return since === undefined || s.monthIndex >= since + POLICY_LOCK_IN_DURATION * MONTHS_PER_YEAR;
+  };
+  const step = (g: GameState, rng: () => number): GameState => {
+    let x = g;
+    let month = s.month;
+    for (let k = 0; k < MONTHS_PER_YEAR; k++) {
+      const r = stepMonth(x, month, rng, CP, 'es', { publicUseUpkeep: true, seasonality: true, connectivity: { K: conn.K, K0: conn.K0 } });
+      x = r.next;
+      month = r.month;
+    }
+    return x;
+  };
+  return oneYearRegret(s.game, s.seed + 104729, CP, { step, canDeactivate, minActive: 0 }).regret;
+}
+
+/** Research indices of the session so far (phase 48). Territorio has no prediction strip (spec §7): no skill. */
+export function sessionResearch(s: Session): ResearchIndices {
+  return researchIndices(s.research ?? createResearchTracker(), s.game);
+}
+
 /** Advances one month. Only the end of the game stops it: situations never pause the clock. */
-export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es'): Session {
+export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, language: Language = 'es', opts: AdvanceMonthOptions = {}): Session {
   if (s.outcome) return s;
+  let research = s.research ?? createResearchTracker();
+  if (opts.regret && s.month === 0) research = trackRegret(research, yearRegret(s, CP));
   // Connectivity of the map as the previous month left it (the engine does not know the map, phase 40 §3).
   const conn = currentConnectivity(s);
   const monthIndex = s.monthIndex + 1;
@@ -357,6 +404,8 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   items.push(...unlockNews(s, next, CP));
   items.push(...situationNews);
   next.news = pushNews(s.news, items);
+
+  next.research = trackStep(research, s.game, game, 1 / MONTHS_PER_YEAR, !!r.event);
 
   const sustained = sustainedBreach(s.breach, game);
   next.breach = sustained.breach;

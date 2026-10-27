@@ -83,7 +83,7 @@ function TerritorioGame() {
         acc += dt;
         if (acc >= SECONDS_PER_MONTH[sp]) {
           acc = 0;
-          setSession((prev) => advanceMonth(prev, CONTROL_PARAMS, locale));
+          setSession((prev) => advanceMonth(prev, CONTROL_PARAMS, locale, { regret: true }));
         }
       } else {
         acc = 0;
@@ -224,7 +224,7 @@ function TerritorioGame() {
         session={session}
         speed={speed}
         onSpeed={setSpeed}
-        onStep={() => setSession((prev) => advanceMonth(prev, CONTROL_PARAMS, locale))}
+        onStep={() => setSession((prev) => advanceMonth(prev, CONTROL_PARAMS, locale, { regret: true }))}
         onExit={() => { setSpeed(0); setScreen('title'); }}
       />
 

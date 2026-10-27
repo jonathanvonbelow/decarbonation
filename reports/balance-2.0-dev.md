@@ -1,6 +1,6 @@
 # Balance del modelo 2.0-dev (full)
 
-Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 330 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
+Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 662 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
 
 ## Criterios
 
@@ -12,7 +12,7 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 330 s.
 | `C4_shortcuts_closed` | FAIL | 1.000 | ≤ 5.0 % |
 | `C5_strategy_decides` | FAIL | 1.000 | ninguna tasa de victoria en (30.0 %, 70.0 %); valor = casos dentro |
 | `C6_indicator_range` | FAIL | 4.929 | ≥ 15 puntos en B, F, E, W |
-| `C7_prediction_band` | FAIL | 0.604 | "sin cambio" entre 30.0 % y 36.0 %; valor = máx |x − 33 %| |
+| `C7_prediction_band` | PASS | 0.023 | "sin cambio" entre 30.0 % y 36.0 %; valor = máx |x − 33 %| |
 | `C8_no_spurious_collapse` | PASS | 0.000 | ninguna quiebra salvo buy_everything (Territorio); valor = quiebras no permitidas |
 | `C9_annual_monthly` | PASS | 0.000 | |Δ| ≤ 1 en indicadores y ≤ 0.1 t en c (N2, sin eventos, años 10 y 30); valor = máx(|Δ|/umbral); solo modelo 2.x |
 
@@ -92,15 +92,15 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 330 s.
 
 <details><summary>C7_prediction_band</summary>
 
-- N1 B: 93.4 % ✗
-- N1 E: 68.8 % ✗
-- N1 c: 64.5 % ✗
-- N2 B: 93.3 % ✗
-- N2 E: 57.1 % ✗
-- N2 c: 61.9 % ✗
-- N3 B: 93.3 % ✗
-- N3 E: 46.4 % ✗
-- N3 c: 69.3 % ✗
+- N1 B: 33.5 %
+- N1 E: 35.2 %
+- N1 c: 32.4 %
+- N2 B: 34.0 %
+- N2 E: 32.4 %
+- N2 c: 31.9 %
+- N3 B: 33.7 %
+- N3 E: 33.3 %
+- N3 c: 30.7 %
 
 </details>
 
@@ -129,7 +129,7 @@ Anterior: modelo 1.1 (full), 2026-10-22; contra sus criterios completos.
 | `C4_shortcuts_closed` | FAIL | FAIL | 0.350 → 1.000 | worsened |
 | `C5_strategy_decides` | FAIL | FAIL | 5.000 → 1.000 | improved |
 | `C6_indicator_range` | FAIL | FAIL | 0.341 → 4.929 | improved |
-| `C7_prediction_band` | FAIL | FAIL | 0.670 → 0.604 | improved |
+| `C7_prediction_band` | FAIL | PASS | 0.670 → 0.023 | improved |
 | `C8_no_spurious_collapse` | PASS | PASS | 0.000 → 0.000 | same |
 | `C9_annual_monthly` | SKIP | PASS | 1.529 → 0.000 | improved |
 
@@ -207,9 +207,9 @@ Proporción de años en que `actualDirection` (src/components/tutorial/predictio
 
 | Nivel | años | B | E | c |
 |---|---|---|---|---|
-| N1 | 4500 | 93 % | 69 % | 65 % |
-| N2 | 4500 | 93 % | 57 % | 62 % |
-| N3 | 4436 | 93 % | 46 % | 69 % |
+| N1 | 4500 | 34 % | 35 % | 32 % |
+| N2 | 4500 | 34 % | 32 % | 32 % |
+| N3 | 4436 | 34 % | 33 % | 31 % |
 
 ## Consistencia anual–mensual (N2, sin eventos)
 

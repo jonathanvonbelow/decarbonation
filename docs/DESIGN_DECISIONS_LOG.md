@@ -3092,3 +3092,88 @@ cubierto por tests y build.
 que el contador; oportunidades fuera del contador (recalibrado 1,0/4 → 1,2/3); `protectedAreaCost` con estado;
 `toPointsDelta` compartido; `_CP` opcional; opciones inasequibles marcadas en la auditoría; test del retiro del desgaste
 no tautológico. No aplicada: `wearTotal` como empuje y no como movimiento realizado (es lo que pide la spec §3).
+
+## 2026-10-22 — v6 fase 48: predicción 2.0 e índices de investigación
+
+Spec: `mejora-general/files/48_prediccion_e_indices.md`. Cierra N-04b (predicción resuelta de antemano).
+
+**Qué.** (1) Bandas de "sin cambio" por terciles: `scripts/prediction-bands.ts` mide el percentil 33 de |ΔX| anual de B, E
+y c por nivel y escribe `src/components/tutorial/predictionBands.json` (`modelVersion`, `bands`, `climatology` =
+proporciones baja/igual/sube); `--check` sale 1 si el JSON no es del `MODEL_VERSION` actual o quedó viejo, y
+`tests/tutorial/predictions.spec.ts` falla si `modelVersion ≠ MODEL_VERSION`. `actualDirection(key, before, after, level)`
+usa la banda del nivel; `RANGE` y `FLAT_THRESHOLD_FRACTION` borrados; `evaluatePredictions(…, level, persistence)` guarda en
+cada resultado `level`, `band` y `persistencePred`. La tira no muestra la banda (no cambia la tarea); el debriefing sí, una
+línea por nivel jugado. B ya se mostraba con un decimal (`IndicatorCard`, `precision = 1`). (2) `src/sim/v2/research.ts`:
+Brier categórico (0/2 determinista, Σ(p − o)² de la climatología), `skillScore`, `predictionSkill`, `oneYearRegret`
+(cartera del jugador vs. vecinas a un cambio, máximo 5 y permanencia respetados, sin dejar el juego de 3 niveles sin
+políticas, `makeRng(seed, year + 1)` común: ≤ 11 pasos anuales, ~15 ms), `safeJustGap`, `ResearchTracker`
+(`trackStep` / `trackRegret`: brecha integrada en el tiempo, tiempo activo por política, desactivaciones, episodios de
+choque), `policyEntropy`, `researchIndices` (objeto plano de 13 claves para `research_indices`). Parámetros en
+`PARAMS_V2.research` (pisos/techos 🟧 de la spec, `shockMinDrop` 0,5, `recovery` 0,9). (3) Telemetría:
+`sendWithOptionalColumns` generaliza el patrón de `model_version` (fase 32) a cualquier columna de una migración (reenvía sin
+la columna faltante, una advertencia por tabla y columna); `logPrediction` agrega `band` y `persistence_pred`;
+`finalizeGameSession` manda `research_indices` en un UPDATE aparte (un rechazo nunca deja la sesión sin cerrar), saneado con
+`sanitizeIndices` (compartido con el cuestionario); el resumen de Territorio (`buildSummary` → `toRowFields`) agrega
+`research_indices`. `supabase/research_indices_migration.sql` (idempotente, CHECKs con nombre, NO aplicada) y
+`analytics_queries.sql` con precisión, SS_pers y SS_clim por `model_version`, nivel e indicador, y los índices por sesión.
+(4) UI: `ResearchIndicesTable` (es/en, `debriefing.research.*`) en `DebriefingModal` (más la frase de habilidad: "repetir lo
+del año anterior habría acertado X %") y en la pantalla final de Territorio. Territorio no tiene predicción (§7, 🟧 no
+incluida): su arrepentimiento se calcula cada enero (`advanceMonth(…, { regret: true })`, sólo desde la UI; 12 meses con la
+conectividad congelada, sin bandeja ni desgaste, como pide la spec).
+
+**Desvíos.** (a) El prototipo no implementa bandas, Brier ni arrepentimiento: todo se mide con el motor TS. (b) Bandas
+fuera de muestra: se miden sobre 600 jugadores apartados (semillas 20000…, `BAND_PLAYER_SEED_BASE`) y C7 se evalúa sobre
+los 150 de `sim:check` (10000…). Con la misma muestra C7 pasaba por construcción (0,004; señalado en la revisión). Fuera de
+muestra la proporción "sin cambio" queda en 31–35 % con 150 jugadores (peor: N1 E 35,2 %, N3 c 30,7 %); con los 50 de
+`--quick` el ruido de muestreo llega a ±4 (N1 E 37,1 %), así que `--quick` puede marcar C7 FAIL (no es regresión: el criterio
+no pasaba en `balance-latest.json`); `tests/harness/predictionBands.spec.ts` usa 150. Valores (N1/N2/N3): B 0,187 / 0,186 /
+0,184; E 0,353 / 0,466 / 0,655; c 0,051 / 0,050 / 0,040 t (spec, prototipo: 0,160 / 0,275 / 0,039 en N1). Proporciones
+N1 (sube/igual/baja): B 34/33/33, E 42/33/24, c 15/33/51, como las de la spec. (c) Persistencia el primer año de cada nivel
+(o si el año anterior no terminó donde empieza la ronda) = `'flat'`. (d) Choque para la resiliencia = paso con evento en el
+que F o E cae ≥ 0,5 puntos (el motor no expone los blancos de cada evento); episodios abiertos al final del nivel o de la
+partida cuentan con el tiempo transcurrido (censura por derecha). (e) El juego de 3 niveles usa `Math.random`: el
+arrepentimiento usa una semilla de sesión propia (números aleatorios comunes); el S del jugador también es contrafáctico.
+(f) SS con base perfecta y jugador imperfecto = −∞ en la función pura; se guarda acotado a `SKILL_FLOOR` = −10 (null
+significaría "sin predicciones"). (g) Brecha seguro-y-justo = suma (no promedio) de los seis términos normalizados,
+promediada en el tiempo. (h) La migración pone los CHECK aparte con nombre (con `ADD COLUMN IF NOT EXISTS … CHECK` no se
+crearían si la columna existía) y agrega `band ≥ 0`. (i) `tsconfig.json`: `resolveJsonModule`.
+
+**Hallazgo.** En la prueba e2e (N1, sólo Agroecológicas, 30 años) la regla de persistencia acertó 87 % y el jugador
+sintético que siempre dice "baja/igual/sube" fijo 32 %: con una cartera estable las tendencias son muy persistentes, así que
+SS_pers es una vara exigente (bien para el artículo: medir contra persistencia y no contra el azar).
+
+**C6 W N1 (nota para la 49, sin cambiar el criterio).** W de N1 se mueve 4,9 (medianas por estrategia, con eventos); el
+prototipo da el mismo recorrido estrecho (93,7–97,8 sin eventos: C₀ = 5 ⇒ W₀ = 95 en la zona saturada de la logística). El
+Nivel 1 no muestra W en el tablero (desde el Nivel 2) ni lo usa en sus rutas: propuesta para la 49, excluir W de N1 de C6
+(o medir C6 sólo sobre indicadores visibles en el nivel) en lugar de forzar el modelo.
+
+**Deudas.** Predicción en Territorio (§7) no incluida. El arrepentimiento de Territorio ignora bandeja y mapa. El índice de
+resiliencia depende de `shockMinDrop` (criterio experto). C7 queda a ~0,8 pp del borde (N3 c 30,7 %): si la 49 cambia la
+dinámica, regenerar el JSON (`npx tsx scripts/prediction-bands.ts`) y la tabla `clim` de `analytics_queries.sql` (test).
+
+**Revisión de código** (aplicada): índices que no se reiniciaban al "Jugar de nuevo" (ahora `resetResearch`, y la habilidad
+cuenta sólo las predicciones de la partida); el cambio o reinicio de nivel ya no cuenta como desactivaciones y cierra los
+choques abiertos; vecinas sin la última política; −∞ → piso; `research_indices` en UPDATE aparte y saneado; banda del
+debriefing por nivel; `precision_persistencia` ignora filas sin `persistence_pred`; C7 fuera de muestra; índices memorizados
+al abrir el debriefing / la pantalla final.
+
+**`npm run sim:check`** contra la 47 (el juego no cambia: sólo C7):
+
+| Criterio | 47 (quick) | 48 (quick) | 47 (completo) | 48 (completo) |
+|---|---|---|---|---|
+| C1 | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C2 | PASS 0,800 | PASS 0,800 | FAIL 0,450 | FAIL 0,450 |
+| C3 | PASS 0 | PASS 0 | PASS 0,125 | PASS 0,125 |
+| C4 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 |
+| C5 | PASS 0 | PASS 0 | FAIL 1 | FAIL 1 |
+| C6 | FAIL 4,458 | FAIL 4,458 | FAIL 4,929 | FAIL 4,929 (W N1, F N3 14,6) |
+| C7 | FAIL 0,597 | FAIL 0,041 (50 jugadores: N1 E 37 %) | FAIL 0,604 | **PASS 0,023** (fuera de muestra; 30,7–35,2 %) |
+| C8 | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+
+**Verificación.** `npx tsc --noEmit`, `npm test` (43 archivos, 709 tests), `npm run build`, `npm run i18n:audit` limpios.
+E2E con Chrome (dev server :3148, `GEMINI_API_KEY` de relleno): `/play?demo=1` N1: activar Agroecológicas, predecir,
+avanzar año (✓/✗ en la tira), 30 años, nivel no superado, abandonar → informe de cierre con "Acertaste 27 de 84 (32 %)",
+"repetir lo del año anterior habría acertado 87 %; habilidad −4,18 / −1,05", banda del Nivel 1 y la tabla de índices.
+`/territorio`: 157 meses con "+1" sin atender la bandeja → colapso político 2037 y pantalla final con la tabla (regret 7,0,
+brecha 0,39, presupuesto 1,11, resiliencia 59 meses, G 0,55, J 1,00); el resumen del cuestionario lleva 13 índices.

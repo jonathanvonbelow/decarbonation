@@ -1,6 +1,6 @@
 import { createClient, Session } from '@supabase/supabase-js';
 import { MODEL_VERSION_BY_GAME } from '../sim/version';
-import { sendWithModelVersion } from './modelVersionColumn';
+import { sanitizeIndices, sendWithModelVersion, sendWithOptionalColumns } from './modelVersionColumn';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -92,7 +92,8 @@ export async function finalizeGameSession(
   sessionId: string,
   resultado: 'victoria' | 'derrota' | 'abandono',
   nivelAlcanzado: number,
-  anioFin: number
+  anioFin: number,
+  researchIndices?: object | null,
 ): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase
@@ -100,6 +101,17 @@ export async function finalizeGameSession(
     .update({ resultado, nivel_alcanzado: nivelAlcanzado, anio_fin: anioFin, ended_at: new Date().toISOString() })
     .eq('id', sessionId);
   if (error) console.error('finalizeGameSession:', error);
+  // v6 / phase 48: the session's research indices (src/sim/v2/research.ts) in `research_indices` (JSONB), in a separate
+  // update so that a rejected payload never leaves the session unfinalised. Sanitised to what the SQL CHECK accepts; a
+  // project without supabase/research_indices_migration.sql gets nothing sent (the column is dropped, warned once).
+  const indices = sanitizeIndices(researchIndices);
+  if (!indices) return;
+  const client = supabase;
+  const res = await sendWithOptionalColumns(
+    'game_sessions', {}, { research_indices: indices },
+    (row) => (Object.keys(row).length ? client.from('game_sessions').update(row).eq('id', sessionId) : Promise.resolve({ error: null })),
+  );
+  if (res.error) console.error('finalizeGameSession (research_indices):', res.error);
 }
 
 // `annual_snapshots` is trimmed to one row per session holding only the FINAL
