@@ -147,7 +147,7 @@ function TerritorioGame() {
 
   const onParcel = useCallback((x: number, y: number) => {
     if (tool) {
-      run((s) => declareUse(s, x, y, tool), (r) => fill(c.news.declared, { use: c.uses[tool].name, cost: fmt.big(Number(r.detail?.cost ?? 0)) }));
+      run((s) => declareUse(s, x, y, tool), (r) => fill(c.news.declared, { use: c.uses[tool].name, km2: Number(r.detail?.km2 ?? 0), cost: fmt.big(Number(r.detail?.cost ?? 0)) }));
       return;
     }
     setSelected((cur) => (cur && cur.x === x && cur.y === y ? null : { x, y }));
@@ -248,7 +248,7 @@ function TerritorioGame() {
       {tool && (
         <div className="pointer-events-none absolute left-1/2 top-[7.5rem] z-30 -translate-x-1/2 md:top-[5.5rem]">
           <div className="pointer-events-auto panel flex items-center gap-3 px-3 py-2 text-[13px]">
-            <span>{fill(c.tools.declareHint, { use: c.uses[tool].name, where: c.uses[tool].where, cost: fmt.big(publicUseCost(tool, CONTROL_PARAMS)) })}</span>
+            <span>{fill(c.tools.declareHint, { use: c.uses[tool].name, where: c.uses[tool].where, cost: fmt.big(publicUseCost(tool, CONTROL_PARAMS, undefined, session.game)) })}</span>
             <button type="button" className="text-ash hover:text-bone" onClick={() => setTool(null)}>{c.tools.cancel}</button>
           </div>
         </div>
@@ -260,7 +260,7 @@ function TerritorioGame() {
             session={session}
             at={selected}
             onClose={() => setSelected(null)}
-            onDeclare={(use) => run((s) => declareUse(s, selected.x, selected.y, use), (r) => fill(c.news.declared, { use: c.uses[use].name, cost: fmt.big(Number(r.detail?.cost ?? 0)) }))}
+            onDeclare={(use) => run((s) => declareUse(s, selected.x, selected.y, use), (r) => fill(c.news.declared, { use: c.uses[use].name, km2: Number(r.detail?.km2 ?? 0), cost: fmt.big(Number(r.detail?.cost ?? 0)) }))}
           />
         </div>
       )}

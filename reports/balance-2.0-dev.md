@@ -1,13 +1,13 @@
 # Balance del modelo 2.0-dev (full)
 
-Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 400 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
+Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 330 s. Modelo por juego: niveles 2.0-dev, Territorio 2.0-dev. Semillas: 40 por estrategia y nivel (3 niveles), 20 por estrategia (Territorio); 150 jugadores sintéticos por nivel. Criterios: 00_INDICE_v6.md §6; estrategias: scripts/harness/strategies.ts.
 
 ## Criterios
 
 | Criterio | Estado | Valor | Umbral |
 |---|---|---|---|
 | `C1_do_nothing_never_wins` | PASS | 0.000 | = 0 % en cada nivel y en Territorio |
-| `C2_targeted_wins` | FAIL | 0.400 | ≥ 70.0 % |
+| `C2_targeted_wins` | FAIL | 0.450 | ≥ 70.0 % |
 | `C3_no_strategy_wins_all` | PASS | 0.125 | ≤ 50.0 % por estrategia |
 | `C4_shortcuts_closed` | FAIL | 1.000 | ≤ 5.0 % |
 | `C5_strategy_decides` | FAIL | 1.000 | ninguna tasa de victoria en (30.0 %, 70.0 %); valor = casos dentro |
@@ -37,7 +37,7 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 400 s.
 - N3 production→production: 95.0 %
 - N3 innovation→innovation: 100.0 %
 - Territorio conservation→conservation: 100.0 %
-- Territorio production→production: 40.0 % ✗
+- Territorio production→production: 45.0 % ✗
 - Territorio innovation→innovation: 100.0 %
 
 </details>
@@ -65,7 +65,7 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 400 s.
 
 <details><summary>C5_strategy_decides</summary>
 
-- Territorio production: 40.0 % ✗
+- Territorio production: 45.0 % ✗
 
 </details>
 
@@ -83,10 +83,10 @@ Generado por `npm run sim:check` (scripts/sim-check.ts) el 2026-10-27, en 400 s.
 - N3 F: 14.6 (balanced → extractive) ✗
 - N3 E: 20.7 (tech_tax → extractive)
 - N3 W: 26.8 (extractive → innovation)
-- Territorio B: 30.4 (extractive → conservation)
-- Territorio F: 25.4 (buy_everything → extractive)
-- Territorio E: 31.3 (buy_everything → production)
-- Territorio W: 34.4 (buy_everything → innovation)
+- Territorio B: 30.7 (extractive → conservation)
+- Territorio F: 25.7 (buy_everything → extractive)
+- Territorio E: 32.5 (buy_everything → production)
+- Territorio W: 40.5 (buy_everything → innovation)
 
 </details>
 
@@ -124,7 +124,7 @@ Anterior: modelo 1.1 (full), 2026-10-22; contra sus criterios completos.
 | Criterio | Antes | Ahora | Valor antes → ahora | Cambio |
 |---|---|---|---|---|
 | `C1_do_nothing_never_wins` | FAIL | PASS | 0.075 → 0.000 | improved |
-| `C2_targeted_wins` | FAIL | FAIL | 0.000 → 0.400 | improved |
+| `C2_targeted_wins` | FAIL | FAIL | 0.000 → 0.450 | improved |
 | `C3_no_strategy_wins_all` | PASS | PASS | 0.225 → 0.125 | improved |
 | `C4_shortcuts_closed` | FAIL | FAIL | 0.350 → 1.000 | worsened |
 | `C5_strategy_decides` | FAIL | FAIL | 5.000 → 1.000 | improved |
@@ -190,16 +190,16 @@ Tasa de victoria con intervalo de Wilson al 95 %; rutas = % de semillas que cump
 
 | Estrategia | Victoria | cons / prod / inno | todas | B | F | E | W | St | c | D/Y | Puntaje | Fin (p50) | Derrotas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| do_nothing | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 37.2 (33.6–38.9) | 37.3 (32.3–41.6) | 29.9 (28.5–31.9) | 50.1 (36.0–53.0) | 52.8 (39.0–62.2) | 6.77 (6.66–6.88) | 0.00 (0.00–0.00) | 519 | 2054.0 | — |
-| conservation | 100 % [84 %–100 %] | 100 % / 0 % / 0 % | 0 % | 62.5 (61.7–64.0) | 30.5 (28.5–33.8) | 27.6 (24.9–29.2) | 68.2 (65.0–73.4) | 76.0 (71.0–80.5) | 5.62 (5.16–5.90) | 0.41 (0.29–0.59) | 639 | 2054.0 | — |
-| production | 40 % [22 %–61 %] | 0 % / 40 % / 0 % | 0 % | 38.9 (34.8–40.7) | 43.9 (39.7–48.4) | 48.4 (47.6–50.9) | 73.4 (69.7–80.8) | 87.9 (85.5–92.5) | 7.25 (6.34–7.52) | 0.24 (0.14–0.31) | 619 | 2054.0 | — |
-| innovation | 100 % [84 %–100 %] | 0 % / 0 % / 100 % | 0 % | 46.2 (43.8–47.5) | 34.4 (28.8–37.2) | 31.6 (29.4–33.1) | 77.2 (72.6–82.5) | 86.6 (82.3–88.4) | 3.96 (3.83–4.09) | 0.50 (0.35–0.59) | 672 | 2054.0 | — |
-| settle_only | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 42.1 (40.1–44.3) | 36.2 (29.8–40.6) | 30.9 (29.6–32.1) | 67.7 (60.0–74.2) | 76.6 (72.0–83.1) | 6.48 (5.75–6.78) | 0.00 (0.00–0.03) | 591 | 2054.0 | — |
-| cheap_production | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 41.7 (39.8–44.3) | 31.9 (26.8–37.8) | 34.9 (33.2–37.5) | 67.4 (57.9–72.1) | 79.2 (73.3–84.2) | 6.78 (5.97–7.06) | 0.00 (0.00–0.01) | 585 | 2054.0 | — |
-| extractive | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 32.1 (28.7–33.5) | 44.5 (39.1–47.0) | 46.4 (43.3–49.7) | 53.7 (45.7–64.3) | 54.6 (46.9–69.6) | 7.47 (6.71–7.89) | 0.56 (0.53–0.62) | 514 | 2054.0 | — |
-| buy_everything | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 52.7 (49.6–55.6) | 19.1 (18.3–19.9) | 17.1 (12.2–18.7) | 42.8 (32.1–50.0) | 43.7 (23.8–55.5) | 3.21 (3.02–3.49) | 0.72 (0.66–0.94) | 564 | 2034.3 | sustained 19, bankruptcy 1 |
+| do_nothing | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 38.6 (36.4–39.8) | 36.7 (33.8–40.3) | 29.6 (27.8–30.4) | 41.7 (37.6–49.7) | 4.9 (4.9–5.0) | 6.86 (6.75–6.98) | 0.00 (0.00–0.00) | 454 | 2038.8 | political 20 |
+| conservation | 100 % [84 %–100 %] | 100 % / 0 % / 0 % | 0 % | 62.0 (61.7–63.0) | 31.7 (30.0–34.9) | 28.0 (26.0–29.6) | 73.6 (71.0–78.5) | 80.5 (77.1–83.9) | 5.63 (5.06–5.92) | 0.41 (0.29–0.58) | 645 | 2054.0 | — |
+| production | 45 % [26 %–66 %] | 0 % / 45 % / 0 % | 0 % | 38.3 (33.6–40.1) | 44.5 (40.5–50.4) | 48.9 (47.3–51.5) | 79.3 (75.9–84.8) | 90.2 (89.0–93.8) | 7.17 (6.52–7.70) | 0.22 (0.13–0.30) | 623 | 2054.0 | — |
+| innovation | 100 % [84 %–100 %] | 0 % / 0 % / 100 % | 0 % | 45.5 (43.7–46.7) | 35.9 (31.2–38.8) | 31.5 (30.1–33.8) | 81.4 (76.6–85.3) | 89.4 (86.3–91.6) | 3.95 (3.80–4.09) | 0.49 (0.35–0.58) | 679 | 2054.0 | — |
+| settle_only | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 40.9 (39.7–42.6) | 37.3 (31.3–42.8) | 30.8 (29.5–32.4) | 72.9 (67.7–76.8) | 81.3 (75.3–86.6) | 6.43 (5.75–6.84) | 0.00 (0.00–0.03) | 604 | 2054.0 | — |
+| cheap_production | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 40.6 (39.4–41.9) | 32.5 (28.2–37.9) | 35.3 (34.1–36.6) | 71.5 (68.4–75.8) | 83.6 (79.0–86.5) | 6.72 (5.88–7.02) | 0.00 (0.00–0.02) | 602 | 2054.0 | — |
+| extractive | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 31.4 (27.8–32.9) | 44.8 (37.8–51.1) | 47.7 (45.0–50.4) | 59.7 (52.7–71.2) | 65.9 (56.8–78.2) | 7.66 (6.53–7.89) | 0.53 (0.45–0.60) | 537 | 2054.0 | — |
+| buy_everything | 0 % [0 %–16 %] | 0 % / 0 % / 0 % | 0 % | 53.7 (51.0–55.5) | 19.1 (18.4–19.7) | 16.3 (11.9–18.1) | 41.0 (27.9–48.8) | 35.7 (21.6–53.8) | 3.14 (2.97–3.41) | 0.74 (0.68–0.90) | 553 | 2036.3 | sustained 19, bankruptcy 1 |
 
-Recorrido entre estrategias (máx − mín de las medianas): B 30.4, F 25.4, E 31.3, W 34.4.
+Recorrido entre estrategias (máx − mín de las medianas): B 30.7, F 25.7, E 32.5, W 40.5.
 
 ## Banda de predicción (jugadores sintéticos)
 

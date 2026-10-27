@@ -501,7 +501,7 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
     .filter((use) => canDeclare(session.territory, at.x, at.y, use))
     .map((use) => {
       const cells = lotFor(session.territory, at.x, at.y, use).length;
-      return { use, km2: Math.round(cells * session.territory.kHaPerParcel * 10), cost: publicUseCost(use, CONTROL_PARAMS, cells * session.territory.kHaPerParcel) };
+      return { use, km2: Math.round(cells * session.territory.kHaPerParcel * 10), cost: publicUseCost(use, CONTROL_PARAMS, cells * session.territory.kHaPerParcel, session.game) };
     });
   return (
     <div className="pointer-events-auto panel w-full p-3 md:w-72" role="dialog" aria-label={c.kinds[kind as keyof Copy['kinds']]}>

@@ -29,7 +29,8 @@ import { evaluateTerritorio } from './routes';
 import { mapFx, type FxId } from './fx';
 import { buildMonthNews, tallyLand, unlockNews, type NewsItem } from './news';
 import {
-  wearShift, wearTally, defaultOption, resolveSituation, rollSituation, situationCost, SITUATION_BY_ID, type OpenSituation,
+  neglectShift, pruneNeglect, wearShift, wearTally, defaultOption, pruneImpulses, resolveSituation, rollSituation, situationCost, SITUATION_BY_ID,
+  type OpenSituation,
 } from './situations';
 
 export * from './calendar';
@@ -72,11 +73,16 @@ export interface Session {
    * (21_fusion_ecosim.md §7, decisión 1 del equipo).
    */
   open: OpenSituation[];
-  /** Pressure points the inbox has cost so far, for the closing screen. */
+  /** Points of conflict and pressure the inbox has cost so far (target shift × slope of the logistic), for the closing screen. */
   wearTotal: number;
   /** Situations the player actually decided, and ones that expired unattended. */
   resolvedCount: number;
   expiredCount: number;
+  /**
+   * Month index of each recent expiry (phase 47): the neglect tally that shifts the target of political collapse
+   * (`neglectShift`). Optional so a session saved before phase 47 still runs.
+   */
+  expiredAt?: number[];
   /** The model's own random event that fired this month, if any. Shown as a note, never as a modal. */
   lastEvent: RandomEvent | null;
   outcome: Outcome | null;
@@ -182,6 +188,7 @@ export function createSession(seed: number): Session {
     wearTotal: 0,
     resolvedCount: 0,
     expiredCount: 0,
+    expiredAt: [],
     lastEvent: null,
     outcome: null,
     declaredCount: 0,
@@ -244,7 +251,8 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     connectivity: { K: conn.K, K0: conn.K0 },
     // Everything still on the desk wears the government down this month: a shift of the targets of conflict and of
     // the pressures while it stays open (phase 42, the prototype's `wear`).
-    wear: wearShift(s.open, monthIndex),
+    // Situations that expired unanswered shift the target of political collapse (phase 47, `neglectShift`).
+    wear: { ...wearShift(s.open, monthIndex), Pc: neglectShift(s.expiredAt ?? [], monthIndex) },
   });
   const synced = syncTerritory(s.territory, r.next.landUses, r.flows);
   const situationFlows: LandFlow[] = [];
@@ -254,12 +262,14 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
   const stamp = { monthIndex, year: s.game.year, month: s.month };
 
   // 1. Tally of the wear the desk caused this month (the wear itself entered the step above as a target shift).
-  const wear = wearTally(s.open, monthIndex);
+  const wear = wearTally(s.open, monthIndex, r.next);
   const wornTotal = Object.values(wear).reduce((sum, n) => sum + n, 0);
   let open = s.open.map((item) => ({ ...item, worn: item.worn + (wear[item.id] ?? 0) }));
 
   // 2. Anything past its deadline resolves itself the way nobody chose.
   let expiredCount = s.expiredCount;
+  // Not deciding has its own political cost (decisión del usuario 2026-09-19; phase 47): the neglect tally.
+  const expiredAt = pruneNeglect(s.expiredAt ?? [], monthIndex);
   const stillOpen: OpenSituation[] = [];
   open.forEach((item) => {
     if (monthIndex < item.expiresAt) {
@@ -274,6 +284,8 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
         game = applied.state;
         situationFlows.push(...applied.flows);
       }
+      // Letting an opportunity (tone 'good') lapse is its own cost, not neglect of the government's duties.
+      if (def.tone !== 'good') expiredAt.push(monthIndex);
       situationNews.push({
         ...stamp, id: `${item.id}-expired`, kind: 'situation', tone: 'bad',
         key: 'situation.expired', values: { situation: item.defId, option: fallback.id },
@@ -282,6 +294,11 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     }
   });
   open = stillOpen;
+  // Impulses older than 6τ are dropped (bounded memory; prototype `play_territorio`).
+  if (game.model) {
+    const pruned = pruneImpulses(game.model);
+    if (pruned !== game.model) game = { ...game, model: pruned };
+  }
 
   // 3. A new one may arrive.
   const arrival = rollSituation(game, open.map((o) => o.defId), monthIndex, makeRng(s.seed + 7919, monthIndex), undefined);
@@ -317,6 +334,7 @@ export function advanceMonth(s: Session, CP: ControlParams = CONTROL_PARAMS, lan
     open,
     wearTotal: s.wearTotal + wornTotal,
     expiredCount,
+    expiredAt,
     lastEvent: r.event,
   };
 

@@ -96,9 +96,10 @@ export interface AdvanceOptions {
   connectivity?: Connectivity;
   /**
    * Wear of the Territorio situations still open (phase 42): logit shifts of the targets of conflict (C) and of the
-   * three pressures (a / e / s) this step. Absent (the 3-level game), every shift is 0.
+   * three pressures (a / e / s) this step; Pc: the neglect of the desk, situations that expired unanswered (phase 47).
+   * Absent (the 3-level game), every shift is 0.
    */
-  wear?: { C?: number; a?: number; e?: number; s?: number };
+  wear?: { C?: number; a?: number; e?: number; s?: number; Pc?: number };
   /** Seasonal weights w_m of the drought hazard (phase 46 §4). Territorio only. */
   seasonality?: boolean;
   /** Holds the yield shock ε at 0 (phase 46 §3; the golden test). Without an rng there are no shocks either. */
@@ -369,7 +370,7 @@ export function stepInPlace(next: GameState, dt: number, rng: Rng | null, CP: Co
   //    relaxing exactly toward its anchored target (phases 39–42, 45).
   updateBiodiversity(next as GameState & { model: typeof model }, eff, CP, dt, opts.connectivity);
   updateFoodSecurity(next as GameState & { model: typeof model }, eff, CP, dt);
-  updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt, opts.wear?.C ?? 0);
+  updateRelaxedIndicators(next as GameState & { model: typeof model }, eff, CP, dt, opts.wear?.C ?? 0, opts.wear?.Pc ?? 0);
   updatePressures(next as GameState & { model: typeof model }, eff, CP, dt, opts.wear);
 
   // 9. Sync derived indicators from Stella stocks, then clamp every 0-100 indicator (final step, not per term —

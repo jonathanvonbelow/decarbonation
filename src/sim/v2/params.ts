@@ -375,6 +375,36 @@ export const PARAMS_V2 = {
     stressMid: 0.20, stressWidth: 0.04,
     growthPIE: 0.01, growthPEA: 0.005, growthTaxDrag: 0.0002, growthStress: 0.01,
     carbonTaxRevenue: 0.005,
+    /**
+     * 47 — price/income scale of public investments with the economy: min(cap, max(1, √(Y/Y0))) multiplies the
+     * catalogue prices of situations and public-use lots and the positive treasury incomes of situations (prototype
+     * `cost_scale`; the cap 2.5 is the one `situationCost` had since v4/F8). Dimensionless. Criterio experto.
+     */
+    investmentScaleCap: 2.5,
+  },
+
+  /**
+   * 47 — Territorio situations as decaying target impulses (mejora-general/files/47 §2; prototype `add_situation_effect`,
+   * `IMPULSE_TAU`). An option's effect on a bounded indicator X becomes Δℓ = Δpoints / (100·p·(1 − p)), p = X/100 clamped
+   * to [0.01, 0.99], that fades as e^(−Δt/τ), τ = halfLifeMonths/12/ln 2 years (🟧 18 months; a situation may declare its
+   * own `halfLifeMonths`). An impulse older than `discardTaus`·τ is dropped (prototype: 6τ, e^−6 ≈ 0.25 % left). The
+   * sum per indicator is capped at ±relaxation.impulseCap. Criterio experto.
+   */
+  situations: {
+    halfLifeMonths: 18,
+    discardTaus: 6,
+    /**
+     * 47 — an inbox nobody answers (decisión del usuario 2026-09-19: a neglected desk must be able to topple the
+     * government). Each situation that expires unanswered counts 1 in a neglect tally N that fades with half-life
+     * `neglectHalfLifeMonths`; the target of political collapse shifts by neglectLogit·max(0, N − neglectTolerance)
+     * logit units (uncapped, like the wear: it is not an option's effect). A government that lets a few matters lapse
+     * (N ≤ tolerance) pays nothing beyond their default options, and lapsed opportunities (tone good) do not count; one
+     * that ignores the desk (≈ 2–2.5 expiries a year)
+     * is toppled. Criterio experto, calibrated with the harness (tests/territorio/session.spec "neglected desk").
+     */
+    neglectLogit: 1.2,
+    neglectTolerance: 3,
+    neglectHalfLifeMonths: 36,
   },
 
   /**

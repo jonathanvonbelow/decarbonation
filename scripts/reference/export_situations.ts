@@ -38,7 +38,7 @@ function whenExpr(fn: unknown): string | null {
 }
 
 const out = SITUATIONS.map((d) => ({
-  id: d.id, category: d.category, deadline: d.deadline, weight: d.weight, wear: d.wear, hasWhen: !!d.when,
+  id: d.id, category: d.category, tone: d.tone, deadline: d.deadline, weight: d.weight, wear: d.wear, halfLifeMonths: d.halfLifeMonths ?? null, hasWhen: !!d.when,
   whenExpr: whenExpr(d.when),
   options: d.options.map((o) => ({ id: o.id, cost: o.cost ?? 0, effects: o.effects.map((e: any) => ({
     indicator: e.indicator ?? null, pct: e.changePercentage ?? null, abs: e.changeAbsolute ?? null,

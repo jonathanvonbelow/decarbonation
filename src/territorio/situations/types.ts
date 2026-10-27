@@ -19,7 +19,10 @@ export type SituationCategory =
 
 export type SituationTone = 'good' | 'bad' | 'neutral';
 
-/** Pressure and conflict a situation adds every month it stays unresolved. */
+/**
+ * Pressure and conflict a situation causes every month it stays unresolved, in catalogue points: since phase 42 each
+ * point shifts the target of that indicator by PARAMS_V2.relaxation.wearLogit logit units (× age factor 1–2).
+ */
 export interface SituationWear {
   conflict?: number;
   ppAgricola?: number;
@@ -31,7 +34,7 @@ export interface SituationOption {
   id: string;
   es: string;
   en: string;
-  /** Paid from Reservas_del_Tesoro when chosen. */
+  /** Catalogue price, paid as a public investment when chosen (× √(Y/Y0), capped at 2.5: `situationCost`). */
   cost?: number;
   effects: RandomEventEffect[];
 }
@@ -46,6 +49,12 @@ export interface SituationDef {
   /** Relative frequency among the situations whose `when` holds. */
   weight: number;
   wear: SituationWear;
+  /**
+   * Half-life in months of the impulses its options leave on the indicators' targets (phase 47). Without it, the
+   * default 18 months (PARAMS_V2.situations.halfLifeMonths); set only for structural effects (works, laws), at most 10
+   * situations, each documented where it is declared.
+   */
+  halfLifeMonths?: number;
   /** Extra condition on the state; without it the situation can always appear. */
   when?: (s: GameState) => boolean;
   es: { title: string; body: string };
@@ -61,7 +70,7 @@ export interface OpenSituation {
   /** Month index when it arrived, and the month it expires. */
   openedAt: number;
   expiresAt: number;
-  /** Wear already accumulated, in pressure points, for the debriefing. */
+  /** Wear already accumulated, in points of the indicators it pushed (phase 47), for the debriefing. */
   worn: number;
 }
 

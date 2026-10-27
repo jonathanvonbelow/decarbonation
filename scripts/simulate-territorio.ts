@@ -87,7 +87,7 @@ function play(strategy: Strategy, seed: number): Session {
     // Public uses, one at a time, whenever there is money for it.
     if (pendingUses.length > 0) {
       const use = pendingUses[0];
-      if (s.game.stellaSpecificState.Reservas_del_Tesoro > publicUseCost(use, CONTROL_PARAMS) * 2) {
+      if (s.game.stellaSpecificState.Reservas_del_Tesoro > publicUseCost(use, CONTROL_PARAMS, undefined, s.game) * 2) {
         const parcel = firstDeclarable(s, use);
         if (parcel) {
           const r = declareUse(s, parcel.x, parcel.y, use);

@@ -308,3 +308,18 @@ Verificado: golden activo (`tests/sim/golden.v2.spec.ts`, 27 filas, B/F/E/W/St/c
 | — | Efectos como saltos de nivel: F/E/B sobre el indicador; W/St/presiones/dinero sobre su stock; CO₂ y puntaje se omiten (se recalculan). Se borra `src/sim/deferred.ts` (y `pendingDeferred`/`extraDeferred` de Territorio) | `events.ts`, `situations/index.ts`, `territorio/session.ts` | Un choque se disipa con la relajación, como en el prototipo |
 | — | Choque de rendimiento ε AR(1): ε ← 0,5^dt·ε + 0,04·(1 − 0,5·η_AGUA^prod)·√dt·z, z por Box–Muller del rng; entra en la producción de alimentos (41) | `events.ts`, `core.ts`, `food.ts` | F fluctúa año a año (σ ≈ 4 % de la producción); el agua lo amortigua |
 | C9 | Paso anual = 12 sub-pasos mensuales (`advanceYear`); calendario único (12·dt meses); `monthlyTriggerChance`, `rollEvent`, `rollMonthlyEvent` y las ramas `dt` de core borradas; estacionalidad de la sequía solo en Territorio | `core.ts`, `index.ts`, `monthly.ts`, `modelo_v2.py` | Golden regenerado (hasta 3 puntos al año 1 en `extractive`, ≤ 0,5 al año 30); C9 = 0 |
+
+## Modelo 2.0-dev — Territorio: situaciones como impulsos y usos públicos 2.0 (fase 47, 2026-10-27)
+
+Spec: `mejora-general/files/47_territorio_situaciones_usos_publicos.md`; prototipo: `add_situation_effect`, `apply_option`,
+`play_territorio` (impulsos, desgaste, descuido). Código: `src/territorio/situations/index.ts` (`applySituationEffects`,
+`resolveSituation`, `situationImpulse`, `pruneImpulses`, `wearTally`, `neglectShift`), `src/territorio/session.ts`,
+`PARAMS_V2.situations`, `PARAMS_V2.finance.investmentScaleCap`, `investmentScale` (`finance.ts`), `drivePc` (`indicators.ts`).
+Verificado: `tests/territorio/situations.spec.ts`, `tests/territorio/session.spec.ts`, `reports/situations-audit.md`.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| T-01 | Una opción sobre B, F, E, C/W, Pc/St o una presión deja un impulso Δℓ = Δpts/(100·p·(1 − p)) (p ∈ [0,01; 0,99]) en el objetivo, que decae con τ = 18/12/ln 2 años (o `halfLifeMonths` de la situación), tope ±0,6 por indicador sobre la suma, descarte a 6τ. Se borra `SITUATION_EFFECT_SCALE` (0,5): ya no hay saltos de nivel | `situations/index.ts`, `session.ts` | Ninguno (sólo Territorio escribe impulsos) |
+| T-07 / T-12 | Dinero inmediato: ingresos > 0 × √(Y/Y₀) (tope 2,5), cargos fijos; deuda y reservas en % sobre el stock; `PBI_Real` como choque de nivel de Y (5 efectos que el prototipo ignoraba). Costos de lotes 100/225/300/400 × √(Y/Y₀) (tope 2,5), pagados con `payPublicInvestment`; área declarada y conectividad sin cambio (fases 34/40/42/44) | `situations/index.ts`, `territory.ts`, `finance.ts`, `modelo_v2.py` | Ninguno |
+| Decisión 2026-09-19 | Descuido del escritorio: N = Σ e^(−Δm/τ_N) sobre las situaciones vencidas (vida media 36 meses); D_Pc += 1,2·max(0, N − 3) (sin tope); las oportunidades (tono `good`) que vencen no cuentan. Ignorar la bandeja cae por colapso político en 2036–2044 (10 semillas; prototipo `do_nothing` 2036,9–2040,3) | `session.ts`, `indicators.ts`, `core.ts` (`wear.Pc`), `modelo_v2.py` | Ninguno (`wear.Pc` = 0) |
+| — | Recesión global: el −5 % de reservas se mantiene y se agrega al prototipo (`R%`) | `modelo_v2.py` | Ninguno (golden sin eventos, sin cambios) |

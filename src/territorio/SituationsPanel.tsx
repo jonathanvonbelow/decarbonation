@@ -7,7 +7,7 @@ import React from 'react';
 import { Button } from '../components/ui/Button';
 import { fill, useCopy } from './copy';
 import { SITUATION_BY_ID, type OpenSituation, type SituationActor, type SituationDef } from './situations';
-import { situationCost } from './situations';
+import { situationCost, wearTally } from './situations';
 import { artRoute, newsArtUrl, themeForSituation, type NewsRoute } from './newsArt';
 import { leadingRouteId } from './routes';
 import { portraitUrl, type PortraitActor } from './sprites';
@@ -29,10 +29,9 @@ const TONE_BORDER = {
   neutral: 'border-basalt-600',
 } as const;
 
-function wearLabel(def: SituationDef): number {
-  const { conflict = 0, ppAgricola = 0, ppAmbientalista = 0, ppSocial = 0 } = def.wear;
-  return conflict + ppAgricola + ppAmbientalista + ppSocial;
-}
+/** This month's wear of one open situation, in the same points as the desk's tally (`wearTally`, phase 47). */
+const wearLabel = (item: OpenSituation, monthIndex: number, game: Session['game']): number =>
+  wearTally([item], monthIndex + 1, game)[item.id] ?? 0;
 
 export function SituationCard({ item, def, monthIndex, reserves, game, route, onDecide }: {
   item: OpenSituation;
@@ -50,7 +49,7 @@ export function SituationCard({ item, def, monthIndex, reserves, game, route, on
   const monthsLeft = Math.max(0, item.expiresAt - monthIndex);
   const total = Math.max(1, item.expiresAt - item.openedAt);
   const urgency = 1 - monthsLeft / total;
-  const wear = wearLabel(def);
+  const wear = wearLabel(item, monthIndex, game);
   const theme = themeForSituation(def);
   return (
     <article className={`overflow-hidden rounded-md border bg-basalt-800 ${TONE_BORDER[def.tone]}`}>

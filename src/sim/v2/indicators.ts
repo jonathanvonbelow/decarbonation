@@ -15,7 +15,8 @@
  * Fiscal stress φ (`model.fiscal.stress`) is sHigh(interest / tax revenue; 0.20, 0.04), written by the finance step of
  * this same step (src/sim/v2/finance.ts, phase 44), which runs before the indicators, as in the prototype.
  * Concentration and just transition enter the conflict since phase 45 (src/sim/v2/social.ts). The wear of open situations enters D_C as a shift (phase 42, `wearC`). Situation impulses
- * (`model.impulses`) are read and capped at ±0.6 logit, but nothing writes them before phase 47.
+ * (`model.impulses`, written by Territorio's situations since phase 47) are capped at ±0.6 logit per indicator. The neglect
+ * of the desk (expired situations, phase 47) enters D_Pc as an uncapped shift (`wearPc`).
  *
  * Pure: no React, no randomness, no mutation.
  */
@@ -113,7 +114,7 @@ export function driveC(s: IndicatorState, eff: Eff, wear = 0, social: SocialIndi
  * D_Pc: drive of political collapse (spec 39 §4). Reads W and E of this step and the pressures of the
  * previous step (they update after, phase 42).
  */
-export function drivePc(s: IndicatorState): number {
+export function drivePc(s: IndicatorState, wear = 0): number {
   const a = s.model.anchors;
   const r = R.Pc;
   const st = s.stellaSpecificState;
@@ -126,7 +127,8 @@ export function drivePc(s: IndicatorState): number {
   d += r.fiscalStress * s.model.fiscal.stress;
   d += r.polarisation * (polarisation - a.pressureSpread0) / r.polarisationScale;
   d += r.pressureMean * (mean - a.pressureMean0) / r.pressureMeanScale;
-  d += pactShift(s.pacts, 'Pc') + capImpulses(impulseSum(s.model, 'Pc'));
+  // Neglect of the Territorio desk (phase 47, `neglectShift` in src/territorio/situations/index.ts): 0 in the 3-level game.
+  d += wear + pactShift(s.pacts, 'Pc') + capImpulses(impulseSum(s.model, 'Pc'));
   return d;
 }
 
@@ -136,14 +138,14 @@ export const targetE = (s: IndicatorState, eff: Eff, CP: ControlParams): number 
 export const targetC = (s: IndicatorState, eff: Eff, wear = 0, social?: SocialIndices): number =>
   target100(s.model.anchors.l.C, driveC(s, eff, wear, social));
 /** Pc* (0-100); St* = 100 − Pc*. */
-export const targetPc = (s: IndicatorState): number => target100(s.model.anchors.l.Pc, drivePc(s));
+export const targetPc = (s: IndicatorState, wear = 0): number => target100(s.model.anchors.l.Pc, drivePc(s, wear));
 
 /**
  * Step 8 (E → C (W) → Pc (St)) of advance(): each reads the ones already updated. Mutates `s.indicators`,
  * `s.stellaSpecificState` and `s.model.targets` (advance() owns the copy). B (phase 40, biodiversity.ts) and F
  * (still model 1.1 until phase 41) are updated before and the pressures after (1.1 until phase 42).
  */
-export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: ControlParams, dt: number, wearC = 0): void {
+export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: ControlParams, dt: number, wearC = 0, wearPc = 0): void {
   const st = s.stellaSpecificState;
   const eStar = targetE(s, eff, CP);
   s.indicators.economicSecurity = stepIndicator(s.indicators.economicSecurity, eStar, CP.Velocidad_Ajuste_Seg_Economica, dt);
@@ -152,7 +154,7 @@ export function updateRelaxedIndicators(s: IndicatorState, eff: Eff, CP: Control
   s.model.social = { concentration: social.concentration, justTransition: social.jt.justTransition, restrictionLoad: social.jt.restrictionLoad };
   st.Conflicto_social = stepIndicator(st.Conflicto_social, cStar, CP.Velocidad_Ajuste_Conflicto, dt);
   s.indicators.socialWellbeing = 100 - st.Conflicto_social;
-  const pcStar = targetPc(s);
+  const pcStar = targetPc(s, wearPc);
   st.Colapso_politico = stepIndicator(st.Colapso_politico, pcStar, CP.Velocidad_Ajuste_Colapso, dt);
   s.indicators.politicalStability = 100 - st.Colapso_politico;
   s.model.targets = { ...s.model.targets, E: eStar, C: cStar, Pc: pcStar };

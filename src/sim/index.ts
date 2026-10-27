@@ -44,7 +44,7 @@ export * from './v2/land';
 export * from './v2/carbon';
 export { drivePressures, productiveShare, sectorSize, targetPressures, updatePressures, type PressureTargets, type PressureWear } from './v2/pressures';
 export {
-  amortisationRate, baseInterestRate, baseSpendingShare, canPayPublicInvestment, fiscalStressOf, interestRate, isBankrupt,
+  amortisationRate, baseInterestRate, baseSpendingShare, canPayPublicInvestment, fiscalStressOf, interestRate, investmentScale, isBankrupt,
   payPublicInvestment, primaryBalanceAverage, stepFinance, type FinanceStep, type PublicInvestmentResult,
 } from './v2/finance';
 export { pactAnnualCost, pactEnergyShift, pactEntryCost, pactLandFactors, pactParams, pactShift, pactYearlyCostOf, type PactId } from './v2/pacts';

@@ -177,7 +177,7 @@ export function LeftRail({ session, tool, onTool, heat, onHeat }: {
         <p className="label-eyebrow mb-1 px-1 !text-[11px]">{c.tools.title}</p>
         <div className="grid grid-cols-2 gap-1 md:grid-cols-1">
           {PUBLIC_USES.map((use) => {
-            const useCost = publicUseCost(use, CONTROL_PARAMS);
+            const useCost = publicUseCost(use, CONTROL_PARAMS, undefined, session.game); // √(Y/Y0) price, phase 47
             // Phase 44: the public-investment rule (free reserves, then debt while D/Y <= 0.6), not "reserves >= cost".
             const affordable = canPayPublicInvestment(session.game, useCost);
             const anywhere = declarable.has(use);

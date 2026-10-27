@@ -214,7 +214,7 @@ export function cueFor(prev: Session, next: Session, CP: ControlParams = CONTROL
 
   // 11. Never declared a public use, with fiscal room for a few lots (phase 44: free reserves, then debt while D/Y <= 0.6):
   //     the one direct lever he can point at.
-  const cheapest = Math.min(...PUBLIC_USES.map((u) => publicUseCost(u, CP)));
+  const cheapest = Math.min(...PUBLIC_USES.map((u) => publicUseCost(u, CP, undefined, next.game)));
   if (next.declaredCount === 0 && next.monthIndex >= MONTHS_PER_YEAR * 2 && canPayPublicInvestment(next.game, cheapest * 3)) {
     return { id: 'idle-declare', key: 'idle.declare', values: { cost: Math.round(cheapest) }, tone: 'normal', priority: 1, surface: 'bubble', anchor: ANCHOR.tools };
   }

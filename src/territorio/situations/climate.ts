@@ -73,6 +73,8 @@ export const CLIMATE_SITUATIONS: SituationDef[] = [
   {
     id: 'aquifer-drop', actor: 'science', category: 'climate', tone: 'bad', deadline: 6, weight: 3,
     wear: { ppAmbientalista: 0.3, ppAgricola: 0.3 },
+    // Phase 47: structural — recharge works, extraction quotas and a depleted aquifer all last years (half-life 5 years).
+    halfLifeMonths: 60,
     es: { title: 'El acuífero bajó dos metros', body: 'El monitoreo hidrogeológico muestra descenso sostenido de las napas bajo la zona de riego.' },
     en: { title: 'The aquifer dropped two metres', body: 'Hydrogeological monitoring shows a sustained decline under the irrigated belt.' },
     options: [
@@ -111,7 +113,7 @@ export const CLIMATE_SITUATIONS: SituationDef[] = [
     en: { title: 'A generous rainy season', body: 'The water year closes above average. There is room to decide what to do with the surplus.' },
     options: [
       { id: 'store', es: 'Almacenar y recargar acuíferos', en: 'Store it and recharge aquifers', cost: 60, effects: [{ indicator: 'biodiversity', changeAbsolute: 1 }, { indicator: 'foodSecurity', changeAbsolute: 1 }] },
-      { id: 'expand', es: 'Habilitar más superficie de riego', en: 'Open up more irrigated land', effects: [{ indicator: 'foodSecurity', changeAbsolute: 2.5 }, { indicator: 'biodiversity', changeAbsolute: -1.5 }, { indicator: 'stella.PP_AGRICOLA', changeAbsolute: -4 }] },
+      { id: 'expand', es: 'Habilitar más superficie de riego', en: 'Open up more irrigated land', effects: [{ indicator: 'foodSecurity', changeAbsolute: 2.5 }, { indicator: 'biodiversity', changeAbsolute: -1.5 }, { indicator: 'stella.PP_AGRICOLA', changeAbsolute: -4 }, { indicator: 'stella.PP_AMBIENTALISTA', changeAbsolute: 4 }] },
       { id: 'nothing', es: 'No hacer nada especial', en: 'Do nothing in particular', effects: [{ indicator: 'foodSecurity', changeAbsolute: 0.5 }] },
     ],
   },

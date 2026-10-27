@@ -10,6 +10,7 @@ import type { Indicators } from '../types';
 import { fill, useCopy } from './copy';
 import { withWorkshopCode } from './survey/workshopCode';
 import { SUSTAINED_REASONS, type Session } from './session';
+import { neglectShift } from './situations';
 
 /** Which end-of-game copy a collapse gets: the model's four reasons, plus the two sustained ones. */
 function collapseKey(reason: string): keyof ReturnType<typeof useCopy>['c']['end']['reasons'] {
@@ -96,6 +97,9 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
       ? c.end.lost
       : fill(c.end.collapse, { year: session.game.year });
   const start = session.game.levelBaseline;
+  // Only when the government fell by political collapse with the neglect tally still pushing (phase 47).
+  const neglected = outcome.kind === 'collapse' && collapseKey(outcome.reason) === 'political'
+    && neglectShift(session.expiredAt ?? [], session.monthIndex) > 0;
   const final = session.game.indicators;
   return (
     <div className="absolute inset-0 z-50 overflow-y-auto bg-basalt-950/95 px-6 py-12 md:px-24" role="dialog" aria-modal="true" aria-labelledby="end-title">
@@ -103,6 +107,8 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
         <p className="label-eyebrow">{c.brand.name}</p>
         <h1 id="end-title" className="mt-2 font-[var(--font-display)] text-3xl text-bone md:text-5xl">{title}</h1>
         {outcome.kind === 'collapse' && <p className="mt-3 text-[15px] text-ember">{c.end.reasons[collapseKey(outcome.reason)]}</p>}
+        {/* Phase 47: the neglect of the desk weighed on political collapse (decisión del usuario 2026-09-19). */}
+        {neglected && <p className="mt-2 text-[15px] text-ash">{c.end.neglect}</p>}
         {outcome.kind !== 'won' && (
           <p className="mt-3 text-[15px] text-ash">
             {routes.floorsMet ? fill(c.end.closest, { route: t(routes.closest.route.nameKey) }) : c.end.floorsBroken}
@@ -126,11 +132,18 @@ export function EndScreen({ session, onAgain, onTitle }: { session: Session; onA
                   <td className="tnum py-2 text-right text-bone">{fmt.num(final[key], 1)}</td>
                 </tr>
               ))}
-              <tr className="border-t border-basalt-700">
-                <td className="py-2 text-ash">{c.end.declared}</td>
-                <td className="py-2" />
-                <td className="tnum py-2 text-right text-bone">{session.declaredCount}</td>
-              </tr>
+              {([
+                [c.end.declared, fmt.num(session.declaredCount, 0)],
+                [c.end.resolved, fmt.num(session.resolvedCount, 0)],
+                [c.end.expired, fmt.num(session.expiredCount, 0)],
+                [c.end.wear, fmt.num(session.wearTotal, 0)],
+              ] as const).map(([label, value]) => (
+                <tr key={label} className="border-t border-basalt-700">
+                  <td className="py-2 text-ash">{label}</td>
+                  <td className="py-2" />
+                  <td className="tnum py-2 text-right text-bone">{value}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

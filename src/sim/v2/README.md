@@ -58,6 +58,7 @@ avanza 12·dt meses y cambia de año después de diciembre). `stepMonth` = `adva
 | 44 | paso 6: gasto base, deuda automática, quiebra (`finance.ts`, `PARAMS_V2.finance`, `Gasto_Publico_Base_*`); `costShareOf` pasa a `costShare` (κ) y se borra `costShareBridge`; `payPublicInvestment` | hecho (`src/sim/economy.ts` borrado; φ, B, F, E, c y D/Y coinciden con el golden ±5e-4 sin eventos) |
 | 45 | conflicto distributivo: G y J en D_C (`src/sim/v2/social.ts`, `conflictWeights.gini/just`, `justTransition`; `model.social`) | hecho (golden W/St coinciden) |
 | 46 | paso 3: eventos con sorteo independiente, choques de nivel, ε AR(1) (`src/sim/events.ts`, `PARAMS_V2.events`); paso anual = 12 sub-pasos mensuales; `deferred.ts` borrado; `GOLDEN_ACTIVE = true` | hecho (golden activo y exacto) |
+| 47 | Territorio: situaciones como impulsos del objetivo (`model.impulses`, vida media 18 meses, tope ±0,6, descarte a 6τ; `PARAMS_V2.situations`), descuido del escritorio sobre D_Pc (`AdvanceOptions.wear.Pc`), `investmentScale` √(Y/Y₀) en costos de situaciones y lotes | hecho (`SITUATION_EFFECT_SCALE` borrado; prototipo sin golden nuevo) |
 
 ## Convenciones
 
@@ -160,3 +161,11 @@ en el prototipo; golden regenerado): con un solo paso de dt = 1 los impulsores s
 que conserva p anual exacto (la spec dice "multiplicada por w_m"; con el producto la frecuencia anual cambia en segundo
 orden). (4) Sin multiplicador de estrés de N3 (🟧 opcional de la spec, no activado). (5) Escrutinio c > 1,5·c₀
 (prototipo; la spec no lo menciona). (6) `rng = null` o `noShocks` ⇒ ε = 0.
+
+Fase 47: sin recortes de ecuación. Decisiones: (1) un efecto de situación sobre B, F, E, C/W, Pc/St o una presión es un
+impulso Δℓ = Δpts/(100·p·(1 − p)) del objetivo (W y St se invierten sobre C y Pc); dinero inmediato (ingresos > 0 × √(Y/Y₀),
+cargos fijos, % sobre el stock), PBI_Real como choque de nivel de Y (como el Y% de los eventos), suelo por transferencias.
+(2) Descuido del escritorio (decisión del usuario 2026-09-19): cada situación vencida suma 1 a un contador con vida media de
+36 meses (las oportunidades, tono `good`, no cuentan); D_Pc += 1,2·max(0, N − 3) (sin tope, como el desgaste). Ignorar la bandeja cae por colapso político en 2036–2044.
+(3) El descarte de impulsos es a 6τ (prototipo; la spec dice "6 vidas medias"). (4) El −5 % de reservas de la recesión se
+mantiene y se agrega al prototipo (`R%`). (5) Solo `aquifer-drop` declara `halfLifeMonths` (60).

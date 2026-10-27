@@ -163,7 +163,7 @@ EVENTS = [
     {"id": "justice", "min": 2, "p": lambda s: 0.05 if s["t"] > 5 else 0.0,
      "fx": {"pi_e": 7, "pi_s": 5, "C_if_calm": (-2, 3)}},
     {"id": "recession", "min": 3, "p": lambda s: 0.08 if s["E"] < 50 else 0.02,
-     "fx": {"Y%": -0.04, "E%": -0.15, "C": 6}},
+     "fx": {"Y%": -0.04, "E%": -0.15, "C": 6, "R%": -0.05}},  # v6/47: R% as in ALL_RANDOM_EVENTS
     {"id": "fossil", "min": 3, "p": lambda s: 0.03 + (0.05 if s["pol"]["SE"]["u"] else 0),
      "fx": {"E%": -0.10, "Y%": -0.02, "C": 7}},
 ]
@@ -466,6 +466,7 @@ def indicators_step(s, dt, wear=None):
     pol = max(s["pi"].values()) - min(s["pi"].values())
     dP = 0.9 * (a["W0"] - W) / 20 + 0.5 * (a["E0"] - s["E"]) / 20 + 0.8 * fs
     dP += 0.5 * (pol - a["pol0"]) / 30 + 0.6 * (pibar - a["pibar0"]) / 20 + pact("Pc") + cap(impulses(s, "Pc"))
+    dP += wear.get("Pc", 0.0)  # v6/47: neglect of the Territorio desk (expired situations), uncapped
     s["Pc*"] = target(a["lPc"], dP)
     s["Pc"] = relax(s["Pc"], s["Pc*"], k["Pc"], dt)
 
@@ -501,6 +502,8 @@ def events_step(s, rng, dt):
                     s[X] = max(0.0, min(100.0, s[X] * (1 + fx[X + "%"])))
             if "Y%" in fx:
                 s["Y"] *= 1 + fx["Y%"]
+            if "R%" in fx:  # v6/47: the recession's -5 % of reserves (the code always had it)
+                s["R"] *= 1 + fx["R%"]
             if "C" in fx:
                 s["C"] = max(0.0, min(100.0, s["C"] + fx["C"]))
             if "C_if_calm" in fx:  # organised movement: lowers conflict when wellbeing is high
@@ -696,7 +699,10 @@ LOT = 5.0
 USE_COST = {"protected": 100, "wetland": 225, "restoration": 300, "energy": 400}
 USE_TARGET = {"protected": "BNP", "wetland": "HUM", "restoration": "RES", "energy": "ENR"}
 USE_FROM = {"protected": ["BNNP"], "wetland": ["CC", "PRG", "FAL"], "restoration": ["CC", "PRG", "FAL"], "energy": ["PRG", "CC", "FAL"]}
-IMPULSE_TAU = 18 / 12 / math.log(2)   # half-life of 18 months
+IMPULSE_TAU = 18 / 12 / math.log(2)   # half-life of 18 months (a situation may set its own halfLifeMonths, v6/47)
+# v6/47: neglect of the desk (user decision 2026-09-19): each expired situation counts 1 in a tally that fades with a
+# 36-month half-life; Pc* shifts by NEGLECT_LOGIT * max(0, tally - NEGLECT_TOL) (PARAMS_V2.situations).
+NEGLECT_LOGIT, NEGLECT_TOL, NEGLECT_TAU_M = 1.2, 3.0, 36 / math.log(2)
 SIT_MAP = {"biodiversity": "B", "foodSecurity": "F", "economicSecurity": "E", "stella.Conflicto_social": "C",
            "stella.Colapso_politico": "Pc", "stella.PP_AGRICOLA": "pi_a", "stella.PP_AMBIENTALISTA": "pi_e", "stella.PP_SOCIAL": "pi_s"}
 
@@ -710,19 +716,28 @@ def cost_scale(s) -> float:
     return min(2.5, max(1.0, math.sqrt(s["Y"] / s["anchor"]["Y0"])))
 
 
-def add_situation_effect(s, eff):
+def add_situation_effect(s, eff, tau=IMPULSE_TAU):
     X = SIT_MAP.get(eff["indicator"])
     if X:
         v = max(1.0, min(99.0, value_of(s, X)))
-        dpts = eff["abs"] if eff["abs"] is not None else (eff["pct"] or 0) * v
+        dpts = eff["abs"] if eff["abs"] is not None else (eff["pct"] or 0) * value_of(s, X)
         dl = dpts / (100 * (v / 100) * (1 - v / 100))
-        s["impulses"].append({"X": X, "d": dl, "t": s["t"], "tau": IMPULSE_TAU})
-    elif eff["indicator"] == "stella.Reservas_del_Tesoro" and eff["abs"] is not None:
+        s["impulses"].append({"X": X, "d": dl, "t": s["t"], "tau": tau})
+    elif eff["indicator"] == "stella.Reservas_del_Tesoro":
         # v6/32 fix (spec 47): only positive incomes scale with the economy, like costs do;
-        # a negative effect is a fixed charge (it used to be scaled too).
-        s["R"] += eff["abs"] * cost_scale(s) if eff["abs"] > 0 else eff["abs"]
-    elif eff["indicator"] == "stella.Deuda" and eff["abs"] is not None:
-        s["D"] = max(0.0, s["D"] + eff["abs"])
+        # a negative effect is a fixed charge (it used to be scaled too). v6/47: a percentage is of the current stock.
+        if eff["abs"] is not None:
+            s["R"] += eff["abs"] * cost_scale(s) if eff["abs"] > 0 else eff["abs"]
+        elif eff["pct"] is not None:
+            s["R"] *= 1 + eff["pct"]
+    elif eff["indicator"] == "stella.Deuda":
+        # v6/47: the percentage form (credit-rating downgrade, +3 % of debt) was ignored
+        d = eff["abs"] if eff["abs"] is not None else (eff["pct"] or 0) * s["D"]
+        s["D"] = max(0.0, s["D"] + d)
+    elif eff["indicator"] == "stella.PBI_Real":
+        # v6/47: a level shock of real GDP, like the events' Y% (5 effects in the catalogue were ignored)
+        d = eff["abs"] if eff["abs"] is not None else (eff["pct"] or 0) * s["Y"]
+        s["Y"] = max(1e-9, s["Y"] + d)
 
 
 def move_land(s, src, dst, amt) -> float:
@@ -768,9 +783,11 @@ def apply_land_effects(s, effects):
                 p_[1] -= move_land(s, src, p_[0], p_[1])
 
 
-def apply_option(s, opt):
+def apply_option(s, opt, d=None):
+    hl = (d or {}).get("halfLifeMonths")
+    tau = hl / 12 / math.log(2) if hl else IMPULSE_TAU
     for eff in opt["effects"]:
-        add_situation_effect(s, eff)
+        add_situation_effect(s, eff, tau)
     apply_land_effects(s, opt["effects"])
 
 
@@ -844,6 +861,7 @@ def play_territorio(strat, seed, months=360):
     effort_pending = dict(st.get("effort", {}))
     uses = list(st.get("uses", []))
     inbox = []  # open situations: dict(def, opened, expires)
+    expired_at = []  # v6/47: months of the unanswered expiries (neglect tally)
     sustained = {"W": 0, "F": 0}
     dt = 1 / 12
     for m in range(months):
@@ -865,11 +883,12 @@ def play_territorio(strat, seed, months=360):
                 for opt in item["def"]["options"]:
                     cost = opt["cost"] * cost_scale(s)
                     if pay(s, cost):
-                        apply_option(s, opt)
+                        apply_option(s, opt, item["def"])
                         inbox.remove(item)
                         break
         # wear of open items: logit push on the targets while open
-        wear = {"C": 0.0, "a": 0.0, "e": 0.0, "s": 0.0}
+        neglect = sum(math.exp(-(m - me) / NEGLECT_TAU_M) for me in expired_at)
+        wear = {"C": 0.0, "a": 0.0, "e": 0.0, "s": 0.0, "Pc": NEGLECT_LOGIT * max(0.0, neglect - NEGLECT_TOL)}
         for item in inbox:
             age = (m - item["opened"]) / max(1, item["expires"] - item["opened"])
             f = 1 + min(1.0, age)
@@ -883,8 +902,10 @@ def play_territorio(strat, seed, months=360):
         # expirations -> last option
         for item in list(inbox):
             if m >= item["expires"]:
-                apply_option(s, item["def"]["options"][-1])
+                apply_option(s, item["def"]["options"][-1], item["def"])
                 inbox.remove(item)
+                if item["def"].get("tone") != "good":  # a lapsed opportunity is not neglect (v6/47)
+                    expired_at.append(m)
         # arrivals
         i = {"W": 100 - s["C"], "F": s["F"], "B": s["B"], "pmax": max(s["pi"].values())}
         p = BASE_ARRIVAL + (0.05 if i["W"] < 45 else 0) + (0.04 if i["F"] < 40 else 0) + (0.03 if i["B"] < 35 else 0) + (0.05 if i["pmax"] > 65 else 0)
@@ -900,6 +921,7 @@ def play_territorio(strat, seed, months=360):
                     break
         # drop fully decayed impulses
         s["impulses"] = [imp for imp in s["impulses"] if s["t"] - imp["t"] < 6 * imp["tau"]]
+        expired_at = [me for me in expired_at if m - me < 6 * NEGLECT_TAU_M]
         # sustained breach (12 months)
         sustained["W"] = sustained["W"] + 1 if 100 - s["C"] < 10 else 0
         sustained["F"] = sustained["F"] + 1 if s["F"] < 20 else 0

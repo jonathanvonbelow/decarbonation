@@ -38,7 +38,7 @@ import {
   CONTEXT_KINDS, createGeography, distanceField, fbm, GRID_SIZE, hash01, largestComponent4, PRODUCTIVE_PARCELS, REGIONS, regionWeights,
   urbanKind, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial,
 } from './geography';
-import { payPublicInvestment } from './v2/finance';
+import { investmentScale, payPublicInvestment } from './v2/finance';
 
 export { GRID_SIZE, hash01, PRODUCTIVE_PARCELS, REGIONS, type ContextKind, type Development, type Geography, type RegionId, type RoadMaterial };
 
@@ -653,9 +653,16 @@ export type PublicUseResult =
 /** Parcels in one lot on this map (50 at 0.1 kHa per parcel). */
 export const lotParcels = (t: Pick<Territory, 'kHaPerParcel'>): number => Math.max(1, Math.round(LOT_KHA / t.kHaPerParcel));
 
-/** One-time cost of declaring a full lot of `use` (LOT_KHA), under the given control parameters. */
-export function publicUseCost(use: PublicUse, CP: ControlParams, kHa = LOT_KHA): number {
-  return RULES[use].cost(CP) * kHa;
+/**
+ * One-time cost of declaring `kHa` (a full lot, LOT_KHA, by default) of `use`, under the given control parameters. With
+ * a state, the catalogue price follows the economy (phase 47, `investmentScale`: min(2.5, max(1, √(Y/Y0)))); without
+ * one it is the price at level start.
+ */
+export function publicUseCost(
+  use: PublicUse, CP: ControlParams, kHa = LOT_KHA,
+  state?: Parameters<typeof investmentScale>[0],
+): number {
+  return RULES[use].cost(CP) * kHa * (state ? investmentScale(state) : 1);
 }
 
 /** Land use a parcel becomes under `use`. */
@@ -714,8 +721,9 @@ export function lotFor(territory: Territory, x: number, y: number, use: PublicUs
 /**
  * Declares the lot around (x, y) as a public use: moves its area in the model, pays the cost
  * (per kHa actually moved) as a public investment (reserves above the floor, then debt while D/Y ≤ 0.6; phase 44,
- * `payPublicInvestment`; refused with 'no-fiscal-space'), and — for the part that was farmland — adds
- * the agricultural-pressure impulse that taking land out of production causes. Parcels whose area
+ * `payPublicInvestment`; refused with 'no-fiscal-space'; the price scales with √(Y/Y0) since phase 47). Taking
+ * farmland out of production raises the agricultural pressure through the sectoral-size term of its target (phase 42),
+ * not through a direct impulse. Parcels whose area
  * the model no longer holds are left out (fallow parcels draw on the model's fallow area, FAL), so a
  * declaration never creates land. Pure: returns new state and territory, or the reason it is not possible.
  */
@@ -748,7 +756,8 @@ export function declarePublicUse(
   });
   if (!cells.length) return { ok: false, reason: 'no-area' };
 
-  const cost = RULES[use].cost(CP) * kHa * cells.length;
+  // Phase 47: the price follows the economy (√(Y/Y0), capped at 2.5), like the situations' costs.
+  const cost = publicUseCost(use, CP, kHa * cells.length, state);
   // Phase 44: public investment — reserves above the floor, then debt while D/Y ≤ 0.6 (src/sim/v2/finance.ts).
   const paid = payPublicInvestment(state, cost);
   if (!paid.ok) return { ok: false, reason: 'no-fiscal-space', cost };
@@ -788,4 +797,5 @@ export const declareProtectedArea = (
   state: GameState, territory: Territory, x: number, y: number, CP: ControlParams,
 ): PublicUseResult => declarePublicUse(state, territory, x, y, 'protected', CP);
 
-export const protectedAreaCost = (CP: ControlParams, kHa = LOT_KHA): number => publicUseCost('protected', CP, kHa);
+export const protectedAreaCost = (CP: ControlParams, kHa = LOT_KHA, state?: Parameters<typeof investmentScale>[0]): number =>
+  publicUseCost('protected', CP, kHa, state);

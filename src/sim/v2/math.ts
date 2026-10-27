@@ -35,3 +35,9 @@ export const toLogitDelta = (points: number, current: number): number => {
   const p = Math.min(0.99, Math.max(0.01, current / 100));
   return points / (100 * p * (1 - p));
 };
+
+/** Inverse of `toLogitDelta`: the points of a 0-100 indicator a logit shift is worth at its current value (phase 47). */
+export const toPointsDelta = (logit: number, current: number): number => {
+  const p = Math.min(0.99, Math.max(0.01, current / 100));
+  return logit * 100 * p * (1 - p);
+};

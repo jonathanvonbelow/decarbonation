@@ -209,6 +209,19 @@ export function payPublicInvestment(state: GameState, cost: number): PublicInves
   };
 }
 
+/**
+ * Price/income scale of public investments with the economy (phase 47; prototype `cost_scale`): min(cap, max(1, √(Y/Y0))),
+ * Y0 the GDP at level start (model anchors; the level baseline for a state without them). Multiplies the catalogue prices
+ * of Territorio's situations and public-use lots, and the positive treasury incomes of situations.
+ */
+export function investmentScale(
+  state: Pick<GameState, 'stellaSpecificState'> & Partial<Pick<GameState, 'model' | 'levelBaseline' | 'indicators'>>,
+): number {
+  const y0 = state.model?.anchors?.gdp0 || state.levelBaseline?.pbi || state.indicators?.pbi || 1;
+  const ratio = state.stellaSpecificState.PBI_Real / y0;
+  return Math.min(F.investmentScaleCap, Math.max(1, Math.sqrt(Number.isFinite(ratio) && ratio > 0 ? ratio : 1)));
+}
+
 /** Whether `payPublicInvestment(state, cost)` would succeed (for UI hints and DecarboNito's validation); no allocation. */
 export function canPayPublicInvestment(state: Pick<GameState, 'stellaSpecificState'>, cost: number): boolean {
   const st = state.stellaSpecificState;

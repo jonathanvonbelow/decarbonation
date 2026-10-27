@@ -3007,3 +3007,88 @@ sub-paso (costo menor); el −5 % de reservas de la recesión (deuda 47); la mig
 
 **Deudas.** Rutas (C2/C4/C5, 49); situaciones como impulsos (47); presentación de eventos múltiples en el juego de 3 niveles
 (panel de N3 muestra el último; 50); F N3 y W N1 (C6, 49).
+
+## 2026-10-22 — v6 fase 47: Territorio, situaciones como impulsos, descuido del escritorio y usos públicos 2.0
+
+**Qué se hizo** (`mejora-general/files/47_territorio_situaciones_usos_publicos.md`; rama `v6-modelo-v2`; trabajo del
+2026-10-27, fechado como el resto de la cadena).
+- `src/territorio/situations/index.ts`: `applySituationEffects` + `resolveSituation`. Un efecto sobre B, F, E, C (o W
+  invertido), Pc (o St invertido) o una presión deja un **impulso del objetivo** en `game.model.impulses`
+  (`TargetImpulse` de la fase 35): Δℓ = Δpts/(100·p·(1 − p)), p ∈ [0,01; 0,99], t = `model.t`, τ = vida media/12/ln 2
+  (🟧 18 meses, `PARAMS_V2.situations.halfLifeMonths`; `SituationDef.halfLifeMonths` opcional, usado sólo en
+  `aquifer-drop` = 60: obras, cupos y acuífero agotado duran años). El motor ya los leía con tope ±0,6 (`capImpulses`);
+  `pruneImpulses` los descarta a 6τ (`advanceMonth`). **Se borra `SITUATION_EFFECT_SCALE`** (0,5): ya no hay saltos.
+- Dinero inmediato: ingresos > 0 × √(Y/Y₀), cargos fijos, % sobre el stock de reservas/deuda (el +3 % de deuda de
+  `credit-rating` ya no se ignora); **`PBI_Real` como choque de nivel de Y** (como el Y% de los eventos; 5 efectos del
+  catálogo). Suelo: transferencias de la fase 37 (verificado: mismo camino que los eventos). Lo demás (CO₂) sigue omitido.
+- `investmentScale` (`finance.ts`, tope `PARAMS_V2.finance.investmentScaleCap` 2,5): lo usan `situationCost` y ahora
+  también los lotes (`publicUseCost(use, CP, kHa, state)`, `declarePublicUse`): 100/225/300/400 × √(Y/Y₀) (antes fijos;
+  el prototipo ya escalaba). Pago con `payPublicInvestment` y error `no-fiscal-space` (es/en) ya estaban desde la 44;
+  área declarada (34), sin impulso agrícola por lote (42) y conectividad (40) verificados sin cambios.
+- Desgaste (§3): ya adelantado en la 42 (`wearShift` → `opts.wear`). `wearTally` pasa a medir puntos: 0,04·w·factor de
+  edad × pendiente logística del valor actual (`toPointsDelta`, nuevo en `math.ts`), como pide la spec; la tarjeta de la
+  bandeja muestra el desgaste del mes en la misma unidad.
+- **Decisión del usuario 2026-09-19 restaurada** ("un gobierno que deja de gobernar no llega al final del mandato"). Con
+  impulsos acotados a ±0,6, ninguna opción por defecto puede tumbar al gobierno, y el desgaste desaparece al vencer. Canal
+  nuevo: cada situación que **vence sin respuesta** suma 1 a un contador N (`Session.expiredAt`) que decae con vida media
+  36 meses; D_Pc += 1,2·max(0, N − 3) (`neglectShift`, `AdvanceOptions.wear.Pc`, `drivePc(s, wear)`; sin tope, como el
+  desgaste). Las oportunidades (tono `good`) que vencen no cuentan (revisión de código). Medido, ignorando todo: semilla
+  11 cae por colapso político en 2039, semillas 1–9 entre 2036 y 2044; resolviendo la mitad de lo que llega (calibración
+  con tolerancia 4), ninguna colapsó (St final 37–64); resolviendo 3/4, St 73–78. Prototipo: igual (`NEGLECT_*` en
+  `play_territorio`), `do_nothing` de Territorio colapsa en 10/10 semillas (2036,9–2040,3). El test de `session.spec`
+  vuelve a exigir colapso antes de 2044.
+- **−5 % de reservas de la recesión** (deuda 46/47): se mantiene en el código y se agrega al prototipo (`R%` en `EVENTS`);
+  el golden no cambia (sin eventos).
+- Prototipo (`modelo_v2.py`): `add_situation_effect` con PBI_Real, % de reservas y deuda, vida media por situación;
+  descuido; `R%`. `export_situations.ts` exporta `halfLifeMonths` y `tone`. Golden regenerado: idéntico.
+- `scripts/situations-audit.ts` → `reports/situations-audit.md` (§4). Desvío: el índice de la spec
+  (0,25·ΔB + 0,25·ΔF + 0,25·ΔE + 0,25·ΔW, promediado sobre 24 meses porque los impulsos decaen) no ve estabilidad ni
+  presiones, que es justamente donde el catálogo pone el precio de las opciones "buenas"; el script separa
+  **compromisos** (gana en índice y costo a cambio de St, presiones o dinero: 13) de **dominantes** reales (Pareto sobre
+  índice, costo, St y presiones: 4, todas de dos opciones donde la alternativa es el default, justificadas en el
+  reporte). Corrección del catálogo: `good-rains/expand` (riego sin costo) suma π_e + 4. Defaults convenientes: 0;
+  opciones nulas: 0.
+- UI: pantalla final con resueltas, vencidas y desgaste acumulado (es/en) y una línea cuando el descuido pesó en un
+  colapso político; la bandeja avisa que dejar vencer cuesta autoridad. Arreglado de paso: el aviso de declaración
+  mostraba "{km2}" sin llenar.
+- Tests: `tests/territorio/situations.spec.ts` nuevo (3/24 = 0,125 y mitad a los 18 meses; % y recorte de p; tope ±0,6 con
+  20 opciones; el impulso mueve E* y se apaga; vida media propia; descarte 6τ; dinero, deuda, PBI; costos √(Y/Y₀) con
+  tope; suelo conservado; desgaste de una situación abierta 6 meses y su retiro; descuido; dos semillas con la misma
+  estrategia, W final a < 25 puntos). `session.spec`: escritorio abandonado vuelve a colapsar; efecto sobre W = impulso.
+
+**Desvíos y discrepancias** (filas 47 de `docs/v6-spec-vs-motor.md`): descarte a 6τ (prototipo) y no a "6 vidas medias";
+canal de descuido (no está en la spec); índice de la auditoría ampliado con St y presiones; `applyWear` ya no existía (42).
+
+**Deudas** (no resueltas acá). Territorio `production` 45 % (completo, 20 semillas; banda prohibida 30–70 %, C5): falla
+por F < 44 en la mitad de las semillas (mediana 44,5); la mecánica de situaciones no lo explica (impulsos acotados) →
+umbrales de rutas, fase 49. `extractive` de Territorio ya no gana producción (0 %). `cond.publicNature` 4,5 %: sin
+cambio de mecánica (área declarada) → 49. `wearTotal` mide el empuje sobre los objetivos (cota superior de lo que se
+movieron los stocks), como la spec.
+
+**`npm run sim:check`** contra la 46:
+
+| Criterio | 46 (quick) | 47 (quick) | 46 (completo) | 47 (completo) |
+|---|---|---|---|---|
+| C1 do_nothing nunca gana | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C2 dirigida gana su ruta | PASS 0,800 | PASS 0,800 | FAIL 0,400 | FAIL 0,450 (Territorio producción 45 %) |
+| C3 ninguna gana todas | PASS 0 | PASS 0 | PASS 0,125 | PASS 0,125 |
+| C4 atajos cerrados | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 | FAIL 1,000 (N1 `tech_tax`) |
+| C5 la estrategia decide | PASS 0 | PASS 0 | FAIL 1 | FAIL 1 (Territorio producción 45 %) |
+| C6 recorrido ≥ 15 | FAIL 4,458 | FAIL 4,458 | FAIL 4,929 | FAIL 4,929 (W N1) |
+| C7 banda de predicción | FAIL 0,597 | FAIL 0,597 | FAIL 0,604 | FAIL 0,604 |
+| C8 sin quiebras espurias | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+| C9 anual–mensual | PASS 0 | PASS 0 | PASS 0 | PASS 0 |
+
+Territorio (completo): `do_nothing` colapso político 20/20 (p50 2038,8). El juego de 3 niveles no cambia.
+
+**Otras verificaciones.** `npx tsc --noEmit`, `npm test` (40 archivos, 670 tests), `npm run build`, `npm run i18n:audit`
+limpios. E2E con Chrome (dev server :3147, `GEMINI_API_KEY` de relleno): `/territorio`: resolver una situación (cobra 40,
+sin salto de indicadores), avanzar meses, declarar un área protegida (cuesta 102 = 100 × √(Y/Y₀)), dejar correr el
+escritorio sin atender: colapso político en 2035 con la pantalla final mostrando resueltas 1, vencidas 36, desgaste 69 y
+la línea de descuido (con la calibración previa a la revisión). `/play?demo=1` no se tocó en esta fase (sin UI propia);
+cubierto por tests y build.
+
+**Revisión de código** (aplicada): mensaje de descuido sólo en colapso político; desgaste de la tarjeta en la misma unidad
+que el contador; oportunidades fuera del contador (recalibrado 1,0/4 → 1,2/3); `protectedAreaCost` con estado;
+`toPointsDelta` compartido; `_CP` opcional; opciones inasequibles marcadas en la auditoría; test del retiro del desgaste
+no tautológico. No aplicada: `wearTotal` como empuje y no como movimiento realizado (es lo que pide la spec §3).

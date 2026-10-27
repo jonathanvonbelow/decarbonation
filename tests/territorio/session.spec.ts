@@ -22,7 +22,7 @@ function advance(s: Session, months: number): Session {
 
 /**
  * Advances while actually governing: every situation on the desk is settled with its first
- * affordable option. Ignoring the inbox wears the government (until phase 42 it ended the game), so
+ * affordable option. Ignoring the inbox topples the government (phase 47 neglect), so
  * tests about anything else have to keep the desk clear.
  */
 function govern(s: Session, months: number): Session {
@@ -210,9 +210,8 @@ describe('Territorio session', () => {
 
 describe('sustained breaches (Territorio only)', () => {
   it('ends the game when a floor stays broken for a whole year, not on a single bad month', () => {
-    // Phase 42: with anchored pressures a neglected desk no longer drags the government down by itself (seed 11 now
-    // reaches 2054 with St ≈ 46, as in the prototype's Territorio `do_nothing`; see the next test), so the breach is
-    // forced: conflict anchored at 97 keeps wellbeing at ≈ 3 month after month.
+    // A neglected desk falls by political collapse (phase 47, next test), not by this rule, so the breach is forced:
+    // conflict anchored at 97 keeps wellbeing at ≈ 3 month after month.
     let s = createSession(11);
     const game = JSON.parse(JSON.stringify(s.game)) as typeof s.game;
     game.stellaSpecificState.Conflicto_social = 97;
@@ -228,10 +227,13 @@ describe('sustained breaches (Territorio only)', () => {
     expect(s.monthIndex).toBe(12);
   });
 
-  it('a neglected desk wears the government but, with anchored pressures, does not topple it (seed 11, phase 42)', () => {
+  it('a neglected desk topples the government (decisión del usuario 2026-09-19; phase 47 neglect, seed 11)', () => {
+    // Phase 42 (anchored pressures) had left seed 11 alive in 2054 with St ≈ 46; the neglect tally of the expired
+    // situations (phase 47) shifts Pc* until the government falls (2039 on seed 11; 2036–2044 on seeds 1–9).
     const s = advance(createSession(11), TOTAL_MONTHS);
-    expect(s.outcome?.kind).toBe('lost');
-    expect(s.game.indicators.politicalStability).toBeLessThan(s.game.levelBaseline.politicalStability);
+    expect(s.outcome?.kind).toBe('collapse');
+    expect(s.game.indicators.politicalStability).toBeLessThanOrEqual(5);
+    expect(s.game.year).toBeLessThan(START_YEAR + 20);
   });
 
   it('an open situation shifts the targets while it stays open (phase 42 wear) and the pressure relaxes back once settled', () => {
@@ -274,12 +276,11 @@ describe('model 1.1 in Territorio', () => {
     expect(p.previousFatigueFactor).toBeLessThan(1);
   });
 
-  it('phase 46: a situation effect on a derived indicator (W) is a jump of its stock; one on CO2 is skipped', () => {
+  it('phase 47: a situation effect on a derived indicator (W) is an impulse on the target of its stock; one on CO2 is skipped', () => {
     const id = 'test_derived';
     SITUATION_BY_ID[id] = {
       id, actor: 'government', category: 'climate', tone: 'good', deadline: 6, weight: 0, wear: {},
       es: { title: 't', body: 'b' }, en: { title: 't', body: 'b' },
-      // SITUATION_EFFECT_SCALE halves it: +10 written, +5 applied.
       options: [{ id: 'a', es: 'a', en: 'a', effects: [
         { indicator: 'socialWellbeing', changeAbsolute: 10 }, { indicator: 'co2EqEmissionsPerCapita', changePercentage: -0.10 },
       ] }, { id: 'z', es: 'z', en: 'z', effects: [] }],
@@ -289,8 +290,11 @@ describe('model 1.1 in Territorio', () => {
       const opened: Session = { ...s0, open: [{ id: 'x1', defId: id, openedAt: 0, expiresAt: 6, worn: 0 }] };
       const decided = decideSituation(opened, 'x1', 'a').session;
       const C0 = s0.game.stellaSpecificState.Conflicto_social;
-      expect(decided.game.stellaSpecificState.Conflicto_social).toBeCloseTo(C0 - 5, 9);
-      expect(decided.game.indicators.socialWellbeing).toBeCloseTo(100 - (C0 - 5), 9);
+      // No jump: the stock stays, and W + 10 becomes an impulse of −10 points on the target of C.
+      expect(decided.game.stellaSpecificState.Conflicto_social).toBe(C0);
+      const imp = decided.game.model!.impulses.at(-1)!;
+      expect(imp.indicator).toBe('C');
+      expect(imp.logit).toBeCloseTo(-10 / (100 * (C0 / 100) * (1 - C0 / 100)), 12);
       expect(decided.game.indicators.co2EqEmissionsPerCapita).toBe(s0.game.indicators.co2EqEmissionsPerCapita);
     } finally {
       delete SITUATION_BY_ID[id];
