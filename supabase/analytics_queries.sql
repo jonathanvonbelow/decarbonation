@@ -366,13 +366,13 @@ GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
 WITH clim(model_version, level, indicator, p_down, p_flat, p_up) AS (
   VALUES
     ('2.0-dev', 1, 'biodiversity', 0.3294, 0.3333, 0.3372),
-    ('2.0-dev', 1, 'economicSecurity', 0.2428, 0.3334, 0.4238),
+    ('2.0-dev', 1, 'economicSecurity', 0.2437, 0.3333, 0.4229),
     ('2.0-dev', 1, 'co2EqEmissionsPerCapita', 0.5144, 0.3334, 0.1522),
     ('2.0-dev', 2, 'biodiversity', 0.3204, 0.3338, 0.3458),
-    ('2.0-dev', 2, 'economicSecurity', 0.2553, 0.3333, 0.4113),
-    ('2.0-dev', 2, 'co2EqEmissionsPerCapita', 0.4956, 0.3334, 0.1711),
+    ('2.0-dev', 2, 'economicSecurity', 0.2556, 0.3334, 0.411),
+    ('2.0-dev', 2, 'co2EqEmissionsPerCapita', 0.4956, 0.3334, 0.171),
     ('2.0-dev', 3, 'biodiversity', 0.3071, 0.3334, 0.3595),
-    ('2.0-dev', 3, 'economicSecurity', 0.323, 0.3333, 0.3437),
+    ('2.0-dev', 3, 'economicSecurity', 0.3236, 0.3333, 0.3431),
     ('2.0-dev', 3, 'co2EqEmissionsPerCapita', 0.5033, 0.3333, 0.1634)
 ), scored AS (
   SELECT pr.model_version, pr.level, pr.indicator,

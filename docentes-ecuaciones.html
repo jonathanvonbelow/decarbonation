@@ -122,10 +122,10 @@ D_B = z/(1 − B₀/100) · ln(H/H₀) + Σ qB·η^land + 0.1·min(η_AS, η_CR)
             <p class="text-sm text-ash" data-lang="en" hidden>Food available per person against the starting level, plus access by income (economic security). Supply comes from farmland and its yields, minus exports; the yield shock ε is random and persistent (AR(1)) and Water Management damps it.</p>
             <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">Q = (1 − x)·[CC·1·(1 + 0.25·η_PAI) + CA·0.7·(1 + 0.15·η_AS) + PRG·0.25·(1 + 0.2·η_GS)]·(1 + 0.06·η_AGUA)·(1 + 0.006)^t·(1 + ε)
 x = 0.3 + 0.2·η_PEA;   ρ = max(Q/Pop, 0.001·ρ₀)
-D_F = 2.5·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
+D_F = 3·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
             <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>Q = (1 − x)·[CC·1·(1 + 0.25·η_PAI) + CA·0.7·(1 + 0.15·η_AS) + PRG·0.25·(1 + 0.2·η_GS)]·(1 + 0.06·η_AGUA)·(1 + 0.006)^t·(1 + ε)
 x = 0.3 + 0.2·η_PEA;   ρ = max(Q/Pop, 0.001·ρ₀)
-D_F = 2.5·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
+D_F = 3·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
           </div>
           <div class="panel p-5">
             <h3 class="font-semibold text-hydro mb-1" data-lang="es">7. Seguridad económica, conflicto y colapso</h3>
@@ -305,14 +305,14 @@ S3 = 10·(0.1·B + 0.15·C_sc + 0.2·P_sc + 0.25·X + 0.3·Y_sc)</pre>
           <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
             <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Estabilidad política mínima: ≥ 30; Ratio deuda/PBI máximo: ≤ 1; Bienestar social mínimo: ≥ 35.</li>
             <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 52; Bosque nativo: ≥ 17 %; Emisiones CO₂eq/cápita: ≤ 5,4; Ratio deuda/PBI: ≤ 0,6.</li>
-            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad económica: ≥ 36; Seguridad alimentaria: ≥ 33; Bienestar social: ≥ 52.</li>
+            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad económica: ≥ 36; Seguridad alimentaria: ≥ 31; Bienestar social: ≥ 52.</li>
             <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 4,5; Electricidad renovable (%): ≥ 35 %; Seguridad económica: ≥ 30; Pactos internacionales activos: ≥ 1.</li>
             <li><strong class="text-bone">Vía del Equilibrio</strong> (7 de estas 9): Biodiversidad: ≥ 50; Seguridad alimentaria: ≥ 40; Seguridad económica: ≥ 38; Bienestar social: ≥ 65; Estabilidad política: ≥ 75; Emisiones CO₂eq/cápita: ≤ 4,5; Ratio deuda/PBI: ≤ 0,5; PBI respecto del inicial (×): ≥ 1,7; Puntaje general: ≥ 720.</li>
           </ul>
           <ul data-lang="en" hidden class="text-sm text-ash space-y-3 list-none">
             <li><strong class="text-bone">Governance floors (all at once):</strong> Minimum political stability: ≥ 30; Maximum debt/GDP ratio: ≤ 1; Minimum social wellbeing: ≥ 35.</li>
             <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 52; Native forest: ≥ 17 %; CO₂eq emissions per capita: ≤ 5.4; Debt/GDP ratio: ≤ 0.6.</li>
-            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Economic security: ≥ 36; Food security: ≥ 33; Social wellbeing: ≥ 52.</li>
+            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Economic security: ≥ 36; Food security: ≥ 31; Social wellbeing: ≥ 52.</li>
             <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.5; Renewable electricity (%): ≥ 35 %; Economic security: ≥ 30; Active international pacts: ≥ 1.</li>
             <li><strong class="text-bone">Balanced Pathway</strong> (7 of these 9): Biodiversity: ≥ 50; Food security: ≥ 40; Economic security: ≥ 38; Social wellbeing: ≥ 65; Political stability: ≥ 75; CO₂eq emissions per capita: ≤ 4.5; Debt/GDP ratio: ≤ 0.5; GDP relative to the start (×): ≥ 1.7; General score: ≥ 720.</li>
           </ul>

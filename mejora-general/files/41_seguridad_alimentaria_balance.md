@@ -34,6 +34,11 @@ objetivo:
 Valores de referencia del prototipo (N2, año 30, sin eventos): sin políticas 40,5; extractiva 51,1; cartera verde 37,4;
 balanceada 32,4 (v6/41: decía 32,3; el prototipo da 32,44). En 1.1, 40,3–41,1 para todas.
 
+> **Nota v6/49b (2026-10-28).** κ₁ pasó de 2,5 a 3,0 (decisión del usuario del 2026-10-27 sobre el criterio C6: con 2,5 el
+> recorrido de F en N3 era 14,6 < 15 con eventos). Con 3,0 un 20 % más de disponibilidad sube F ≈ 13,5 puntos cerca de 40,
+> y los valores de referencia del prototipo (N2, año 30, sin eventos) pasan a: sin políticas 40,9; extractiva 52,2; cartera
+> verde 37,5; balanceada 30,8. Ver `docs/DESIGN_DECISIONS_LOG.md` (fase 49b).
+
 ## 2. Implementación
 
 | Archivo | Cambio |

@@ -16,7 +16,7 @@ calibración.**
 | `carbon.ts` | fase 38: `energyTargets` / `updateEnergyState` (s*, u*, inercia k = 0,15), `fluxOf`, `computeEmissions` (energía, AFOLU, LUC desde los flujos realizados ÷ dt, total y per cápita en tCO₂e), `budgetPath` / `carbonBudgetIndex` (B_t), `CO2_PER_C` = 44/12 |
 | `indicators.ts` | fase 39: marco común X* = 100·σ(ℓ₀ + D), `stepIndicator` (= `relax`), `impulseSum` / `capImpulses` (±0,6), `pactShift`, `productiveValue`, `driveE` / `driveC` / `drivePc`, `targetE` / `targetC` / `targetPc`, `updateRelaxedIndicators` (paso 8: E → C (W) → Pc (St)) |
 | `biodiversity.ts` | fase 40: `habitatIndex` (H = Σ h·a, también el ancla H₀), `driveB` / `targetB` (especies-área en logit, γ_H = z/(1 − B₀/100), calidad de manejo qB·η^land, sinergias continuas, conectividad γ_K·ln(K/K₀) solo con mapa, pactos), `connectivityTerm`, `updateBiodiversity` (paso 8, primero) |
-| `food.ts` | fase 41: `exportShare` (x = 0,30 + 0,20·η_PEA), `domesticSupply` (Q, también el ancla ρ₀), `foodPerCapita` (ρ con piso 0,001·ρ₀), `meanYield` (capa del mapa), `driveF` / `targetF` (2,5·ln(ρ/ρ₀) + 0,6·(E − E₀)/50), `updateFoodSecurity` (paso 8, segundo; lee la E del paso anterior) |
+| `food.ts` | fase 41: `exportShare` (x = 0,30 + 0,20·η_PEA), `domesticSupply` (Q, también el ancla ρ₀), `foodPerCapita` (ρ con piso 0,001·ρ₀), `meanYield` (capa del mapa), `driveF` / `targetF` (κ₁·ln(ρ/ρ₀) + 0,6·(E − E₀)/50, κ₁ = 3,0 desde la 49b; 2,5 en la spec 41), `updateFoodSecurity` (paso 8, segundo; lee la E del paso anterior) |
 | `pressures.ts` | fase 42: `productiveShare` (a_prod = (CC + CA + PRG)/ΣA, PF fuera), `sectorSize` (σ_prod), `drivePressures` / `targetPressures` (φ·η^social/15, σ_prod solo sobre la suma de políticas de π_a, desvíos de E, F, a_prod, B, c, W y τ, desgaste, impulsos con tope), `updatePressures` (paso 8, último) |
 | `pacts.ts` | fase 43: `pactParams`, `pactShift` (B / E / Pc, logit), `pactEnergyShift` (s* / u*), `pactLandFactors` (frontera BNNP → BNP / CC), `pactAnnualCost` / `pactEntryCost` / `pactYearlyCostOf` (fracciones del PBI) |
 | `land.ts` | fase 37: `landFlows` (matriz conservativa: frontera, barbecho, pool agrícola por renta anclada, neteo), `realiseLandFlows` / `applyLandFlows` (dt exacto, sin negativos, flujos en kHa y ha), `transferArea`, `applyLandEffects` (efectos de suelo de eventos y situaciones) |
@@ -176,3 +176,8 @@ mantiene y se agrega al prototipo (`R%`). (5) Solo `aquifer-drop` declara `halfL
 Fase 48: sin recortes de la spec salvo §7 (predicción en Territorio, 🟧 no incluida por defecto). Desvíos: un "choque" para la
 resiliencia es un paso con evento donde F o E cae ≥ 0,5 puntos (el motor no expone los blancos del evento); el arrepentimiento
 de Territorio deja fuera bandeja y mapa (conectividad congelada) y sólo lo pide la UI (`advanceMonth(…, { regret: true })`).
+
+Fase 49b (2026-10-28, decisión del usuario del 2026-10-27 sobre C6, opción 3): sin recortes. Se cambia un parámetro, no una
+ecuación: `PARAMS_V2.food.kappa1` 2,5 → 3,0 (también en el prototipo; golden, `food41`/`indicators39`/`pressures42_cases.json`,
+trayectorias de `core.spec.ts` y bandas de predicción regenerados). El piso de F de la ruta de producción del N3 pasa de 33 a 31
+(`winRoutes.ts` y `ROUTES3` del prototipo) para que `production` N3 conserve su tasa. C6 F N3 16,8 (antes 14,6); C1–C9 PASS.

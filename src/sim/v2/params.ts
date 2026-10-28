@@ -236,14 +236,16 @@ export const PARAMS_V2 = {
    * yield: production units per kHa per year relative to CC (CA 0.7, PRG 0.25). yieldPolicy: yield multipliers per
    * unit of η^prod (CC ×(1 + 0.25·η_PAI), CA ×(1 + 0.15·η_AS), PRG ×(1 + 0.20·η_GS), all ×(1 + 0.06·η_AGUA)).
    * yieldTrend: technological yield growth, fraction per year. export0 + exportPEA·η_PEA: exported share of the
-   * production (fraction). kappa1: logit units per unit of ln(ρ/ρ0) (+20 % of ρ lifts F ≈ 11 points near 40);
+   * production (fraction). kappa1: logit units per unit of ln(ρ/ρ0) (+20 % of ρ lifts F ≈ 13 points near 40; 2.5 → 3.0 in
+   * v6/49b, decision of 2026-10-27 on criterion C6: with 2.5 the supply/demand balance moved F N3 only 14.6 points
+   * between the extreme portfolios with events, < 15; see docs/DESIGN_DECISIONS_LOG.md);
    * kappa2 / econScale: access by income, logit units per (E − E0)/50. rhoFloor: ρ ≥ 0.001·ρ0 (a territory with no
    * farmland still imports a little; avoids ln 0). Criterio experto (prototype values).
    */
   food: {
     yield: { CC: 1.0, CA: 0.7, PRG: 0.25 },
     yieldPolicy: { PAI: 0.25, AS: 0.15, GS: 0.20, AGUA: 0.06 },
-    yieldTrend: 0.006, export0: 0.30, exportPEA: 0.20, kappa1: 2.5, kappa2: 0.6, econScale: 50, rhoFloor: 1e-3,
+    yieldTrend: 0.006, export0: 0.30, exportPEA: 0.20, kappa1: 3.0, kappa2: 0.6, econScale: 50, rhoFloor: 1e-3,
   },
 
   /** 39 — economic security coefficients (logit units per unit of effective efficiency). */

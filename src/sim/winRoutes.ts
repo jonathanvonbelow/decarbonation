@@ -308,7 +308,9 @@ export const LEVEL_ROUTES: Record<number, { floors: RouteCondition[]; routes: Wi
         descriptionKey: 'routes.production.desc', accent: 'ochre', scoreMultiplier: 1.0,
         conditions: [
           { labelKey: 'cond.economicSecurity', read: E, target: 36, dir: 'min' },
-          { labelKey: 'cond.foodSecurity', read: F, target: 33, dir: 'min' },
+          // 33 → 31 in v6/49b: κ1 = 3.0 lowers the export-led portfolio's F (N3 `production` 82.5 % → 72.5 % at 33);
+          // 31 restores 82.5 % without opening the route to `extractive` (fails W) or `balanced` (F ≈ 27).
+          { labelKey: 'cond.foodSecurity', read: F, target: 31, dir: 'min' },
           { labelKey: 'cond.socialWellbeing', read: W, target: 52, dir: 'min' },
         ],
       },

@@ -32,6 +32,10 @@ Punto de partida (prototipo, 40 semillas con eventos):
 | 2 | B ≥ 25; F ≥ 25; St ≥ 35; cada π ≤ 85 | B ≥ 52; bosque ≥ 16 %; c ≤ 6,5 | E ≥ 40; F ≥ 32; W ≥ 60 | c ≤ 5,5; renovables ≥ 30 %; E ≥ 33 | — |
 | 3 | St ≥ 30; D/Y ≤ 1,0; W ≥ 35 | B ≥ 52; bosque ≥ 17 %; c ≤ 5,4; D/Y ≤ 0,6 | E ≥ 36; F ≥ 33; W ≥ 52 | c ≤ 4,5; renovables ≥ 35 %; E ≥ 30; ≥ 1 pacto | 7 de 9: B ≥ 50; F ≥ 40; E ≥ 38; W ≥ 65; St ≥ 75; c ≤ 4,5; D/Y ≤ 0,5; Y ≥ 1,7·Y₀; S ≥ 720 |
 
+> **Nota v6/49b (2026-10-28).** El piso de F de la ruta de producción del N3 pasó de 33 a 31 junto con κ₁ 2,5 → 3,0 (criterio
+> C6): con 33 la estrategia `production` del N3 bajaba de 82,5 % a 72,5 % en el arnés; con 31 vuelve a 85 %. Las tasas del
+> prototipo de la tabla siguiente son anteriores a ese cambio. Ver `docs/DESIGN_DECISIONS_LOG.md` (fase 49b).
+
 “Renovables” = `model.energy.renewableShare` (resultado, no esfuerzo: la condición de “esfuerzo tecnológico ≥ 30”
 de 1.1 se cumplía con el reparto parejo). Condiciones nuevas → claves i18n `cond.renewables`, `cond.debtRatio` (ya
 existe), `cond.gdpGrowth`.

@@ -3324,3 +3324,66 @@ Territorio, noticias, prompts por nivel) siguen escribiendo 2 % / 60 % / 20 % a 
 C8 0, C9 0,000 en quick); e2e en navegador: `/play?demo=1` N1–N3 (flechas, bloques, políticas, instrumentos, panel del
 facilitador, tres manuales en es/en, DecarboNito abre y falla limpio con key placeholder), `/territorio` (HUD, rutas, ficha
 de parcela, declaración, situaciones, partida a ×4 hasta el final), `/` y `/docentes/*` (variantes y es/en).
+
+## 2026-10-22 — v6 fase 49b: ajuste de la respuesta de F (criterio C6)
+
+Unidad entre la 50 y la 51. **Decisión del usuario del 2026-10-27, opción 3**: el criterio C6 (≥ 15 puntos de recorrido en B,
+F, E, W entre estrategias extremas, 00_INDICE_v6 §6) no se cambia; se ajusta la respuesta de F en el modelo (motor y
+prototipo, golden en el mismo commit) para que se cumpla con eventos. W de N1 sigue excluido (`C6_EXCLUDED`, visto bueno
+pendiente, sin objeción del usuario).
+
+**Diagnóstico.** Antes de la 49b, F N3 = 14,6 en el arnés (balanced 29,8 → extractive 44,3; 40 semillas con eventos, año 30);
+prototipo 13,5 con eventos y 15,3 sin eventos (el motor sin eventos coincide con el prototipo: 15,28). (1) **Por qué N3 es
+más estrecho que N1 (20,8 sin eventos).** El término de oferta κ₁·ln(ρ/ρ₀) de `extractive` vale +0,34 logit en N1 pero
++0,09 en N3: en N3 hay menos bosque talable (60 BNNP + 40 BNP protegido contra 100 BNNP), la frontera agrícola crece menos
+(CC 100 → 142 contra 100 → 161) y la exportación de PEA (x 0,30 → 0,50) se come casi toda la ganancia de PAI. Lo que sostiene
+a `extractive` arriba en N3 es el acceso por ingreso (+0,21 logit). En el otro extremo, `balanced` exporta (PEA) sin subir
+rendimientos (sin PAI): oferta −0,45 logit. (2) **Por qué los eventos lo comprimen ≈ 1,5 puntos.** Los choques de F son
+proporcionales (sequía −12 %, cadena de suministro −8 %, cosecha +15 %): a igual frecuencia pegan más arriba. `extractive`
+pierde 2,8 puntos con eventos (más sequías por CC > 25 % del territorio sin AGUA; escrutinio 2,45/corrida y fósil 2,15 que
+le bajan E y con ella el acceso: +0,21 → +0,16 logit) y `balanced` 1,4 (gana más cosechas por AS, 1,85 contra 1,05). El
+choque AR(1) de rendimiento es simétrico y casi no mueve medianas. Ni k_F (velocidad, no nivel al año 30) ni el piso de ρ
+(nunca activo en N3) explican la brecha; el término de acceso 0,6·(E − E₀)/50 es lo que sostiene a `extractive`, y los
+eventos que le bajan E lo achican.
+
+**Qué.** `PARAMS_V2.food.kappa1` 2,5 → 3,0 (`src/sim/v2/params.ts`, `P["kappa1"]` del prototipo): +20 % de disponibilidad por
+habitante sube F ≈ 13,5 puntos cerca de 40 (antes ≈ 11). Justificación: κ₁ es la elasticidad de la seguridad alimentaria a
+la disponibilidad, criterio experto de la 41; con 2,5 la balanza oferta/demanda —el mecanismo central de la 41— casi no
+separaba a quien exporta sin invertir en rendimientos de quien expande e intensifica, y el *trade-off* exportar/alimentar
+quedaba por debajo de lo que el juego tiene que mostrar. Un solo parámetro, mismo efecto en los dos juegos (Territorio usa
+el mismo `driveF`). Para que la ruta de producción no pierda tasa, el piso de F de producción del N3 pasa de 33 a 31
+(`src/sim/winRoutes.ts`, `ROUTES3[3]` del prototipo): con κ₁ 3,0 y 33, `production` N3 caía de 82,5 % a 72,5 % (11 de 40
+semillas con F < 33, casi todas entre 30,6 y 32,7); con 31, 85 %. `extractive` N3 sigue en 0 % (falla W ≥ 52 en las 40
+semillas) y `balanced` no llega (F ≈ 27,5).
+
+**Alternativas descartadas** (κ₁ y κ₂ medidos con el arnés, 40 semillas, y con el prototipo; las demás razonadas): κ₁ 2,8 (N3 15,8: sin margen
+de ruido); κ₂ 0,6 → 1,0 / 1,2 (acceso por ingreso: N3 16,1 / 17,2, pero el doble de cambio relativo y sube la F de
+`extractive` hasta 50–53, con lo que `extractive` N2 gana producción 5–7 % y rompe C4 ≤ 5 %); subir la respuesta de
+rendimiento de PAI (mismo problema: ensancha por arriba, `extractive` cumple F y W); tocar los eventos (atenuar los choques
+proporcionales) cambia la didáctica de los riesgos y el C7; excluir F N3 del criterio (no autorizado).
+
+**Regenerado en el mismo commit.** `scripts/reference/golden_v2.csv` (cambian F y lo que la sigue: E por el término de crisis
+alimentaria, W/St por C, presiones agrícola/social, S; B, c y D/Y no cambian; `golden.v2.spec.ts` pasa sin tocar
+tolerancias); `food41_cases.json`, `indicators39_cases.json`, `pressures42_cases.json` (el bloque de indicadores lee κ₁;
+`biodiversity40` y `finance44` no cambian); trayectorias de `tests/sim/core.spec.ts` (`balanced` exporta: F N2 32,5 → 30,4,
+N3 34,9 → 33,2, mensual 33,2 → 31,3; B, CO₂, PBI, reservas, deuda y CC idénticos); `tests/sim/food.v2.spec.ts` (κ₁ y los dos
+ejemplos numéricos de la 41: +20 % de ρ → 53,5; PEA pleno → 19,5); `predictionBands.json` (`npx tsx scripts/prediction-bands.ts`,
+bandas de E 0,352 / 0,464 / 0,651; `--check` al día) y su copia en `supabase/analytics_queries.sql`; `docentes-ecuaciones.html`
+(`params-table-html.ts` y `routes-table-html.ts` con `--write`, `--check` al día: D_F = 3·ln(ρ/ρ₀) …, producción N3 F ≥ 31).
+Notas de diferencia en `mejora-general/files/41` (κ₁ y valores de referencia N2 del prototipo: sin políticas 40,9, extractiva
+52,2, verde 37,5, balanceada 30,8) y `49` (piso N3; las tasas del prototipo de su tabla son anteriores).
+
+**Resultado.** F N3 = 16,8 en el arnés (balanced 27,5 → extractive 44,4; antes 14,6); sin eventos 17,7 (antes 15,3).
+Prototipo: 15,8 con eventos (antes 13,5) y 17,7 sin eventos (antes 15,3). N1 F 22,9, N2 F 18,3, Territorio F 26,5.
+`npm run sim:check` completo: exit 0, C1 0,000 · C2 0,800 (antes 0,825; mínimo ahora Territorio producción 80 %) · C3 0,050
+(N2 balanced 5 %, antes 32,5 %) · C4 0,000 · C5 0 · C6 16,847 (antes 14,556 FAIL) · C7 0,023 (N3 c 30,7 %, igual) · C8 0 · C9
+0,000. `reports/balance-latest.json` actualizado con `--update-latest`.
+
+**Deudas.** Territorio `production` gana su ruta 80 % (antes 90 %): 4 de 20 semillas quedan con F < 40,5; no se baja el piso
+porque el procedimiento de 49 §4 lo ata al p90 de `do_nothing` (≈ 40). Margen de 10 pp sobre C2 y C5; vigilar en la 51. El
+recorrido de F N2 (18,3) y N3 (16,8) depende de que `balanced` siga siendo la cartera exportadora sin rendimientos: si el arnés
+cambia sus estrategias, revisar C6. Las tasas del prototipo citadas en la 49 §2 no se recalcularon.
+
+**Verificación.** `npx tsc --noEmit`, `npm test` (47 archivos, 737 tests), `npm run build`, `npm run i18n:audit` limpios;
+`npm run sim:check` completo exit 0 y `--update-latest`. Sin cambios de UI (solo cifras generadas de la hoja docente): sin
+prueba en navegador.

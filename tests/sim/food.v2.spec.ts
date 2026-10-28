@@ -43,22 +43,22 @@ describe('supply/demand target', () => {
     expect(domesticSupply(s.landUses, {}, 0, 0)).toBeCloseTo(167.3, 9);
   });
 
-  it('+20 % of ρ with E = E0 lifts F* from 40 to ≈ 51.3', () => {
+  it('+20 % of ρ with E = E0 lifts F* from 40 to ≈ 53.5 (κ1 = 3.0 since v6/49b; 51.3 with 2.5)', () => {
     const s = asModel(freshState(2));
     s.stellaSpecificState.Poblacion_Total = CP.Poblacion_Inicial / 1.2;
     const f = targetF(s, eff({}));
-    expect(f).toBeCloseTo(100 * sigmoid(logit(0.4) + 2.5 * Math.log(1.2)), 9);
-    expect(f).toBeCloseTo(51.26, 2);
+    expect(f).toBeCloseTo(100 * sigmoid(logit(0.4) + 3.0 * Math.log(1.2)), 9);
+    expect(f).toBeCloseTo(53.53, 2);
   });
 
-  it('Agricultural Exports at efficiency 1: x 0.30 → 0.50, ρ × 0.714, F* 40 → ≈ 22.3 before the E compensation', () => {
+  it('Agricultural Exports at efficiency 1: x 0.30 → 0.50, ρ × 0.714, F* 40 → ≈ 19.5 before the E compensation (22.3 with κ1 = 2.5)', () => {
     const s = asModel(freshState(2));
     expect(exportShare(eff({ PEA: 1 }))).toBeCloseTo(0.5, 12);
     expect(foodPerCapita(s, eff({ PEA: 1 })) / s.model.anchors.foodPerCapita0).toBeCloseTo(0.5 / 0.7, 12);
-    expect(targetF(s, eff({ PEA: 1 }))).toBeCloseTo(22.33, 2);
+    expect(targetF(s, eff({ PEA: 1 }))).toBeCloseTo(19.55, 2);
     // access by income: +20 points of E add 0.6·20/50 = 0.24 logit
     s.indicators.economicSecurity += 20;
-    expect(driveF(s, eff({ PEA: 1 }))).toBeCloseTo(2.5 * Math.log(0.5 / 0.7) + 0.24, 12);
+    expect(driveF(s, eff({ PEA: 1 }))).toBeCloseTo(3.0 * Math.log(0.5 / 0.7) + 0.24, 12);
   });
 
   it('yields respond to their policies, water to all, and the trend compounds 0.6 %/year', () => {
@@ -164,7 +164,7 @@ describe('port of the prototype (scripts/reference/modelo_v2.py, food_production
 
 it('PARAMS_V2.food mirrors the prototype', () => {
   expect(PARAMS_V2.food.yield).toEqual({ CC: 1.0, CA: 0.7, PRG: 0.25 });
-  expect(PARAMS_V2.food.kappa1).toBe(2.5);
+  expect(PARAMS_V2.food.kappa1).toBe(3.0); // v6/49b (criterion C6), was 2.5
   expect(PARAMS_V2.food.kappa2).toBe(0.6);
   expect(CP.Velocidad_Ajuste_Seg_Alimentaria).toBe(0.35);
 });

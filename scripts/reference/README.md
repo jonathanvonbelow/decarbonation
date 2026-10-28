@@ -42,3 +42,10 @@ Fase 46: el juego de 3 niveles integra cada año con 12 sub-pasos mensuales (`SU
 de dt = 1 los impulsores se evaluaban una vez por año y anual y mensual diferían hasta 2,05 puntos en St). El calendario de
 desbloqueo de pactos en `play_level` sale del número de paso (con t acumulado en floats, 2029,9999… < 2030). `golden_v2.csv`
 regenerado (cambios de hasta 3 puntos al año 1, ≤ 0,5 al año 30).
+
+## Cambio de parámetro v6 / fase 49b (2026-10-28)
+
+`kappa1` (respuesta de F a la disponibilidad por habitante) 2,5 → 3,0 y piso de F de la ruta de producción del N3 33 → 31,
+por la decisión del usuario sobre el criterio C6 (recorrido de F ≥ 15 puntos entre estrategias extremas). `golden_v2.csv`,
+`food41_cases.json`, `indicators39_cases.json` y `pressures42_cases.json` regenerados en el mismo commit (`biodiversity40` y
+`finance44` no leen F y no cambian). Detalle en `docs/DESIGN_DECISIONS_LOG.md`.

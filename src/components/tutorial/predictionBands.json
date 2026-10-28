@@ -3,18 +3,18 @@
   "bands": {
     "1": {
       "biodiversity": 0.187159,
-      "economicSecurity": 0.353459,
+      "economicSecurity": 0.351766,
       "co2EqEmissionsPerCapita": 0.051087
     },
     "2": {
       "biodiversity": 0.186074,
-      "economicSecurity": 0.466303,
+      "economicSecurity": 0.46444,
       "co2EqEmissionsPerCapita": 0.050195
     },
     "3": {
       "biodiversity": 0.183727,
-      "economicSecurity": 0.654832,
-      "co2EqEmissionsPerCapita": 0.039801
+      "economicSecurity": 0.650545,
+      "co2EqEmissionsPerCapita": 0.039799
     }
   },
   "climatology": {
@@ -25,9 +25,9 @@
         "up": 0.3372
       },
       "economicSecurity": {
-        "down": 0.2428,
-        "flat": 0.3334,
-        "up": 0.4238
+        "down": 0.2437,
+        "flat": 0.3333,
+        "up": 0.4229
       },
       "co2EqEmissionsPerCapita": {
         "down": 0.5144,
@@ -42,14 +42,14 @@
         "up": 0.3458
       },
       "economicSecurity": {
-        "down": 0.2553,
-        "flat": 0.3333,
-        "up": 0.4113
+        "down": 0.2556,
+        "flat": 0.3334,
+        "up": 0.411
       },
       "co2EqEmissionsPerCapita": {
         "down": 0.4956,
         "flat": 0.3334,
-        "up": 0.1711
+        "up": 0.171
       }
     },
     "3": {
@@ -59,9 +59,9 @@
         "up": 0.3595
       },
       "economicSecurity": {
-        "down": 0.323,
+        "down": 0.3236,
         "flat": 0.3333,
-        "up": 0.3437
+        "up": 0.3431
       },
       "co2EqEmissionsPerCapita": {
         "down": 0.5033,

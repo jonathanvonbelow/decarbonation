@@ -107,7 +107,7 @@ P = {
     "k": {"B": 0.12, "F": 0.35, "E": 0.30, "C": 0.35, "Pc": 0.25, "pi": 0.35},
     # food (42)
     "yield": {"CC": 1.0, "CA": 0.7, "PRG": 0.25},
-    "yield_trend": 0.006, "export0": 0.30, "kappa1": 2.5, "kappa2": 0.6,
+    "yield_trend": 0.006, "export0": 0.30, "kappa1": 3.0, "kappa2": 0.6,  # kappa1 2.5 -> 3.0 (v6/49b, criterion C6)
     # economy (39)
     "g0": 0.02, "tax0": 0.15, "gamma": {1: 0.13, 2: 0.125, 3: 0.125}, "reserve_floor": 0.02,
     "i": {1: 0.025, 2: 0.035, 3: 0.045}, "alpha": {1: 0.15, 2: 0.12, 3: 0.10},
@@ -672,7 +672,7 @@ ROUTES3 = {
         "innovation": lambda h, s: h["c"] <= 5.5 and h["ren"] >= 0.30 and h["E"] >= 33},
     3: {"floors": lambda h, s: h["St"] >= 30 and h["DY"] <= 1.0 and h["W"] >= 35,
         "conservation": lambda h, s: h["B"] >= 52 and h["forest"] >= 17 and h["c"] <= 5.4 and h["DY"] <= 0.6,
-        "production": lambda h, s: h["E"] >= 36 and h["F"] >= 33 and h["W"] >= 52,
+        "production": lambda h, s: h["E"] >= 36 and h["F"] >= 31 and h["W"] >= 52,  # F 33 -> 31 (v6/49b, follows kappa1)
         "innovation": lambda h, s: h["c"] <= 4.5 and h["ren"] >= 0.35 and h["E"] >= 30 and sum(s["pacts"].values()) >= 1,
         "equilibrium": lambda h, s: sum([h["B"] >= 50, h["F"] >= 40, h["E"] >= 38, h["W"] >= 65, h["St"] >= 75, h["c"] <= 4.5,
                                          h["DY"] <= 0.5, h["Ygrowth"] >= 1.7, h["S"] >= 720]) >= 7},

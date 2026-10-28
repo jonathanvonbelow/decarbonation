@@ -359,3 +359,16 @@ idéntico a la fase 49). Verificado: `tests/game/modelView.spec.ts`, `tests/game
 | ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
 |---|---|---|---|
 | N-08 (definitiva) | El panel del facilitador expone solo claves que el motor lee, en los grupos de 50 §3 (con `Poblacion_Inicial`, `Eficiencia_Minima_Politicas`, `Recuperacion_Politicas_Anios`, `Gasto_Publico_Base_*`); cada una con test de efecto. Pistas de instrumentos = relevancias de `INSTRUMENT_CHANNELS` (se borra `INSTRUMENT_IMPACT_HINTS`). Manuales, hoja docente y DecarboNito describen el 2.0; las tablas docentes se generan del código | `src/components/facilitator/*`, `src/game/modelView.ts`, `src/components/equations/families.ts`, `scripts/params-table-html.ts`, `scripts/routes-table-html.ts` | Ninguno en el modelo; `Poblacion_Inicial` del panel ahora sí actúa al empezar/reiniciar un nivel |
+
+## Modelo 2.0-dev — ajuste de la respuesta de F (fase 49b, 2026-10-28)
+
+Decisión del usuario del 2026-10-27 sobre el criterio C6 (opción 3: ajustar la respuesta de F, no el criterio). Prototipo:
+`P["kappa1"]` y `ROUTES3[3]["production"]` de `scripts/reference/modelo_v2.py`, golden regenerado. Verificado:
+`tests/sim/golden.v2.spec.ts` (sin tocar tolerancias), `tests/sim/food.v2.spec.ts` (24 casos ±1e-9 regenerados),
+`tests/sim/indicators.v2.spec.ts`, `tests/sim/pressures.v2.spec.ts`, `tests/sim/core.spec.ts`, `npm run sim:check` completo
+(C1–C9 PASS, exit 0).
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| C6 (F N3) | κ₁ = 2,5 → 3,0 en D_F = κ₁·ln(ρ/ρ₀) + 0,6·(E − E₀)/50: +20 % de disponibilidad por habitante sube F ≈ 13,5 puntos cerca de 40 (antes ≈ 11) | `PARAMS_V2.food.kappa1` (`src/sim/v2/params.ts`), prototipo | Recorrido de F entre estrategias extremas (arnés, 40 semillas con eventos, año 30): N1 19,7 → 22,9; N2 15,9 → 18,3; N3 14,6 → 16,8 (balanced 27,5 → extractive 44,4). `extractive` casi no cambia (su término de oferta ≈ 0); la cartera que exporta sin subir rendimientos (`balanced`, PEA sin PAI) baja ≈ 2 puntos. Territorio F 25,7 → 26,5 |
+| C2 (producción N3) | Piso de F de la ruta de producción del N3 33 → 31 | `src/sim/winRoutes.ts`, `ROUTES3` del prototipo, `docentes-ecuaciones.html` (generada) | `production` N3 85 % (con 33 y κ₁ 3,0: 72,5 %; antes de la 49b 82,5 %). `extractive` sigue en 0 % (falla W ≥ 52), `balanced` no llega (F ≈ 27,5) |
