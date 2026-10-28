@@ -232,6 +232,8 @@ export function advanceYear(state: GameState, rng: Rng | null, CP: ControlParams
     }
   }
   next.currentEvent = events.length ? events[events.length - 1] : null;
+  // Bookkeeping for the level-3 events panel (phase 50): every event of the year, not just the last. No model effect.
+  next.eventsThisYear = events.map((e) => e.id);
   const areasAfter = areasOf(next);
   const landUseDelta = {} as Record<LandUseType, number>;
   LAND_USE_TYPES.forEach((k) => { landUseDelta[k] = areasAfter[k] - areasBefore[k]; });

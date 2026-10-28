@@ -4,7 +4,8 @@
  * The decision to go monthly was so more situations and news fit inside each year. The model's own
  * random events keep their calibrated (low) frequency, so the volume comes from here instead: every
  * headline is derived from what the model actually did this month — land that changed use, a
- * pressure or indicator crossing a threshold, the treasury going negative, an emissions milestone,
+ * pressure or indicator crossing a threshold, debt crossing 60 % of GDP or entering the bankruptcy zone (phase 50: the
+ * reserves can no longer go negative, they have a 2 % floor), an emissions or renewables milestone,
  * the yearly balance, a mechanic unlocking. News has no mechanical effect of its own: it narrates
  * the model, it never adds to it.
  *
@@ -16,6 +17,7 @@ import { CONTROL_PARAMS } from '../constants';
 import { isProductive, type ParcelChange } from '../sim';
 import type { ControlParams, GameState, Indicators, RandomEvent } from '../types';
 import { LandUseType } from '../types';
+import { PARAMS_V2 } from '../sim/v2/params';
 import { INSTRUMENTS_UNLOCK_YEAR } from './calendar';
 import type { Session } from './session';
 
@@ -66,6 +68,8 @@ const LAND_HEADLINES: Record<string, { key: string; tone: NewsTone }> = {
   [`${LU.UnprotectedNativeForest}>${LU.ProtectedNativeForest}`]: { key: 'land.protectedByPolicy', tone: 'good' },
   [`${LU.ConventionalCrops}>${LU.AgroecologicalCrops}`]: { key: 'land.toAgroeco', tone: 'good' },
   [`${LU.AgroecologicalCrops}>${LU.UnprotectedNativeForest}`]: { key: 'land.regrowth', tone: 'good' },
+  // Phase 50: fallow (FAL, phase 37) regenerating into native forest.
+  [`fallow>${LU.UnprotectedNativeForest}`]: { key: 'land.fallowRegrows', tone: 'good' },
 };
 
 /** Threshold crossings worth a headline: [indicator, threshold, direction, key, tone]. */
@@ -76,8 +80,6 @@ const CROSSINGS: [keyof Indicators, number, 'up' | 'down', string, NewsTone][] =
   ['ppAmbientalista', 50, 'down', 'actor.ngoCalm', 'good'],
   ['ppSocial', 70, 'up', 'actor.citizensUp', 'bad'],
   ['ppSocial', 50, 'down', 'actor.citizensCalm', 'good'],
-  ['treasuryReserves', 0, 'down', 'finance.negative', 'bad'],
-  ['treasuryReserves', 0, 'up', 'finance.recovered', 'good'],
   ['foodSecurity', 25, 'down', 'alert.food', 'bad'],
   ['biodiversity', 30, 'down', 'alert.biodiversity', 'bad'],
   ['politicalStability', 30, 'down', 'alert.stability', 'bad'],
@@ -143,6 +145,24 @@ export function buildMonthNews(ctx: MonthNewsContext): NewsItem[] {
       add({ kind: key.startsWith('actor') ? 'actor' : key.startsWith('finance') ? 'finance' : 'alert', tone, key });
     }
   });
+
+  // Phase 50: public finance. The 1.1 "reserves in the red / positive again" headlines could no longer fire (reserves
+  // have a floor of 2 % of GDP since phase 44): debt crossing the 60 % threshold of the public-investment rule, interest
+  // crossing 20 % of revenue (fiscal stress) and the first month inside the bankruptcy rule.
+  const dyOf = (g: GameState) => (g.stellaSpecificState.PBI_Real > 0 ? g.stellaSpecificState.Deuda / g.stellaSpecificState.PBI_Real : 0);
+  const debtLimit = PARAMS_V2.finance.debtThreshold;
+  if (crossed(dyOf(ctx.prev), dyOf(ctx.next), debtLimit, 'up')) add({ kind: 'finance', tone: 'bad', key: 'finance.debtHigh' });
+  if (crossed(dyOf(ctx.prev), dyOf(ctx.next), debtLimit, 'down')) add({ kind: 'finance', tone: 'good', key: 'finance.debtEased' });
+  const burdenBefore = ctx.prev.model?.fiscal.interestBurden ?? 0;
+  const burdenAfter = ctx.next.model?.fiscal.interestBurden ?? 0;
+  if (crossed(burdenBefore, burdenAfter, PARAMS_V2.finance.bankruptcyInterestBurden, 'up')) add({ kind: 'finance', tone: 'bad', key: 'finance.stress' });
+  if ((ctx.prev.model?.fiscal.breachYears ?? 0) <= 0 && (ctx.next.model?.fiscal.breachYears ?? 0) > 0) {
+    add({ kind: 'alert', tone: 'bad', key: 'finance.bankruptcyNear' });
+  }
+  // Renewable share of electricity: each 10 points reached (phase 38 energy block).
+  const renBefore = Math.floor(10 * (ctx.prev.model?.energy.renewableShare ?? 0));
+  const renAfter = Math.floor(10 * (ctx.next.model?.energy.renewableShare ?? 0));
+  if (renAfter > renBefore && renAfter > 0) add({ kind: 'milestone', tone: 'good', key: 'milestone.renewables', values: { value: renAfter * 10 } });
 
   // Emissions milestones: each whole tonne per capita crossed.
   const co2Before = before.co2EqEmissionsPerCapita;

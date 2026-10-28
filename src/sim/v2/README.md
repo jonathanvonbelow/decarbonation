@@ -61,6 +61,7 @@ avanza 12·dt meses y cambia de año después de diciembre). `stepMonth` = `adva
 | 46 | paso 3: eventos con sorteo independiente, choques de nivel, ε AR(1) (`src/sim/events.ts`, `PARAMS_V2.events`); paso anual = 12 sub-pasos mensuales; `deferred.ts` borrado; `GOLDEN_ACTIVE = true` | hecho (golden activo y exacto) |
 | 47 | Territorio: situaciones como impulsos del objetivo (`model.impulses`, vida media 18 meses, tope ±0,6, descarte a 6τ; `PARAMS_V2.situations`), descuido del escritorio sobre D_Pc (`AdvanceOptions.wear.Pc`), `investmentScale` √(Y/Y₀) en costos de situaciones y lotes | hecho (`SITUATION_EFFECT_SCALE` borrado; prototipo sin golden nuevo) |
 | 48 | fuera de `advance`: bandas de predicción por terciles (`scripts/prediction-bands.ts`), índices de investigación (`research.ts`, `PARAMS_V2.research`) | hecho (el modelo no cambia) |
+| 50 | fuera de `advance`: interfaz, manuales, hoja docente y DecarboNito leen el submodelo con `src/game/modelView.ts`; `advanceYear` anota `eventsThisYear` (solo contabilidad) | hecho (el modelo no cambia) |
 
 ## Convenciones
 

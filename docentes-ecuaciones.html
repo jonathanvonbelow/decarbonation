@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DecarboNation — Hoja de ecuaciones</title>
-    <meta name="description" content="Cómo funciona el modelo por dentro: las siete familias de ecuaciones que gobiernan la simulación, qué cambia en Territorio, y qué tan auditadas están." />
+    <meta name="description" content="Cómo funciona el modelo 2.0 por dentro: las nueve familias de ecuaciones, los parámetros con su origen, las rutas de victoria de los dos juegos y qué tan auditado está." />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="canonical" href="https://decarbonation.vercel.app/docentes/ecuaciones">
     <link rel="stylesheet" href="/src/index.css" />
@@ -29,111 +29,318 @@
         <span data-lang="en" hidden>Equations sheet</span>
       </h1>
       <p class="text-ash mb-2">
-        <span data-lang="es">Para estudiantes avanzados, revisores o cualquiera que quiera abrir la caja negra. No es material de primera clase — para eso está el <a href="/docentes/plan-clase" class="text-hydro hover:underline">plan de clase</a>.</span>
-        <span data-lang="en" hidden>For advanced students, reviewers, or anyone who wants to open the black box. Not first-class material — that's what the <a href="/docentes/plan-clase" class="text-hydro hover:underline">lesson plan</a> is for.</span>
+        <span data-lang="es">Para estudiantes avanzados, revisores o cualquiera que quiera abrir la caja negra. No es material de primera clase — para eso está el <a href="/docentes/plan-clase" class="text-hydro hover:underline">plan de clase</a>. Describe el modelo 2.0, que comparten Territorio y el juego de 3 niveles.</span>
+        <span data-lang="en" hidden>For advanced students, reviewers, or anyone who wants to open the black box. Not first-class material — that's what the <a href="/docentes/plan-clase" class="text-hydro hover:underline">lesson plan</a> is for. It describes model 2.0, shared by Territory and the 3-level game.</span>
+      </p>
+      <p class="panel p-4 text-sm text-ochre mt-4">
+        <span data-lang="es">Importante: las cifras de esta hoja son de un modelo de juego calibrado para que las decisiones importen, no proyecciones del Bosque Atlántico ni de ningún territorio real. Sirven para razonar sobre mecanismos y trade-offs, no para predecir.</span>
+        <span data-lang="en" hidden>Important: the figures on this sheet come from a game model calibrated so that decisions matter, not projections of the Atlantic Forest or of any real territory. They are for reasoning about mechanisms and trade-offs, not for forecasting.</span>
       </p>
 
       <section class="mt-10 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Cómo está armado el modelo</h2>
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>How the model is built</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="panel p-5">
-            <h3 class="font-semibold text-bone mb-1" data-lang="es">Parámetros de control global</h3>
-            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Global control parameters</h3>
-            <p class="text-sm text-ash" data-lang="es">Ajustan la sensibilidad y las constantes de la simulación. Modificarlos cambia drásticamente el comportamiento del juego.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Tune the simulation's sensitivity and constants. Changing them drastically alters the game's behavior.</p>
-          </div>
-          <div class="panel p-5">
-            <h3 class="font-semibold text-bone mb-1" data-lang="es">Políticas</h3>
-            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Policies</h3>
-            <p class="text-sm text-ash" data-lang="es">Definiciones base para cada política: costos y dinámica de eficiencia a lo largo del tiempo.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Base definitions for each policy: costs and efficiency dynamics over time.</p>
-          </div>
-          <div class="panel p-5">
-            <h3 class="font-semibold text-bone mb-1" data-lang="es">Usos del suelo</h3>
-            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Land uses</h3>
-            <p class="text-sm text-ash" data-lang="es">Propiedades base para cada tipo de uso del suelo: flujo anual de carbono (tCO₂e por hectárea, puede ser negativo) y carbono almacenado (Mg C por hectárea), por criterio experto.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Base properties for each land use type: annual carbon flux (tCO₂e per hectare, may be negative) and stored carbon (Mg C per hectare), set by expert judgment.</p>
-          </div>
-          <div class="panel p-5">
-            <h3 class="font-semibold text-bone mb-1" data-lang="es">Ecuaciones fundamentales</h3>
-            <h3 class="font-semibold text-bone mb-1" data-lang="en" hidden>Core equations</h3>
-            <p class="text-sm text-ash" data-lang="es">Las fórmulas que interrelacionan esas variables para producir los resultados anuales.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>The formulas that interrelate those variables to produce each year's results.</p>
-          </div>
-        </div>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">La idea central: ancla y objetivo</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>The core idea: anchor and target</h2>
+        <p class="text-sm text-ash" data-lang="es">Cada indicador acotado (biodiversidad, seguridades alimentaria y económica, bienestar, estabilidad, presiones) se mueve cada paso una fracción del camino hacia un objetivo. El objetivo está anclado en el estado inicial: sin políticas y con el territorio quieto, coincide con el valor de partida y nada se mueve. Lo que el jugador ve moverse es solo lo que él o el territorio movieron. El juego muestra ese objetivo bajo cada indicador ("va hacia 52").</p>
+        <p class="text-sm text-ash" data-lang="en" hidden>Every bounded indicator (biodiversity, food and economic security, wellbeing, stability, pressures) moves each step a fraction of the way toward a target. The target is anchored to the starting state: with no policies and an unchanged territory it equals the starting value and nothing moves. What the player sees move is only what they or the territory moved. The game shows that target under each indicator ("heading to 52").</p>
       </section>
 
       <section class="mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Las siete familias de ecuaciones</h2>
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>The seven equation families</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Las nueve familias de ecuaciones</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>The nine equation families</h2>
+        <p class="text-xs text-ash-dim mb-3" data-lang="es">Generadas desde el código (npx tsx scripts/params-table-html.ts --write): los números son los que usa el motor.</p>
+        <p class="text-xs text-ash-dim mb-3" data-lang="en" hidden>Generated from the code (npx tsx scripts/params-table-html.ts --write): the numbers are the ones the engine uses.</p>
         <div class="space-y-4">
+<!-- BEGIN:equation-families -->
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">1. Eficiencia de política</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>1. Policy efficiency</h3>
-            <p class="text-sm text-ash" data-lang="es">Determina cuán efectiva es una política. Recién activada rinde poco (puesta en marcha); con los años de uso se desgasta hacia un piso institucional y, si se la deja descansar, se recupera. El reparto del esfuerzo entre sus instrumentos, con rendimientos decrecientes, la escala por canal (suelo, producción, social) y fija su costo.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Determines how effective a policy is. Freshly activated it yields little (start-up); with years of use it wears towards an institutional floor and, if left to rest, it recovers. The split of effort across its instruments, with diminishing returns, scales it per channel (land, production, social) and sets its cost.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">1. Políticas: puesta en marcha, desgaste, instrumentos y costo</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>1. Policies: start-up, wear, instruments and cost</h3>
+            <p class="text-sm text-ash" data-lang="es">Una política recién activada rinde poco (puesta en marcha λ), se desgasta con los años de uso hacia un piso institucional η_min (desgaste δ) y se recupera si descansa (ρ). Sus cuatro instrumentos reparten el efecto en tres canales (suelo, producción, social; Neutralidad de Carbono además electricidad, eficiencia e impuesto) con rendimientos decrecientes. El costo es una fracción del PBI que crece con el esfuerzo.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>A freshly activated policy yields little (start-up λ), wears with years of use toward an institutional floor η_min (wear δ) and recovers while resting (ρ). Its four instruments split the effect across three channels (land, production, social; Carbon Neutrality also electricity, efficiency and tax) with diminishing returns. Its cost is a share of GDP that grows with effort.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">η = (1 − e^(−τ/λ)) · [η_min + (1 − η_min) · e^(−T/δ)]      η_min = 0,35
+T ← T + dt (activa);   T ← T · e^(−dt/ρ) (en reposo),   ρ = 5
+η^c = η · Σ μ_k^c · φ(e_k) / Σ μ_k^c · φ(25),   φ(e) = 1 − e^(−e/40)
+Costo = κ · Y · (0,3 + 0,7 · ē),   ē = min(100, Σ e_k)/100</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>η = (1 − e^(−τ/λ)) · [η_min + (1 − η_min) · e^(−T/δ)]      η_min = 0.35
+T ← T + dt (active);   T ← T · e^(−dt/ρ) (resting),   ρ = 5
+η^c = η · Σ μ_k^c · φ(e_k) / Σ μ_k^c · φ(25),   φ(e) = 1 − e^(−e/40)
+Cost = κ · Y · (0.3 + 0.7 · ē),   ē = min(100, Σ e_k)/100</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">2. Balance de carbono</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>2. Carbon balance</h3>
-            <p class="text-sm text-ash" data-lang="es">La ecuación central para el cambio climático: un inventario anual en toneladas de CO₂ equivalente con tres componentes (energía, flujo del suelo y cambio de uso), dividido por la población (400.000 habitantes al inicio). La energía baja con la participación renovable y la eficiencia, que avanzan con inercia; con 4 % del territorio en parques energéticos la electricidad sería 100 % renovable (cada lote representa una cartera de generación, transmisión y almacenamiento, no un dimensionamiento físico). Los flujos del suelo son criterio experto y los stocks se basan en la revisión del Bosque Atlántico (2024). Además se lleva un presupuesto de carbono acumulado frente a una trayectoria lineal a −30 % en 2054.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>The central equation for climate change: a yearly inventory in tonnes of CO₂ equivalent with three components (energy, land flux and land-use change), divided by the population (400,000 inhabitants at the start). Energy falls with the renewable share and efficiency, which move with inertia; with 4 % of the territory under energy parks electricity would be 100 % renewable (each lot stands for a portfolio of generation, transmission and storage, not a physical sizing). Land fluxes are expert judgment and stocks follow the Atlantic Forest review (2024). A cumulative carbon budget is also kept against a linear path to −30 % in 2054.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">2. Uso del suelo: matriz de transición conservativa</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>2. Land use: conservative transition matrix</h3>
+            <p class="text-sm text-ash" data-lang="es">El área total no cambia. El bosque nativo no protegido se protege o se desmonta según las políticas (frontera); una parte de la tierra agrícola vuelve cada año a un pool que se reasigna según la renta de cada uso, anclada al inicio; la tierra que pierde una sequía o una situación pasa a barbecho, que reingresa o se regenera.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Total area is constant. Unprotected native forest is protected or cleared according to policies (frontier); part of the farmland returns each year to a pool reallocated by each use's rent, anchored to the start; land lost to a drought or a situation becomes fallow, which re-enters or regenerates.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">BNNP→BNP = A · (0,008 + 0,05·η_CR)
+BNNP→CC = A · (0,01 + 0,04·η_PAI + 0,01·η_FRA) · (1 − η_CR)
+pool = Σ 0,02·A_k + 0,25·A_FAL,   reparto ∝ e^(β·r_k),  β = 1
+FAL→BNNP = 0,05·A_FAL</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>BNNP→BNP = A · (0.008 + 0.05·η_CR)
+BNNP→CC = A · (0.01 + 0.04·η_PAI + 0.01·η_FRA) · (1 − η_CR)
+pool = Σ 0.02·A_k + 0.25·A_FAL,   split ∝ e^(β·r_k),  β = 1
+FAL→BNNP = 0.05·A_FAL</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">3. Cálculo de indicadores</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>3. Indicator calculation</h3>
-            <p class="text-sm text-ash" data-lang="es">Fórmula genérica para indicadores socio-ambientales como la Biodiversidad: una suma ponderada de los efectos de las políticas y los usos del suelo.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Generic formula for socio-environmental indicators like Biodiversity: a weighted sum of the effects of policies and land uses.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">3. Carbono: energía, suelo y cambio de uso</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>3. Carbon: energy, land and land-use change</h3>
+            <p class="text-sm text-ash" data-lang="es">Inventario anual en toneladas de CO₂ equivalente con tres componentes, dividido por la población (400.000 habitantes al inicio). La energía baja con la participación renovable s y la eficiencia u, que avanzan con inercia; con 4 % del territorio en parques energéticos la electricidad sería renovable (un lote representa una cartera de generación, transmisión y almacenamiento). Presupuesto de carbono: emisiones acumuladas frente a una senda lineal a −30 % en 2054.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Yearly inventory in tonnes of CO₂ equivalent with three components, divided by the population (400,000 inhabitants at the start). Energy falls with the renewable share s and efficiency u, which move with inertia; with 4 % of the territory under energy parks electricity would be renewable (a lot stands for a portfolio of generation, transmission and storage). Carbon budget: cumulative emissions against a linear path to −30 % in 2054.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">Energía = ε0 · (y/y0)^0,3 · (1 + 0,15·η_SE) · [0,35·(1 − s) + 0,65·(1 − u)] · Pop,   ε0 = 4 / 5 / 4,6
+s* = min(0,9; 0,6·η_CN^elec + min(1; a_ENR/0,04) + pactos);   u* = min(0,6; 0,35·η_CN^other + pactos);   k = 0,15
+AFOLU = Σ f_i · ha_i        LUC = Σ ha_(i→j)/dt · max(0, stock_i − stock_j) · 44/12
+c = (Energía + AFOLU + LUC) / Pop</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>Energy = ε0 · (y/y0)^0.3 · (1 + 0.15·η_SE) · [0.35·(1 − s) + 0.65·(1 − u)] · Pop,   ε0 = 4 / 5 / 4.6
+s* = min(0.9; 0.6·η_CN^elec + min(1; a_ENR/0.04) + pacts);   u* = min(0.6; 0.35·η_CN^other + pacts);   k = 0.15
+AFOLU = Σ f_i · ha_i        LUC = Σ ha_(i→j)/dt · max(0, stock_i − stock_j) · 44/12
+c = (Energy + AFOLU + LUC) / Pop</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">4. Presión política (Nivel 2+)</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>4. Political pressure (Level 2+)</h3>
-            <p class="text-sm text-ash" data-lang="es">Modela cómo aumenta o disminuye el descontento de los grupos de interés (agrícola, ambientalista, social) en respuesta a las políticas y los indicadores: cada año suma un impulso lineal y pierde una fracción fija de sí misma (disipación), entre 0 y 100.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Models how discontent among interest groups (agricultural, environmentalist, social) rises or falls in response to policies and indicators: each year it adds a linear impulse and loses a fixed share of itself (dissipation), between 0 and 100.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">4. Marco común de los indicadores</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>4. Common indicator framework</h3>
+            <p class="text-sm text-ash" data-lang="es">Todo indicador acotado (0–100) se mueve cada paso una fracción del camino hacia un objetivo logístico anclado en su valor inicial: sin políticas y con el territorio quieto, el objetivo es el valor de partida y nada se mueve. El impulsor D suma desvíos respecto del inicio y efectos de políticas; la relajación es exacta, así que doce pasos mensuales equivalen a uno anual. Las situaciones de Territorio son impulsos del objetivo que se desvanecen (vida media 18 meses, tope ±0,6 logit).</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Every bounded indicator (0–100) moves each step a fraction of the way toward a logistic target anchored at its starting value: with no policies and an unchanged territory the target is the starting value and nothing moves. The driver D adds deviations from the start and policy effects; relaxation is exact, so twelve monthly steps equal one yearly step. Territorio situations are fading target impulses (half-life 18 months, cap ±0.6 logit).</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">X* = 100 · σ( logit(X₀/100) + D_X + Σ impulses )
+X ← X* + (X − X*) · (1 − k_X)^dt
+k_B / k_F / k_E / k_C / k_Pc / k_π = 0.12 / 0.35 / 0.3 / 0.35 / 0.25 / 0.35</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>X* = 100 · σ( logit(X₀/100) + D_X + Σ impulses )
+X ← X* + (X − X*) · (1 − k_X)^dt
+k_B / k_F / k_E / k_C / k_Pc / k_π = 0.12 / 0.35 / 0.3 / 0.35 / 0.25 / 0.35</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">5. Economía</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>5. Economy</h3>
-            <p class="text-sm text-ash" data-lang="es">Fórmulas que gobiernan la macroeconomía de la nación: crecimiento del PBI, impuestos, intereses, amortización de deuda y balance de las finanzas públicas.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Formulas governing the nation's macroeconomy: GDP growth, taxes, interest, debt amortization, and the balance of public finances.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">5. Biodiversidad: relación especies-área</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>5. Biodiversity: species-area relationship</h3>
+            <p class="text-sm text-ash" data-lang="es">Relación especies-área de paisaje (Pereira, Ziv y Miranda, 2014) con z = 0,35 sobre un índice de hábitat (afinidad de cada uso por su área), más la calidad de manejo de las políticas, la sinergia Agroecología + Conservación, el antagonismo Agricultura Intensiva + Normativas Flexibles, los pactos y, en Territorio, la conectividad del bosque en el mapa.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Countryside species-area relationship (Pereira, Ziv &amp; Miranda, 2014) with z = 0.35 on a habitat index (affinity of each use by its area), plus the management quality of policies, the Agroecology + Conservation synergy, the Intensive Agriculture + Flexible Regulations antagonism, pacts and, in Territorio, forest connectivity on the map.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">H = Σ h_i · a_i
+D_B = z/(1 − B₀/100) · ln(H/H₀) + Σ qB·η^land + 0.1·min(η_AS, η_CR) − 0.12·min(η_PAI, η_FRA) + pacts [+ 0.25·ln(K/K₀)]</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>H = Σ h_i · a_i
+D_B = z/(1 − B₀/100) · ln(H/H₀) + Σ qB·η^land + 0.1·min(η_AS, η_CR) − 0.12·min(η_PAI, η_FRA) + pacts [+ 0.25·ln(K/K₀)]</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">6. Estabilidad y conflicto</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>6. Stability and conflict</h3>
-            <p class="text-sm text-ash" data-lang="es">Ecuaciones que determinan la cohesión social y la estabilidad del gobierno. Cruciales para evitar las condiciones de fin de juego (colapso político, ecológico, hambruna, bancarrota).</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Equations determining social cohesion and government stability. Crucial for avoiding game-over conditions (political or ecological collapse, famine, bankruptcy).</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">6. Seguridad alimentaria: oferta y demanda</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>6. Food security: supply and demand</h3>
+            <p class="text-sm text-ash" data-lang="es">Disponibilidad de alimentos por persona frente a la del inicio, más el acceso por ingreso (seguridad económica). La oferta sale de la tierra agrícola y sus rendimientos, menos lo que se exporta; el choque de rendimiento ε es aleatorio y persistente (AR(1)) y la Gestión del Agua lo amortigua.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Food available per person against the starting level, plus access by income (economic security). Supply comes from farmland and its yields, minus exports; the yield shock ε is random and persistent (AR(1)) and Water Management damps it.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">Q = (1 − x)·[CC·1·(1 + 0.25·η_PAI) + CA·0.7·(1 + 0.15·η_AS) + PRG·0.25·(1 + 0.2·η_GS)]·(1 + 0.06·η_AGUA)·(1 + 0.006)^t·(1 + ε)
+x = 0.3 + 0.2·η_PEA;   ρ = max(Q/Pop, 0.001·ρ₀)
+D_F = 2.5·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>Q = (1 − x)·[CC·1·(1 + 0.25·η_PAI) + CA·0.7·(1 + 0.15·η_AS) + PRG·0.25·(1 + 0.2·η_GS)]·(1 + 0.06·η_AGUA)·(1 + 0.006)^t·(1 + ε)
+x = 0.3 + 0.2·η_PEA;   ρ = max(Q/Pop, 0.001·ρ₀)
+D_F = 2.5·ln(ρ/ρ₀) + 0.6·(E − E₀)/50</pre>
           </div>
           <div class="panel p-5">
-            <h3 class="font-semibold text-hydro mb-1" data-lang="es">7. Puntaje general</h3>
-            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>7. General score</h3>
-            <p class="text-sm text-ash" data-lang="es">Calcula el Puntaje General. Los componentes y sus pesos cambian en cada nivel para reflejar los desafíos de esa etapa.</p>
-            <p class="text-sm text-ash" data-lang="en" hidden>Calculates the General Score. Components and their weights change each level to reflect that stage's challenges.</p>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">7. Seguridad económica, conflicto y colapso</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>7. Economic security, conflict and collapse</h3>
+            <p class="text-sm text-ash" data-lang="es">La seguridad económica sigue a las políticas productivas, al crecimiento, al valor productivo de la tierra y a los servicios ecosistémicos, y cae con el estrés fiscal, los impuestos y las crisis alimentarias. El conflicto social (bienestar = 100 − conflicto) suma el deterioro de alimentos y economía, la presión ambientalista, la concentración de la tierra G y restringir sin acompañar (1 − J). El colapso político (estabilidad = 100 − colapso) sigue al bienestar, la economía, el estrés fiscal y la polarización de las presiones.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Economic security follows productive policies, growth, the productive value of land and ecosystem services, and falls with fiscal stress, taxes and food crises. Social conflict (wellbeing = 100 − conflict) adds the deterioration of food and economy, environmental pressure, land concentration G and restricting without support (1 − J). Political collapse (stability = 100 − collapse) follows wellbeing, the economy, fiscal stress and the polarisation of pressures.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">D_E = Σ bE·η^prod − 0.15·η_CN^tax + 0.25·(g − g₀)/0.01 + 1.5·(V/V₀ − 1) + 0.15·(B − B₀)/20 − 0.8·φ − 0.04·τ − 0.6·[s(F) − s(F₀)] + pacts
+D_C = 0.6·(F₀ − F)/15 + 0.5·(E₀ − E)/15 + 0.4·(πe − πe₀)/20 + Σ c·η^social − Σ relief·η^social + 2·Δa_CC + 1·Δa_PF + 0.03·τ + 0.6·φ + 3·(G − G₀) + 0.6·(1 − J)·R
+D_Pc = 0.9·(W₀ − W)/20 + 0.5·(E₀ − E)/20 + 0.8·φ + 0.5·(pol − pol₀)/30 + 0.6·(π̄ − π̄₀)/20 + pacts
+G = (CC + PF)/(CC + CA + PRG + PF);   J = S/(S + R)  (1 if S + R = 0),  R = η_CR + 0.5·η_CN^tax + 0.3·η_AGUA,  S = 0.5·(η_AS + η_GS)</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>D_E = Σ bE·η^prod − 0.15·η_CN^tax + 0.25·(g − g₀)/0.01 + 1.5·(V/V₀ − 1) + 0.15·(B − B₀)/20 − 0.8·φ − 0.04·τ − 0.6·[s(F) − s(F₀)] + pacts
+D_C = 0.6·(F₀ − F)/15 + 0.5·(E₀ − E)/15 + 0.4·(πe − πe₀)/20 + Σ c·η^social − Σ relief·η^social + 2·Δa_CC + 1·Δa_PF + 0.03·τ + 0.6·φ + 3·(G − G₀) + 0.6·(1 − J)·R
+D_Pc = 0.9·(W₀ − W)/20 + 0.5·(E₀ − E)/20 + 0.8·φ + 0.5·(pol − pol₀)/30 + 0.6·(π̄ − π̄₀)/20 + pacts
+G = (CC + PF)/(CC + CA + PRG + PF);   J = S/(S + R)  (1 if S + R = 0),  R = η_CR + 0.5·η_CN^tax + 0.3·η_AGUA,  S = 0.5·(η_AS + η_GS)</pre>
           </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">8. Presiones sectoriales</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>8. Sectoral pressures</h3>
+            <p class="text-sm text-ash" data-lang="es">Las presiones agrícola, ambientalista y social siguen el mismo marco anclado: suben cuando su sector queda peor que al inicio (economía y alimentos para el campo; biodiversidad y CO₂ para el ambientalismo; bienestar e impuestos para la sociedad) y con las políticas que lo afectan. Sacar tierra de producción tensiona al campo en proporción al área.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The agricultural, environmentalist and social pressures follow the same anchored framework: they rise when their sector ends up worse than at the start (economy and food for farmers; biodiversity and CO₂ for environmentalists; wellbeing and taxes for society) and with the policies that affect it. Taking land out of production strains farmers in proportion to the area.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">D_πa = σ_prod·Σ φa·η^social/15 + 0.03·(E₀ − E) + 0.02·(F₀ − F) + 4·(a_prod,0 − a_prod)
+D_πe = Σ φe·η^social/15 + 0.035·(B₀ − B) + 1.5·(c − c₀)/c₀
+D_πs = Σ φs·η^social/15 + 0.04·(W₀ − W) + 0.04·τ</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>D_πa = σ_prod·Σ φa·η^social/15 + 0.03·(E₀ − E) + 0.02·(F₀ − F) + 4·(a_prod,0 − a_prod)
+D_πe = Σ φe·η^social/15 + 0.035·(B₀ − B) + 1.5·(c − c₀)/c₀
+D_πs = Σ φs·η^social/15 + 0.04·(W₀ − W) + 0.04·τ</pre>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">9. Finanzas públicas</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>9. Public finance</h3>
+            <p class="text-sm text-ash" data-lang="es">El Estado gasta casi todo lo que recauda antes de pagar una política (gasto público base γ, el parámetro más sensible del modelo). Las reservas nunca bajan del 2 % del PBI: todo déficit se financia con deuda, a una tasa que sube por encima del 60 % del PBI; los intereses altos generan estrés fiscal φ, que frena el crecimiento y empuja la economía, el conflicto y el colapso. La inversión pública (pactos, usos públicos, opciones pagas) se rechaza sin espacio fiscal. Quiebra: deuda &gt; 100 % del PBI con intereses &gt; 20 % de la recaudación durante dos años.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>The State spends almost everything it collects before paying for a single policy (base public spending γ, the model's most sensitive parameter). Reserves never fall below 2 % of GDP: every deficit is financed with debt, at a rate that rises above 60 % of GDP; high interest creates fiscal stress φ, which slows growth and pushes economy, conflict and collapse. Public investment (pacts, public uses, paid options) is refused without fiscal space. Bankruptcy: debt &gt; 100 % of GDP with interest &gt; 20 % of revenue for two years.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">g = 0.02 + 0.01·η_PIE + 0.005·η_PEA − 0.0002·τ − 0.01·φ;   Y' = Y·(1 + g·dt)
+T = Y'·(0.15 + τ/100) + 0.005·Y'·η_CN^tax;   G₀ = γ_N·Y',  γ = 0.13 / 0.125 / 0.125
+SP = T − G₀ − K;   i = i_N + 0.05·max(0, D/Y − 0.6);   R' = R + (SP − i·D − α_N·D)·dt + L
+R' &lt; 0.02·Y'  ⇒  D' += 0.02·Y' − R',  R' = 0.02·Y';   φ = sHigh(i·D/T; 0.2, 0.04)</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>g = 0.02 + 0.01·η_PIE + 0.005·η_PEA − 0.0002·τ − 0.01·φ;   Y' = Y·(1 + g·dt)
+T = Y'·(0.15 + τ/100) + 0.005·Y'·η_CN^tax;   G₀ = γ_N·Y',  γ = 0.13 / 0.125 / 0.125
+SP = T − G₀ − K;   i = i_N + 0.05·max(0, D/Y − 0.6);   R' = R + (SP − i·D − α_N·D)·dt + L
+R' &lt; 0.02·Y'  ⇒  D' += 0.02·Y' − R',  R' = 0.02·Y';   φ = sHigh(i·D/T; 0.2, 0.04)</pre>
+          </div>
+          <div class="panel p-5">
+            <h3 class="font-semibold text-hydro mb-1" data-lang="es">Anexo: puntaje general (3 niveles)</h3>
+            <h3 class="font-semibold text-hydro mb-1" data-lang="en" hidden>Appendix: general score (3 levels)</h3>
+            <p class="text-sm text-ash" data-lang="es">Anclado al inicio de cada nivel: el componente de carbono vale 100 en 0,25·c₀ y 0 en 1,25·c₀; el de PBI se llena al 2× del PBI inicial. Cada ruta multiplica el puntaje final del nivel.</p>
+            <p class="text-sm text-ash" data-lang="en" hidden>Anchored to each level's start: the carbon component is 100 at 0.25·c₀ and 0 at 1.25·c₀; the GDP one fills up at 2× the starting GDP. Each route multiplies the level's final score.</p>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="es">C_sc = 100·clip((1.25·c₀ − c)/c₀, 0, 1);  P_sc = 100 − π̄;  X = (F + E + W + St)/4;  Y_sc = min(100, 100·Y/(2·Y₀))
+S1 = 10·(0.4·B + 0.45·C_sc + 0.15·E)
+S2 = 10·(0.15·B + 0.2·C_sc + 0.3·P_sc + 0.35·X)
+S3 = 10·(0.1·B + 0.15·C_sc + 0.2·P_sc + 0.25·X + 0.3·Y_sc)</pre>
+            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-basalt-900 p-3 text-xs text-bone" data-lang="en" hidden>C_sc = 100·clip((1.25·c₀ − c)/c₀, 0, 1);  P_sc = 100 − π̄;  X = (F + E + W + St)/4;  Y_sc = min(100, 100·Y/(2·Y₀))
+S1 = 10·(0.4·B + 0.45·C_sc + 0.15·E)
+S2 = 10·(0.15·B + 0.2·C_sc + 0.3·P_sc + 0.35·X)
+S3 = 10·(0.1·B + 0.15·C_sc + 0.2·P_sc + 0.25·X + 0.3·Y_sc)</pre>
+          </div>
+<!-- END:equation-families -->
         </div>
+      </section>
+
+      <section id="parametros" class="panel p-6 mb-8 scroll-mt-20">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Parámetros y su origen</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Parameters and their source</h2>
+        <p class="text-sm text-ash mb-3" data-lang="es">Los parámetros principales, generados desde el código. El facilitador puede cambiar en vivo los que figuran con su nombre en mayúsculas (panel del facilitador); el resto vive en las tablas del modelo.</p>
+        <p class="text-sm text-ash mb-3" data-lang="en" hidden>The main parameters, generated from the code. The facilitator can change live the ones listed with their upper-case name (facilitator panel); the rest live in the model tables.</p>
+<!-- BEGIN:params-table -->
+        <div data-lang="es" class="overflow-x-auto">
+          <table class="w-full min-w-[560px] text-left text-sm text-ash">
+            <thead><tr class="text-xs text-ash-dim"><th class="py-1 pr-3 font-normal">Parámetro</th><th class="py-1 pr-3 font-normal">Valor</th><th class="py-1 pr-3 font-normal">Unidad</th><th class="py-1 pr-3 font-normal">Origen</th></tr></thead>
+            <tbody>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Población inicial</span><br><code class="text-xs text-ash-dim">Poblacion_Inicial</code></td><td class="py-1.5 pr-3 tnum">400.000</td><td class="py-1.5 pr-3">habitantes</td><td class="py-1.5">decisión del equipo<br><span class="text-xs text-ash-dim">decisión 4 del índice v6: AFOLU ≈ 20–35 % de las emisiones, comparable al inventario argentino</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Crecimiento de la población</span><br><code class="text-xs text-ash-dim">Tasa_Crecimiento_Poblacional_Base</code></td><td class="py-1.5 pr-3 tnum">0,008</td><td class="py-1.5 pr-3">fracción/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Crecimiento base del PBI</span><br><code class="text-xs text-ash-dim">Tasa_Base_Crecimiento_PBI</code></td><td class="py-1.5 pr-3 tnum">0,02</td><td class="py-1.5 pr-3">fracción/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Recaudación base</span><br><code class="text-xs text-ash-dim">Tasa_Impositiva_General_Sobre_PBI</code></td><td class="py-1.5 pr-3 tnum">0,15</td><td class="py-1.5 pr-3">fracción del PBI</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Gasto público base γ (niveles 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Gasto_Publico_Base_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0,13 / 0,125 / 0,125</td><td class="py-1.5 pr-3">fracción del PBI/año</td><td class="py-1.5">calibrado por simulación<br><span class="text-xs text-ash-dim">el parámetro más sensible del modelo</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Tasa de interés base (niveles 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Tasa_de_interes_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0,025 / 0,035 / 0,045</td><td class="py-1.5 pr-3">fracción/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Amortización de la deuda (niveles 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Pago_deuda_anual_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0,15 / 0,12 / 0,1</td><td class="py-1.5 pr-3">fracción de la deuda/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Piso de reservas · umbral de deuda · prima de riesgo</span><br><code class="text-xs text-ash-dim">finance.reserveFloor / debtThreshold / riskPremium</code></td><td class="py-1.5 pr-3 tnum">0,02 / 0,6 / 0,05</td><td class="py-1.5 pr-3">fracción del PBI · D/Y · tasa por punto de D/Y</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Velocidades de ajuste B / F / E / C / Pc / π</span><br><code class="text-xs text-ash-dim">Velocidad_Ajuste_*</code></td><td class="py-1.5 pr-3 tnum">0,12 / 0,35 / 0,3 / 0,35 / 0,25 / 0,35</td><td class="py-1.5 pr-3">fracción del camino/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Piso institucional de eficiencia η_min</span><br><code class="text-xs text-ash-dim">Eficiencia_Minima_Politicas</code></td><td class="py-1.5 pr-3 tnum">0,35</td><td class="py-1.5 pr-3">0–1</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Recuperación en reposo ρ</span><br><code class="text-xs text-ash-dim">Recuperacion_Politicas_Anios</code></td><td class="py-1.5 pr-3 tnum">5</td><td class="py-1.5 pr-3">años</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Puesta en marcha λ por política</span><br><code class="text-xs text-ash-dim">rampYears</code></td><td class="py-1.5 pr-3 tnum">AS 1,5 · CR 2,5 · GS 1,5 · AGUA 2 · CN 2,5 · PAI 1 · PEA 0,5 · PIE 1,5 · FRA 0,5 · SE 0,5</td><td class="py-1.5 pr-3">años</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Desgaste δ por política</span><br><code class="text-xs text-ash-dim">fatigueYears</code></td><td class="py-1.5 pr-3 tnum">AS 15 · CR 25 · GS 12 · AGUA 20 · CN 25 · PAI 8 · PEA 10 · PIE 10 · FRA 6 · SE 5</td><td class="py-1.5 pr-3">años de uso</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Costo a esfuerzo pleno κ</span><br><code class="text-xs text-ash-dim">costShare</code></td><td class="py-1.5 pr-3 tnum">AS 0,008 · CR 0,01 · GS 0,006 · AGUA 0,008 · CN 0,012 · PAI 0,006 · PEA 0,003 · PIE 0,005 · FRA 0,002 · SE 0,012</td><td class="py-1.5 pr-3">fracción del PBI/año</td><td class="py-1.5">criterio experto<br><span class="text-xs text-ash-dim">calibrado contra el gasto público base</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Escala de rendimientos decrecientes del esfuerzo</span><br><code class="text-xs text-ash-dim">effortE0</code></td><td class="py-1.5 pr-3 tnum">40</td><td class="py-1.5 pr-3">puntos de esfuerzo</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Flujo de carbono por uso del suelo</span><br><code class="text-xs text-ash-dim">flux</code></td><td class="py-1.5 pr-3 tnum">BNP -1 · BNNP 0,5 · CA 0,8 · CC 2,5 · PF -4 · PRG 3 · HUM -3 · RES -9 · ENR 0,1 · FAL -2</td><td class="py-1.5 pr-3">tCO₂e/ha/año</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Carbono almacenado por uso del suelo</span><br><code class="text-xs text-ash-dim">stock</code></td><td class="py-1.5 pr-3 tnum">BNP 200 · BNNP 170 · CA 60 · CC 45 · PF 90 · PRG 50 · HUM 250 · RES 70 · ENR 40 · FAL 55</td><td class="py-1.5 pr-3">Mg C/ha</td><td class="py-1.5">literatura<br><span class="text-xs text-ash-dim">revisión del Bosque Atlántico (Anais da ABC, 2024) más carbono subterráneo y del suelo</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Emisiones de energía por habitante al inicio (niveles 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">energy.eps0</code></td><td class="py-1.5 pr-3 tnum">1 4 · 2 5 · 3 4,6</td><td class="py-1.5 pr-3">tCO₂/hab</td><td class="py-1.5">literatura<br><span class="text-xs text-ash-dim">fijadas para que el perfil AFOLU / energía se parezca al del inventario nacional</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Inercia de la energía · parques para electricidad 100 % renovable · techo renovable de Neutralidad de Carbono</span><br><code class="text-xs text-ash-dim">energy.adjust / parksFullShare / renewablesMaxCN</code></td><td class="py-1.5 pr-3 tnum">0,15 / 0,04 / 0,6</td><td class="py-1.5 pr-3">fracción/año · fracción del territorio · fracción</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Recorte de la senda del presupuesto de carbono a 2054</span><br><code class="text-xs text-ash-dim">energy.budgetCut2054</code></td><td class="py-1.5 pr-3 tnum">0,3</td><td class="py-1.5 pr-3">fracción</td><td class="py-1.5">decisión del equipo</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Exponente especies-área z</span><br><code class="text-xs text-ash-dim">zSAR</code></td><td class="py-1.5 pr-3 tnum">0,35</td><td class="py-1.5 pr-3">—</td><td class="py-1.5">literatura<br><span class="text-xs text-ash-dim">Pereira, Ziv y Miranda (2014), relación especies-área de paisaje</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Afinidad de hábitat por uso</span><br><code class="text-xs text-ash-dim">habitat</code></td><td class="py-1.5 pr-3 tnum">BNP 1 · HUM 1 · BNNP 0,8 · RES 0,55 · CA 0,35 · PF 0,15 · PRG 0,15 · FAL 0,3 · CC 0,05 · ENR 0,05</td><td class="py-1.5 pr-3">0–1</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Efecto de cada política sobre la biodiversidad</span><br><code class="text-xs text-ash-dim">qB</code></td><td class="py-1.5 pr-3 tnum">CR 0,55 · AS 0,2 · GS 0,12 · AGUA 0,08 · CN 0,05 · PAI -0,25 · PEA -0,06 · PIE -0,03 · FRA -0,45 · SE -0,1</td><td class="py-1.5 pr-3">logit por unidad de eficiencia</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Rendimiento relativo por uso agrícola</span><br><code class="text-xs text-ash-dim">food.yield</code></td><td class="py-1.5 pr-3 tnum">CC 1 · CA 0,7 · PRG 0,25</td><td class="py-1.5 pr-3">relativo al cultivo convencional</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Efecto de cada política sobre la seguridad económica</span><br><code class="text-xs text-ash-dim">bE</code></td><td class="py-1.5 pr-3 tnum">PIE 0,55 · PEA 0,45 · PAI 0,35 · FRA 0,2 · SE 0,15 · AS 0,1 · GS 0,1 · AGUA 0,05 · CN -0,1 · CR -0,05</td><td class="py-1.5 pr-3">logit por unidad de eficiencia</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Pesos del conflicto (alimentos, economía, presión ambiental, concentración G, transición justa J)</span><br><code class="text-xs text-ash-dim">conflictWeights</code></td><td class="py-1.5 pr-3 tnum">food 0,6 · econ 0,5 · envPressure 0,4 · gini 3 · just 0,6</td><td class="py-1.5 pr-3">logit</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Escala de los efectos de política sobre las presiones</span><br><code class="text-xs text-ash-dim">pressure.phiScale</code></td><td class="py-1.5 pr-3 tnum">15</td><td class="py-1.5 pr-3">puntos por logit</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Adhesión / cuota anual de los pactos (tratado, acuerdo de carbono, transferencia)</span><br><code class="text-xs text-ash-dim">pacts.*.entry / annual</code></td><td class="py-1.5 pr-3 tnum">0,03 / 0,002 / 0,05 / 0,004 / 0,1 / 0,008</td><td class="py-1.5 pr-3">fracción del PBI</td><td class="py-1.5">criterio experto</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Vida media del efecto de una situación (Territorio)</span><br><code class="text-xs text-ash-dim">situations.halfLifeMonths</code></td><td class="py-1.5 pr-3 tnum">18</td><td class="py-1.5 pr-3">meses</td><td class="py-1.5">criterio experto</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div data-lang="en" hidden class="overflow-x-auto">
+          <table class="w-full min-w-[560px] text-left text-sm text-ash">
+            <thead><tr class="text-xs text-ash-dim"><th class="py-1 pr-3 font-normal">Parameter</th><th class="py-1 pr-3 font-normal">Value</th><th class="py-1 pr-3 font-normal">Unit</th><th class="py-1 pr-3 font-normal">Source</th></tr></thead>
+            <tbody>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Initial population</span><br><code class="text-xs text-ash-dim">Poblacion_Inicial</code></td><td class="py-1.5 pr-3 tnum">400,000</td><td class="py-1.5 pr-3">inhabitants</td><td class="py-1.5">team decision<br><span class="text-xs text-ash-dim">v6 index decision 4: AFOLU ≈ 20–35 % of emissions, comparable to the Argentine inventory</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Population growth</span><br><code class="text-xs text-ash-dim">Tasa_Crecimiento_Poblacional_Base</code></td><td class="py-1.5 pr-3 tnum">0.008</td><td class="py-1.5 pr-3">fraction/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Base GDP growth</span><br><code class="text-xs text-ash-dim">Tasa_Base_Crecimiento_PBI</code></td><td class="py-1.5 pr-3 tnum">0.02</td><td class="py-1.5 pr-3">fraction/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Base revenue</span><br><code class="text-xs text-ash-dim">Tasa_Impositiva_General_Sobre_PBI</code></td><td class="py-1.5 pr-3 tnum">0.15</td><td class="py-1.5 pr-3">share of GDP</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Base public spending γ (levels 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Gasto_Publico_Base_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0.13 / 0.125 / 0.125</td><td class="py-1.5 pr-3">share of GDP/yr</td><td class="py-1.5">calibrated by simulation<br><span class="text-xs text-ash-dim">the model's most sensitive parameter</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Base interest rate (levels 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Tasa_de_interes_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0.025 / 0.035 / 0.045</td><td class="py-1.5 pr-3">fraction/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Debt amortisation (levels 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">Pago_deuda_anual_Nivel_1..3</code></td><td class="py-1.5 pr-3 tnum">0.15 / 0.12 / 0.1</td><td class="py-1.5 pr-3">share of debt/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Reserve floor · debt threshold · risk premium</span><br><code class="text-xs text-ash-dim">finance.reserveFloor / debtThreshold / riskPremium</code></td><td class="py-1.5 pr-3 tnum">0.02 / 0.6 / 0.05</td><td class="py-1.5 pr-3">share of GDP · D/Y · rate per point of D/Y</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Adjustment speeds B / F / E / C / Pc / π</span><br><code class="text-xs text-ash-dim">Velocidad_Ajuste_*</code></td><td class="py-1.5 pr-3 tnum">0.12 / 0.35 / 0.3 / 0.35 / 0.25 / 0.35</td><td class="py-1.5 pr-3">fraction of the way/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Institutional efficiency floor η_min</span><br><code class="text-xs text-ash-dim">Eficiencia_Minima_Politicas</code></td><td class="py-1.5 pr-3 tnum">0.35</td><td class="py-1.5 pr-3">0–1</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Recovery at rest ρ</span><br><code class="text-xs text-ash-dim">Recuperacion_Politicas_Anios</code></td><td class="py-1.5 pr-3 tnum">5</td><td class="py-1.5 pr-3">years</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Start-up λ per policy</span><br><code class="text-xs text-ash-dim">rampYears</code></td><td class="py-1.5 pr-3 tnum">AS 1.5 · CR 2.5 · GS 1.5 · AGUA 2 · CN 2.5 · PAI 1 · PEA 0.5 · PIE 1.5 · FRA 0.5 · SE 0.5</td><td class="py-1.5 pr-3">years</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Wear δ per policy</span><br><code class="text-xs text-ash-dim">fatigueYears</code></td><td class="py-1.5 pr-3 tnum">AS 15 · CR 25 · GS 12 · AGUA 20 · CN 25 · PAI 8 · PEA 10 · PIE 10 · FRA 6 · SE 5</td><td class="py-1.5 pr-3">years of use</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Cost at full effort κ</span><br><code class="text-xs text-ash-dim">costShare</code></td><td class="py-1.5 pr-3 tnum">AS 0.008 · CR 0.01 · GS 0.006 · AGUA 0.008 · CN 0.012 · PAI 0.006 · PEA 0.003 · PIE 0.005 · FRA 0.002 · SE 0.012</td><td class="py-1.5 pr-3">share of GDP/yr</td><td class="py-1.5">expert judgement<br><span class="text-xs text-ash-dim">calibrated against base public spending</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Diminishing-returns scale of effort</span><br><code class="text-xs text-ash-dim">effortE0</code></td><td class="py-1.5 pr-3 tnum">40</td><td class="py-1.5 pr-3">effort points</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Carbon flux per land use</span><br><code class="text-xs text-ash-dim">flux</code></td><td class="py-1.5 pr-3 tnum">BNP -1 · BNNP 0.5 · CA 0.8 · CC 2.5 · PF -4 · PRG 3 · HUM -3 · RES -9 · ENR 0.1 · FAL -2</td><td class="py-1.5 pr-3">tCO₂e/ha/yr</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Carbon stock per land use</span><br><code class="text-xs text-ash-dim">stock</code></td><td class="py-1.5 pr-3 tnum">BNP 200 · BNNP 170 · CA 60 · CC 45 · PF 90 · PRG 50 · HUM 250 · RES 70 · ENR 40 · FAL 55</td><td class="py-1.5 pr-3">Mg C/ha</td><td class="py-1.5">literature<br><span class="text-xs text-ash-dim">Atlantic Forest review (Anais da ABC, 2024) plus below-ground and soil carbon</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Energy emissions per inhabitant at start (levels 1 / 2 / 3)</span><br><code class="text-xs text-ash-dim">energy.eps0</code></td><td class="py-1.5 pr-3 tnum">1 4 · 2 5 · 3 4.6</td><td class="py-1.5 pr-3">tCO₂/hab</td><td class="py-1.5">literature<br><span class="text-xs text-ash-dim">set so the AFOLU / energy profile resembles the national inventory</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Energy inertia · parks for 100 % renewable electricity · Carbon Neutrality renewable ceiling</span><br><code class="text-xs text-ash-dim">energy.adjust / parksFullShare / renewablesMaxCN</code></td><td class="py-1.5 pr-3 tnum">0.15 / 0.04 / 0.6</td><td class="py-1.5 pr-3">fraction/yr · share of territory · fraction</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Cut of the carbon-budget path by 2054</span><br><code class="text-xs text-ash-dim">energy.budgetCut2054</code></td><td class="py-1.5 pr-3 tnum">0.3</td><td class="py-1.5 pr-3">fraction</td><td class="py-1.5">team decision</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Species-area exponent z</span><br><code class="text-xs text-ash-dim">zSAR</code></td><td class="py-1.5 pr-3 tnum">0.35</td><td class="py-1.5 pr-3">—</td><td class="py-1.5">literature<br><span class="text-xs text-ash-dim">Pereira, Ziv &amp; Miranda (2014), countryside species-area relationship</span></td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Habitat affinity per use</span><br><code class="text-xs text-ash-dim">habitat</code></td><td class="py-1.5 pr-3 tnum">BNP 1 · HUM 1 · BNNP 0.8 · RES 0.55 · CA 0.35 · PF 0.15 · PRG 0.15 · FAL 0.3 · CC 0.05 · ENR 0.05</td><td class="py-1.5 pr-3">0–1</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Effect of each policy on biodiversity</span><br><code class="text-xs text-ash-dim">qB</code></td><td class="py-1.5 pr-3 tnum">CR 0.55 · AS 0.2 · GS 0.12 · AGUA 0.08 · CN 0.05 · PAI -0.25 · PEA -0.06 · PIE -0.03 · FRA -0.45 · SE -0.1</td><td class="py-1.5 pr-3">logit per unit of efficiency</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Relative yield per farm use</span><br><code class="text-xs text-ash-dim">food.yield</code></td><td class="py-1.5 pr-3 tnum">CC 1 · CA 0.7 · PRG 0.25</td><td class="py-1.5 pr-3">relative to conventional crops</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Effect of each policy on economic security</span><br><code class="text-xs text-ash-dim">bE</code></td><td class="py-1.5 pr-3 tnum">PIE 0.55 · PEA 0.45 · PAI 0.35 · FRA 0.2 · SE 0.15 · AS 0.1 · GS 0.1 · AGUA 0.05 · CN -0.1 · CR -0.05</td><td class="py-1.5 pr-3">logit per unit of efficiency</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Conflict weights (food, economy, environmental pressure, concentration G, just transition J)</span><br><code class="text-xs text-ash-dim">conflictWeights</code></td><td class="py-1.5 pr-3 tnum">food 0.6 · econ 0.5 · envPressure 0.4 · gini 3 · just 0.6</td><td class="py-1.5 pr-3">logit</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Scale of policy effects on pressures</span><br><code class="text-xs text-ash-dim">pressure.phiScale</code></td><td class="py-1.5 pr-3 tnum">15</td><td class="py-1.5 pr-3">points per logit</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Pact entry / annual fee (treaty, carbon accord, tech transfer)</span><br><code class="text-xs text-ash-dim">pacts.*.entry / annual</code></td><td class="py-1.5 pr-3 tnum">0.03 / 0.002 / 0.05 / 0.004 / 0.1 / 0.008</td><td class="py-1.5 pr-3">share of GDP</td><td class="py-1.5">expert judgement</td></tr>
+            <tr class="border-t border-basalt-700 align-top"><td class="py-1.5 pr-3"><span class="text-bone">Half-life of a situation effect (Territorio)</span><br><code class="text-xs text-ash-dim">situations.halfLifeMonths</code></td><td class="py-1.5 pr-3 tnum">18</td><td class="py-1.5 pr-3">months</td><td class="py-1.5">expert judgement</td></tr>
+            </tbody>
+          </table>
+        </div>
+<!-- END:params-table -->
+      </section>
+
+      <section id="niveles" class="panel p-6 mb-8 scroll-mt-20">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Rutas de victoria del juego de 3 niveles</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>Win routes of the 3-level game</h2>
+        <p class="text-sm text-ash mb-3" data-lang="es">Al final de cada nivel hay que cumplir todos los mínimos de gobernabilidad y una ruta completa. Generadas desde el código (npx tsx scripts/routes-table-html.ts --write).</p>
+        <p class="text-sm text-ash mb-3" data-lang="en" hidden>At the end of each level every governance floor and one complete route must be met. Generated from the code (npx tsx scripts/routes-table-html.ts --write).</p>
+<!-- BEGIN:routes-niveles -->
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="es">Nivel 1</h4>
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="en" hidden>Level 1</h4>
+          <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Biodiversidad mínima: ≥ 25; Seguridad económica mínima: ≥ 15; Ratio deuda/PBI máximo: ≤ 0,8.</li>
+            <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 50; Bosque nativo: ≥ 20 %; Emisiones CO₂eq/cápita: ≤ 5,2.</li>
+            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad económica: ≥ 36; Seguridad alimentaria: ≥ 32; Emisiones CO₂eq/cápita: ≤ 6,5.</li>
+            <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 4,6; Seguridad económica: ≥ 30.</li>
+          </ul>
+          <ul data-lang="en" hidden class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Governance floors (all at once):</strong> Minimum biodiversity: ≥ 25; Minimum economic security: ≥ 15; Maximum debt/GDP ratio: ≤ 0.8.</li>
+            <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 50; Native forest: ≥ 20 %; CO₂eq emissions per capita: ≤ 5.2.</li>
+            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Economic security: ≥ 36; Food security: ≥ 32; CO₂eq emissions per capita: ≤ 6.5.</li>
+            <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.6; Economic security: ≥ 30.</li>
+          </ul>
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="es">Nivel 2</h4>
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="en" hidden>Level 2</h4>
+          <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Biodiversidad mínima: ≥ 25; Seguridad alimentaria mínima: ≥ 25; Estabilidad política mínima: ≥ 35; Presión agrícola máxima: ≤ 85; Presión ambientalista máxima: ≤ 85; Presión social máxima: ≤ 85.</li>
+            <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 52; Bosque nativo: ≥ 16 %; Emisiones CO₂eq/cápita: ≤ 6,5.</li>
+            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad económica: ≥ 40; Seguridad alimentaria: ≥ 32; Bienestar social: ≥ 60.</li>
+            <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 5,5; Electricidad renovable (%): ≥ 30 %; Seguridad económica: ≥ 33.</li>
+          </ul>
+          <ul data-lang="en" hidden class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Governance floors (all at once):</strong> Minimum biodiversity: ≥ 25; Minimum food security: ≥ 25; Minimum political stability: ≥ 35; Maximum agricultural pressure: ≤ 85; Maximum environmentalist pressure: ≤ 85; Maximum social pressure: ≤ 85.</li>
+            <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 52; Native forest: ≥ 16 %; CO₂eq emissions per capita: ≤ 6.5.</li>
+            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Economic security: ≥ 40; Food security: ≥ 32; Social wellbeing: ≥ 60.</li>
+            <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 5.5; Renewable electricity (%): ≥ 30 %; Economic security: ≥ 33.</li>
+          </ul>
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="es">Nivel 3</h4>
+          <h4 class="font-semibold text-bone mt-4 mb-1" data-lang="en" hidden>Level 3</h4>
+          <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Estabilidad política mínima: ≥ 30; Ratio deuda/PBI máximo: ≤ 1; Bienestar social mínimo: ≥ 35.</li>
+            <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 52; Bosque nativo: ≥ 17 %; Emisiones CO₂eq/cápita: ≤ 5,4; Ratio deuda/PBI: ≤ 0,6.</li>
+            <li><strong class="text-bone">Vía de la Transición Productiva</strong> (todas a la vez): Seguridad económica: ≥ 36; Seguridad alimentaria: ≥ 33; Bienestar social: ≥ 52.</li>
+            <li><strong class="text-bone">Vía de la Innovación</strong> (todas a la vez): Emisiones CO₂eq/cápita: ≤ 4,5; Electricidad renovable (%): ≥ 35 %; Seguridad económica: ≥ 30; Pactos internacionales activos: ≥ 1.</li>
+            <li><strong class="text-bone">Vía del Equilibrio</strong> (7 de estas 9): Biodiversidad: ≥ 50; Seguridad alimentaria: ≥ 40; Seguridad económica: ≥ 38; Bienestar social: ≥ 65; Estabilidad política: ≥ 75; Emisiones CO₂eq/cápita: ≤ 4,5; Ratio deuda/PBI: ≤ 0,5; PBI respecto del inicial (×): ≥ 1,7; Puntaje general: ≥ 720.</li>
+          </ul>
+          <ul data-lang="en" hidden class="text-sm text-ash space-y-3 list-none">
+            <li><strong class="text-bone">Governance floors (all at once):</strong> Minimum political stability: ≥ 30; Maximum debt/GDP ratio: ≤ 1; Minimum social wellbeing: ≥ 35.</li>
+            <li><strong class="text-bone">Ecological Integrity Pathway</strong> (all at once): Biodiversity: ≥ 52; Native forest: ≥ 17 %; CO₂eq emissions per capita: ≤ 5.4; Debt/GDP ratio: ≤ 0.6.</li>
+            <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Economic security: ≥ 36; Food security: ≥ 33; Social wellbeing: ≥ 52.</li>
+            <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.5; Renewable electricity (%): ≥ 35 %; Economic security: ≥ 30; Active international pacts: ≥ 1.</li>
+            <li><strong class="text-bone">Balanced Pathway</strong> (7 of these 9): Biodiversity: ≥ 50; Food security: ≥ 40; Economic security: ≥ 38; Social wellbeing: ≥ 65; Political stability: ≥ 75; CO₂eq emissions per capita: ≤ 4.5; Debt/GDP ratio: ≤ 0.5; GDP relative to the start (×): ≥ 1.7; General score: ≥ 720.</li>
+          </ul>
+<!-- END:routes-niveles -->
       </section>
 
       <section id="territorio" class="panel p-6 mb-8 scroll-mt-20">
         <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="es">Qué cambia en Territorio</h2>
         <h2 class="text-xl font-bold font-[var(--font-display)] text-chlorophyll mb-4" data-lang="en" hidden>What changes in Territory</h2>
-        <p class="text-sm text-ash mb-3" data-lang="es">El modelo es uno solo: Territorio y el juego de 3 niveles comparten las mismas familias de ecuaciones. Lo que cambia es cómo se las recorre.</p>
-        <p class="text-sm text-ash mb-3" data-lang="en" hidden>There is only one model: Territory and the 3-level game share the same equation families. What changes is how they are stepped through.</p>
+        <p class="text-sm text-ash mb-3" data-lang="es">El modelo es uno solo: Territorio y el juego de 3 niveles comparten las mismas nueve familias de ecuaciones y el mismo integrador. Lo que cambia es cómo se las recorre.</p>
+        <p class="text-sm text-ash mb-3" data-lang="en" hidden>There is only one model: Territory and the 3-level game share the same nine equation families and the same integrator. What changes is how they are stepped through.</p>
         <ul class="text-sm text-ash space-y-2 mb-5 list-disc list-inside" data-lang="es">
-          <li><strong class="text-bone">Paso mensual.</strong> Mismo motor (<code class="text-xs bg-basalt-900 px-1 rounded">src/sim/</code>), pero avanza con <code class="text-xs bg-basalt-900 px-1 rounded">stepMonth</code> en lugar del paso anual, partiendo de las fórmulas del nivel 2.</li>
-          <li><strong class="text-bone">Territorio espacial.</strong> Cada parcela de 1 km² refleja el uso del suelo que calcula el modelo; el jugador solo cambia a mano los usos públicos.</li>
-          <li><strong class="text-bone">Tres usos públicos nuevos</strong> (humedal, restauración, parque energético), con tasas por criterio experto (entrada F5 del registro de decisiones).</li>
-          <li><strong class="text-bone">Situaciones.</strong> 100 casos que desgastan al gobierno si no se resuelven a tiempo (entrada F6 del registro).</li>
+          <li><strong class="text-bone">Paso mensual.</strong> El juego de 3 niveles avanza un año como doce pasos mensuales del mismo motor; Territorio avanza mes a mes, con los parámetros del nivel 2.</li>
+          <li><strong class="text-bone">Territorio espacial.</strong> Cada parcela de 1 km² refleja el uso del suelo que calcula el modelo; el jugador solo cambia a mano los usos públicos. Proteger o restaurar junto al bosque existente suma conectividad y rinde más para la biodiversidad.</li>
+          <li><strong class="text-bone">Usos públicos</strong> (área protegida, restauración, humedal, parque energético): inversión pública cuyo precio crece con la economía; sin espacio fiscal, se rechazan.</li>
+          <li><strong class="text-bone">Situaciones.</strong> Cien casos sobre el escritorio: cada opción deja un impulso sobre los objetivos que se desvanece (vida media de 18 meses); las que vencen sin respuesta desgastan al gobierno.</li>
           <li><strong class="text-bone">Rutas de victoria propias,</strong> calibradas simulando estrategias completas hasta 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>).</li>
         </ul>
         <ul class="text-sm text-ash space-y-2 mb-5 list-disc list-inside" data-lang="en" hidden>
-          <li><strong class="text-bone">Monthly step.</strong> Same engine (<code class="text-xs bg-basalt-900 px-1 rounded">src/sim/</code>), but it advances with <code class="text-xs bg-basalt-900 px-1 rounded">stepMonth</code> instead of the yearly step, starting from the Level 2 formulas.</li>
-          <li><strong class="text-bone">Spatial territory.</strong> Each 1 km² parcel reflects the land use the model computes; the player only changes public uses by hand.</li>
-          <li><strong class="text-bone">Three new public uses</strong> (wetland, restoration, energy park), with rates set by expert judgment (entry F5 of the decision log).</li>
-          <li><strong class="text-bone">Situations.</strong> 100 cases that wear the government down if they aren't settled in time (entry F6 of the log).</li>
+          <li><strong class="text-bone">Monthly step.</strong> The 3-level game advances a year as twelve monthly steps of the same engine; Territory advances month by month, with the Level 2 parameters.</li>
+          <li><strong class="text-bone">Spatial territory.</strong> Each 1 km² parcel reflects the land use the model computes; the player only changes public uses by hand. Protecting or restoring next to the existing forest adds connectivity and pays off more for biodiversity.</li>
+          <li><strong class="text-bone">Public uses</strong> (protected area, restoration, wetland, energy park): public investment whose price grows with the economy; without fiscal space they are refused.</li>
+          <li><strong class="text-bone">Situations.</strong> A hundred cases on the desk: each option leaves an impulse on the targets that fades (18-month half-life); those that expire unanswered wear the government down.</li>
           <li><strong class="text-bone">Its own win routes,</strong> calibrated by simulating complete strategies to 2054 (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>).</li>
         </ul>
         <h3 class="font-semibold text-hydro mb-2" data-lang="es">Condiciones de cada ruta (generadas desde el código)</h3>
         <h3 class="font-semibold text-hydro mb-2" data-lang="en" hidden>Conditions of each route (generated from the code)</h3>
+<!-- BEGIN:routes-territorio -->
           <ul data-lang="es" class="text-sm text-ash space-y-3 list-none">
             <li><strong class="text-bone">Mínimos de gobernabilidad (todos a la vez):</strong> Biodiversidad mínima: ≥ 25; Seguridad alimentaria mínima: ≥ 20; Estabilidad política mínima: ≥ 25; Bienestar social mínimo: ≥ 12.</li>
             <li><strong class="text-bone">Vía de la Integridad Ecológica</strong> (todas a la vez): Biodiversidad: ≥ 52; Bosque nativo: ≥ 15 %; Territorio declarado bajo uso público de conservación: ≥ 6 %; Emisiones CO₂eq/cápita: ≤ 6,2.</li>
@@ -146,35 +353,32 @@
             <li><strong class="text-bone">Productive Transition Pathway</strong> (all at once): Food security: ≥ 40.5; Economic security: ≥ 40; Social wellbeing: ≥ 55; 5-year mean primary balance (% of GDP): ≥ 0 %; Debt/GDP ratio: ≤ 0.6; Years with two or more productive policies at once: ≥ 15.</li>
             <li><strong class="text-bone">Innovation Pathway</strong> (all at once): CO₂eq emissions per capita: ≤ 4.8; Territory with public energy park: ≥ 1.6 %; Social wellbeing: ≥ 55.</li>
           </ul>
-        <p class="text-xs text-ash-dim mt-4" data-lang="es">Rigor: lo calibrado por simulación son los umbrales de las rutas; las tasas de los usos públicos nuevos son criterio experto, sin calibración empírica.</p>
-        <p class="text-xs text-ash-dim mt-4" data-lang="en" hidden>Rigor: what is calibrated by simulation is the route thresholds; the rates of the new public uses are expert judgment, with no empirical calibration.</p>
+<!-- END:routes-territorio -->
       </section>
 
-      <section class="panel p-6 mb-8">
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="es">Rigor y auditoría: qué está verificado y qué no</h2>
-        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="en" hidden>Rigor and audit: what's verified and what isn't</h2>
-        <p class="text-ash text-sm mb-3" data-lang="es">
-          El equipo audita cada fórmula contra su fuente original y publica los hallazgos, incluidos los que no
-          quedan bien. Dos ejemplos reales, no maquillados:
-        </p>
-        <p class="text-ash text-sm mb-3" data-lang="en" hidden>
-          The team audits every formula against its original source and publishes the findings, including the ones
-          that don't look good. Two real examples, not touched up:
-        </p>
-        <ul class="text-sm text-ash space-y-2 mb-4 list-disc list-inside">
-          <li data-lang="es"><strong class="text-bone">Decaimiento de eficiencia (P-1):</strong> con los parámetros actuales, una política activada una sola vez pierde casi toda su eficiencia mucho antes de terminar el nivel — y el contador de tiempo activo nunca se resetea al desactivarla, así que ni siquiera reactivarla ayuda como debería. Esto explica por qué algunos indicadores casi no responden a ninguna estrategia probada. Corregido en el modelo 2.0: la eficiencia ahora tiene un piso institucional y se recupera en reposo.</li>
-          <li data-lang="en" hidden><strong class="text-bone">Efficiency decay (P-1):</strong> with current parameters, a policy activated once loses nearly all its efficiency well before the level ends — and the active-time counter never resets when deactivated, so even reactivating it doesn't help the way it should. This explains why some indicators barely respond to any tested strategy. Fixed in model 2.0: efficiency now has an institutional floor and recovers while resting.</li>
-          <li data-lang="es"><strong class="text-bone">Conservación de área (L-1):</strong> un test automático encontró que, con eventos aleatorios activos, ~16 kHa de superficie no se conservan exactamente entre usos del suelo — probablemente un evento que suma o resta área sin la transferencia pareada correspondiente. Pendiente de revisar evento por evento.</li>
-          <li data-lang="en" hidden><strong class="text-bone">Area conservation (L-1):</strong> an automated test found that, with random events active, ~16 kHa of area isn't exactly conserved across land uses — likely one event that adds or removes area without the matching paired transfer. Pending an event-by-event review.</li>
+      <section id="rigor" class="panel p-6 mb-8 scroll-mt-20">
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="es">Rigor: qué está calibrado, qué viene de la literatura y qué es criterio experto</h2>
+        <h2 class="text-xl font-bold font-[var(--font-display)] text-ember mb-3" data-lang="en" hidden>Rigor: what is calibrated, what comes from the literature and what is expert judgement</h2>
+        <p class="text-sm text-ash mb-3" data-lang="es"><strong class="text-bone">Las cifras son de un modelo de juego y no proyecciones del Bosque Atlántico.</strong> El modelo está calibrado para que las decisiones del jugador importen y ninguna estrategia gane sola, no para reproducir la trayectoria de un territorio real. La columna "Origen" de la tabla de parámetros dice de dónde sale cada número.</p>
+        <p class="text-sm text-ash mb-3" data-lang="en" hidden><strong class="text-bone">The figures come from a game model and are not projections of the Atlantic Forest.</strong> The model is calibrated so that the player's decisions matter and no strategy wins on its own, not to reproduce the path of a real territory. The "Source" column of the parameter table says where each number comes from.</p>
+        <ul class="text-sm text-ash space-y-2 mb-4 list-disc list-inside" data-lang="es">
+          <li><strong class="text-bone">Calibrado por simulación</strong> (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>, ocho estrategias × 40 semillas por nivel y 20 en Territorio): los umbrales de las rutas, las bandas de la predicción ("sin cambio" en un tercio de los años) y el gasto público base γ.</li>
+          <li><strong class="text-bone">Literatura</strong>: los stocks de carbono por uso (revisión del Bosque Atlántico, Anais da ABC, 2024), el exponente especies-área z (Pereira, Ziv y Miranda, 2014) y el perfil de emisiones (energía frente a AFOLU) parecido al del inventario nacional.</li>
+          <li><strong class="text-bone">Criterio experto</strong>: los flujos de carbono por uso, los coeficientes de cada política, las velocidades de ajuste, las tasas de los usos públicos y los pesos del conflicto. Son plausibles, no medidos.</li>
+          <li><strong class="text-bone">Decisión del equipo</strong>: la población de 400.000 habitantes y el recorte de la senda del presupuesto de carbono.</li>
         </ul>
-        <p class="text-sm text-ash-dim" data-lang="es">
-          La auditoría técnica completa (qué está OK, qué falta corregir, qué falta documentar, ítem por ítem) es
-          pública: <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">descargar el detalle técnico completo</a>.
-        </p>
-        <p class="text-sm text-ash-dim" data-lang="en" hidden>
-          The full technical audit (what's OK, what needs fixing, what needs documenting, item by item) is public:
-          <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">download the full technical detail</a>.
-        </p>
+        <ul class="text-sm text-ash space-y-2 mb-4 list-disc list-inside" data-lang="en" hidden>
+          <li><strong class="text-bone">Calibrated by simulation</strong> (<code class="text-xs bg-basalt-900 px-1 rounded">npm run sim:check</code>, eight strategies × 40 seeds per level and 20 in Territory): route thresholds, prediction bands ("no change" in a third of the years) and base public spending γ.</li>
+          <li><strong class="text-bone">Literature</strong>: carbon stocks per use (Atlantic Forest review, Anais da ABC, 2024), the species-area exponent z (Pereira, Ziv &amp; Miranda, 2014) and an emission profile (energy vs. AFOLU) resembling the national inventory.</li>
+          <li><strong class="text-bone">Expert judgement</strong>: carbon fluxes per use, each policy's coefficients, adjustment speeds, public-use rates and conflict weights. They are plausible, not measured.</li>
+          <li><strong class="text-bone">Team decision</strong>: the population of 400,000 inhabitants and the cut of the carbon-budget path.</li>
+        </ul>
+        <h3 class="font-semibold text-bone mb-2" data-lang="es">Auditoría pública</h3>
+        <h3 class="font-semibold text-bone mb-2" data-lang="en" hidden>Public audit</h3>
+        <p class="text-sm text-ash mb-3" data-lang="es">El equipo audita cada fórmula y publica los hallazgos, incluidos los que no quedan bien. Dos ejemplos de la auditoría que dio origen al modelo 2.0: en el modelo anterior una política activada perdía casi toda su eficiencia antes de terminar el nivel y el contador nunca se reiniciaba (ahora arranca de a poco, se desgasta hacia un piso y se recupera en reposo); y con eventos aleatorios unas 16 kHa no se conservaban entre usos del suelo (ahora la matriz de transición es conservativa y un test automático lo verifica con eventos activos).</p>
+        <p class="text-sm text-ash mb-3" data-lang="en" hidden>The team audits every formula and publishes the findings, including the ones that don't look good. Two examples from the audit behind model 2.0: in the previous model an activated policy lost nearly all its efficiency before the level ended and the counter never reset (now it starts slowly, wears toward a floor and recovers at rest); and with random events about 16 kHa were not conserved across land uses (now the transition matrix is conservative and an automated test checks it with events active).</p>
+        <p class="text-sm text-ash-dim" data-lang="es">La auditoría técnica completa es pública: <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">descargar el detalle técnico</a>.</p>
+        <p class="text-sm text-ash-dim" data-lang="en" hidden>The full technical audit is public: <a href="/docentes/hoja-de-ecuaciones.md" class="text-hydro hover:underline">download the technical detail</a>.</p>
       </section>
 
       <p class="text-xs text-ash-dim">

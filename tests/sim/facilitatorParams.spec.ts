@@ -13,10 +13,10 @@
  *     checked against the Territorio session actions that read them (UI_ONLY_PARAM_KEYS).
  */
 import { describe, expect, it } from 'vitest';
-import { stepYear } from '../../src/sim';
+import { createInitialState, stepYear } from '../../src/sim';
 import { CONTROL_PARAMS } from '../../src/constants';
 import { Policy, type ControlParams, type GameState } from '../../src/types';
-import { PARAM_GROUPS_EN, PARAM_GROUPS_ES, UI_ONLY_PARAM_KEYS, type NumericParamKey } from '../../src/components/facilitator/paramGroups';
+import { PARAM_GROUPS_EN, PARAM_GROUPS_ES, RESTART_PARAM_KEYS, UI_ONLY_PARAM_KEYS, type NumericParamKey } from '../../src/components/facilitator/paramGroups';
 import { createSession, setTaxPressure, unlocks } from '../../src/territorio/session';
 import { freshState, withActivePolicies } from './testHelpers';
 
@@ -36,12 +36,25 @@ function scenario(key: NumericParamKey): { level: number; tax: number; loan: num
   return { level: 2, tax: 0, loan: 0 };
 }
 
+/** Keys that only act on a resting policy (phase 50): Carbon Neutrality rests two years and is switched back on. */
+const REST_KEYS = new Set<NumericParamKey>(['Recuperacion_Politicas_Anios']);
+
 function fiveYears(key: NumericParamKey, CP: ControlParams): string {
   const { level, tax, loan } = scenario(key);
-  let s: GameState = withActivePolicies(freshState(level), BALANCED);
+  // Keys read at level start (Poblacion_Inicial, phase 50) need the level built with the changed CP, as App.tsx does.
+  const start: GameState = RESTART_PARAM_KEYS.includes(key)
+    ? { ...freshState(level), ...createInitialState(level, CP).gameStatePatch }
+    : freshState(level);
+  let s: GameState = withActivePolicies(start, BALANCED);
   s.additionalTaxPressurePercentage = tax;
   s.loanRequestedThisRound = loan;
-  for (let i = 0; i < 5; i++) s = stepYear(s, noEventRng, CP).next;
+  for (let i = 0; i < 5; i++) {
+    // Off in year 2, back on in year 4: the recovered wear shows in its efficiency once it runs again.
+    if ((i === 1 || i === 3) && REST_KEYS.has(key)) {
+      s = { ...s, policies: { ...s.policies, [Policy.CarbonNeutrality]: { ...s.policies[Policy.CarbonNeutrality], isActive: i === 3 } } };
+    }
+    s = stepYear(s, noEventRng, CP).next;
+  }
   return JSON.stringify({ indicators: s.indicators, stella: s.stellaSpecificState, landUses: s.landUses });
 }
 
@@ -50,6 +63,12 @@ const panelKeys = [...new Set(PARAM_GROUPS_ES.flatMap((g) => g.keys))];
 describe('facilitator panel parameters', () => {
   it('lists the same keys in both languages', () => {
     expect(PARAM_GROUPS_EN.flatMap((g) => g.keys)).toEqual(PARAM_GROUPS_ES.flatMap((g) => g.keys));
+  });
+
+  it('has the four groups of spec 50 §3, with the 2.0 keys', () => {
+    expect(PARAM_GROUPS_ES).toHaveLength(4);
+    ['Poblacion_Inicial', 'Eficiencia_Minima_Politicas', 'Recuperacion_Politicas_Anios', 'Gasto_Publico_Base_Nivel_2', 'Velocidad_Ajuste_Presiones']
+      .forEach((k) => expect(panelKeys).toContain(k));
   });
 
   it('exposes no key the 1.1 model deleted', () => {

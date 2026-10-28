@@ -55,6 +55,8 @@ const CAPA_B_C_VERIFIED_BILINGUAL = [
   // Capa C (AI prompts) -- already fully bilingual before this phase touched anything; verified
   // by inspection, not modified.
   'src/services/geminiService.ts',
+  // v6/50: `routesContextLines` builds DecarboNito's route lines for the Gemini prompts, in Spanish on purpose (Capa C).
+  'src/game/modelView.ts',
   'src/services/decarbonitoAgent.ts',
   'src/services/suggestionService.ts',
   // Capa B (domain content) -- translated in this phase. descriptions.ts: ~90 equation/parameter
@@ -65,6 +67,8 @@ const CAPA_B_C_VERIFIED_BILINGUAL = [
   // pattern-matched internally and sent to Gemini as context, where Capa C's own guidance says
   // Spanish is fine -- see that file's own comment just above where they're set.
   'src/components/equations/descriptions.ts',
+  // v6/50: the nine equation families carry `es` and `en` side by side (shared with docentes-ecuaciones.html).
+  'src/components/equations/families.ts',
   'src/sim/v2/finance.ts', // phase 44: the bilingual loan log moved here from src/sim/economy.ts (deleted)
   'src/sim/events.ts',
   'src/sim/index.ts',

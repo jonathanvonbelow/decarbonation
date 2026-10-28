@@ -17,6 +17,8 @@ import type { NewsItem } from './news';
 import { SITUATION_BY_ID } from './situations';
 import { activeWorkshopCode } from './survey/workshopCode';
 import { TOTAL_MONTHS, type MonthSample, type Session } from './session';
+import { carbonView, fiscalView, indicatorTarget, targetDirection } from '../game/modelView';
+import { PARAMS_V2 } from '../sim/v2/params';
 
 export type Speed = 0 | 1 | 4;
 export type PanelId = 'situations' | 'policies' | 'finance' | 'routes' | 'news';
@@ -72,6 +74,10 @@ export function TopBar({ session, speed, onSpeed, onStep, onExit }: {
           <p className="label-eyebrow !text-[10px]">{c.finance.debtRatio}</p>
           <p className={`tnum text-[14px] ${m.debt > 0.6 * m.pbi ? 'text-ember' : m.debt > 0.4 * m.pbi ? 'text-ochre' : 'text-bone'}`}>{m.pbi > 0 ? `${Math.round((100 * m.debt) / m.pbi)} %` : '—'}</p>
         </div>
+        {/* Phase 50: reserves at their floor and D/Y above 0.6 — every public investment would be refused. */}
+        {fiscalView(session.game)?.noFiscalSpace && (
+          <span className="mx-1 rounded border border-ember/60 px-1.5 py-0.5 text-[11px] text-ember" title={fill(c.hud.noFiscalSpaceTip, { dy: 100 * PARAMS_V2.finance.debtThreshold })}>{c.hud.noFiscalSpace}</span>
+        )}
         <div className="px-2">
           <p className="label-eyebrow !text-[10px]">{c.hud.score}</p>
           <p className="tnum text-[14px] text-bone">{fmt.big(m.generalScore)}</p>
@@ -102,7 +108,13 @@ const INDICATORS: { key: IndicatorKey; name: string; color: string; lowerIsBette
 ];
 
 export function IndicatorStrip({ session }: { session: Session }) {
-  const { locale, fmt, signed } = useCopy();
+  const { c, locale, fmt, signed } = useCopy();
+  // Phase 50: CO₂ by source and the carbon budget, as the tooltip of the CO₂ cell.
+  const carbon = carbonView(session.game);
+  const co2Tip = carbon ? fill(c.hud.co2Tip, {
+    energy: fmt.num(carbon.energy, 2), afolu: fmt.num(carbon.afolu, 2), luc: fmt.num(carbon.luc, 2),
+    ren: fmt.pct(100 * carbon.renewableShare, 0), budget: carbon.budget === null ? '—' : fmt.num(carbon.budget, 2),
+  }) : undefined;
   const stripRef = useAnchor<HTMLDivElement>(ANCHOR.indicators, 'indicadores');
   const h = session.history;
   const now = h[h.length - 1];
@@ -115,8 +127,11 @@ export function IndicatorStrip({ session }: { session: Session }) {
         const delta = value - yearAgo[ind.key];
         const good = ind.lowerIsBetter ? delta < 0 : delta > 0;
         const flat = Math.abs(delta) < 0.05;
+        // Phase 50: the target X* the indicator relaxes toward (model.targets); CO₂ has none (it is a flow).
+        const target = ind.bounded ? indicatorTarget(session.game, ind.name as keyof Session['game']['indicators']) : null;
+        const dir = targetDirection(value, target);
         return (
-          <div key={ind.key} className="flex min-w-0 flex-col gap-1 rounded-md px-2 py-1.5">
+          <div key={ind.key} className="flex min-w-0 flex-col gap-1 rounded-md px-2 py-1.5" title={ind.key === 'co2' ? co2Tip : target !== null ? fill(c.hud.towardsTip, { value: fmt.num(target, 1) }) : undefined}>
             <span className="truncate text-[11px] uppercase tracking-wide text-ash-dim" title={getIndicatorName(ind.name, locale)}>
               {getIndicatorName(ind.name, locale)}
             </span>
@@ -125,6 +140,11 @@ export function IndicatorStrip({ session }: { session: Session }) {
               <span className={`tnum text-[11px] ${flat ? 'text-ash-dim' : good ? 'text-chlorophyll' : 'text-ember'}`}>
                 {flat ? '·' : signed(delta)}
               </span>
+              {target !== null && (
+                <span className={`tnum ml-auto text-[11px] ${dir === 'flat' ? 'text-ash-dim' : dir === 'up' ? 'text-chlorophyll' : 'text-ember'}`}>
+                  {dir === 'flat' ? c.hud.steady : fill(c.hud.towards, { value: fmt.num(target, 0) })}
+                </span>
+              )}
             </span>
             {ind.bounded ? (
               <span className="h-1 overflow-hidden rounded-full bg-basalt-700">

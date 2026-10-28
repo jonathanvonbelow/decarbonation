@@ -1,6 +1,6 @@
 
 
-import { Policy, PolicyState, LandUseType, LandUse, GameState, LevelConfig, StellaStocks, Pact, PolicyInstrument, RandomEvent, RandomEventEffect, RegionalZoneData, ControlParams, InitialIndicatorOverrides, InstrumentImpactHints } from './types';
+import { Policy, PolicyState, LandUseType, LandUse, GameState, LevelConfig, StellaStocks, Pact, PolicyInstrument, RandomEvent, RandomEventEffect, RegionalZoneData, ControlParams, InitialIndicatorOverrides } from './types';
 // Direct submodule import (not './sim') to avoid a circular dependency: src/sim/index.ts itself
 // imports LEVEL_CONFIGS/CONTROL_PARAMS from this file. src/sim/winRoutes.ts only depends on
 // ./types, so importing it directly here is safe.
@@ -439,7 +439,8 @@ const CHATBOT_BASE_INSTRUCTION = `Eres DecarboNito, un asesor experto para el ju
 
 Analiza el CONTEXTO DEL JUEGO proporcionado y la pregunta del jugador. Ofrece explicaciones claras, identifica trade-offs y sinergias entre las políticas y acciones listadas. No tomes decisiones por el jugador, sino empodéralo con conocimiento. El indicador clave de emisiones es 'CO2eq per cápita'; un valor bajo es favorable.
 Responde siempre en ESPAÑOL.
-4.  **NUNCA USES MARKDOWN:** Tus respuestas se muestran como texto plano y también se convierten a voz (texto a voz), así que los símbolos de markdown se leen en voz alta letra por letra o rompen la lectura. Por lo tanto está PROHIBIDO usar '**negrita**', '*cursiva*', '# títulos', backticks, o viñetas con '*' o '-'. Para resaltar una idea o un título, usá una oración clara, dos puntos, o mayúscula inicial — nunca símbolos especiales. Si necesitás enumerar puntos breves, escribilos como oraciones separadas por saltos de línea, sin ningún símbolo al inicio.`;
+4.  **NUNCA USES MARKDOWN:** Tus respuestas se muestran como texto plano y también se convierten a voz (texto a voz), así que los símbolos de markdown se leen en voz alta letra por letra o rompen la lectura. Por lo tanto está PROHIBIDO usar '**negrita**', '*cursiva*', '# títulos', backticks, o viñetas con '*' o '-'. Para resaltar una idea o un título, usá una oración clara, dos puntos, o mayúscula inicial — nunca símbolos especiales. Si necesitás enumerar puntos breves, escribilos como oraciones separadas por saltos de línea, sin ningún símbolo al inicio.
+5.  CÓMO FUNCIONA EL MODELO (versión 2.0), para explicarlo con precisión. Cada indicador se mueve cada año una fracción del camino hacia un objetivo, que el contexto muestra como "va hacia"; sin políticas y con el territorio quieto, el objetivo es el valor inicial y nada se mueve, así que si el jugador pregunta por qué algo no cambia, mirá la distancia entre valor y objetivo. Las políticas arrancan de a poco ("en marcha"), se desgastan con los años de uso hacia un piso institucional ("desgastada") y se recuperan si se las deja descansar: desactivar una política gastada y reactivarla más tarde es una estrategia válida, pero vuelve a arrancar de a poco. Cada política cuesta una fracción del PBI por año que crece con el esfuerzo; las reservas tienen un piso y todo déficit se paga con deuda, y la deuda cara frena la economía; la quiebra llega con deuda mayor que el PBI e intereses altos durante dos años. El CO2 tiene tres fuentes: energía, suelo (AFOLU) y cambio de uso; la energía baja con la electricidad renovable y la eficiencia, que avanzan con inercia. La única sinergia del modelo es Agroecología junto con Conservación (sube la biodiversidad más que cada una sola) y el único antagonismo es Agricultura Intensiva con Normativas Flexibles; no inventes otras. Para ganar un nivel hay que cumplir todos los mínimos de gobernabilidad y una ruta completa; el contexto lista cada ruta con lo que falta.`;
 
 // Phase 5 (mejora-general/files/17_multiples_vias_victoria.md §3.4): `progressionConditionsMet`
 // external signature (gameState) => boolean is unchanged for every caller, but its body now
@@ -465,23 +466,15 @@ Contexto Específico del Nivel 1 (Estrategia Nacional Fundacional):
 En este nivel, el jugador se enfoca en sentar las bases con políticas nacionales.
 **REGLA ADICIONAL CLAVE PARA NIVEL 1:** Al describir las acciones del jugador, menciona **SOLAMENTE** 'activar o desactivar políticas'. Ignora y **NUNCA** menciones 'asignar esfuerzo a instrumentos', 'préstamos', 'pactos' o 'presión fiscal', ya que no están disponibles.
 
-Los indicadores clave son Biodiversidad, Emisiones de CO2eq per cápita, Porcentaje de Bosque Nativo Total y Puntaje General.
-**NO menciones de forma prominente** Seguridad Alimentaria, Estabilidad Política, PBI Real ni Deuda. Sin embargo, si la Seguridad Económica cae por debajo de 20 o las Reservas del Tesoro son negativas, ADVIERTE al jugador que el costo de sus políticas supera los ingresos de la nación y que necesita considerar alguna política productiva para sostener el financiamiento.
+Los indicadores clave son Biodiversidad, Emisiones de CO2eq per cápita (con su desglose por fuente), Porcentaje de Bosque Nativo Total y Seguridad Económica (las rutas del nivel la piden).
+**NO menciones de forma prominente** Seguridad Alimentaria, Estabilidad Política ni PBI Real. Sin embargo, si la Seguridad Económica se acerca a su mínimo de gobernabilidad o el saldo primario es negativo y la deuda sube, ADVIERTE al jugador que el costo de sus políticas supera lo que recauda la nación (el déficit se paga con deuda) y que necesita considerar alguna política productiva o desactivar alguna costosa.
 El objetivo principal es reducir las emisiones, mejorar la biodiversidad y proteger el bosque nativo. Recuérdale al jugador la importancia del sector AFOLU.
 Mantenlo simple y centrado en las políticas macro y sus efectos sobre el uso del suelo.`,
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL,
     // Phase 5: floors + (conservation | production | innovation) — see src/sim/winRoutes.ts and
-    // the routeBaseline comment above. Old conjunctive winConditions below now only document the
-    // level's headline targets (LevelIntroModal reads it as a fallback) and feed the `equilibrium`
-    // route in the levels that still have one.
+    // the routeBaseline comment above. Phase 50: the 1.1 headline targets (`winConditions`) were deleted; the intro,
+    // the dashboard stars and DecarboNito read LEVEL_ROUTES directly.
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
-    // Phase 49: no score target (the 2.0 routes of level 1 do not use the score; 600 was out of reach of the new scale).
-    winConditions: {
-      biodiversityMin: 40,
-      co2EqEmissionsPerCapitaMax: 5,  // Fase 38: el nivel arranca en c0 = 5,95 t (carbono físico); hay que bajar ~16 %
-      nativeForestTotalMinPercentage: 0.18,
-      economicSecurityMin: 20,  // NEW: minimum economic floor — pure-green portfolio without productive policies will fail
-    }
   },
   {
     levelNumber: 2,
@@ -491,7 +484,8 @@ Mantenlo simple y centrado en las políticas macro y sus efectos sobre el uso de
     chatbotSystemInstruction: `${CHATBOT_BASE_INSTRUCTION}
 Contexto Específico del Nivel 2 (Coordinación Regional y Sostenibilidad Ampliada):
 En este nivel, el jugador enfrenta desafíos más complejos. Los indicadores clave ahora incluyen Seguridad Alimentaria, Seguridad Económica, Bienestar Social y Estabilidad Política. Las **presiones políticas** son fundamentales.
-Se introducen los **'instrumentos de política'**: el jugador puede asignar esfuerzo a acciones específicas dentro de cada política activa para afinar sus estrategias.
+Se introducen los **'instrumentos de política'**: el jugador puede asignar esfuerzo a acciones específicas dentro de cada política activa. Cada instrumento pesa distinto en tres canales (suelo, producción, social) con rendimientos decrecientes: el reparto parejo da el efecto completo; concentrar refuerza un canal y debilita los otros; más esfuerzo total cuesta más.
+Transición justa: algunos instrumentos restringen al sector (áreas protegidas, impuesto al carbono, protección de fuentes de agua) y otros lo acompañan (bioinsumos, capacitación, silvopastoreo). Si el índice J del contexto es bajo con restricciones activas, el conflicto social sube: sugerí acompañar, no solo restringir. Si la concentración de la tierra G sube respecto del inicio, también sube el conflicto.
 **REGLA ADICIONAL CLAVE PARA NIVEL 2:** Debes utilizar el 'Historial de Acciones Recientes' del jugador, proporcionado en el contexto, para dar consejos más personalizados y relevantes. Reconoce sus estrategias pasadas (ej. "Veo que has activado principalmente políticas ambientales...") y enmarca tus recomendaciones en función de las decisiones que ha estado tomando.
 Ayuda al jugador a entender las **interacciones, sinergias y antagonismos** entre diferentes políticas.
 **No discutas préstamos ni presión fiscal adicional detalladamente;** son mecánicas del Nivel 3.
@@ -499,18 +493,6 @@ El objetivo es mantener un equilibrio entre desarrollo económico, bienestar soc
     targetYear: INITIAL_YEAR + YEARS_PER_LEVEL, 
     // Phase 5: floors + (conservation | production | innovation) — see src/sim/winRoutes.ts.
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
-    // Phase 49: no score target (the 2.0 routes of level 2 do not use the score).
-    winConditions: {
-      biodiversityMin: 45,
-      co2EqEmissionsPerCapitaMax: 6,
-      foodSecurityMin: 50,
-      economicSecurityMin: 40,
-      bienestarSocialMin: 50,
-      politicalStabilityMin: 45,
-      ppAgricolaMax: 55,
-      ppAmbientalistaMax: 55,
-      ppSocialMax: 55,
-    }
   },
   {
     levelNumber: 3,
@@ -520,7 +502,8 @@ El objetivo es mantener un equilibrio entre desarrollo económico, bienestar soc
     chatbotSystemInstruction: `${CHATBOT_BASE_INSTRUCTION}
 Contexto Específico del Nivel 3 (Liderazgo Global en Sostenibilidad):
 Este es el nivel más complejo. El jugador debe lograr emisiones per cápita muy bajas y un alto desempeño en todos los indicadores.
-Se introducen mecánicas financieras avanzadas: gestión del **PBI Real, Deuda, posibilidad de tomar Préstamos, y la opción de aplicar Presión Fiscal Adicional** (impuestos extra).
+Se introducen mecánicas financieras avanzadas: gestión del **PBI Real, Deuda, posibilidad de tomar Préstamos, y la opción de aplicar Presión Fiscal Adicional** (impuestos extra). Mirá deuda/PBI, saldo primario e intereses/recaudación del contexto: con intereses por encima del 20 % de la recaudación aparece el estrés fiscal, que frena la economía. Entrar a un pacto es inversión pública: si no hay espacio fiscal (reservas en su piso y deuda por encima del 60 % del PBI), se rechaza. Un préstamo adelanta plata pero es deuda.
+Los instrumentos tienen canales (suelo, producción, social) y la transición justa (J) importa como en el Nivel 2.
 Hay pactos internacionales más avanzados y eventos aleatorios más frecuentes e impactantes.
 **REGLA ADICIONAL CLAVE PARA NIVEL 3:** Debes utilizar el 'Historial de Acciones Recientes' del jugador, proporcionado en el contexto, para dar consejos más personalizados y relevantes. Reconoce sus estrategias pasadas (ej. "Veo que has favorecido las políticas de conservación...") y enmarca tus recomendaciones en función de las decisiones que ha estado tomando. Discute las implicaciones a largo plazo de las decisiones financieras.
 El objetivo es demostrar un liderazgo integral. Ayuda al jugador a prepararse para el 'endgame', considerando todos los factores para un legado sostenible.`,
@@ -528,18 +511,6 @@ El objetivo es demostrar un liderazgo integral. Ayuda al jugador a prepararse pa
     // Phase 5: floors + (conservation | production | innovation | equilibrium). Since phase 49 the
     // `equilibrium` route of src/sim/winRoutes.ts asks for 7 of 9 thresholds (it was the old "6 of 10").
     progressionConditionsMet: (gameState: GameState) => evaluateLevel(gameState, routeBaseline(gameState)).won,
-    winConditions: {
-      // Phase 49: the headline targets mirror the `equilibrium` route of src/sim/winRoutes.ts (7 of 9; ROUTES3 of the
-      // prototype). Its ninth condition, GDP ≥ 1.7·Y0, has no field here.
-      puntajeGeneralMin: 720,
-      co2EqEmissionsPerCapitaMax: 4.5,
-      biodiversityMin: 50,
-      foodSecurityMin: 40,
-      economicSecurityMin: 38,
-      bienestarSocialMin: 65,
-      politicalStabilityMin: 75,
-      deudaPbiMax: 0.5,
-    }
   }
 ];
 
@@ -816,30 +787,5 @@ export const INITIAL_REGIONAL_ZONES_DATA: RegionalZoneData[] = [
 // anclados (src/sim/v2/indicators.ts, biodiversity.ts, food.ts) con sus coeficientes en PARAMS_V2 (bE, productiveValue,
 // conflict, greenRelief, conflictWeights, relaxation, habitat, qB, biodiversity, food).
 
-export const INSTRUMENT_IMPACT_HINTS: InstrumentImpactHints = {
-  // Agroecological
-  "AS_Subsidios_Bioinsumos": [{ indicator: 'Biodiversidad', direction: 'positive', magnitude: 'medium' }, { indicator: 'Seg. Alimentaria', direction: 'positive', magnitude: 'low' }],
-  "AS_Capacitacion_Tecnicas": [{ indicator: 'Biodiversidad', direction: 'positive', magnitude: 'medium' }, { indicator: 'Emisiones CO2', direction: 'negative', magnitude: 'medium' }],
-  // Natural Conservation
-  "CR_Expansion_Areas_Protegidas": [{ indicator: 'Biodiversidad', direction: 'positive', magnitude: 'high' }, { indicator: 'Seg. Alimentaria', direction: 'negative', magnitude: 'low' }],
-  "CR_PSA_Bosques": [{ indicator: 'Biodiversidad', direction: 'positive', magnitude: 'medium' }, { indicator: 'Seg. Económica', direction: 'positive', magnitude: 'low' }],
-  // Sustainable Livestock
-  "GS_Sistemas_Silvopastoriles": [{ indicator: 'Emisiones CO2', direction: 'negative', magnitude: 'medium' }, { indicator: 'Biodiversidad', direction: 'positive', magnitude: 'medium' }],
-  // Carbon Neutrality
-  "C_Impuesto_Carbono_Sectorial": [{ indicator: 'Emisiones CO2', direction: 'negative', magnitude: 'high' }, { indicator: 'Seg. Económica', direction: 'negative', magnitude: 'medium' }],
-  "C_Fomento_Energias_Renovables_No_Convencionales": [{ indicator: 'Emisiones CO2', direction: 'negative', magnitude: 'high' }, { indicator: 'Seg. Económica', direction: 'positive', magnitude: 'low' }],
-  "C_Investigacion_Desarrollo_Captura_Carbono": [{ indicator: 'Emisiones CO2', direction: 'negative', magnitude: 'medium' }],
-  // Intensive Agriculture
-  "PAI_Subsidios_Fertilizantes_Quimicos_Pesticidas": [{ indicator: 'Seg. Alimentaria', direction: 'positive', magnitude: 'high' }, { indicator: 'Biodiversidad', direction: 'negative', magnitude: 'high' }, { indicator: 'Emisiones CO2', direction: 'positive', magnitude: 'medium' }],
-  "PAI_Desarrollo_Variedades_Alto_Rendimento_Transgenicos": [{ indicator: 'Seg. Alimentaria', direction: 'positive', magnitude: 'medium' }],
-  // Agricultural Exports
-  "PEA_Acuerdos_Comerciales_Apertura_Mercados": [{ indicator: 'Seg. Económica', direction: 'positive', magnitude: 'high' }, { indicator: 'Seg. Alimentaria', direction: 'negative', magnitude: 'low' }],
-  // Foreign Investment
-  "PIE_Incentivos_Fiscales_Zonas_Francas": [{ indicator: 'Seg. Económica', direction: 'positive', magnitude: 'high' }, { indicator: 'Bienestar Social', direction: 'negative', magnitude: 'low' }],
-  // Flexible Environmental Regulations
-  "FRA_Reduccion_Tiempos_Evaluacion_Impacto_Ambiental": [{ indicator: 'Seg. Económica', direction: 'positive', magnitude: 'medium' }, { indicator: 'Biodiversidad', direction: 'negative', magnitude: 'high' }],
-  "FRA_Moratorias_Sanciones_Incumplimiento_Ambiental": [{ indicator: 'Biodiversidad', direction: 'negative', magnitude: 'high' }, { indicator: 'Presión Ambientalista', direction: 'positive', magnitude: 'high' }],
-  // Energy Subsidies
-  "SE_Subsidios_Directos_Combustibles_Fosiles_Transporte": [{ indicator: 'Emisiones CO2', direction: 'positive', magnitude: 'high' }, { indicator: 'Bienestar Social', direction: 'positive', magnitude: 'low' }],
-  "SE_Incentivos_Exploracion_Explotacion_Hidrocarburos": [{ indicator: 'Emisiones CO2', direction: 'positive', magnitude: 'high' }, { indicator: 'Seg. Económica', direction: 'positive', magnitude: 'medium' }],
-};
+// Phase 50: INSTRUMENT_IMPACT_HINTS (1.1 hand-written hints) deleted: the instrument panels read INSTRUMENT_CHANNELS
+// (src/sim/v2/params.ts) through src/game/modelView.ts `instrumentHint`.

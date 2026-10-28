@@ -1,5 +1,7 @@
 # Auditoría de ecuaciones — DecarboNation
 
+> **Nota (v6, fase 50):** esta es la auditoría del modelo 1.0, hecha en los ciclos v3–v5 (*this is the audit of model 1.0*). Sus hallazgos (P-1 eficiencia sin recuperación, L-1 área no conservada con eventos, carbono con factor de escala, etc.) dieron origen al modelo 2.0, que los corrige. La descripción vigente del modelo está en la hoja de ecuaciones (`/docentes/ecuaciones`) y el registro técnico actualizado en `docs/audit-equations.md` del repositorio. *The current description of the model is the equations sheet (`/docentes/ecuaciones`).*
+
 Checklist de `mejora-general/files/16_auditoria_ecuaciones.md` §4. Cada ítem se etiqueta:
 
 - **OK** — el código hace lo que el `EquationsManual` describe.

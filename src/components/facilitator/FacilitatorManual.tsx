@@ -1,12 +1,18 @@
-
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLanguageContext } from '../../contexts/LanguageContext';
-const FM_UI = {
-  es: { access: 'Acceso para Facilitadores', enterPassword: 'Por favor, ingrese la contraseña para ver el manual técnico.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', enter: 'Acceder', wrongPassword: 'Contraseña incorrecta.', subtitle: 'Detrás de Escena de DecarboNation', closeLabel: 'Cerrar manual', page: (c:number,t:number) => `Página ${c} de ${t}`, prev: 'Anterior', next: 'Siguiente' },
-  en: { access: 'Facilitator Access', enterPassword: 'Please enter the password to view the technical manual.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', enter: 'Access', wrongPassword: 'Incorrect password.', subtitle: 'Behind the Scenes of DecarboNation', closeLabel: 'Close manual', page: (c:number,t:number) => `Page ${c} of ${t}`, prev: 'Previous', next: 'Next' },
-} as const;
-import { CONTROL_PARAMS, LEVEL_CONFIGS, INITIAL_POLICIES, INITIAL_LAND_USES, ALL_RANDOM_EVENTS, INITIAL_PACTS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
+import type { Language } from '../../hooks/useLanguage';
+import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION, YEARS_PER_LEVEL } from '../../constants';
 import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
+import { CARBON_CEILING_FACTOR, GDP_FULL_MULTIPLE, SCORE_WEIGHTS } from '../../sim/score';
+import { LEVEL_ROUTES } from '../../sim/winRoutes';
+import { getPolicyName } from '../../legacyContent/gameData';
+import { PID_OF } from '../../sim/v2/policies';
+import { tFor, type TranslationKey } from '../../i18n';
+
+const FM_UI = {
+  es: { access: 'Acceso para Facilitadores', enterPassword: 'Por favor, ingrese la contraseña para ver el manual técnico.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', enter: 'Acceder', wrongPassword: 'Contraseña incorrecta.', subtitle: 'Detrás de Escena de DecarboNation (modelo 2.0)', closeLabel: 'Cerrar manual', page: (c:number,t:number) => `Página ${c} de ${t}`, prev: 'Anterior', next: 'Siguiente', title: 'Manual del Facilitador' },
+  en: { access: 'Facilitator Access', enterPassword: 'Please enter the password to view the technical manual.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', enter: 'Access', wrongPassword: 'Incorrect password.', subtitle: 'Behind the Scenes of DecarboNation (model 2.0)', closeLabel: 'Close manual', page: (c:number,t:number) => `Page ${c} of ${t}`, prev: 'Previous', next: 'Next', title: 'Facilitator Manual' },
+} as const;
 
 interface FacilitatorManualProps {
   onClose: () => void;
@@ -20,277 +26,261 @@ const Param: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <span className="text-cyan-400 font-medium">{children}</span>
 );
 
-const manualSlides = [
+const Box: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2 space-y-1">{children}</div>
+);
+const H: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h4 className="font-semibold mt-4 mb-2 text-blue-300">{children}</h4>
+);
+
+const pct = (x: number, lang: Language, digits = 1) => `${(100 * x).toLocaleString(lang === 'es' ? 'es-AR' : 'en-US', { maximumFractionDigits: digits })} %`;
+const num = (x: number, lang: Language) => x.toLocaleString(lang === 'es' ? 'es-AR' : 'en-US', { maximumFractionDigits: 3 });
+
+/**
+ * Phase 50 (mejora-general/files/50 §1): rewritten for model 2.0 and bilingual. Every number is read from the code
+ * (CONTROL_PARAMS, PARAMS_V2, SCORE_WEIGHTS, LEVEL_ROUTES), never copied by hand.
+ */
+function buildSlides(lang: Language): { title: string; content: React.ReactNode }[] {
+  const es = lang === 'es';
+  const L = (a: string, b: string) => (es ? a : b);
+  const tr = (k: string) => tFor(lang, k as TranslationKey);
+  const P = PARAMS_V2;
+  const CP = CONTROL_PARAMS;
+  return [
   {
-    title: "Introducción y Conceptos Clave",
+    title: L('Introducción y conceptos clave', 'Introduction and key concepts'),
     content: (
       <div>
-        <p className="mb-4">Este manual desglosa la lógica interna de la simulación de DecarboNation, revelando los supuestos y parámetros que impulsan el juego.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Flujo del Juego</h4>
+        <p className="mb-4">{L('Este manual explica la lógica interna del modelo 2.0 de DecarboNation: qué ecuaciones mueven cada indicador, qué parámetros puede tocar el facilitador y qué conviene no tocar.', "This manual explains the inner logic of DecarboNation's model 2.0: which equations move each indicator, which parameters the facilitator may change and which are better left alone.")}</p>
+        <H>{L('Flujo del juego', 'Game flow')}</H>
         <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li>El jugador selecciona un conjunto de <strong className="text-yellow-400">Políticas</strong> (máximo <Param>{MAX_ACTIVE_POLICIES}</Param>).</li>
-            <li>(Nivel 2+) El jugador asigna <strong className="text-yellow-400">Esfuerzo</strong> a los <strong className="text-yellow-400">Instrumentos</strong> de cada política activa.</li>
-            <li>El jugador presiona <strong className="text-green-400">"Simular Próximo Año"</strong>.</li>
-            <li>El motor de simulación avanza un año, calculando cambios en el uso del suelo, indicadores, finanzas y presiones políticas.</li>
-            <li>La interfaz se actualiza para reflejar el nuevo estado de la nación.</li>
+            <li>{L('El jugador activa hasta', 'The player activates up to')} <Param>{MAX_ACTIVE_POLICIES}</Param> {L('políticas; cada una queda vigente al menos', 'policies; each one stays in force at least')} <Param>{POLICY_LOCK_IN_DURATION}</Param> {L('años.', 'years.')}</li>
+            <li>{L('(Nivel 2+) Reparte el esfuerzo entre los cuatro instrumentos de cada política activa.', '(Level 2+) They split the effort across the four instruments of each active policy.')}</li>
+            <li>{L('(Nivel 3) Pactos internacionales, préstamos y presión fiscal adicional.', '(Level 3) International pacts, loans and additional tax pressure.')}</li>
+            <li>{L('"Simular Próximo Año" avanza doce pasos mensuales del mismo integrador que usa Territorio.', '"Simulate Next Year" runs twelve monthly steps of the same integrator Territorio uses.')}</li>
         </ol>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Conceptos Fundamentales</h4>
-         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-yellow-400">Eficiencia de Política:</strong> Una política recién activada arranca de a poco (puesta en marcha, <Param>rampYears</Param>), se desgasta con el uso hacia un piso institucional (<Param>Eficiencia_Minima_Politicas</Param>, desgaste <Param>fatigueYears</Param>) y se recupera si descansa (<Param>Recuperacion_Politicas_Anios</Param>).</li>
-            <li><strong className="text-yellow-400">Bloqueo de Política:</strong> Una vez activada, una política no puede desactivarse por <Param>{POLICY_LOCK_IN_DURATION}</Param> años.</li>
-         </ul>
+        <H>{L('La idea central: ancla y objetivo', 'The core idea: anchor and target')}</H>
+        <p className="text-sm">{L('Cada indicador acotado (biodiversidad, seguridades, bienestar, estabilidad, presiones) se mueve cada año una fracción fija del camino hacia un objetivo X* = 100·σ(logit(X₀) + D). D suma desvíos respecto del inicio del nivel y efectos de políticas activas: sin políticas y con el territorio quieto, X* = X₀ y nada se mueve. El tablero muestra ese objetivo ("va hacia NN") bajo cada indicador.', 'Each bounded indicator (biodiversity, food and economic security, wellbeing, stability, pressures) moves a fixed fraction of the way each year toward a target X* = 100·σ(logit(X₀) + D). D adds deviations from the level start and the effects of active policies: with no policies and an unchanged territory, X* = X₀ and nothing moves. The dashboard shows that target ("heading to NN") under each indicator.')}</p>
       </div>
-    )
+    ),
   },
   {
-    title: "Políticas e Instrumentos",
-    content: (
-        <div>
-            <p className="mb-4">Las políticas son las principales palancas de cambio. Cada una tiene su costo a esfuerzo pleno (fracción del PBI, <Param>costShare</Param>: 0,2–1,2 % del PBI por año, calibrado contra el gasto público base de la fase 44), su puesta en marcha (<Param>rampYears</Param>) y su desgaste (<Param>fatigueYears</Param>), en <Param>PARAMS_V2</Param>.</p>
-            <h4 className="font-semibold mt-4 mb-2 text-blue-300">Listado de Políticas</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                {Object.values(INITIAL_POLICIES).map(p => <div key={p.id}>- {p.name}</div>)}
-            </div>
-             <h4 className="font-semibold mt-4 mb-2 text-blue-300">Instrumentos (Nivel 2+)</h4>
-            <p className="text-sm">Cada instrumento pesa distinto en cada canal (suelo, producción, social), con rendimientos decrecientes:</p>
-            <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-                <p><Param>Canal</Param> = <Param>Eficiencia Base</Param> · Σ μ·(1 − e^(−esfuerzo/40)) / Σ μ·(1 − e^(−25/40))</p>
-            </div>
-            <p className="text-sm">El reparto parejo (25 % por instrumento, el único posible en el Nivel 1) da el efecto completo en todos los canales; concentrar refuerza un canal y debilita los demás. Un esfuerzo del 0 % anula el efecto, aunque la política siga activa. El costo es κ · PBI · (0,3 + 0,7 · esfuerzo total / 100).</p>
-        </div>
-    )
-  },
-   {
-    title: "Dinámica de Uso del Suelo",
+    title: L('Políticas: puesta en marcha, desgaste y descanso', 'Policies: start-up, wear and rest'),
     content: (
       <div>
-        <p className="mb-4">Las políticas impactan directamente las tasas de transición entre diferentes usos del suelo.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Usos del Suelo y Propiedades</h4>
-        <ul className="list-disc list-inside space-y-1 text-xs">
-            {Object.entries(INITIAL_LAND_USES).map(([key, lu]) => <li key={lu.stellaName}>{lu.name} (Flujo: <Param>{PARAMS_V2.flux[key as LandCode]}</Param> tCO₂e/ha/año, Stock: <Param>{PARAMS_V2.stock[key as LandCode]}</Param> Mg C/ha)</li>)}
-        </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Lógica de Transición (Ejemplo)</h4>
-        <p className="text-sm">La tasa de conversión de Bosque Nativo No Protegido (BNNP) a Cultivos Convencionales (CC) se calcula así:</p>
-         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Tasa BNNP a CC</Param> = (<Param>Tasa Base ({CONTROL_PARAMS.Tasa_de_BNNP_a_CC_Base})</Param> + <Param>Eficiencia P-PAI</Param> * 0.04 + <Param>Eficiencia P-FRA</Param> * 0.01) * (1 - <Param>Eficiencia P-CR</Param>)</p>
-        </div>
-        <p className="text-sm">Políticas como Agricultura Intensiva (<Code>P-PAI</Code>) y Normativas Flexibles (<Code>P-FRA</Code>) aceleran la conversión, mientras que Conservación (<Code>P-CR</Code>) la frena.</p>
-      </div>
-    )
-  },
-  {
-    title: "Cálculo del Balance de Carbono",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Cálculo del Balance de Carbono</h3>
-        <p className="mb-4">Un inventario anual en toneladas de CO₂ equivalente (tCO₂e) con tres componentes, dividido por la población ({CONTROL_PARAMS.Poblacion_Inicial.toLocaleString('es')} habitantes al inicio, crece {CONTROL_PARAMS.Tasa_Crecimiento_Poblacional_Base * 100} % por año).</p>
-        <div className="bg-slate-800 p-4 rounded font-mono text-sm">
-            <p><span className="text-green-400">CO₂eq per cápita</span> = (<span className="text-red-400">Energía</span> + <span className="text-cyan-400">Flujo del suelo</span> + <span className="text-red-400">Cambio de uso</span>) / Población</p>
-        </div>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Componentes:</h4>
+        <Box>
+          <p>η = (1 − e^(−τ/λ)) · [η_min + (1 − η_min) · e^(−T/δ)]</p>
+          <p>{L('τ: años desde la activación (vuelve a 0 al desactivar) · T: años de uso acumulados, que en reposo bajan como T·e^(−dt/ρ)', 'τ: years since activation (back to 0 on deactivation) · T: accumulated years of use, which decay as T·e^(−dt/ρ) at rest')}</p>
+        </Box>
         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-red-400">Energía</strong>: <Code>ε0 · ingreso^{PARAMS_V2.energy.incomeElasticity} · (1 + {PARAMS_V2.energy.subsidyBoost}·η_SE) · [{PARAMS_V2.energy.electricShare}·(1 − s) + {1 - PARAMS_V2.energy.electricShare}·(1 − u)] · Población</Code>, con ε0 = {PARAMS_V2.energy.eps0[1]} / {PARAMS_V2.energy.eps0[2]} / {PARAMS_V2.energy.eps0[3]} t por nivel. <Code>s</Code> es la participación renovable de la electricidad y <Code>u</Code> la eficiencia del resto; avanzan {PARAMS_V2.energy.adjust * 100} % del camino por año hacia sus objetivos.</li>
-            <li><strong className="text-cyan-400">Flujo del suelo</strong>: suma de <Code>flujo × hectáreas</Code> de cada uso (puede ser negativo: sumidero).</li>
-            <li><strong className="text-red-400">Cambio de uso</strong>: hectáreas convertidas por año × pérdida de stock (Mg C/ha) × 44/12. Solo cuentan las pérdidas; la ganancia llega por el flujo del uso nuevo.</li>
+          <li><strong className="text-yellow-400">{L('Puesta en marcha', 'Start-up')}</strong> (λ, <Code>PARAMS_V2.rampYears</Code>): {L('años hasta alcanzar el 63 % del efecto. La interfaz la muestra como "En marcha (NN %)".', 'years to reach 63 % of the effect. The interface shows "Starting up (NN %)".')}</li>
+          <li><strong className="text-yellow-400">{L('Desgaste', 'Wear')}</strong> (δ, <Code>PARAMS_V2.fatigueYears</Code>): {L('años de uso tras los que perdió el 63 % de su empuje por encima del piso institucional', 'years of use after which it lost 63 % of its push above the institutional floor')} <Param>η_min = {CP.Eficiencia_Minima_Politicas}</Param> (<Code>Eficiencia_Minima_Politicas</Code>). {L('Por debajo de la mitad se muestra "Desgastada (NN %)".', 'Below half it shows "Worn (NN %)".')}</li>
+          <li><strong className="text-yellow-400">{L('Descanso', 'Rest')}</strong> (ρ = <Param>{CP.Recuperacion_Politicas_Anios}</Param> {L('años', 'years')}, <Code>Recuperacion_Politicas_Anios</Code>): {L('una política desactivada recupera su empuje; al reactivarla vuelve a arrancar de a poco.', 'a deactivated policy recovers its push; when reactivated it starts slowly again.')}</li>
         </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Modificadores:</h4>
-        <ul className="list-disc list-inside space-y-2 text-sm mt-2">
-            <li><strong>Neutralidad de Carbono:</strong> objetivo renovable <Code>s* = min({PARAMS_V2.energy.renewablesCap}; {PARAMS_V2.energy.renewablesMaxCN}·η_elec + min(1; %parques / {PARAMS_V2.energy.parksFullShare * 100} %) + pactos)</Code> y de eficiencia <Code>u* = min({PARAMS_V2.energy.efficiencyCap}; {PARAMS_V2.energy.efficiencyMaxCN}·η_otros + pactos)</Code>. Con 4 % del territorio en parques energéticos la electricidad sería 100 % renovable (un lote representa una cartera de generación, transmisión y almacenamiento).</li>
-            <li><strong>Subsidios Energéticos</strong> suben la energía; <strong>Agricultura Intensiva</strong> sube el flujo de cultivos convencionales (×(1 + 0,3·η)); <strong>Ganadería Sostenible</strong>, <strong>Agroecología</strong> y <strong>Conservación</strong> lo bajan en pasturas, cultivos agroecológicos y bosque no protegido; <strong>Normativas Flexibles</strong> lo sube en el bosque no protegido.</li>
-            <li><strong>Presupuesto de carbono</strong>: emisiones acumuladas sobre una trayectoria lineal a −{PARAMS_V2.energy.budgetCut2054 * 100} % en 2054; &gt; 1 = por encima del presupuesto.</li>
-        </ul>
+        <div className="overflow-x-auto mt-3">
+          <table className="w-full text-xs">
+            <thead><tr className="text-left text-gray-400"><th className="p-1">{L('Política', 'Policy')}</th><th className="p-1">λ</th><th className="p-1">δ</th><th className="p-1">κ ({L('% PBI', '% GDP')})</th></tr></thead>
+            <tbody>
+              {Object.values(INITIAL_POLICIES).map((p) => {
+                const pid = PID_OF[p.id];
+                return pid ? (
+                  <tr key={p.id} className="border-t border-slate-700"><td className="p-1">{getPolicyName(p.id, lang) || p.name}</td><td className="p-1">{num(P.rampYears[pid], lang)}</td><td className="p-1">{num(P.fatigueYears[pid], lang)}</td><td className="p-1">{pct(P.costShare[pid], lang)}</td></tr>
+                ) : null;
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    )
+    ),
   },
   {
-    title: "Indicadores Socio-Ambientales",
+    title: L('Instrumentos y canales', 'Instruments and channels'),
     content: (
-       <div>
-        <p className="mb-4">Estos indicadores (0-100%) se acercan cada año a un objetivo; el objetivo depende de cuánto cambió el territorio desde el inicio del nivel y de las políticas activas. Sin políticas y con el territorio quieto, no se mueven.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Biodiversidad: relación especies-área</h4>
-        <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Hábitat H</Param> = Σ afinidad · fracción del territorio de cada uso</p>
-            <p><Param>Objetivo B*</Param> = 100 · σ( logit(B₀/100) + <Param>{PARAMS_V2.zSAR}</Param>/(1 − B₀/100) · ln(H/H₀) + Σ calidad de manejo · η + sinergias + pactos )</p>
-        </div>
-         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-cyan-400">Afinidad de hábitat:</strong> bosque protegido <Param>{PARAMS_V2.habitat.BNP}</Param>, humedal <Param>{PARAMS_V2.habitat.HUM}</Param>, bosque no protegido <Param>{PARAMS_V2.habitat.BNNP}</Param>, restauración <Param>{PARAMS_V2.habitat.RES}</Param>, cultivo agroecológico <Param>{PARAMS_V2.habitat.CA}</Param>, barbecho <Param>{PARAMS_V2.habitat.FAL}</Param>, plantaciones <Param>{PARAMS_V2.habitat.PF}</Param>, pasturas <Param>{PARAMS_V2.habitat.PRG}</Param>, cultivo convencional <Param>{PARAMS_V2.habitat.CC}</Param>, parque energético <Param>{PARAMS_V2.habitat.ENR}</Param>. El exponente z = {PARAMS_V2.zSAR} es el de la relación especies-área de paisaje (Pereira, Ziv y Miranda, 2014).</li>
-            <li><strong className="text-cyan-400">Calidad de manejo:</strong> cada política suma o resta según su eficiencia; Conservación <Param>+{PARAMS_V2.qB.CR}</Param> y Normativas Flexibles <Param>{PARAMS_V2.qB.FRA}</Param> son los extremos. Sinergias continuas: +{PARAMS_V2.biodiversity.synergyAgroConservation}·min(Agroecología, Conservación) y −{PARAMS_V2.biodiversity.synergyIntensiveFlexible}·min(Agricultura Intensiva, Normativas Flexibles). El Tratado de Biodiversidad desplaza el objetivo <Param>+{PARAMS_V2.pacts.biodiversityTreaty.B}</Param>.</li>
-            <li><strong className="text-cyan-400">Inercia:</strong> B recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Biodiversidad * 100)}%</Param> del camino por año (deuda de extinción): el hábitat responde lento.</li>
-            <li><strong className="text-cyan-400">Territorio:</strong> además cuenta la conectividad del bosque en el mapa (fracción del bosque en el parche continuo más grande), con peso <Param>{PARAMS_V2.biodiversity.connectivityGamma}</Param>·ln(K/K₀): proteger o restaurar junto al bosque existente rinde más que un lote aislado.</li>
-        </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Seguridad alimentaria: balance de oferta y demanda</h4>
-        <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>Oferta Q</Param> = (1 − exportado) · [CC · {PARAMS_V2.food.yield.CC} · (1 + {PARAMS_V2.food.yieldPolicy.PAI}·η_PAI) + CA · {PARAMS_V2.food.yield.CA} · (1 + {PARAMS_V2.food.yieldPolicy.AS}·η_AS) + Pasturas · {PARAMS_V2.food.yield.PRG} · (1 + {PARAMS_V2.food.yieldPolicy.GS}·η_GS)] · (1 + {PARAMS_V2.food.yieldPolicy.AGUA}·η_AGUA) · (1 + {PARAMS_V2.food.yieldTrend})^t</p>
-            <p><Param>Exportado</Param> = {PARAMS_V2.food.export0} + {PARAMS_V2.food.exportPEA}·η_PEA;   <Param>ρ</Param> = max(Q / Población, {PARAMS_V2.food.rhoFloor}·ρ₀)</p>
-            <p><Param>Objetivo F*</Param> = 100 · σ( logit(F₀/100) + {PARAMS_V2.food.kappa1}·ln(ρ/ρ₀) + {PARAMS_V2.food.kappa2}·(E − E₀)/{PARAMS_V2.food.econScale} )</p>
-        </div>
-         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-cyan-400">Qué la mueve:</strong> la tierra agrícola (convencional rinde más que agroecológica y que pasturas), los rendimientos (Agricultura Intensiva, Agroecología, Ganadería Sostenible, Gestión del Agua), cuánto se exporta (Exportaciones Agrícolas sube la fracción exportada) y el acceso por ingreso (Seguridad Económica).</li>
-            <li><strong className="text-cyan-400">Trade-off:</strong> la población crece {(CONTROL_PARAMS.Tasa_Crecimiento_Poblacional_Base * 100).toLocaleString('es')} %/año y los rendimientos {(PARAMS_V2.food.yieldTrend * 100).toLocaleString('es')} %/año; si se frena la deforestación sin subir rendimientos, la disponibilidad por persona baja. Un 20 % más de alimentos por persona sube el objetivo {PARAMS_V2.food.kappa1}·ln(1,2) unidades logit (unos 11 puntos cerca de 40).</li>
-            <li><strong className="text-cyan-400">Inercia:</strong> F recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Seg_Alimentaria * 100)}%</Param> del camino por año.</li>
-        </ul>
+      <div>
+        <p className="text-sm mb-2">{L('Cada política tiene cuatro instrumentos. Cada instrumento pesa distinto (relevancia μ: 1 alta, 0,6 media, 0,3 baja) en tres canales: suelo (flujos de uso del suelo, hábitat, carbono del suelo), producción (rendimientos, exportaciones, seguridad económica) y social (conflicto, presiones, transición justa). Neutralidad de Carbono tiene además electricidad renovable, eficiencia del resto de la energía y recaudación del impuesto al carbono.', 'Each policy has four instruments. Each instrument weighs differently (relevance μ: 1 high, 0.6 medium, 0.3 low) on three channels: land (land-use flows, habitat, soil carbon), production (yields, exports, economic security) and social (conflict, pressures, just transition). Carbon Neutrality also has renewable electricity, efficiency of the rest of energy and carbon-tax revenue.')}</p>
+        <Box>
+          <p>{L('canal', 'channel')} c = η · Σ μ_k^c·φ(e_k) / Σ μ_k^c·φ(25),   φ(e) = 1 − e^(−e/{P.effortE0})</p>
+          <p>{L('costo anual', 'annual cost')} = κ · {L('PBI', 'GDP')} · ({P.costFixedShare} + {num(1 - P.costFixedShare, lang)} · {L('esfuerzo total', 'total effort')} / 100)</p>
+        </Box>
+        <p className="text-sm">{L('El reparto parejo 25/25/25/25 (el único del Nivel 1, que no tiene panel de instrumentos) da 1 en todos los canales; concentrar sube un canal y baja los demás, con rendimientos decrecientes. Con 0 % de esfuerzo la política no hace nada aunque esté activa, pero paga la parte fija del costo. El panel de instrumentos etiqueta cada uno con sus canales altos/medios y si restringe o acompaña al sector (transición justa).', 'The even split 25/25/25/25 (the only one on Level 1, which has no instrument panel) gives 1 on every channel; concentrating raises one channel and lowers the others, with diminishing returns. With 0 % effort the policy does nothing even if active, but it still pays the fixed part of the cost. The instrument panel tags each one with its high/medium channels and whether it restricts or supports the sector (just transition).')}</p>
       </div>
-    )
+    ),
   },
   {
-    title: "Dinámica de Presión Política (Nivel 2+)",
-    content: (
-       <div>
-        <p className="mb-2">A partir del Nivel 2, la presión política (0-100) de tres grupos clave se acerca cada año a un <strong className="text-yellow-400">objetivo en S</strong> anclado al inicio del nivel (modelo 2.0, fase 42).</p>
-         <div className="bg-slate-800 p-4 rounded font-mono text-sm space-y-2">
-            <p>1. <strong className="text-yellow-400">Impulsor D:</strong> suma de los efectos de las políticas activas (factor φ × eficiencia en el canal social ÷ {PARAMS_V2.pressure.phiScale}) y de los desvíos de los indicadores respecto del inicio.</p>
-            <p>2. <strong className="text-yellow-400">Objetivo:</strong> <span className="text-cyan-400">π*</span> = 100 · σ( logit(π₀/100) + D ): sin políticas y con todo quieto, π* = π₀.</p>
-            <p>3. <strong className="text-yellow-400">Dinámica:</strong> la presión recorre un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Presiones * 100)}%</Param> del camino hacia π* por año; nunca toca 0 ni 100 de golpe.</p>
-         </div>
-         <h4 className="font-semibold mt-4 mb-2 text-blue-300">Ejemplo: Presión Agrícola</h4>
-          <ul className="list-disc list-inside space-y-2 text-sm">
-              <li><strong className="text-red-400">La sube:</strong> Seguridad Económica y Alimentaria por debajo de su valor inicial (<Param>{PARAMS_V2.pressure.drivers.a.econ}</Param> y <Param>{PARAMS_V2.pressure.drivers.a.food}</Param> logit por punto), sacar tierra de producción (<Param>{PARAMS_V2.pressure.drivers.a.prodShare}</Param> por unidad de fracción del territorio) y <Code>P-CR</Code> conservación sin compensar (<Param>+{PARAMS_V2.pressure.a.CR}</Param>).</li>
-              <li><strong className="text-green-400">La baja:</strong> las políticas que benefician al productor: <Code>P-PAI</Code> (<Param>{PARAMS_V2.pressure.a.PAI}</Param>), <Code>P-PEA</Code> (<Param>{PARAMS_V2.pressure.a.PEA}</Param>), <Code>P-AS</Code> (<Param>{PARAMS_V2.pressure.a.AS}</Param>) y <Code>P-GS</Code> (<Param>{PARAMS_V2.pressure.a.GS}</Param>), multiplicadas por el tamaño del sector productivo.</li>
-          </ul>
-      </div>
-    )
-  },
-   {
-    title: "Modelo Económico y Financiero",
+    title: L('Uso del suelo: matriz de transición', 'Land use: transition matrix'),
     content: (
       <div>
-        <p className="mb-4">La economía se modela a través del PBI, Reservas del Tesoro y Deuda, con dinero escaso (modelo 2.0, fase 44): el Estado ya gasta casi todo lo que recauda antes de pagar una sola política.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Crecimiento del PBI</h4>
-        <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>g</Param> = <Param>{CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI}</Param> + {PARAMS_V2.finance.growthPIE}·η<sub>PIE</sub> + {PARAMS_V2.finance.growthPEA}·η<sub>PEA</sub> − {PARAMS_V2.finance.growthTaxDrag}·τ − {PARAMS_V2.finance.growthStress}·φ<sub>fiscal</sub></p>
-        </div>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Saldo primario</h4>
-         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>SP</Param> = <Param>T</Param> − <Param>γ<sub>N</sub>·Y</Param> − <Param>K</Param></p>
-        </div>
-         <ul className="list-disc list-inside space-y-2 text-sm">
-            <li><strong className="text-green-400">Recaudación T:</strong> <Param>{CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI}</Param> del PBI + la presión fiscal adicional τ + el impuesto al carbono ({PARAMS_V2.finance.carbonTaxRevenue}·Y·η<sub>CN</sub><sup>impuesto</sup>).</li>
-            <li><strong className="text-red-400">Gasto público base γ<sub>N</sub>·Y:</strong> <Param>Gasto_Publico_Base_Nivel_N</Param> = {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_1} / {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_2} / {CONTROL_PARAMS.Gasto_Publico_Base_Nivel_3} (Territorio usa el Nivel 2). Con 15 % de recaudación deja un superávit de 2–2,5 % del PBI. <strong>Es el parámetro más sensible del modelo</strong>: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2; no lo mueva sin correr <Code>npm run sim:check</Code>.</li>
-            <li><strong className="text-red-400">K:</strong> costos de las políticas activas (sobre el PBI previo al crecimiento del año), cuotas anuales de los pactos y, en Territorio, el mantenimiento de los usos públicos (<Param>{CONTROL_PARAMS.Costo_Mantenimiento_Uso_Publico_por_kHa_Anual}</Param> por kHa y año de bosque declarado, humedal, restauración y parque energético). Una cartera verde de cuatro políticas cuesta ≈ 3,8 % del PBI: déficit primario de ≈ 1,3 %.</li>
+        <p className="mb-2 text-sm">{L('El suelo cambia por una matriz conservativa (el área total no cambia): flujos de frontera desde el bosque nativo no protegido, un pool agrícola que se reasigna según la renta de cada uso, y el barbecho.', 'Land changes through a conservative matrix (total area is constant): frontier flows out of unprotected native forest, an agricultural pool reallocated by each use\'s rent, and fallow.')}</p>
+        <Box>
+          <p>BNNP→BNP = A·({CP.Tasa_de_BNNP_a_BNP_Base} + {P.land.frontier.BNNP_BNP.CR}·η_CR)  ·  BNNP→CC = A·({CP.Tasa_de_BNNP_a_CC_Base} + {P.land.frontier.BNNP_CC.PAI}·η_PAI + {P.land.frontier.BNNP_CC.FRA}·η_FRA)·(1 − η_CR)</p>
+          <p>{L('pool', 'pool')} = Σ {P.land.poolShare}·A_k + {P.land.fallowReentry}·A_FAL,   {L('reparto', 'split')} ∝ e^(β·r_k), β = {P.land.rentBeta}</p>
+          <p>FAL→BNNP = {P.land.fallowRegen}·A_FAL   ({L('el barbecho se regenera', 'fallow regenerates')})</p>
+        </Box>
+        <p className="text-sm">{L('Las rentas r_k están ancladas al inicio: Agricultura Intensiva y Exportaciones suben la del cultivo convencional, Agroecología la del agroecológico, Ganadería Sostenible la de pasturas; el impuesto al carbono baja la del convencional. Sequías y situaciones mandan tierra a barbecho, que deja de producir hasta reingresar o regenerarse.', 'Rents r_k are anchored to the start: Intensive Agriculture and Exports raise conventional crops\', Agroecology raises agroecological crops\', Sustainable Livestock raises pastures\'; the carbon tax lowers conventional crops\'. Droughts and situations send land to fallow, which stops producing until it re-enters or regenerates.')}</p>
+        <ul className="list-disc list-inside space-y-1 text-xs mt-2">
+          {Object.entries(INITIAL_LAND_USES).map(([key, lu]) => <li key={lu.stellaName}>{lu.name}: {L('flujo', 'flux')} <Param>{P.flux[key as LandCode]}</Param> tCO₂e/ha/{L('año', 'yr')}, stock <Param>{P.stock[key as LandCode]}</Param> Mg C/ha, {L('hábitat', 'habitat')} <Param>{P.habitat[key as LandCode]}</Param></li>)}
         </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Deuda, piso de reservas y estrés fiscal</h4>
-         <div className="bg-slate-800 p-2 rounded font-mono text-xs my-2">
-            <p><Param>i(d)</Param> = <Param>i<sub>N</sub></Param> + {PARAMS_V2.finance.riskPremium}·max(0, D/Y − {PARAMS_V2.finance.debtThreshold}) · <Param>R</Param> += SP − i·D − α<sub>N</sub>·D + préstamo · si R &lt; {PARAMS_V2.finance.reserveFloor}·Y, la diferencia se cubre con deuda</p>
-            <p><Param>φ<sub>fiscal</sub></Param> = sHigh(intereses / recaudación; {PARAMS_V2.finance.stressMid}, {PARAMS_V2.finance.stressWidth})</p>
-        </div>
-        <p className="text-sm">Las reservas nunca bajan del {PARAMS_V2.finance.reserveFloor * 100} % del PBI: cada déficit se financia con deuda automáticamente, a una tasa que sube cuando la deuda pasa el {PARAMS_V2.finance.debtThreshold * 100} % del PBI. El estrés fiscal frena el crecimiento y empuja hacia abajo la seguridad económica y hacia arriba el conflicto y el colapso político. La inversión pública (entrar a un pacto, declarar un uso público en Territorio, una opción paga de una situación) se paga con las reservas por encima del piso y, el resto, con deuda mientras la deuda no supere el {PARAMS_V2.finance.debtThreshold * 100} % del PBI; si no, se rechaza por falta de espacio fiscal. El préstamo voluntario (hasta 10 % del PBI por año; Nivel 3 siempre, Niveles 1–2 y Territorio desde <Param>{CONTROL_PARAMS.Ano_Activacion_Prestamo}</Param>) entra entero a reservas y deuda en el paso siguiente: sirve para prefinanciar inversión que el piso de reservas impediría.</p>
       </div>
-    )
+    ),
   },
   {
-    title: "Estabilidad Política y Conflicto",
+    title: L('Carbono', 'Carbon'),
     content: (
       <div>
-        <p className="mb-4">Estos dos indicadores clave reflejan la gobernabilidad de la nación y son cruciales para evitar el fin del juego.</p>
-        <p className="text-sm mb-2">Desde el modelo 2.0 (fase 39), Seguridad Económica, Conflicto Social y Colapso Político se mueven cada año una fracción fija del camino hacia un <strong>objetivo</strong>: <Code>X* = 100 · σ(logit(X₀) + D)</Code>. <Code>D</Code> suma desvíos respecto del estado inicial del nivel y efectos de políticas activas, así que sin políticas y con el territorio quieto nada se mueve. No hay umbrales en escalón.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Conflicto Social (Inverso al Bienestar Social)</h4>
-        <p className="text-sm mb-2"><Code>Bienestar Social = 100 - Conflicto Social</Code>. Se acerca a su objetivo un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Conflicto * 100)}%</Param> del camino por año.</p>
-        <p className="font-semibold text-xs text-red-400">Lo que sube el objetivo del conflicto:</p>
-        <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Seguridad Alimentaria o Económica por debajo de su valor inicial (proporcional al deterioro).</li>
-            <li>Presión ambientalista por encima de su valor inicial.</li>
-            <li>Políticas activas como <Code>P-FRA</Code>, <Code>P-PAI</Code> o <Code>P-PIE</Code>; la expansión de cultivos convencionales y plantaciones.</li>
-            <li>Presión fiscal adicional (en cualquier nivel con impuesto adicional).</li>
-            <li>Lo alivian <Code>P-CN</Code>, <Code>P-CR</Code> y <Code>P-AGUA</Code>, en proporción a su eficiencia.</li>
-        </ul>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Colapso Político (Inverso a la Estabilidad Política)</h4>
-        <p className="text-sm mb-2"><Code>Estabilidad Política = 100 - Colapso Político</Code>. Se acerca a su objetivo un <Param>{Math.round(CONTROL_PARAMS.Velocidad_Ajuste_Colapso * 100)}%</Param> del camino por año.</p>
-        <p className="font-semibold text-xs text-red-400">Lo que sube el objetivo del colapso:</p>
-         <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Bienestar Social y Seguridad Económica por debajo de sus valores iniciales.</li>
-            <li>Más polarización (diferencia entre la presión más alta y la más baja) que al inicio.</li>
-            <li>Presión política media por encima de la inicial.</li>
-            <li>El Acuerdo Global de Carbono lo baja un poco mientras está vigente.</li>
+        <p className="mb-3 text-sm">{L('Inventario anual en tCO₂e con tres componentes, dividido por la población', 'Yearly inventory in tCO₂e with three components, divided by the population')} ({CP.Poblacion_Inicial.toLocaleString(es ? 'es-AR' : 'en-US')} {L('habitantes al inicio, crece', 'inhabitants at the start, growing')} {pct(CP.Tasa_Crecimiento_Poblacional_Base, lang)} {L('por año', 'per year')}).</p>
+        <Box>
+          <p>{L('Energía', 'Energy')} = ε0 · ({L('ingreso relativo', 'relative income')})^{P.energy.incomeElasticity} · (1 + {P.energy.subsidyBoost}·η_SE) · [{P.energy.electricShare}·(1 − s) + {num(1 - P.energy.electricShare, lang)}·(1 − u)] · {L('Población', 'Population')}</p>
+          <p>s* = min({P.energy.renewablesCap}; {P.energy.renewablesMaxCN}·η_CN^elec + min(1; %{L('parques', 'parks')}/{pct(P.energy.parksFullShare, lang, 0)}) + {L('pactos', 'pacts')})   u* = min({P.energy.efficiencyCap}; {P.energy.efficiencyMaxCN}·η_CN^other + {L('pactos', 'pacts')})</p>
+          <p>{L('Suelo (AFOLU)', 'Land (AFOLU)')} = Σ {L('flujo', 'flux')}_i · ha_i   ·   {L('Cambio de uso', 'Land-use change')} = Σ {L('ha convertidas', 'converted ha')} · max(0, stock_i − stock_j) · 44/12</p>
+        </Box>
+        <p className="text-sm">ε0 = {P.energy.eps0[1]} / {P.energy.eps0[2]} / {P.energy.eps0[3]} t/{L('hab', 'cap')} ({L('niveles', 'levels')} 1/2/3). {L('s y u avanzan', 's and u move')} {pct(P.energy.adjust, lang, 0)} {L('del camino por año (inercia de infraestructura). El presupuesto de carbono compara las emisiones acumuladas con una senda lineal a', 'of the way per year (infrastructure inertia). The carbon budget compares cumulative emissions with a linear path to')} −{pct(P.energy.budgetCut2054, lang, 0)} {L('en 2054; más de 1 = por encima. El tablero muestra el desglose por fuente.', 'in 2054; above 1 = over. The dashboard shows the breakdown by source.')}</p>
+      </div>
+    ),
+  },
+  {
+    title: L('Biodiversidad y seguridad alimentaria', 'Biodiversity and food security'),
+    content: (
+      <div>
+        <H>{L('Biodiversidad: especies-área', 'Biodiversity: species-area')}</H>
+        <Box>
+          <p>H = Σ h_i · a_i   ·   B* = 100·σ( logit(B₀) + z/(1 − B₀/100)·ln(H/H₀) + Σ qB·η^{L('suelo', 'land')} + {P.biodiversity.synergyAgroConservation}·min(η_AS, η_CR) − {P.biodiversity.synergyIntensiveFlexible}·min(η_PAI, η_FRA) + {L('pactos', 'pacts')} )</p>
+        </Box>
+        <p className="text-sm">z = {P.zSAR} ({L('relación especies-área de paisaje, Pereira, Ziv y Miranda, 2014', 'countryside species-area relationship, Pereira, Ziv & Miranda, 2014')}). {L('Sinergia real del modelo: Agroecología + Conservación; antagonismo: Agricultura Intensiva + Normativas Flexibles. En Territorio suma la conectividad del bosque', 'The model\'s real synergy: Agroecology + Conservation; antagonism: Intensive Agriculture + Flexible Regulations. In Territorio forest connectivity adds')} {P.biodiversity.connectivityGamma}·ln(K/K₀). k_B = {CP.Velocidad_Ajuste_Biodiversidad} {L('por año (deuda de extinción).', 'per year (extinction debt).')}</p>
+        <H>{L('Seguridad alimentaria: oferta y demanda', 'Food security: supply and demand')}</H>
+        <Box>
+          <p>Q = (1 − x)·[CC·{P.food.yield.CC}·(1 + {P.food.yieldPolicy.PAI}·η_PAI) + CA·{P.food.yield.CA}·(1 + {P.food.yieldPolicy.AS}·η_AS) + PRG·{P.food.yield.PRG}·(1 + {P.food.yieldPolicy.GS}·η_GS)]·(1 + {P.food.yieldPolicy.AGUA}·η_AGUA)·(1 + {P.food.yieldTrend})^t·(1 + ε)</p>
+          <p>x = {P.food.export0} + {P.food.exportPEA}·η_PEA   ·   F* = 100·σ( logit(F₀) + {P.food.kappa1}·ln(ρ/ρ₀) + {P.food.kappa2}·(E − E₀)/{P.food.econScale} )</p>
+        </Box>
+        <p className="text-sm">{L('ρ = Q / población. ε es el choque de rendimiento (AR(1), persistencia', 'ρ = Q / population. ε is the yield shock (AR(1), persistence')} {P.events.yieldShock.persistence}, σ = {P.events.yieldShock.sigma}; {L('la Gestión del Agua lo amortigua', 'Water Management damps it')}). k_F = {CP.Velocidad_Ajuste_Seg_Alimentaria}.</p>
+      </div>
+    ),
+  },
+  {
+    title: L('Presiones sectoriales (Nivel 2+)', 'Sectoral pressures (Level 2+)'),
+    content: (
+      <div>
+        <p className="mb-2 text-sm">{L('Las presiones agrícola, ambientalista y social (0–100) se acercan cada año a un objetivo en S anclado al inicio del nivel: π* = 100·σ(logit(π₀) + D_π).', 'The agricultural, environmentalist and social pressures (0–100) approach each year an S-shaped target anchored at the level start: π* = 100·σ(logit(π₀) + D_π).')}</p>
+        <Box>
+          <p>D_πa = σ_prod·Σ φa·η^social/{P.pressure.phiScale} + {P.pressure.drivers.a.econ}·(E₀ − E) + {P.pressure.drivers.a.food}·(F₀ − F) + {P.pressure.drivers.a.prodShare}·(a_prod,0 − a_prod)</p>
+          <p>D_πe = Σ φe·η^social/{P.pressure.phiScale} + {P.pressure.drivers.e.biodiversity}·(B₀ − B) + {P.pressure.drivers.e.co2}·(c − c₀)/c₀</p>
+          <p>D_πs = Σ φs·η^social/{P.pressure.phiScale} + {P.pressure.drivers.s.wellbeing}·(W₀ − W) + {P.pressure.drivers.s.tax}·τ</p>
+        </Box>
+        <p className="text-sm">{L('Conservación baja la ambientalista', 'Conservation lowers the environmentalist pressure')} ({P.pressure.e.CR}) {L('pero sube la agrícola', 'but raises the agricultural one')} (+{P.pressure.a.CR}): {L('conservar sin compensar tensiona al campo. Sacar tierra de producción (usos públicos) también. k_π =', 'conserving without compensation strains farmers. Taking land out of production (public uses) does too. k_π =')} {CP.Velocidad_Ajuste_Presiones}.</p>
+      </div>
+    ),
+  },
+  {
+    title: L('Finanzas públicas', 'Public finance'),
+    content: (
+      <div>
+        <Box>
+          <p>g = {CP.Tasa_Base_Crecimiento_PBI} + {P.finance.growthPIE}·η_PIE + {P.finance.growthPEA}·η_PEA − {P.finance.growthTaxDrag}·τ − {P.finance.growthStress}·φ</p>
+          <p>{L('SP = recaudación − gasto base γ_N·Y − costo de políticas − cuotas de pactos', 'PB = revenue − base spending γ_N·Y − policy costs − pact fees')}   ({L('recaudación', 'revenue')} = Y·({CP.Tasa_Impositiva_General_Sobre_PBI} + τ/100) + {P.finance.carbonTaxRevenue}·Y·η_CN^tax)</p>
+          <p>i = i_N + {P.finance.riskPremium}·max(0, D/Y − {P.finance.debtThreshold})   ·   R' = R + SP − i·D − α_N·D   ·   {L('si', 'if')} R' &lt; {P.finance.reserveFloor}·Y: {L('la diferencia se paga con deuda', 'the gap is paid with debt')}</p>
+          <p>φ = sHigh({L('intereses/recaudación', 'interest/revenue')}; {P.finance.stressMid}, {P.finance.stressWidth})</p>
+        </Box>
+        <ul className="list-disc list-inside space-y-2 text-sm">
+          <li><strong className="text-red-400">{L('Gasto público base', 'Base public spending')}</strong> <Code>Gasto_Publico_Base_Nivel_N</Code> = {CP.Gasto_Publico_Base_Nivel_1} / {CP.Gasto_Publico_Base_Nivel_2} / {CP.Gasto_Publico_Base_Nivel_3} ({L('Territorio usa el Nivel 2', 'Territorio uses Level 2')}). <strong>{L('Advertencia: es el parámetro más sensible del modelo.', 'Warning: it is the most sensitive parameter of the model.')}</strong> {L('Con 15 % de recaudación deja un superávit de 2–2,5 % del PBI antes de las políticas; +20 % de γ le quita a una cartera verde unos 14 puntos de seguridad económica en el Nivel 2. No lo cambie sin correr', 'With 15 % revenue it leaves a surplus of 2–2.5 % of GDP before policies; +20 % on γ takes about 14 points of economic security from a green portfolio on Level 2. Do not change it without running')} <Code>npm run sim:check</Code>.</li>
+          <li><strong className="text-red-400">{L('Inversión pública', 'Public investment')}</strong>: {L('entrar a un pacto, declarar un uso público (Territorio) o una opción paga se paga con las reservas por encima del piso y el resto con deuda mientras D/Y ≤', 'joining a pact, declaring a public use (Territorio) or a paid option is paid from reserves above the floor and the rest with debt while D/Y ≤')} {P.finance.debtThreshold}; {L('si no, se rechaza: "sin espacio fiscal".', 'otherwise it is refused: "no fiscal space".')}</li>
+          <li><strong className="text-red-400">{L('Quiebra', 'Bankruptcy')}</strong>: D/Y &gt; {P.finance.bankruptcyDebtRatio} {L('con intereses', 'with interest')} &gt; {pct(P.finance.bankruptcyInterestBurden, lang, 0)} {L('de la recaudación durante', 'of revenue for')} {P.finance.bankruptcyYears} {L('años seguidos (24 meses en Territorio).', 'years in a row (24 months in Territorio).')}</li>
+          <li>{L('Préstamo voluntario: hasta 10 % del PBI por año (Nivel 3; Niveles 1–2 y Territorio desde', 'Voluntary loan: up to 10 % of GDP per year (Level 3; Levels 1–2 and Territorio from')} <Param>{CP.Ano_Activacion_Prestamo}</Param>); {L('entra entero a reservas y deuda en el paso siguiente.', 'it enters reserves and debt in full in the next step.')}</li>
         </ul>
       </div>
-    )
+    ),
   },
-   {
-    title: "Sistema de Puntuación",
+  {
+    title: L('Economía, conflicto y transición justa', 'Economy, conflict and just transition'),
     content: (
-       <div>
-        <p className="mb-4">El Puntaje General (0-1000) se calcula de forma diferente en cada nivel para reflejar los objetivos de esa etapa.</p>
-        <div className="space-y-4">
-            <div>
-                <h4 className="font-semibold text-blue-300">Nivel 1: Estrategia Fundacional</h4>
-                <ul className="list-disc list-inside text-sm">
-                    <li>Biodiversidad (Peso: <Param>50%</Param>)</li>
-                    <li>Componente de Carbono (Peso: <Param>50%</Param>)</li>
-                </ul>
+      <div>
+        <Box>
+          <p>D_E = Σ bE·η^prod − {P.relaxation.E.carbonTax}·η_CN^tax + {P.relaxation.E.growth}·(g − g₀)/{P.relaxation.E.growthScale} + {P.relaxation.E.landValue}·(V/V₀ − 1) + {P.relaxation.E.biodiversity}·(B − B₀)/{P.relaxation.E.biodiversityScale} − {P.relaxation.E.fiscalStress}·φ − {P.relaxation.E.tax}·τ + {L('pactos', 'pacts')}</p>
+          <p>D_C = {P.conflictWeights.food}·(F₀ − F)/{P.relaxation.C.foodScale} + {P.conflictWeights.econ}·(E₀ − E)/{P.relaxation.C.econScale} + {P.conflictWeights.envPressure}·(πe − πe₀)/{P.relaxation.C.envPressureScale} + Σ c·η^social − Σ {L('alivio', 'relief')}·η^social + {P.relaxation.C.shareCC}·Δa_CC + {P.relaxation.C.sharePF}·Δa_PF + {P.relaxation.C.tax}·τ + {P.relaxation.C.fiscalStress}·φ + {P.conflictWeights.gini}·(G − G₀) + {P.conflictWeights.just}·(1 − J)·R</p>
+          <p>D_Pc = {P.relaxation.Pc.wellbeing}·(W₀ − W)/{P.relaxation.Pc.wellbeingScale} + {P.relaxation.Pc.econ}·(E₀ − E)/{P.relaxation.Pc.econScale} + {P.relaxation.Pc.fiscalStress}·φ + {P.relaxation.Pc.polarisation}·({L('polarización', 'polarisation')} − pol₀)/{P.relaxation.Pc.polarisationScale} + {P.relaxation.Pc.pressureMean}·(π̄ − π̄₀)/{P.relaxation.Pc.pressureMeanScale} + {L('pactos', 'pacts')}</p>
+          <p>{L('Bienestar', 'Wellbeing')} W = 100 − C   ·   {L('Estabilidad', 'Stability')} St = 100 − Pc</p>
+        </Box>
+        <ul className="list-disc list-inside space-y-2 text-sm">
+          <li><strong className="text-yellow-400">G</strong>: {L('concentración de la tierra = (cultivo convencional + plantaciones) / tierra productiva. Si sube respecto del inicio, sube el conflicto.', 'land concentration = (conventional crops + plantations) / productive land. If it rises above the start, conflict rises.')}</li>
+          <li><strong className="text-yellow-400">J</strong>: {L('transición justa (0–1). R es la carga de restricciones (Conservación', 'just transition (0–1). R is the restriction load (Conservation')} {P.justTransition.restriction.CR}, {L('impuesto al carbono', 'carbon tax')} {P.justTransition.restriction.CN}, {L('protección de fuentes de agua', 'water-source protection')} {P.justTransition.restriction.AGUA}); {L('el apoyo viene de Agroecología y Ganadería Sostenible', 'support comes from Agroecology and Sustainable Livestock')} ({P.justTransition.support.AS} / {P.justTransition.support.GS}). {L('Restringir sin acompañar (J bajo con R alto) sube el conflicto. El tablero muestra G y J desde el Nivel 2.', 'Restricting without support (low J with high R) raises conflict. The dashboard shows G and J from Level 2.')}</li>
+          <li>k_E / k_C / k_Pc = {CP.Velocidad_Ajuste_Seg_Economica} / {CP.Velocidad_Ajuste_Conflicto} / {CP.Velocidad_Ajuste_Colapso} {L('por año.', 'per year.')}</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: L('Puntaje', 'Score'),
+    content: (
+      <div>
+        <p className="mb-3 text-sm">{L('El Puntaje General (0–1000) está anclado al inicio de cada nivel: el componente de carbono vale 100 en', 'The General Score (0–1000) is anchored to each level\'s start: the carbon component is 100 at')} {num(CARBON_CEILING_FACTOR - 1, lang)}·c₀ {L('y 0 en', 'and 0 at')} {num(CARBON_CEILING_FACTOR, lang)}·c₀ (c₀ = {L('CO₂ por habitante al inicio', 'CO₂ per inhabitant at the start')}); {L('el de PBI se llena al', 'the GDP one fills up at')} {GDP_FULL_MULTIPLE}× {L('el PBI inicial.', 'the starting GDP.')}</p>
+        <ul className="list-disc list-inside text-sm space-y-1">
+          <li>{L('Nivel 1', 'Level 1')}: B {pct(SCORE_WEIGHTS[1].biodiversity, lang, 0)}, {L('carbono', 'carbon')} {pct(SCORE_WEIGHTS[1].carbon, lang, 0)}, E {pct(SCORE_WEIGHTS[1].economic, lang, 0)}</li>
+          <li>{L('Nivel 2', 'Level 2')}: B {pct(SCORE_WEIGHTS[2].biodiversity, lang, 0)}, {L('carbono', 'carbon')} {pct(SCORE_WEIGHTS[2].carbon, lang, 0)}, {L('presiones', 'pressures')} {pct(SCORE_WEIGHTS[2].pressure, lang, 0)}, {L('promedio F/E/W/St', 'mean F/E/W/St')} {pct(SCORE_WEIGHTS[2].externalities, lang, 0)}</li>
+          <li>{L('Nivel 3', 'Level 3')}: B {pct(SCORE_WEIGHTS[3].biodiversity, lang, 0)}, {L('carbono', 'carbon')} {pct(SCORE_WEIGHTS[3].carbon, lang, 0)}, {L('presiones', 'pressures')} {pct(SCORE_WEIGHTS[3].pressure, lang, 0)}, {L('promedio F/E/W/St', 'mean F/E/W/St')} {pct(SCORE_WEIGHTS[3].externalities, lang, 0)}, {L('PBI', 'GDP')} {pct(SCORE_WEIGHTS[3].gdp, lang, 0)}</li>
+        </ul>
+        <p className="text-xs italic mt-3">{L('Cada ruta multiplica el puntaje final del nivel (la más exigente paga más).', 'Each route multiplies the level\'s final score (the hardest pays more).')}</p>
+      </div>
+    ),
+  },
+  {
+    title: L('Cómo se gana y cómo se pierde', 'How to win and how to lose'),
+    content: (
+      <div>
+        <p className="mb-3 text-sm">{L('Al final de cada nivel', 'At the end of each level')} (<Param>{YEARS_PER_LEVEL}</Param> {L('años) hay que cumplir todos los mínimos de gobernabilidad y una ruta completa. Umbrales calibrados con', 'years) every governance floor and one complete route must be met. Thresholds calibrated with')} <Code>npm run sim:check</Code> ({L('fase 49', 'phase 49')}).</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((lvl) => (
+            <div key={lvl} className="bg-slate-800 p-3 rounded-md text-xs">
+              <h4 className="font-semibold text-blue-300 text-sm">{L('Nivel', 'Level')} {lvl}</h4>
+              <p className="mt-1"><span className="text-gray-400">{tr('routes.floorsTitle')}:</span> {LEVEL_ROUTES[lvl].floors.map((f) => `${tr(f.labelKey)} ${f.dir === 'min' ? '≥' : '≤'} ${num(f.target, lang)}`).join(' · ')}</p>
+              {LEVEL_ROUTES[lvl].routes.map((r) => (
+                <p key={r.id} className="mt-1"><span className="text-cyan-400">{tr(r.nameKey)}</span> (×{r.scoreMultiplier}{r.minConditionsMet ? `, ${r.minConditionsMet}/${r.conditions.length}` : ''}): {r.conditions.map((c) => `${tr(c.labelKey)} ${c.dir === 'min' ? '≥' : '≤'} ${num(c.target, lang)}`).join(' · ')}</p>
+              ))}
             </div>
-            <div>
-                <h4 className="font-semibold text-blue-300">Nivel 2: Sostenibilidad Ampliada</h4>
-                <ul className="list-disc list-inside text-sm">
-                    <li>Biodiversidad (Peso: <Param>15%</Param>)</li>
-                    <li>Componente de Carbono (Peso: <Param>20%</Param>)</li>
-                    <li>Desempeño Político (basado en el promedio de las 3 presiones, peso: <Param>30%</Param>)</li>
-                    <li>Indicadores Socio-Económicos (promedio de las 4 "seguridades", peso: <Param>35%</Param>)</li>
-                </ul>
-            </div>
-             <div>
-                <h4 className="font-semibold text-blue-300">Nivel 3: Liderazgo Global</h4>
-                <ul className="list-disc list-inside text-sm">
-                    <li>Biodiversidad (Peso: <Param>10%</Param>)</li>
-                    <li>Componente de Carbono (Peso: <Param>15%</Param>)</li>
-                    <li>Desempeño Político (Peso: <Param>20%</Param>)</li>
-                    <li>Indicadores Socio-Económicos (Peso: <Param>25%</Param>)</li>
-                    <li>Desempeño del PBI (Peso: <Param>30%</Param>)</li>
-                </ul>
-            </div>
+          ))}
         </div>
-        <p className="text-xs italic mt-4">La suma ponderada de estos componentes (0-100) se multiplica por 10 para obtener el puntaje final.</p>
-      </div>
-    )
-  },
-   {
-    title: "Condiciones de Victoria/Derrota",
-    content: (
-      <div>
-        <p className="mb-4">Para progresar, se deben cumplir todas las condiciones de victoria al final del ciclo de un nivel (<Param>{YEARS_PER_LEVEL}</Param> años).</p>
-        <div className="space-y-4">
-            {LEVEL_CONFIGS.map(level => (
-                <div key={level.levelNumber} className="bg-slate-800 p-3 rounded-md">
-                    <h4 className="font-semibold text-blue-300">Nivel {level.levelNumber}: {level.name}</h4>
-                    <ul className="list-disc list-inside text-xs mt-2 space-y-1">
-                        {Object.entries(level.winConditions || {}).map(([key, value]) => {
-                           const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/Min$|Max$/, m => m === 'Min' ? ' (mín.)' : ' (máx.)').trim();
-                           return <li key={key}>{formattedKey}: <Param>{value.toString()}</Param></li>
-                        })}
-                    </ul>
-                </div>
-            ))}
-        </div>
-        <h4 className="font-semibold mt-4 mb-2 text-red-400">Condiciones de Derrota Instantánea</h4>
-         <ul className="list-disc list-inside text-sm text-red-300">
-            <li>Colapso político &ge; 95%</li>
-            <li>Bancarrota: deuda &gt; {PARAMS_V2.finance.bankruptcyDebtRatio * 100} % del PBI con intereses &gt; {PARAMS_V2.finance.bankruptcyInterestBurden * 100} % de la recaudación durante {PARAMS_V2.finance.bankruptcyYears} años seguidos (24 meses en Territorio)</li>
-            <li>Catástrofe ecológica (Biodiversidad &le; 5%)</li>
-            <li>Hambruna (Seguridad Alimentaria &le; 10%)</li>
+        <H>{L('Derrota inmediata', 'Immediate defeat')}</H>
+        <ul className="list-disc list-inside text-sm text-red-300">
+          <li>{L('Colapso político', 'Political collapse')} ≥ 95 %</li>
+          <li>{L('Quiebra (ver Finanzas públicas)', 'Bankruptcy (see Public finance)')}</li>
+          <li>{L('Catástrofe ecológica (Biodiversidad ≤ 5 %)', 'Ecological catastrophe (Biodiversity ≤ 5 %)')}</li>
+          <li>{L('Hambruna (Seguridad Alimentaria ≤ 10 %)', 'Famine (Food Security ≤ 10 %)')}</li>
         </ul>
       </div>
-    )
+    ),
   },
-   {
-    title: "Mecánicas Avanzadas (Nivel 3)",
+  {
+    title: L('Pactos y eventos (Nivel 3)', 'Pacts and events (Level 3)'),
     content: (
       <div>
-        <p className="mb-4">El Nivel 3 introduce herramientas y eventos que aumentan la complejidad y el realismo.</p>
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Pactos Internacionales</h4>
-        <p className="text-sm">Acuerdos que se desbloquean en años específicos (modelo 2.0, fase 43). Unirse cuesta una fracción del PBI del momento y la membresía otra por año (<Code>PARAMS_V2.pacts</Code>): Tratado de Biodiversidad {PARAMS_V2.pacts.biodiversityTreaty.entry * 100} % / {PARAMS_V2.pacts.biodiversityTreaty.annual * 100} %, Acuerdo Global de Carbono {PARAMS_V2.pacts.globalCarbonAccord.entry * 100} % / {PARAMS_V2.pacts.globalCarbonAccord.annual * 100} %, Transferencia Tecnológica {PARAMS_V2.pacts.techTransferInitiative.entry * 100} % / {PARAMS_V2.pacts.techTransferInitiative.annual * 100} %. Mientras está activo, un pacto desplaza objetivos: el tratado +{PARAMS_V2.pacts.biodiversityTreaty.B} logit a la biodiversidad, {PARAMS_V2.pacts.biodiversityTreaty.E} a la seguridad económica, protección ×{PARAMS_V2.pacts.biodiversityTreaty.protectFactor} y deforestación ×{PARAMS_V2.pacts.biodiversityTreaty.deforestFactor}; el <Code>{INITIAL_PACTS.globalCarbonAccord.name}</Code> {PARAMS_V2.pacts.globalCarbonAccord.E} a la seguridad económica, {PARAMS_V2.pacts.globalCarbonAccord.Pc} al colapso y +{PARAMS_V2.pacts.globalCarbonAccord.renewables} a renovables y eficiencia; la transferencia +{PARAMS_V2.pacts.techTransferInitiative.E} a la seguridad económica y +{PARAMS_V2.pacts.techTransferInitiative.renewables} / +{PARAMS_V2.pacts.techTransferInitiative.efficiency} a renovables / eficiencia. El efecto no crece con los años de membresía, y ningún pacto supera a la política más fuerte sobre el mismo indicador.</p>
-
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Eventos Aleatorios y Noticias</h4>
-        <p className="text-sm">Cada año hay una probabilidad de que ocurra un evento aleatorio (ej. sequía, avance tecnológico), con efectos directos sobre los indicadores. En Nivel 3, si no hay un evento, el sistema de IA genera titulares de noticias basados en el estado actual del juego para aumentar la inmersión.</p>
-
-        <h4 className="font-semibold mt-4 mb-2 text-blue-300">Presión Fiscal Adicional</h4>
-        <p className="text-sm">El jugador puede aplicar una tasa impositiva adicional (0-<Param>{CONTROL_PARAMS.Max_Additional_Tax_Rate_Percentage}%</Param>) sobre el PBI. Esto aumenta los ingresos del tesoro pero tiene consecuencias negativas en la economía y genera malestar social.</p>
+        <H>{L('Pactos internacionales', 'International pacts')}</H>
+        <p className="text-sm">{L('Mientras está activo, un pacto desplaza objetivos (no suma un salto por año). Adhesión / cuota anual como fracción del PBI:', 'While active, a pact shifts targets (it does not add a jump per year). Entry / annual fee as a share of GDP:')} {L('Tratado de Biodiversidad', 'Biodiversity Treaty')} {pct(P.pacts.biodiversityTreaty.entry, lang)} / {pct(P.pacts.biodiversityTreaty.annual, lang)} (B +{P.pacts.biodiversityTreaty.B} logit, E {P.pacts.biodiversityTreaty.E}); {L('Acuerdo Global de Carbono', 'Global Carbon Accord')} {pct(P.pacts.globalCarbonAccord.entry, lang)} / {pct(P.pacts.globalCarbonAccord.annual, lang)} (E {P.pacts.globalCarbonAccord.E}, Pc {P.pacts.globalCarbonAccord.Pc}, {L('renovables', 'renewables')} +{P.pacts.globalCarbonAccord.renewables}); {L('Transferencia Tecnológica', 'Technology Transfer')} {pct(P.pacts.techTransferInitiative.entry, lang)} / {pct(P.pacts.techTransferInitiative.annual, lang)} (E +{P.pacts.techTransferInitiative.E}, {L('renovables', 'renewables')} +{P.pacts.techTransferInitiative.renewables}). {L('La adhesión es inversión pública: sin espacio fiscal se rechaza.', 'Joining is a public investment: without fiscal space it is refused.')}</p>
+        <H>{L('Eventos aleatorios', 'Random events')}</H>
+        <p className="text-sm">{L('Cada mes cada evento se sortea por separado (puede haber varios en un año; el panel del Nivel 3 los lista todos). La sequía crece con la tendencia climática y con la pérdida de bosque, y es más probable sin Gestión del Agua. Si no hubo evento, la IA genera titulares a partir del estado del juego.', 'Every month each event is drawn separately (a year can have several; the Level 3 panel lists them all). Drought grows with the climate trend and with forest loss, and is likelier without Water Management. With no event, the AI writes headlines from the game state.')}</p>
+        <H>{L('Presión fiscal adicional', 'Additional tax pressure')}</H>
+        <p className="text-sm">0–<Param>{CP.Max_Additional_Tax_Rate_Percentage} %</Param>: {L('sube la recaudación, frena el crecimiento y sube la presión social y el conflicto.', 'raises revenue, slows growth and raises social pressure and conflict.')}</p>
       </div>
-    )
+    ),
   },
-];
+  {
+    title: L('Panel del facilitador', 'Facilitator panel'),
+    content: (
+      <div>
+        <p className="text-sm mb-2">{L('El panel solo expone claves que el motor lee (cada una tiene un test que verifica que mueve algo). Los cambios valen en vivo, salvo la población inicial, que se aplica al reiniciar o empezar un nivel.', 'The panel only exposes keys the engine reads (each one has a test that checks it moves something). Changes apply live, except the initial population, which applies when a level starts or restarts.')}</p>
+        <ul className="list-disc list-inside space-y-1 text-sm">
+          <li>{L('Crecimiento y población', 'Growth and population')}: <Code>Tasa_Base_Crecimiento_PBI</Code> <Code>Tasa_Crecimiento_Poblacional_Base</Code> <Code>Poblacion_Inicial</Code></li>
+          <li>{L('Velocidades de ajuste', 'Adjustment speeds')}: <Code>Velocidad_Ajuste_*</Code></li>
+          <li>{L('Políticas', 'Policies')}: <Code>Eficiencia_Minima_Politicas</Code> <Code>Recuperacion_Politicas_Anios</Code></li>
+          <li>{L('Finanzas', 'Finance')}: <Code>Tasa_Impositiva_General_Sobre_PBI</Code> <Code>Gasto_Publico_Base_Nivel_1..3</Code> <Code>Tasa_de_interes_Nivel_1..3</Code> <Code>Pago_deuda_anual_Nivel_1..3</Code> <Code>Max_Additional_Tax_Rate_Percentage</Code> <Code>Ano_Activacion_Prestamo</Code></li>
+        </ul>
+        <p className="text-sm mt-3 text-yellow-300">{L('Gasto_Publico_Base_* es el más sensible: pequeños cambios deciden si las carteras verdes son viables. Las cifras del modelo son de un juego calibrado, no proyecciones de un territorio real.', 'Gasto_Publico_Base_* is the most sensitive: small changes decide whether green portfolios are viable. The model\'s figures come from a calibrated game, not projections of a real territory.')}</p>
+      </div>
+    ),
+  },
+  ];
+}
 
 const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
   const { language } = useLanguageContext();
   const ui = FM_UI[language];
+  const manualSlides = useMemo(() => buildSlides(language), [language]);
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
@@ -357,7 +347,7 @@ const FacilitatorManual: React.FC<FacilitatorManualProps> = ({ onClose }) => {
             <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
               <div>
                 <h2 id="manual-title" className="text-2xl sm:text-3xl font-bold text-custom-accent">
-                    {language === 'es' ? 'Manual del Facilitador' : 'Facilitator Manual'}: <span className="text-blue-300">{slide.title}</span>
+                    {ui.title}: <span className="text-blue-300">{slide.title}</span>
                 </h2>
                 <p className="text-xs text-gray-400">{ui.subtitle}</p>
               </div>

@@ -3247,3 +3247,80 @@ objetivos de cabecera de `LEVEL_CONFIGS` en `LevelIntroModal`, estrellas del tab
 **Verificación.** `npx tsc --noEmit`, `npm test`, `npm run build`, `npm run i18n:audit`; `npm run sim:check` completo: C1
 0,000, C2 0,825, C3 0,325, C4 0,000, C5 0, C6 FAIL 14,556 (F N3), C7 0,023, C8 0, C9 0,000 (antes: C2, C4, C5, C6 FAIL).
 
+## 2026-10-22 — v6 fase 50: interfaz, manuales, paquete docente y DecarboNito al día con el modelo 2.0
+
+Spec: `mejora-general/files/50_interfaz_docentes_decarbonito.md`. Cierra N-08 en su forma definitiva y la documentación
+desalineada. **No cambia ecuaciones ni parámetros**: `npm run sim:check -- --quick` da un reporte idéntico al de la fase 49
+(comparado contra el mismo comando en `HEAD` 5be209b, todo igual salvo el tiempo de corrida).
+
+**Qué.** (1) `src/game/modelView.ts` (puro): lo que las interfaces leen del submodelo 2.0 — objetivo X* de cada indicador
+(`indicatorTarget`; W y St como 100 − C* / 100 − Pc*), CO₂ por habitante por fuente + renovables + presupuesto
+(`carbonView`), D/Y, saldo primario, intereses, estrés y "sin espacio fiscal" (`fiscalView`), G y J (`socialView`), estado y
+costo de una política con costo marginal de +10 pts (`policyView`), etiquetas de instrumentos desde `INSTRUMENT_CHANNELS`
+(`instrumentHint`: canales con μ ≥ 0,6 alto/medio + apoyo/restricción), conectividad de un lote (`lotTouchesForest`) y
+estrellas / líneas / objetivo de puntaje desde `LEVEL_ROUTES`. Lo usan el tablero, Territorio, Gemini y el asesor: un solo
+cálculo. (2) Juego de 3 niveles: flecha "va hacia NN" bajo cada indicador acotado; bloques Carbono, Finanzas públicas (N3
+completo; N1–N2 solo saldo primario) y Transición justa (N2–N3) en `src/components/ModelPanels.tsx`; `PolicyToggle` con
+"En marcha (NN %)" / "Plena" / "Desgastada (NN %)" y costo actual; panel de instrumentos con etiquetas por canal,
+apoyo/restricción y costo marginal; `INSTRUMENT_IMPACT_HINTS` y su tipo borrados (constants, types, App, Dashboard); panel de
+eventos de N3 con todos los eventos del año (`GameState.eventsThisYear`, ids que escribe `advanceYear`: contabilidad, sin
+efecto en el modelo). (3) Deudas de la 49: `winConditions` borrado de `LEVEL_CONFIGS`, `LevelConfig` y
+`lastConcludedLevelInfo`; `LevelIntroModal` lista mínimos y rutas reales (test SSR `tests/game/levelIntro.spec.tsx`); estrellas
+y líneas de umbral del tablero desde `LEVEL_ROUTES`; color/tooltip del puntaje con `scoreTarget`; el prompt de cierre de
+Gemini lista mínimos, rutas con avance y multiplicador, puntaje anclado, CO₂ por fuente, finanzas y G/J. (4) Panel del
+facilitador con los cuatro grupos de 50 §3 (crecimiento y población + `Poblacion_Inicial`, velocidades, políticas
+`Eficiencia_Minima_Politicas` / `Recuperacion_Politicas_Anios`, finanzas); avisos "se aplica al reiniciar nivel" y
+"muy sensible" (γ). `facilitatorParams.spec.ts` cubre las claves nuevas (población construyendo el nivel con el CP; recuperación
+con Neutralidad de Carbono que descansa y vuelve). (5) Manuales reescritos y bilingües: `PlayerManual` (sin la sinergia
+inexistente Conservación + Ganadería; la real es Agroecología + Conservación), `FacilitatorManual` (13 páginas, todo número
+leído del código, advertencia de sensibilidad de `Gasto_Publico_Base_*`), `EquationsManual` con las nueve familias de
+`src/components/equations/families.ts` (fuente única también de la hoja docente). (6) DecarboNito: `CHATBOT_BASE_INSTRUCTION`
+con las mecánicas 2.0 (objetivos, rampa/desgaste/descanso, costo y deuda, CO₂ por fuente, la sinergia real, cómo se gana);
+N1 sigue sin instrumentos; N2/N3 con canales y transición justa; N3 con espacio fiscal. `geminiService` agrega "va hacia",
+desglose de CO₂, saldo primario / D/Y / intereses / sin espacio fiscal, G/J y las rutas con lo que falta. `uiActionRegistry`
+no leía campos borrados: sin cambios. (7) Territorio: tira de indicadores con "→ NN" y tooltip de objetivo; tooltip de CO₂
+con desglose y presupuesto; aviso "Sin espacio fiscal" en la barra superior y en finanzas; bloque Carbono / G / J en Rutas;
+políticas "Plena" / "Desgastada (NN %)"; etiquetas de canal en instrumentos; ficha de parcela con "contiguo al bosque" /
+"aislado" y nota de precio √(Y/Y₀); situaciones con "se desvanece (a la mitad en ~18 meses)"; cues nuevos (`fiscal.low` D/Y >
+0,5, `just.low` J < 0,4 con restricciones, `policy.worn`, `lot.isolated` cuando una declaración baja K, `budget.over` > 1,2;
+una vez por partida); `territorioContext` con objetivos, CO₂ por fuente, G y J y sin espacio fiscal; noticias: fuera "reservas
+en rojo / vuelven a positivas" (imposibles con el piso del 2 %), entran `finance.debtHigh` / `debtEased` (D/Y cruza 0,6),
+`finance.stress`, `finance.bankruptcyNear`, `milestone.renewables` (cada 10 %) y `land.fallowRegrows`; regla nueva en el
+briefing. La pantalla final ya tenía los índices de la 48 y el desgaste (47): sin cambios. (8) Paquete docente:
+`docentes-ecuaciones.html` reescrita — nueve familias, tabla de parámetros con origen (calibrado / literatura / criterio
+experto / decisión del equipo), rutas de los tres niveles y de Territorio, sección "Rigor" que dice que las cifras son de un
+modelo de juego y no proyecciones del Bosque Atlántico; todo bloque numérico sale de `scripts/params-table-html.ts` (nuevo) y
+`scripts/routes-table-html.ts` (ahora también 3 niveles) con `--write` / `--check` (marcadores `<!-- BEGIN:x -->`,
+`scripts/lib/htmlBlocks.ts`) y `tests/docentes/generatedTables.spec.ts` falla si la página queda desactualizada. Guía (sinergia
+real, pregunta de transición justa), diapositivas (dinero escaso), espacio docente (las flechas), landing (eficiencia que
+arranca y se desgasta) y la nota de histórica en `public/docentes/hoja-de-ecuaciones.md`. `docentes-consignas.html` revisada:
+sus preguntas no nombran mecánicas, sin cambios; `docentes.html` y el plan de clase tampoco nombraban mecánicas 1.1.
+
+**Desvíos.** (a) No existe un "panel social" en `levelSpecific/*`: G y J van en `SocialPanel` del tablero (N2–N3). (b) "Se
+desvanece en ~18 meses" es la vida media: el texto dice "a la mitad en ~18 meses". (c) El cue "lote aislado" no tiene el lote
+en la sesión: se dispara cuando una declaración del mes baja la conectividad K; la ficha avisa antes de declarar. (d) Bug de UI
+corregido: las opciones pagas de las situaciones se grisaban con `costo ≤ reservas` (regla 1.1); ahora `canPayPublicInvestment`.
+(e) `Poblacion_Inicial` no tenía efecto desde el panel: `App.tsx` crea cada nivel con `controlParamsRef.current`. (f) El
+contenido del manual del facilitador era solo en español: ahora es/en. (g) `routes.floor.treasury` (sin usos) borrado.
+
+**Deudas.** La barra de progreso de las condiciones que leen el estado y no los indicadores (bosque, D/Y, pactos) sigue en 0
+hasta cumplirse (deuda de la 49, sin cambios). El panel de eventos múltiples del N3 se verificó con test (rng 0) y no en el
+navegador (no hubo eventos en la corrida e2e). C6 F N3 sigue pendiente de decisión (unidad aparte).
+
+**Revisión de código** (aplicada): las líneas de rutas de los prompts de DecarboNito salen de un solo formateador
+(`routesContextLines`, etiquetas traducidas al español —el idioma del prompt— y valor actual también en los mínimos
+incumplidos) para el contexto y la reflexión de cierre; el panel de eventos agrupa un evento que se repite en el año
+("×2") en vez de duplicar tarjetas con la misma clave; el bloque 2.0 del prompt base pasa a ser la regla 5 en prosa (sin
+negritas ni viñetas, que la regla 4 prohíbe) y se conserva "Responde siempre en ESPAÑOL"; "sin espacio fiscal" usa la regla
+del motor (`canPayPublicInvestment` con una inversión de prueba de 1 % del PBI, `NO_FISCAL_SPACE_PROBE`) en vez de una
+heurística propia; el gráfico de CO₂ dibuja los topes de emisiones de las rutas (`emissionsTargets`); un único predicado
+`justTransitionLow` para tablero, Territorio y asesor; los umbrales de las reglas fiscales y de energía en los textos nuevos
+(`model.*`, `hud.noFiscalSpaceTip`) se interpolan desde `PARAMS_V2`; sin `void` ni el objeto `winConditions` de 1.1 en el
+tablero. No aplicada (deuda): los textos que ya existían antes de esta fase (`tips.fiscalStress`, `finance.rules` de
+Territorio, noticias, prompts por nivel) siguen escribiendo 2 % / 60 % / 20 % a mano.
+
+**Verificación.** `npx tsc --noEmit`, `npm test` (47 archivos, 737 tests; `vitest.config.ts` incluye ahora `tests/**/*.spec.tsx`), `npm run build`, `npm run i18n:audit` limpios;
+`npm run sim:check -- --quick` idéntico a la fase 49 (C1 0,000, C2 0,600, C3 0,300, C4 0,000, C5 1,000, C6 14,146, C7 0,041,
+C8 0, C9 0,000 en quick); e2e en navegador: `/play?demo=1` N1–N3 (flechas, bloques, políticas, instrumentos, panel del
+facilitador, tres manuales en es/en, DecarboNito abre y falla limpio con key placeholder), `/territorio` (HUD, rutas, ficha
+de parcela, declaración, situaciones, partida a ×4 hasta el final), `/` y `/docentes/*` (variantes y es/en).

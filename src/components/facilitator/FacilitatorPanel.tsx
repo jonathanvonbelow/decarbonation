@@ -1,7 +1,7 @@
 import React from 'react';
 import { ControlParams } from '../../types';
 import { useLanguageContext } from '../../contexts/LanguageContext';
-import { PARAM_GROUPS_EN, PARAM_GROUPS_ES, type NumericParamKey } from './paramGroups';
+import { PARAM_GROUPS_EN, PARAM_GROUPS_ES, RESTART_PARAM_KEYS, SENSITIVE_PARAM_KEYS, type NumericParamKey } from './paramGroups';
 
 interface FacilitatorPanelProps {
   controlParams: ControlParams;
@@ -10,8 +10,8 @@ interface FacilitatorPanelProps {
 }
 
 const T = {
-  es: { title: 'Panel del Facilitador', closeLabel: 'Cerrar panel', warning: 'Atención: los cambios aquí afectan la simulación en tiempo real. Usar solo con fines de facilitación de talleres.', closeBtn: 'Cerrar' },
-  en: { title: 'Facilitator Panel', closeLabel: 'Close panel', warning: 'Warning: changes here affect the simulation in real time. Use only for workshop facilitation purposes.', closeBtn: 'Close' },
+  es: { title: 'Panel del Facilitador', closeLabel: 'Cerrar panel', warning: 'Atención: los cambios aquí afectan la simulación en tiempo real. Usar solo con fines de facilitación de talleres.', closeBtn: 'Cerrar', restart: 'se aplica al empezar o reiniciar un nivel', sensitive: 'muy sensible: cambia la viabilidad de toda cartera (ver Manual del Facilitador)' },
+  en: { title: 'Facilitator Panel', closeLabel: 'Close panel', warning: 'Warning: changes here affect the simulation in real time. Use only for workshop facilitation purposes.', closeBtn: 'Close', restart: 'applies when a level starts or restarts', sensitive: 'very sensitive: it changes whether any portfolio is viable (see Facilitator Manual)' },
 } as const;
 
 const FacilitatorPanel: React.FC<FacilitatorPanelProps> = ({ controlParams, onChange, onClose }) => {
@@ -41,6 +41,8 @@ const FacilitatorPanel: React.FC<FacilitatorPanelProps> = ({ controlParams, onCh
                 {group.keys.map(key => (
                   <div key={key}>
                     <label className="block text-xs text-gray-400 mb-0.5">{key.replace(/_/g, ' ')}</label>
+                    {RESTART_PARAM_KEYS.includes(key) && <p className="text-[10px] text-ash-dim mb-0.5">{t.restart}</p>}
+                    {SENSITIVE_PARAM_KEYS.includes(key) && <p className="text-[10px] text-yellow-400 mb-0.5">{t.sensitive}</p>}
                     <input
                       type="number" step="any"
                       value={controlParams[key] as number}

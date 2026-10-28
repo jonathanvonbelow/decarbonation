@@ -1,10 +1,10 @@
 import React from 'react';
 import { PolicyState } from '../types';
 import Tooltip from './common/Tooltip';
-import { useT } from '../i18n';
+import { useFormat, useT } from '../i18n';
 import { getPolicyName } from '../legacyContent/gameData';
 import { ANCHORS, useAnchor } from './decarbonito/anchors';
-import { policyStatus } from '../sim/v2/policies';
+import { policyView } from '../game/modelView';
 
 interface PolicyToggleProps {
   policy: PolicyState;
@@ -12,11 +12,14 @@ interface PolicyToggleProps {
   currentYear: number;
   policyLockInDuration: number;
   currentLevel: number;
+  /** Real GDP: the annual cost of a policy is a share of it (phase 36/44). */
+  gdp: number;
 }
 
 
-const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYear, policyLockInDuration, currentLevel }) => {
+const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYear, policyLockInDuration, gdp }) => {
   const { t, locale } = useT();
+  const fmt = useFormat();
 
   const isLockedForDeactivation =
     policy.isActive &&
@@ -41,8 +44,8 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
   };
 
   const efficiencyPercentage = policy.currentEfficiency !== undefined ? (policy.currentEfficiency * 100).toFixed(0) : null;
-  // Model 2.0 (phase 36): start-up ramp and wear, shown in every level.
-  const status = policyStatus(policy);
+  // Model 2.0 (phase 36/50): start-up ramp, full or worn (with what is left of its push), and the current annual cost.
+  const view = policyView(policy, gdp);
   const displayName = getPolicyName(policy.id, locale) || policy.name;
   const rowRef = useAnchor<HTMLDivElement>(ANCHORS.policyRow(policy.id), displayName);
 
@@ -56,6 +59,8 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
             {t('policyToggle.currentEfficiency')} <span className={getEfficiencyTextColor(policy.currentEfficiency)}>{efficiencyPercentage}%</span>
           </p>
           <p className="text-xs text-gray-400 text-center">{t('policyToggle.efficiencyNote')}</p>
+          <p className="text-xs text-gray-300 text-center mt-1">{t('policyToggle.cost', { cost: fmt.big(view.annualCost) })}</p>
+          <p className="text-[11px] text-gray-400 text-center">{t('policyToggle.costTip')}</p>
         </div>
       </>
     );
@@ -97,17 +102,23 @@ const PolicyToggle: React.FC<PolicyToggleProps> = ({ policy, onToggle, currentYe
                   className={`inline-block w-3 h-3 rounded-full ml-2 ${getEfficiencyColor(policy.currentEfficiency)}`}
                 ></span>
               )}
-              {status.starting && (
-                <span className="ml-2 text-xs text-ochre">{t('policyToggle.starting', { pct: (status.ramp * 100).toFixed(0) })}</span>
+              {view.phase === 'starting' && (
+                <span className="ml-2 text-xs text-ochre">{t('policyToggle.starting', { pct: (view.ramp * 100).toFixed(0) })}</span>
               )}
-              {status.worn && (
-                <span className="ml-2 text-xs text-ochre" title={t('policyToggle.wornTitle')}>{t('policyToggle.worn')}</span>
+              {view.phase === 'full' && (
+                <span className="ml-2 text-xs text-chlorophyll">{t('policyToggle.full')}</span>
+              )}
+              {view.phase === 'worn' && (
+                <span className="ml-2 text-xs text-ochre" title={t('policyToggle.wornTitle')}>{t('policyToggle.wornPct', { pct: (view.fatigue * 100).toFixed(0) })}</span>
               )}
               {isLockedForDeactivation ? <span className="ml-1">🔒</span> : ''}
             </span>
           </Tooltip>
         </div>
       </label>
+      {policy.isActive && (
+        <p data-numeric className="mt-1 ml-[4.25rem] text-[11px] text-ash-dim">{t('policyToggle.cost', { cost: fmt.big(view.annualCost) })}</p>
+      )}
     </div>
   );
 };

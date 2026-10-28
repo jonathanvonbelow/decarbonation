@@ -20,6 +20,8 @@ import { rawCoefficient } from './heat';
 import { SITUATION_BY_ID } from './situations';
 import { SWATCH, TONE_DOT, useNewsText, type PanelId } from './hud';
 import { INSTRUMENTS_UNLOCK_YEAR, maxLoan, unlocks, type Session } from './session';
+import { carbonView, fiscalView, instrumentHint, justTransitionLow, lotTouchesForest, socialView } from '../game/modelView';
+import { PARAMS_V2 } from '../sim/v2/params';
 
 /* ── Sheet shell ───────────────────────────────────────────────────────────────────────────── */
 
@@ -138,6 +140,7 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
                     {fill(p.isActive ? c.policies.cost : c.policies.costFull, { pct: fmt.pct(costPct, 1) })}
                     {p.isActive && ` · ${fill(c.policies.efficiency, { pct: fmt.pct((p.currentEfficiency ?? 0) * 100, 0) })}`}
                     {status.starting && ` · ${fill(c.policies.starting, { pct: fmt.pct(status.ramp * 100, 0) })}`}
+                    {p.isActive && !status.starting && !status.worn && ` · ${c.policies.full}`}
                     {p.isActive && yearsActive > 0 && ` · ${fill(c.policies.years, { n: yearsActive })}`}
                   </span>
                 </span>
@@ -152,7 +155,7 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
                 <span className={`block h-full rounded-full ${status.worn ? 'bg-ochre' : 'bg-chlorophyll'}`} style={{ width: `${Math.max(0, Math.min(100, (p.currentEfficiency ?? 0) * 100))}%` }} />
               </span>
             )}
-            {status.worn && <p className="mt-1 text-[11px] leading-snug text-ochre">{c.policies.worn}</p>}
+            {status.worn && <p className="mt-1 text-[11px] leading-snug text-ochre">{fill(c.policies.worn, { pct: fmt.pct(status.fatigue * 100, 0) })}</p>}
 
             {expanded && (
               <div className="mt-2 space-y-2">
@@ -175,6 +178,7 @@ export function PoliciesPanel({ session, onToggle, onEffort }: {
                             remaining={100 - used}
                             onChange={(v) => onEffort(id, inst.id, v)}
                           />
+                          <InstrumentTags policyId={id} instrumentId={inst.id} />
                           <p className="text-[11px] leading-snug text-ash-dim">{inst.description}</p>
                         </div>
                       ))}
@@ -233,6 +237,7 @@ function FiscalSummary({ session }: { session: Session }) {
         ))}
       </dl>
       <p className={`text-[11px] ${stressTone}`}>{stressText}</p>
+      {fiscalView(session.game)?.noFiscalSpace && <p className="text-[11px] text-ember">{fill(c.hud.noFiscalSpaceTip, { dy: 100 * PARAMS_V2.finance.debtThreshold })}</p>}
       {breachMonths > 0 && <p className="text-[11px] text-ember">{fill(c.finance.breach, { months: breachMonths })}</p>}
       <p className="text-[11px] text-ash-dim">{c.finance.rules}</p>
     </div>
@@ -336,6 +341,8 @@ export function RoutesPanel({ session }: { session: Session }) {
     <div className="space-y-4">
       <p className="px-1 text-[12px] text-ash">{c.routes.title}</p>
 
+      <CarbonAndSocial session={session} />
+
       {!outcome.floorsMet && (
         <p className="rounded border border-ember/40 px-2 py-1 text-[12px] text-ember">
           {t('routes.floorsBroken')}: {outcome.failedFloors.map((f) => t(f.labelKey)).join(', ')}
@@ -427,6 +434,59 @@ export function RoutesPanel({ session }: { session: Session }) {
   );
 }
 
+/** Phase 50: CO₂ per inhabitant by source, renewables and the carbon budget; land concentration G and just transition J. */
+function CarbonAndSocial({ session }: { session: Session }) {
+  const { c, fmt } = useCopy();
+  const carbon = carbonView(session.game);
+  const social = socialView(session.game);
+  if (!carbon) return null;
+  const rows: [string, string, string][] = [
+    [c.routes.energy, `${fmt.num(carbon.energy, 2)} t`, 'text-bone'],
+    [c.routes.afolu, `${fmt.num(carbon.afolu, 2)} t`, carbon.afolu < 0 ? 'text-chlorophyll' : 'text-bone'],
+    [c.routes.luc, `${fmt.num(carbon.luc, 2)} t`, carbon.luc > 0.05 ? 'text-ochre' : 'text-bone'],
+    [c.routes.renewables, fmt.pct(100 * carbon.renewableShare, 0), 'text-bone'],
+    [c.routes.budget, carbon.budget === null ? '—' : fmt.num(carbon.budget, 2), carbon.budget !== null && carbon.budget > 1 ? 'text-ember' : 'text-bone'],
+  ];
+  if (social) {
+    rows.push([c.routes.concentration, fmt.num(social.concentration, 2), social.concentration > social.concentration0 + 0.02 ? 'text-ochre' : 'text-bone']);
+    rows.push([c.routes.just, fmt.num(social.justTransition, 2), justTransitionLow(social) ? 'text-ember' : 'text-bone']);
+  }
+  return (
+    <section>
+      <h3 className="label-eyebrow mb-1 !text-[11px]">{c.routes.carbonTitle} · {fmt.num(carbon.perCapita, 2)} t</h3>
+      <dl className="grid grid-cols-2 gap-1">
+        {rows.map(([label, value, tone]) => (
+          <div key={label} className="flex justify-between gap-2 rounded bg-basalt-800 px-2 py-1">
+            <dt className="truncate text-[11px] text-ash-dim">{label}</dt>
+            <dd className={`tnum text-[12px] ${tone}`}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/** Phase 50: the instrument's high / medium channels and its just-transition label (INSTRUMENT_CHANNELS). */
+function InstrumentTags({ policyId, instrumentId }: { policyId: Policy; instrumentId: string }) {
+  const { t } = useT();
+  const hint = instrumentHint(policyId, instrumentId);
+  if (!hint || (hint.channels.length === 0 && hint.tag === 'neutral')) return null;
+  return (
+    <p className="mt-0.5 flex flex-wrap gap-1">
+      {hint.channels.map(({ channel, level }) => (
+        <span key={channel} className={`rounded px-1 text-[10px] ${level === 'high' ? 'bg-hydro/25 text-bone' : 'bg-basalt-700 text-ash'}`}>
+          {t(level === 'high' ? 'instruments.high' : 'instruments.medium', { channel: t(`instruments.channel.${channel}` as TranslationKey) })}
+        </span>
+      ))}
+      {hint.tag !== 'neutral' && (
+        <span className={`rounded px-1 text-[10px] ${hint.tag === 'support' ? 'bg-chlorophyll/20 text-chlorophyll' : 'bg-ochre/20 text-ochre'}`} title={t(hint.tag === 'support' ? 'instruments.supportTip' : 'instruments.restrictionTip')}>
+          {t(hint.tag === 'support' ? 'instruments.support' : 'instruments.restriction')}
+        </span>
+      )}
+    </p>
+  );
+}
+
 const CHART_KEYS: Record<string, string> = {
   biodiversity: 'biodiversity',
   foodSecurity: 'foodSecurity',
@@ -500,8 +560,15 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
   const lots = PUBLIC_USES
     .filter((use) => canDeclare(session.territory, at.x, at.y, use))
     .map((use) => {
-      const cells = lotFor(session.territory, at.x, at.y, use).length;
-      return { use, km2: Math.round(cells * session.territory.kHaPerParcel * 10), cost: publicUseCost(use, CONTROL_PARAMS, cells * session.territory.kHaPerParcel, session.game) };
+      const lot = lotFor(session.territory, at.x, at.y, use);
+      const cells = lot.length;
+      // Phase 50: connectivity hint for the forest-like uses (phase 40: K rewards protecting next to the forest).
+      const forestLike = use === 'protected' || use === 'restoration';
+      return {
+        use, km2: Math.round(cells * session.territory.kHaPerParcel * 10),
+        cost: publicUseCost(use, CONTROL_PARAMS, cells * session.territory.kHaPerParcel, session.game),
+        connected: forestLike ? lotTouchesForest(session.territory, lot) : null,
+      };
     });
   return (
     <div className="pointer-events-auto panel w-full p-3 md:w-72" role="dialog" aria-label={c.kinds[kind as keyof Copy['kinds']]}>
@@ -533,12 +600,18 @@ export function ParcelCard({ session, at, onDeclare, onClose }: {
       {lots.length > 0 && (
         <div className="mt-3 space-y-1">
           <p className="label-eyebrow !text-[10px]">{c.parcel.declareTitle}</p>
-          {lots.map(({ use, km2, cost }) => (
-            <Button key={use} size="sm" variant="secondary" className="w-full justify-between" onClick={() => onDeclare(use)}>
-              <span>{c.uses[use].name} <span className="tnum text-[11px] text-ash-dim">{km2} km²</span></span>
-              <span className="tnum text-[12px] text-ash">{fmt.big(cost)}</span>
-            </Button>
+          {lots.map(({ use, km2, cost, connected }) => (
+            <div key={use}>
+              <Button size="sm" variant="secondary" className="w-full justify-between" onClick={() => onDeclare(use)}>
+                <span>{c.uses[use].name} <span className="tnum text-[11px] text-ash-dim">{km2} km²</span></span>
+                <span className="tnum text-[12px] text-ash">{fmt.big(cost)}</span>
+              </Button>
+              {connected !== null && (
+                <p className={`mt-0.5 text-[11px] leading-snug ${connected ? 'text-chlorophyll' : 'text-ochre'}`}>{connected ? c.parcel.connected : c.parcel.isolated}</p>
+              )}
+            </div>
           ))}
+          <p className="text-[10px] text-ash-dim">{c.parcel.priceNote}</p>
         </div>
       )}
     </div>

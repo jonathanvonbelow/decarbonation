@@ -39,10 +39,72 @@ export const UI_ES = {
     wornTitle: 'Perdió más de la mitad de su empuje por desgaste; si descansa, se recupera.',
     lockedUntil: '🔒 Bloqueada hasta el año {year}.',
     efficiencyTitle: 'Eficiencia: {value}%',
+    // Fase 50: estado "plena" y desgaste con su porcentaje; costo anual que depende del esfuerzo.
+    full: 'Plena',
+    wornPct: 'Desgastada ({pct} %)',
+    cost: 'Costo actual: {cost}/año',
+    costTip: 'Costo anual con el esfuerzo de hoy: una parte fija (30 %) más una que crece con el esfuerzo total en sus instrumentos. Se paga con la recaudación; el déficit, con deuda.',
   },
   instruments: {
-    // Fase 36 (modelo 2.0): los instrumentos actúan por canales (src/sim/v2/policies.ts).
-    hintsNote: 'Cada instrumento pesa distinto sobre suelo, producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo, concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. En esta versión en desarrollo los indicadores leen el canal de producción; el CO₂ lee además la electricidad renovable (sobre todo Renovables) y la eficiencia del resto de la energía (sobre todo Eficiencia), que avanzan con inercia.',
+    // Fase 36/50 (modelo 2.0): los instrumentos actúan por canales (INSTRUMENT_CHANNELS, src/sim/v2/params.ts).
+    hintsNote: 'Cada instrumento pesa distinto sobre el suelo, la producción y lo social, con rendimientos decrecientes: el reparto parejo da el efecto completo en todos los canales; concentrar refuerza un canal y debilita los otros. El costo sigue al esfuerzo total. Las etiquetas muestran dónde pesa más cada instrumento (alto / medio) y si restringe o acompaña al sector.',
+    channel: {
+      land: 'suelo',
+      prod: 'producción',
+      social: 'social',
+      elec: 'electricidad renovable',
+      other: 'eficiencia energética',
+      tax: 'impuesto al carbono',
+    },
+    high: '{channel} alto',
+    medium: '{channel} medio',
+    support: 'acompaña',
+    restriction: 'restringe',
+    supportTip: 'Instrumento de apoyo: compensa a quien carga con la transición y sube la transición justa (J).',
+    restrictionTip: 'Instrumento de restricción: impone una carga sobre el sector; sin apoyo al lado, baja la transición justa (J) y sube el conflicto.',
+    marginal: '+{step} pts de esfuerzo: +{cost}/año',
+    marginalFull: 'Esfuerzo total al 100 %: subir uno exige bajar otro.',
+  },
+  // Fase 50: lo que muestran los tableros del modelo 2.0 (src/game/modelView.ts).
+  model: {
+    towards: 'va hacia {value}',
+    steady: 'estable',
+    towardsTip: 'Objetivo hacia el que se mueve este indicador con tus decisiones y el territorio de hoy: cada año recorre una fracción del camino. Si cambiás algo, cambia el objetivo.',
+    carbon: {
+      title: 'Carbono',
+      perCapita: 'CO₂eq por habitante',
+      energy: 'Energía',
+      afolu: 'Suelo (AFOLU)',
+      luc: 'Cambio de uso',
+      sourcesTip: 'Toneladas de CO₂ equivalente por habitante y por año, por fuente: la energía; el flujo del suelo (agricultura, ganadería, bosques; negativo si captura); y el cambio de uso (carbono que se libera al convertir un uso con más carbono en otro con menos).',
+      renewables: 'Electricidad renovable',
+      efficiency: 'Eficiencia del resto de la energía',
+      energyTip: 'Las dos avanzan con inercia (un {k} % del camino por año) hacia lo que permiten la Neutralidad de Carbono, los parques energéticos y los pactos.',
+      budget: 'Presupuesto de carbono usado',
+      budgetTip: 'Emisiones acumuladas desde el inicio del nivel sobre una senda que baja un {cut} % hacia 2054. Más de 1 = te pasaste del presupuesto.',
+      budgetNone: 'sin datos aún',
+    },
+    fiscal: {
+      title: 'Finanzas públicas',
+      debtRatio: 'Deuda / PBI',
+      primary: 'Saldo primario',
+      primaryTip: 'Recaudación menos gasto público base, costo de las políticas y cuotas de los pactos, como % del PBI. Negativo = déficit: se paga con deuda cuando las reservas tocan su piso del {floor} % del PBI.',
+      burden: 'Intereses / recaudación',
+      stressLow: 'Sin estrés fiscal',
+      stressMid: 'Estrés fiscal: frena la economía',
+      stressHigh: 'Estrés fiscal alto: riesgo de quiebra',
+      noSpace: 'Sin espacio fiscal: las reservas libres no alcanzan y endeudarse más llevaría la deuda por encima del {dy} % del PBI. Pactos y otras inversiones públicas se rechazan.',
+      breach: 'En zona de quiebra hace {months} meses (a los {limit} la nación quiebra).',
+      rules: 'Las reservas no bajan del {floor} % del PBI: cada déficit se paga con deuda. Quiebra: deuda > {dyBreak} % del PBI con intereses > {ci} % de la recaudación durante {years} años.',
+    },
+    social: {
+      title: 'Transición justa',
+      concentration: 'Concentración de la tierra (G)',
+      concentrationTip: 'Parte de la tierra productiva en cultivo convencional y plantaciones (0–1). Si sube respecto del inicio ({start}), sube el conflicto social.',
+      just: 'Transición justa (J)',
+      justTip: 'Cuánto de lo que restringís (áreas protegidas, impuesto al carbono, protección de fuentes de agua) va acompañado de apoyo al sector (bioinsumos, capacitación, silvopastoreo…). 1 = acompañado o sin restricciones; cerca de 0 = restringir sin acompañar, que sube el conflicto.',
+      justLow: 'Estás restringiendo sin acompañar: sumá esfuerzo en instrumentos de apoyo (Agroecología, Ganadería Sostenible) o el conflicto va a subir.',
+    },
   },
   routes: {
     panelTitle: 'Rutas de victoria',
@@ -55,7 +117,6 @@ export const UI_ES = {
     floor: {
       biodiversity: 'Biodiversidad mínima',
       economicSecurity: 'Seguridad económica mínima',
-      treasury: 'Reservas del tesoro no negativas',
       foodSecurity: 'Seguridad alimentaria mínima',
       politicalStability: 'Estabilidad política mínima',
       pressureAgri: 'Presión agrícola máxima',
@@ -78,7 +139,7 @@ export const UI_ES = {
     innovation: {
       name: 'Vía de la Innovación',
       tagline: 'La tecnología cambia la frontera',
-      desc: 'Exige emisiones muy bajas mediante instrumentos tecnológicos y cooperación internacional. Tolera un uso del suelo más intensivo.',
+      desc: 'Exige emisiones muy bajas con energía limpia (electricidad renovable, eficiencia) y, en el Nivel 3, cooperación internacional, sin hundir la economía. Tolera un uso del suelo más intensivo.',
     },
     equilibrium: {
       name: 'Vía del Equilibrio',
@@ -266,7 +327,7 @@ export const UI_ES = {
     },
     policies: {
       title: 'Políticas',
-      intro: 'Podés activar hasta 5 políticas a la vez. Una vez activada, queda bloqueada un tiempo antes de poder desactivarla, y tiene un costo fiscal.',
+      intro: 'Podés activar hasta 5 políticas a la vez. Cada una arranca de a poco ("en marcha"), rinde plena unos años y se desgasta con el uso; si la dejás descansar, se recupera. Queda bloqueada un tiempo antes de poder desactivarla y cuesta una parte del PBI por año.',
       tryOne: 'Probá activar una vos mismo — cualquiera.',
     },
     routes: {
@@ -284,15 +345,15 @@ export const UI_ES = {
     },
     instruments: {
       title: 'Instrumentos',
-      intro: 'Cada política activa tiene instrumentos propios. Si no les asignás esfuerzo, la política no produce ningún efecto — activarla no alcanza.',
+      intro: 'Cada política activa tiene instrumentos propios, y cada uno pesa más sobre el suelo, la producción o lo social. El reparto parejo da el efecto completo; concentrar refuerza un canal y debilita los otros. Sin esfuerzo, la política no produce ningún efecto — activarla no alcanza.',
     },
     pressures: {
       title: 'Presiones sectoriales',
-      intro: 'Las presiones agrícola, ambientalista y social suben cuando esos sectores están en desventaja, y bajan solas con el tiempo. Si quedan muy desparejas, la estabilidad política se resiente.',
+      intro: 'Las presiones agrícola, ambientalista y social suben cuando esos sectores quedan peor que al inicio, y vuelven hacia su nivel de partida cuando eso se corrige. Si quedan muy desparejas, la estabilidad política se resiente.',
     },
     finance: {
       title: 'Finanzas y pactos',
-      intro: 'Podés pedir préstamos (aumentan la deuda), ajustar la presión fiscal adicional, y unirte a pactos internacionales. Un préstamo es deuda, no dinero gratis.',
+      intro: 'Las reservas no bajan del 2 % del PBI: cada déficit se paga con deuda, y la deuda cara frena la economía. Podés pedir préstamos, ajustar la presión fiscal adicional y unirte a pactos internacionales (si hay espacio fiscal). Un préstamo es deuda, no dinero gratis.',
     },
   },
   tips: {

@@ -16,7 +16,7 @@ import SurveyPost from './components/surveys/SurveyPost';
 import FacilitatorPanel from './components/facilitator/FacilitatorPanel';
 import GameSummaryPanel from './components/game/GameSummaryPanel';
 // FIX: Added NumericStellaKeys and NumericIndicatorKeys to imports from types.ts to ensure proper type checking for dynamic property access.
-import { GameState, Policy, HistoricalDataPoint, LandUseType, LandUse, PolicyState, LevelConfig, Pact, ChatMessage, PolicyInstrument, RandomEvent, RandomEventEffect, ControlParams, InitialIndicatorOverrides, ChatMessageEmphasisType, InstrumentImpactHints, NumericStellaKeys, NumericIndicatorKeys } from './types';
+import { GameState, Policy, HistoricalDataPoint, LandUseType, LandUse, PolicyState, LevelConfig, Pact, ChatMessage, PolicyInstrument, RandomEvent, RandomEventEffect, ControlParams, InitialIndicatorOverrides, ChatMessageEmphasisType, NumericStellaKeys, NumericIndicatorKeys } from './types';
 import {
   INITIAL_YEAR, SIMULATION_YEARS_PER_ROUND,
   YEARS_PER_LEVEL,
@@ -25,8 +25,9 @@ import {
   API_KEY_ERROR_MESSAGE, GEMINI_MODEL_TEXT, ALL_RANDOM_EVENTS,
   LEVEL_2_INITIAL_LAND_USES, LEVEL_2_INITIAL_STELLA_OVERRIDES, LEVEL_2_INITIAL_INDICATOR_OVERRIDES,
   LEVEL_3_INITIAL_LAND_USES, LEVEL_3_INITIAL_STELLA_OVERRIDES, LEVEL_3_INITIAL_INDICATOR_OVERRIDES,
-  POLICY_LOCK_IN_DURATION, MAX_ACTIVE_POLICIES, INSTRUMENT_IMPACT_HINTS
+  POLICY_LOCK_IN_DURATION, MAX_ACTIVE_POLICIES
 } from './constants';
+import { carbonView, fiscalView, routesContextLines, scoreTarget, socialView } from './game/modelView';
 import { Dashboard } from './components/Dashboard';
 import Header from './components/Header';
 import { askGemini, generateNewsHeadlines } from './services/geminiService';
@@ -45,7 +46,7 @@ import {
 } from './sim';
 import { CARBON_CEILING_FACTOR, GDP_FULL_MULTIPLE, SCORE_WEIGHTS, scoreComponents } from './sim/score';
 import WinRoutesPanel from './components/game/WinRoutesPanel';
-import { useT } from './i18n';
+import { tFor, useT, type TranslationKey } from './i18n';
 import { DecarboNitoProvider, dnApiRef, dnModeRef } from './components/decarbonito/DecarboNitoProvider';
 import DecarboNitoLayer from './components/decarbonito/DecarboNitoLayer';
 import { agentTurn } from './services/decarbonitoAgent';
@@ -100,7 +101,7 @@ type NivelActiveKeyStrings = `Nivel_${LevelNumber}_Active`;
 // The engine is src/sim/.
 
 const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
-    const { currentLevel, indicators, stellaSpecificState, activeLevelConfig } = gs;
+    const { currentLevel, indicators, stellaSpecificState } = gs;
     let text = `El Puntaje General (0-1000) refleja tu desempeño. Para el Nivel ${currentLevel}, se calcula así:\n\n`;
 
     // Phase 49: the same components the engine scores with (src/sim/score.ts), anchored to the level's c0 and Y0.
@@ -160,7 +161,8 @@ const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
     }
 
     text += `\nLa suma ponderada de estos componentes (0-100) se multiplica por 10 para el puntaje final.`;
-    const targetScoreForLevel = activeLevelConfig?.winConditions?.puntajeGeneralMin;
+    // Phase 50: the score threshold of the level's routes (only the equilibrium route of level 3 asks for one).
+    const targetScoreForLevel = scoreTarget(currentLevel);
     if (targetScoreForLevel !== undefined) {
         text += `\n\nEl objetivo de puntaje mínimo para superar el Nivel ${currentLevel} es ${targetScoreForLevel}.`;
         text += `\n(Verde: Cumpliendo/Superando objetivo. Amarillo: Cercano. Rojo: Lejos del objetivo).`;
@@ -170,7 +172,7 @@ const generateScoreTooltipText = (gs: GameState, CP: ControlParams): string => {
 
 
 const getDynamicScoreColorClass = (score: number, activeLevelConfig?: LevelConfig, startScore?: number): string => {
-    const targetMinScore = activeLevelConfig?.winConditions?.puntajeGeneralMin;
+    const targetMinScore = activeLevelConfig ? scoreTarget(activeLevelConfig.levelNumber) : undefined;
 
     if (targetMinScore === undefined) {
         // Phase 49: levels without a score target colour against the level's own starting score (the scale is anchored
@@ -560,7 +562,7 @@ export const App = () => {
         }
 
         const newLevelNumber = prev.currentLevel + 1;
-        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(newLevelNumber);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(newLevelNumber, controlParamsRef.current);
         if (!gameStatePatch.activeLevelConfig) return prev;
 
         setHistoricalData([initialHistoricalDataPoint]);
@@ -590,7 +592,7 @@ export const App = () => {
         }
     } else if (lastResult?.status === 'lost') {
         const retryLevelNumber = lastResult.level;
-        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(retryLevelNumber);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(retryLevelNumber, controlParamsRef.current);
         if (!gameStatePatch.activeLevelConfig) {
             setGameState(prev => ({ ...prev, lastConcludedLevelInfo: null }));
             return;
@@ -631,65 +633,24 @@ export const App = () => {
     }
 
     if (lastInfo && !gameState.sentLevelReflectionMessage && apiKeyAvailable && !showClosingSynthesisModal) {
-      const { level, status, reason, finalIndicators, winConditions } = lastInfo;
-      
+      const { level, status, reason, finalIndicators } = lastInfo;
+      // Phase 50 (debt of 49): the reflection reads the 2.0 floors and routes (src/sim/winRoutes.ts) and the anchored
+      // score, not the 1.1 headline targets of LEVEL_CONFIGS.winConditions (deleted).
+      const finalState = gameStateRef.current;
       let prompt = `El Nivel ${level} de DecarboNation ha concluido.\n`;
       prompt += `Resultado: ${status === 'won' ? '¡Nivel Superado!' : 'Nivel No Superado.'}\n`;
       prompt += `Razón Detallada: ${reason}\n\n`;
-      prompt += `Análisis de Desempeño para el Nivel ${level} (enfócate SÓLO en estos indicadores y objetivos específicos de este nivel):\n`;
-
-      if (winConditions) {
-        if (winConditions.puntajeGeneralMin !== undefined) {
-            prompt += `  - Puntaje General: Objetivo >= ${winConditions.puntajeGeneralMin}. Logrado: ${finalIndicators.generalScore.toFixed(1)}\n`;
-        }
-        if (winConditions.biodiversityMin !== undefined) {
-            prompt += `  - Biodiversidad: Objetivo >= ${winConditions.biodiversityMin}%. Logrado: ${finalIndicators.biodiversity.toFixed(1)}%\n`;
-        }
-        if (winConditions.co2EqEmissionsPerCapitaMax !== undefined) {
-            prompt += `  - Emisiones CO2eq/cápita: Objetivo <= ${winConditions.co2EqEmissionsPerCapitaMax} t/hab. Logrado: ${finalIndicators.co2EqEmissionsPerCapita.toFixed(2)} t/hab\n`;
-        }
-         if (winConditions.nativeForestTotalMinPercentage !== undefined && level === 1) {
-            const currentTotalLandArea = (Object.values(gameStateRef.current.landUses) as LandUse[]).reduce((sum, lu) => sum + lu.area, 0);
-            const nativeForestArea = gameStateRef.current.landUses[LandUseType.ProtectedNativeForest].area + gameStateRef.current.landUses[LandUseType.UnprotectedNativeForest].area;
-            const nativeForestPercentage = currentTotalLandArea > 0 ? (nativeForestArea / currentTotalLandArea) * 100 : 0;
-            prompt += `  - % Bosque Nativo Total: Objetivo >= ${(winConditions.nativeForestTotalMinPercentage * 100).toFixed(0)}%. Logrado: ${nativeForestPercentage.toFixed(1)}%\n`;
-        }
-        
-        if (level >= 2) {
-             if (winConditions.foodSecurityMin !== undefined) {
-                prompt += `  - Seguridad Alimentaria: Objetivo >= ${winConditions.foodSecurityMin}%. Logrado: ${finalIndicators.foodSecurity.toFixed(1)}%\n`;
-            }
-            if (winConditions.economicSecurityMin !== undefined) {
-                prompt += `  - Seguridad Económica: Objetivo >= ${winConditions.economicSecurityMin}%. Logrado: ${finalIndicators.economicSecurity.toFixed(1)}%\n`;
-            }
-            if (winConditions.bienestarSocialMin !== undefined) {
-                prompt += `  - Bienestar Social: Objetivo >= ${winConditions.bienestarSocialMin}%. Logrado: ${finalIndicators.socialWellbeing.toFixed(1)}%\n`;
-            }
-             if (winConditions.politicalStabilityMin !== undefined) {
-                prompt += `  - Estabilidad Política: Objetivo >= ${winConditions.politicalStabilityMin}%. Logrado: ${finalIndicators.politicalStability.toFixed(1)}%\n`;
-            }
-            if (winConditions.ppAgricolaMax !== undefined) {
-                prompt += `  - Presión Agrícola: Objetivo < ${winConditions.ppAgricolaMax}%. Logrado: ${finalIndicators.ppAgricola.toFixed(1)}%\n`;
-            }
-            if (winConditions.ppAmbientalistaMax !== undefined) {
-                prompt += `  - Presión Ambientalista: Objetivo < ${winConditions.ppAmbientalistaMax}%. Logrado: ${finalIndicators.ppAmbientalista.toFixed(1)}%\n`;
-            }
-            if (winConditions.ppSocialMax !== undefined) {
-                prompt += `  - Presión Social: Objetivo < ${winConditions.ppSocialMax}%. Logrado: ${finalIndicators.ppSocial.toFixed(1)}%\n`;
-            }
-        }
-
-        if (level === 3) {
-            if (winConditions.deudaPbiMax !== undefined) {
-                 const deudaPbiRatio = gameStateRef.current.stellaSpecificState.PBI_Real > 0 ? (gameStateRef.current.stellaSpecificState.Deuda / gameStateRef.current.stellaSpecificState.PBI_Real) : Infinity;
-                 prompt += `  - Ratio Deuda/PBI: Objetivo <= ${winConditions.deudaPbiMax}. Logrado: ${deudaPbiRatio.toFixed(2)}\n`;
-            }
-            if (winConditions.pbiMin !== undefined) {
-                prompt += `  - PBI: Objetivo >= ${winConditions.pbiMin}. Logrado: ${finalIndicators.pbi.toFixed(0)}\n`;
-            }
-            prompt += `  - Presión Fiscal Adicional Aplicada al final: ${gameStateRef.current.additionalTaxPressurePercentage}%\n`;
-        }
-      }
+      prompt += `Análisis de Desempeño para el Nivel ${level} (enfócate SÓLO en estos mínimos y rutas de este nivel). Para ganar hay que cumplir TODOS los mínimos de gobernabilidad y UNA ruta completa:\n`;
+      // The prompt is in Spanish: route labels in Spanish too, whatever the UI language (shared with geminiService).
+      prompt += routesContextLines(finalState, (k) => tFor('es', k as TranslationKey)).map((l) => `  ${l}`).join('\n') + '\n';
+      prompt += `  - Puntaje General final: ${finalIndicators.generalScore.toFixed(0)} de 1000 (al inicio del nivel: ${finalState.levelBaseline.generalScore.toFixed(0)}; el componente de carbono se mide contra el CO2 inicial del nivel).\n`;
+      const cv = carbonView(finalState);
+      if (cv) prompt += `  - CO2eq por habitante: ${cv.perCapita.toFixed(2)} t (energía ${cv.energy.toFixed(2)}, suelo ${cv.afolu.toFixed(2)}, cambio de uso ${cv.luc.toFixed(2)}); electricidad renovable ${(100 * cv.renewableShare).toFixed(0)}%; presupuesto de carbono usado ${cv.budget === null ? 'sin datos' : cv.budget.toFixed(2)}.\n`;
+      const fv = fiscalView(finalState);
+      if (fv) prompt += `  - Finanzas: deuda/PBI ${(100 * fv.debtRatio).toFixed(0)}%, saldo primario ${(100 * fv.primaryShare).toFixed(1)}% del PBI, intereses/recaudación ${(100 * fv.interestBurden).toFixed(0)}%${fv.noFiscalSpace ? ', sin espacio fiscal' : ''}.\n`;
+      const sv = socialView(finalState);
+      if (sv && level >= 2) prompt += `  - Transición justa J = ${sv.justTransition.toFixed(2)}; concentración de la tierra G = ${sv.concentration.toFixed(2)} (inicio ${sv.concentration0.toFixed(2)}).\n`;
+      if (level === 3) prompt += `  - Presión Fiscal Adicional Aplicada al final: ${finalState.additionalTaxPressurePercentage}%\n`;
       prompt += `\nComo DecarboNito, por favor ofrece una breve reflexión sobre el desempeño del jugador EN ESTE NIVEL (${level}), enfocándote en los aspectos mencionados y su relevancia para los objetivos de este nivel en particular. Sé conciso. El juego ahora avanza 1 año por simulación. Responde en ESPAÑOL.`;
       if (level >=2) {
         prompt += `\nSi el jugador utilizó instrumentos de política, puedes comentar brevemente si su estrategia de asignación de esfuerzo parece haber contribuido o no al resultado del nivel, de forma general.`;
@@ -1098,6 +1059,7 @@ export const App = () => {
     let tempGameState = JSON.parse(JSON.stringify(gameStateRef.current)) as GameState;
     
     tempGameState.currentEvent = null;
+    tempGameState.eventsThisYear = [];
     tempGameState.newsHeadlines = [];
     
     if (tempGameState.activeLevelConfig) {
@@ -1122,7 +1084,6 @@ export const App = () => {
                 status: conditionsMet ? 'won' : 'lost',
                 reason: winReason,
                 finalIndicators: JSON.parse(JSON.stringify(tempGameState.indicators)),
-                winConditions: tempGameState.activeLevelConfig?.winConditions
             };
 
             if(conditionsMet) {
@@ -1264,7 +1225,7 @@ export const App = () => {
     setGameState(prev => {
         if (prev.currentLevel === level) return prev;
 
-        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(level);
+        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(level, controlParamsRef.current);
         if (!gameStatePatch.activeLevelConfig) return prev;
 
         setHistoricalData([initialHistoricalDataPoint]);
@@ -1365,7 +1326,6 @@ export const App = () => {
           togglePact={togglePact}
           handleInstrumentEffortChange={handleInstrumentEffortChange}
           handleAdditionalTaxPressureChange={handleAdditionalTaxPressureChange}
-          instrumentImpactHints={INSTRUMENT_IMPACT_HINTS}
           predictionSelections={predictionSelections}
           onPredictionChange={setPredictionSelections}
           lastPredictionResults={lastPredictionResults}

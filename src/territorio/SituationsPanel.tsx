@@ -12,6 +12,8 @@ import { artRoute, newsArtUrl, themeForSituation, type NewsRoute } from './newsA
 import { leadingRouteId } from './routes';
 import { portraitUrl, type PortraitActor } from './sprites';
 import type { Session } from './session';
+import { canPayPublicInvestment } from '../sim';
+import { PARAMS_V2 } from '../sim/v2/params';
 
 const PORTRAIT: Record<SituationActor, PortraitActor> = {
   farmer: 'farmer',
@@ -87,10 +89,16 @@ export function SituationCard({ item, def, monthIndex, reserves, game, route, on
         <p className="tnum mt-1 text-[11px] text-ember">{fill(c.situations.wear, { n: fmt.num(wear, 1) })}</p>
       )}
 
+      {/* Phase 47/50: option effects on the indicators are target impulses that fade (half-life 18 months by default). */}
+      {def.options.some((o) => o.effects.some((e) => typeof e.indicator === 'string')) && (
+        <p className="mt-1 text-[11px] text-ash-dim">{fill(c.situations.fades, { months: def.halfLifeMonths ?? PARAMS_V2.situations.halfLifeMonths })}</p>
+      )}
       <div className="mt-2 space-y-1">
         {def.options.map((option) => {
           const cost = situationCost(option.cost ?? 0, game);
-          const canPay = cost <= reserves;
+          // Phase 44/50: a paid option is a public investment (free reserves, then debt while D/Y <= 0.6), as
+          // resolveSituation charges it; the old `cost <= reserves` greyed out options the model would accept.
+          const canPay = canPayPublicInvestment(game, cost);
           return (
             <Button
               key={option.id}

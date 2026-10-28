@@ -187,7 +187,10 @@ const THEME_FOR_KEY: Record<string, NewsTheme> = {
   'alert.biodiversity': 'biodiversity',
   'alert.social': 'social',
   'alert.food': 'climate',
-  'finance.negative': 'treasury',
+  // Phase 50: the reserves can no longer go negative (2 % floor); fiscal news is about debt and bankruptcy.
+  'finance.debtHigh': 'treasury',
+  'finance.bankruptcyNear': 'treasury',
+  'milestone.renewables': 'technology',
   'milestone.co2Up': 'emissions',
   'milestone.co2Down': 'technology',
 };

@@ -3,6 +3,7 @@ import { GameState, ControlParams, Policy, LandUseType } from '../../types';
 import { CONTROL_PARAMS, INITIAL_POLICIES, INITIAL_LAND_USES, LEVEL_CONFIGS } from '../../constants';
 import Tooltip from '../common/Tooltip';
 import { DESCRIPTIONS } from './descriptions';
+import { EQUATION_FAMILIES, SCORE_FAMILY } from './families';
 import { PARAMS_V2, type LandCode } from '../../sim/v2/params';
 
 /** Pact costs of PARAMS_V2.pacts as "a % / b % / c %" (treaty / carbon accord / tech transfer), phase 43. */
@@ -12,8 +13,8 @@ const pactPcts = (key: 'entry' | 'annual'): string =>
 import { costShareOf, PID_OF } from '../../sim/v2/policies';
 import { useLanguageContext } from '../../contexts/LanguageContext';
 const EQ_UI = {
-  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo (% PBI, esfuerzo pleno)', thDecay: 'Puesta en marcha / desgaste (años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Flujo (tCO₂e/ha/año)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Área (Viva)', noDescription: 'Sin descripción.' },
-  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost (% GDP, full effort)', thDecay: 'Start-up / wear (years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Flux (tCO₂e/ha/yr)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Area (Live)', noDescription: 'No description.' },
+  es: { title: 'Manual de Ecuaciones y Parámetros', subtitle: 'Esta sección contiene la lógica interna de la simulación. Se requiere contraseña.', passwordPlaceholder: 'Contraseña', passwordLabel: 'Contraseña para el manual', verify: 'Verificar', wrongPw: 'Contraseña incorrecta.', mainTitle: 'Manual de Ecuaciones', liveSubtitle: (y:number) => `Datos y Lógica de la Simulación DecarboNation (Valores en vivo para Año: ${y})`, filter: 'Filtrar parámetros...', prev: 'Anterior', next: 'Siguiente', closeLabel: 'Cerrar manual', thParam: 'Parámetro', thValue: 'Valor', thPolicy: 'Política', thCost: 'Costo (% PBI, esfuerzo pleno)', thDecay: 'Puesta en marcha / desgaste (años)', thEfficiency: 'Eficiencia (Vivo)', thEffort: 'Esfuerzo (Vivo)', thLandUse: 'Uso de Suelo', thEmission: 'Flujo (tCO₂e/ha/año)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Área (Viva)', noDescription: 'Sin descripción.', sControl: 'Parámetros de Control Global', sPolicies: 'Definiciones de Políticas', sLand: 'Definiciones de Uso de Suelo', families: 'Las nueve familias de ecuaciones (modelo 2.0)', pacts: (e: string, a: string) => `Pactos (tratado / acuerdo de carbono / transferencia): adhesión ${e} y cuota anual ${a} del PBI.` },
+  en: { title: 'Equations and Parameters Manual', subtitle: 'This section contains the internal simulation logic. Password required.', passwordPlaceholder: 'Password', passwordLabel: 'Manual password', verify: 'Verify', wrongPw: 'Incorrect password.', mainTitle: 'Equations Manual', liveSubtitle: (y:number) => `DecarboNation Simulation Data & Logic (Live values for Year: ${y})`, filter: 'Filter parameters...', prev: 'Previous', next: 'Next', closeLabel: 'Close manual', thParam: 'Parameter', thValue: 'Value', thPolicy: 'Policy', thCost: 'Cost (% GDP, full effort)', thDecay: 'Start-up / wear (years)', thEfficiency: 'Efficiency (Live)', thEffort: 'Effort (Live)', thLandUse: 'Land Use', thEmission: 'Flux (tCO₂e/ha/yr)', thSequestration: 'Stock (Mg C/ha)', thArea: 'Area (Live)', noDescription: 'No description.', sControl: 'Global Control Parameters', sPolicies: 'Policy Definitions', sLand: 'Land Use Definitions', families: 'The nine equation families (model 2.0)', pacts: (e: string, a: string) => `Pacts (treaty / carbon accord / tech transfer): entry ${e} and annual fee ${a} of GDP.` },
 } as const;
 
 // Helper components for styling
@@ -132,7 +133,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
 
         <div className="overflow-y-auto flex-grow scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 pr-4">
             
-            <SectionTitle tooltipText={d('TITLE_CONTROL_PARAMS')}>Parámetros de Control Global</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_CONTROL_PARAMS')}>{ui.sControl}</SectionTitle>
             <input
                 type="text"
                 placeholder={ui.filter}
@@ -163,7 +164,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
 
-            <SectionTitle tooltipText={d('TITLE_POLICIES')}>Definiciones de Políticas</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_POLICIES')}>{ui.sPolicies}</SectionTitle>
             <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 text-xs">
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
@@ -193,7 +194,7 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
             
-            <SectionTitle tooltipText={d('TITLE_LAND_USE')}>Definiciones de Uso de Suelo</SectionTitle>
+            <SectionTitle tooltipText={d('TITLE_LAND_USE')}>{ui.sLand}</SectionTitle>
              <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 text-xs">
                 <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900">
@@ -221,71 +222,17 @@ const EquationsManual: React.FC<EquationsManualProps> = ({ onClose, gameState })
                 </table>
             </div>
 
-            <SectionTitle tooltipText={d('TITLE_EQUATIONS')}>Ecuaciones Fundamentales</SectionTitle>
-            
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLICY_EFFICIENCY')}>Eficiencia de Política</SubSectionTitle>
-            <p className="text-sm mb-2">Una política recién activada tarda en ponerse en marcha (λ años), se desgasta con el uso hacia un piso institucional (δ años) y, si se la deja descansar, recupera su empuje (ρ años).</p>
-            <Formula>{`Eficiencia = (1 − e^(−τ/λ)) · [η_min + (1 − η_min) · e^(−T/δ)]
-τ: años desde la activación (vuelve a 0 al desactivar) · T: años de uso acumulados (T · e^(−dt/ρ) en reposo)
-Canal c = Σ μ_k · φ(e_k) / Σ μ_k · φ(25),  φ(e) = 1 − e^(−e/40)
-Costo anual = κ · PBI · (0,3 + 0,7 · esfuerzo total / 100)`}</Formula>
-            <p className="text-sm">Por defecto <Param>η_min</Param> = {CONTROL_PARAMS.Eficiencia_Minima_Politicas} y <Param>ρ</Param> = {CONTROL_PARAMS.Recuperacion_Politicas_Anios} años (el facilitador puede cambiarlos). κ es el costo a esfuerzo pleno de la tabla (escala transitoria hasta que exista el gasto público base). Cada instrumento pesa distinto en cada canal (suelo, producción, social); el reparto parejo 25/25/25/25 da 1 en todos, concentrar sube un canal y baja los demás. En el Nivel 1 el esfuerzo siempre es parejo.</p>
-            
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_CARBON_BALANCE')}>Balance de Carbono</SubSectionTitle>
-            <p className="text-sm mb-2">Inventario en toneladas de CO₂ equivalente por año, con tres componentes: energía, flujo del suelo y cambio de uso. El componente del suelo puede ser negativo (sumidero).</p>
-            <Formula>{`Energía = ε0 · (ingreso per cápita relativo)^0,3 · (1 + 0,15·η_SE) · [0,35·(1 − s) + 0,65·(1 − u)] · Población
-s* = min(0,9; 0,60·η_CN^elec + min(1; %parques/4 %) + pactos)   u* = min(0,6; 0,35·η_CN^otros + pactos)
-s, u avanzan hacia s*, u* un 15 % del camino por año (inercia de infraestructura)
-Suelo = Σ flujo_i · Área_i[ha]      Cambio de uso = Σ ha convertidas/año · max(0, stock_i − stock_j) · 44/12
-CO₂eq per cápita = (Energía + Suelo + Cambio de uso) / Población`}</Formula>
-            <p className="text-sm">ε0 = {PARAMS_V2.energy.eps0[1]} / {PARAMS_V2.energy.eps0[2]} / {PARAMS_V2.energy.eps0[3]} t por habitante (niveles 1 / 2 / 3); población inicial {CONTROL_PARAMS.Poblacion_Inicial.toLocaleString('es')} habitantes. Las políticas cambian el flujo de algunos usos (<Code>Agricultura Intensiva</Code> sube el de cultivos convencionales; <Code>Ganadería Sostenible</Code>, <Code>Agroecología</Code> y <Code>Conservación</Code> lo bajan; <Code>Normativas Flexibles</Code> lo sube en el bosque no protegido). Flujos y stocks por criterio experto (stocks basados en la revisión del Bosque Atlántico, 2024).</p>
-
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_INDICATORS')}>Cálculo de Indicadores (Ej. Biodiversidad)</SubSectionTitle>
-             <p className="text-sm mb-2">Los indicadores socio-ambientales son el resultado de la compleja interacción entre las decisiones políticas y el estado del territorio.</p>
-            <Formula>{`Hábitat:   H = Σ h_i · a_i          (a_i = fracción del territorio de cada uso)
-Objetivo:  B* = 100 · σ( logit(B₀/100) + D_B )
-D_B = z/(1 − B₀/100) · ln(H/H₀) + Σ qB·η^suelo + ${PARAMS_V2.biodiversity.synergyAgroConservation}·min(η_AS, η_CR) − ${PARAMS_V2.biodiversity.synergyIntensiveFlexible}·min(η_PAI, η_FRA) + pactos
-      [+ ${PARAMS_V2.biodiversity.connectivityGamma}·ln(K/K₀) en Territorio]
-Dinámica:  B ← B* + (B − B*) · (1 − k_B)^dt`}</Formula>
-            <p className="text-sm">Relación especies-área de paisaje (Pereira, Ziv y Miranda, 2014) con z = {PARAMS_V2.zSAR}. Afinidades h: bosque protegido {PARAMS_V2.habitat.BNP}, humedal {PARAMS_V2.habitat.HUM}, bosque no protegido {PARAMS_V2.habitat.BNNP}, restauración {PARAMS_V2.habitat.RES}, agroecológico {PARAMS_V2.habitat.CA}, barbecho {PARAMS_V2.habitat.FAL}, plantaciones {PARAMS_V2.habitat.PF}, pasturas {PARAMS_V2.habitat.PRG}, convencional {PARAMS_V2.habitat.CC}, parque energético {PARAMS_V2.habitat.ENR}. qB: Conservación +{PARAMS_V2.qB.CR}, Normativas Flexibles {PARAMS_V2.qB.FRA}. k_B = {CONTROL_PARAMS.Velocidad_Ajuste_Biodiversidad} por año (deuda de extinción). K es la fracción del bosque en el parche continuo más grande del mapa.</p>
-            <Formula>{`Oferta:    Q = (1 − x) · [A_CC·${PARAMS_V2.food.yield.CC}·(1 + ${PARAMS_V2.food.yieldPolicy.PAI}·η_PAI) + A_CA·${PARAMS_V2.food.yield.CA}·(1 + ${PARAMS_V2.food.yieldPolicy.AS}·η_AS) + A_PRG·${PARAMS_V2.food.yield.PRG}·(1 + ${PARAMS_V2.food.yieldPolicy.GS}·η_GS)]
-               · (1 + ${PARAMS_V2.food.yieldPolicy.AGUA}·η_AGUA) · (1 + ${PARAMS_V2.food.yieldTrend})^t · (1 + ε)
-Exportado: x = ${PARAMS_V2.food.export0} + ${PARAMS_V2.food.exportPEA}·η_PEA        ρ = max(Q/P, ${PARAMS_V2.food.rhoFloor}·ρ₀)
-Objetivo:  F* = 100 · σ( logit(F₀/100) + ${PARAMS_V2.food.kappa1}·ln(ρ/ρ₀) + ${PARAMS_V2.food.kappa2}·(E − E₀)/${PARAMS_V2.food.econScale} )
-Dinámica:  F ← F* + (F − F*) · (1 − k_F)^dt`}</Formula>
-            <p className="text-sm">Seguridad alimentaria por balance de oferta y demanda: ρ es la disponibilidad por persona y ρ₀ la del inicio del nivel; E es la seguridad económica del paso anterior (acceso por ingreso). ε es el choque de rendimiento (0 por ahora). k_F = {CONTROL_PARAMS.Velocidad_Ajuste_Seg_Alimentaria} por año.</p>
-            
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_POLITICAL_PRESSURE')}>Presión Política (Nivel 2+)</SubSectionTitle>
-            <p className="text-sm mb-2">Las tres presiones sectoriales (agrícola, ambientalista, social) se acercan cada año a un objetivo en S anclado al inicio del nivel: viven en el interior del rango y solo se acercan a 0 o 100 con carteras extremas.</p>
-            <Formula>{`σ_prod = a_prod / a_prod,0      a_prod = (A_CC + A_CA + A_PRG) / ΣA   (las plantaciones no cuentan)
-D_πa = σ_prod · Σ φa·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.a.econ}·(E₀ − E) + ${PARAMS_V2.pressure.drivers.a.food}·(F₀ − F) + ${PARAMS_V2.pressure.drivers.a.prodShare}·(a_prod,0 − a_prod)
-D_πe = Σ φe·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.e.biodiversity}·(B₀ − B) + ${PARAMS_V2.pressure.drivers.e.co2}·(c − c₀)/c₀
-D_πs = Σ φs·η^social / ${PARAMS_V2.pressure.phiScale} + ${PARAMS_V2.pressure.drivers.s.wellbeing}·(W₀ − W) + ${PARAMS_V2.pressure.drivers.s.tax}·τ
-Objetivo:  π* = 100 · σ( logit(π₀/100) + D_π )      Dinámica:  π ← π* + (π − π*) · (1 − k_π)^dt`}</Formula>
-            <p className="text-sm">φ son los factores por política (Conservación: ambientalista {PARAMS_V2.pressure.e.CR}, agrícola +{PARAMS_V2.pressure.a.CR}; Normativas Flexibles: ambientalista +{PARAMS_V2.pressure.e.FRA}; Agricultura Intensiva: agrícola {PARAMS_V2.pressure.a.PAI}). Sacar tierra de producción (usos públicos, restauración) tensiona al gremio en proporción al área. k_π = {CONTROL_PARAMS.Velocidad_Ajuste_Presiones} por año.</p>
-
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_ECONOMY')}>Economía</SubSectionTitle>
-            <p className="text-sm mb-2">Modela la salud financiera de la nación, que es crucial para poder financiar políticas y mantener la estabilidad.</p>
-            <Formula>{`g   = ${CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI} + ${PARAMS_V2.finance.growthPIE}·η_PIE + ${PARAMS_V2.finance.growthPEA}·η_PEA − ${PARAMS_V2.finance.growthTaxDrag}·τ − ${PARAMS_V2.finance.growthStress}·φ        Y' = Y·(1 + g·dt)
-T   = Y'·(${CONTROL_PARAMS.Tasa_Impositiva_General_Sobre_PBI} + τ/100) + ${PARAMS_V2.finance.carbonTaxRevenue}·Y'·η_CN^imp          G₀ = γ_N·Y'   (γ = ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_1} / ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_2} / ${CONTROL_PARAMS.Gasto_Publico_Base_Nivel_3})
-K   = Σ κ·Y·(0,3 + 0,7·esfuerzo) + Σ cuota_pacto·Y' + mantenimiento de usos públicos (Territorio)
-SP  = T − G₀ − K                                     saldo primario
-i   = i_N + ${PARAMS_V2.finance.riskPremium}·max(0, D/Y − ${PARAMS_V2.finance.debtThreshold})        Int = i·D     Am = α_N·D
-R'  = R + (SP − Int − Am)·dt + préstamo      D' = D − Am·dt + préstamo
-si R' < ${PARAMS_V2.finance.reserveFloor}·Y':  D' += ${PARAMS_V2.finance.reserveFloor}·Y' − R',  R' = ${PARAMS_V2.finance.reserveFloor}·Y'      (el déficit se financia con deuda)
-φ   = sHigh(Int / T; ${PARAMS_V2.finance.stressMid}, ${PARAMS_V2.finance.stressWidth})
-Quiebra: D/Y > ${PARAMS_V2.finance.bankruptcyDebtRatio} e Int/T > ${PARAMS_V2.finance.bankruptcyInterestBurden} durante ${PARAMS_V2.finance.bankruptcyYears} años seguidos (24 meses en Territorio)`}</Formula>
-            <p className="text-sm">Cuotas anuales de los pactos: {pactPcts('annual')} del PBI; la adhesión ({pactPcts('entry')}) es inversión pública, como declarar un uso público o una opción paga de una situación: se paga con las reservas por encima del piso y el resto con deuda mientras D/Y ≤ {PARAMS_V2.finance.debtThreshold}; si no, no hay espacio fiscal. Sin políticas, el superávit primario es (0,15 − γ)·Y: 2 % del PBI en el Nivel 1 y 2,5 % en los Niveles 2–3 y Territorio. γ (<Code>Gasto_Publico_Base_Nivel_N</Code>) es el parámetro más sensible del modelo.</p>
-
-            <SubSectionTitle tooltipText={d('EQUATION_TITLE_STABILITY_CONFLICT')}>Estabilidad y Conflicto</SubSectionTitle>
-            <p className="text-sm mb-2">Indicadores que pueden llevar al fin del juego si se descuidan. Representan la cohesión social y la legitimidad del gobierno.</p>
-            <Formula>{`Objetivo:  X* = 100 · σ( logit(X₀/100) + D_X )       X ∈ {Seg. Económica, Conflicto, Colapso}
-Dinámica:  X ← X* + (X − X*) · (1 − k_X)^dt         (exacta: 12 pasos mensuales = 1 anual)
-D_E  = Σ bE·η^prod − 0,15·η_CN^imp + 0,25·(g − g₀)/0,01 + 1,5·(V/V₀ − 1) + 0,15·(B − B₀)/20 − 0,8·φ − 0,04·τ − 0,6·[s(F) − s(F₀)] + pactos
-D_C  = 0,6·(F₀ − F)/15 + 0,5·(E₀ − E)/15 + 0,4·(πe − πe₀)/20 + Σ c·η^social − Σ alivio·η^social + 2·Δa_CC + Δa_PF + 0,03·τ + 0,6·φ
-D_Pc = 0,9·(W₀ − W)/20 + 0,5·(E₀ − E)/20 + 0,8·φ + 0,5·(polarización − pol₀)/30 + 0,6·(π̄ − π̄₀)/20 + pactos
-Bienestar = 100 − Conflicto      Estabilidad = 100 − Colapso`}</Formula>
-            <p className="text-sm">Todo término es un desvío respecto del inicio del nivel o el efecto de una política activa: sin políticas y con el territorio quieto, nada se mueve. k = {CONTROL_PARAMS.Velocidad_Ajuste_Seg_Economica} / {CONTROL_PARAMS.Velocidad_Ajuste_Conflicto} / {CONTROL_PARAMS.Velocidad_Ajuste_Colapso} por año (E / C / Pc). τ es el impuesto adicional en puntos; g₀ = {CONTROL_PARAMS.Tasa_Base_Crecimiento_PBI} es el crecimiento base; φ es el estrés fiscal (intereses / recaudación por encima de 0,20); s(F) = 1/(1 + e^((F − 20)/4)) mide una crisis alimentaria.</p>
+            <SectionTitle tooltipText={d('TITLE_EQUATIONS')}>{ui.families}</SectionTitle>
+            {/* Phase 50: the nine families of model 2.0, from src/components/equations/families.ts (also the source of
+                docentes-ecuaciones.html), with every number read from PARAMS_V2 / CONTROL_PARAMS. */}
+            {[...EQUATION_FAMILIES, SCORE_FAMILY].map((f) => (
+              <div key={f.id}>
+                <SubSectionTitle>{f.title[language]}</SubSectionTitle>
+                <p className="text-sm mb-2">{f.summary[language]}</p>
+                <Formula>{f.formula[language]}</Formula>
+              </div>
+            ))}
+            <p className="text-xs text-gray-400 mt-4">{ui.pacts(pactPcts('entry'), pactPcts('annual'))}</p>
         </div>
     </>
   );

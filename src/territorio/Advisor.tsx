@@ -23,7 +23,7 @@ import { DecarboNitoLayer } from '../components/decarbonito/DecarboNitoLayer';
 import { useDecarboNito } from '../components/decarbonito/DecarboNitoProvider';
 import { useT } from '../i18n';
 import type { TranslationKey } from '../i18n';
-import { getEventName } from '../legacyContent/gameData';
+import { getEventName, getPolicyName } from '../legacyContent/gameData';
 import { askTerritorio } from '../services/geminiService';
 import type { ChatMessage } from '../types';
 import { cueFor, territorioContext, type Cue } from './advisorRules';
@@ -55,6 +55,7 @@ export function Advisor({ session, active }: { session: Session; active: boolean
     if (typeof values.route === 'string') values.route = tMain(values.route as TranslationKey);
     if (typeof values.condition === 'string') values.condition = tMain(values.condition as TranslationKey);
     if (typeof values.floor === 'string') values.floor = tMain(values.floor as TranslationKey);
+    if (typeof values.policy === 'string') values.policy = getPolicyName(values.policy, locale) || values.policy;
     if (typeof values.situation === 'string') {
       const def = SITUATION_BY_ID[values.situation];
       if (def) values.situation = def[locale].title;

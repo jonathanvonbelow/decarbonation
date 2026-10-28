@@ -6,301 +6,160 @@ interface PlayerManualProps {
   onClose: () => void;
 }
 
-const SLIDES_ES = [
-  {
-    title: "Introducción: Pensando Estratégicamente",
-    content: (
-      <div>
-        <p className="mb-4">¡Bienvenido al Manual del Jugador! Esta guía te ayudará a ir más allá de las decisiones individuales para convertirte en un verdadero estratega de la sostenibilidad. El objetivo es pensar en cómo tus políticas se combinan para crear un futuro próspero y sostenible.</p>
-        <p className="mb-4">No se trata solo de activar políticas, sino de tejer una red de decisiones coherentes que se refuercen mutuamente a lo largo del tiempo.</p>
-        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">🤖 DecarboNito, tu asesor flotante</h4>
-          <p className="text-sm">DecarboNito ya no vive en un panel fijo: es un personaje que flota sobre el tablero. Hacé clic en él (o presioná la tecla C) para conversar. Puede responder preguntas, señalarte cualquier control del tablero, y — si se lo pedís explícitamente — operar la interfaz por vos (activar políticas, asignar esfuerzo, simular), siempre pidiendo tu confirmación antes de cambiar algo.</p>
-        </div>
-        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">🏁 No hay una sola forma de ganar</h4>
-          <p className="text-sm">Cada nivel se puede superar por varias rutas distintas (por ejemplo: una vía productiva, una ecológica, una de innovación tecnológica), cada una con su propio perfil de exigencias. El panel "Rutas de victoria" del tablero muestra tu progreso en cada una en tiempo real — no hace falta cumplir un único checklist fijo.</p>
-        </div>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Piensa en planes de 5 a 10 años. ¿Cuál es tu visión para la nación? ¿Quieres un paraíso ecológico, una potencia económica verde, o un modelo de equidad social? Tu visión guiará tus decisiones.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">Discutan y definan una visión compartida para la nación. Consideren asignar roles (ej. Ministro/a de Ambiente, de Economía, de Bienestar Social) para enriquecer el debate.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Sinergias y Antagonismos",
-    content: (
-      <div>
-        <p className="mb-4">Las políticas no actúan de forma aislada. Algunas se ayudan mutuamente (<strong className="text-green-400">sinergias</strong>), mientras que otras entran en conflicto (<strong className="text-red-400">antagonismos</strong>).</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="p-3 bg-green-900 bg-opacity-40 rounded-lg">
-            <strong className="text-green-300">Ejemplo de Sinergia:</strong><br/>
-            Activar <span className="font-semibold">Conservación de Bienes Naturales</span> + <span className="font-semibold">Ganadería Sostenible</span> no solo suma, ¡multiplica! La biodiversidad se dispara y las presiones ambientalistas bajan.
-          </div>
-          <div className="p-3 bg-red-900 bg-opacity-40 rounded-lg">
-            <strong className="text-red-300">Ejemplo de Antagonismo:</strong><br/>
-            Combinar <span className="font-semibold">Agricultura Intensiva</span> con <span className="font-semibold">Normativas Ambientales Flexibles</span> puede provocar un colapso en la biodiversidad.
-          </div>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Antes de simular, revisa tus políticas activas. ¿Están trabajando juntas hacia tu visión, o se están saboteando entre sí?</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">El "Ministro de Economía" puede querer políticas que entren en conflicto con las del "Ministro de Ambiente". Negocien y busquen un punto medio.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Estrategias para el Nivel 1",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Foco: Sentar las Bases</h3>
-        <p className="mb-4">En este nivel, el objetivo es detener la sangría ambiental y comenzar a construir un futuro sostenible.</p>
-        <p className="font-semibold">Indicadores Clave: <span className="text-green-300">Biodiversidad</span>, <span className="text-cyan-300">Emisiones CO2eq/cápita</span>, <span className="text-yellow-300">% Bosque Nativo</span>.</p>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Una combinación inicial potente es <strong className="text-green-400">Políticas de Conservación</strong> + <strong className="text-yellow-400">Políticas Agroecológicas</strong>. Esto estabilizará la biodiversidad y mejorará tu balance de carbono.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">Acuerden una estrategia ambiental fundacional. ¿Priorizamos la protección estricta de bosques o fomentamos la transición a cultivos sostenibles?</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Estrategias para el Nivel 2",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Foco: El Equilibrio Sociopolítico</h3>
-        <p className="mb-4">Ahora gestionas también las expectativas y el descontento de tu gente. Las <strong className="text-orange-400">presiones políticas</strong> y los <strong className="text-purple-400">indicadores socioeconómicos</strong> son el centro del escenario.</p>
-        <p className="font-semibold mb-2">Nuevas mecánicas: <span className="text-blue-300">Instrumentos de Política</span>.</p>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Mantén un ojo en los medidores de presión. Si la presión agrícola sube demasiado, activa una política que los beneficie. Usa los instrumentos para asignar más esfuerzo a las acciones más eficientes.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">La negociación se vuelve crítica. ¿Cómo se llega a un acuerdo entre el "lobby agrícola" y los "grupos ambientalistas"? Los instrumentos permiten negociar el esfuerzo asignado a cada subpolítica.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Estrategias para el Nivel 3",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Foco: Liderazgo Global y Finanzas</h3>
-        <p className="mb-4">Tu nación juega en las grandes ligas. La gestión financiera es tan importante como la ambiental.</p>
-        <ul className="list-none space-y-3 text-sm">
-          <li><strong className="text-green-300 block">🤝 Pactos Internacionales:</strong> Analizá costos y beneficios a largo plazo antes de unirte.</li>
-          <li><strong className="text-yellow-300 block">💰 Préstamos y deuda:</strong> El Estado ya gasta casi todo lo que recauda: con pocas políticas sobra un 2–2,5 % del PBI. Si gastás más, las reservas bajan hasta un piso (2 % del PBI) y el resto se paga solo con deuda; la deuda cobra intereses que suben si pasa el 60 % del PBI y, si los intereses se comen la recaudación, frenan la economía. Un préstamo (hasta 10 % del PBI por año) adelanta plata para invertir. Con deuda por encima del 100 % del PBI e intereses por encima del 20 % de la recaudación durante dos años, la nación quiebra.</li>
-          <li><strong className="text-red-300 block">📊 Presión Fiscal Adicional:</strong> Aumenta ingresos pero reduce bienestar y crecimiento. Herramienta de doble filo.</li>
-        </ul>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Usa préstamos para financiar políticas de alto retorno. Los impuestos adicionales como último recurso.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">Debatan como gabinete: ¿Necesitamos este préstamo? ¿Los beneficios del pacto superan los costos?</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Gestión de Crisis",
-    content: (
-      <div>
-        <p className="mb-4">No entres en pánico, ¡analiza y actúa!</p>
-        <ul className="list-none space-y-3 text-sm">
-          <li><strong className="text-orange-400 block">🚨 Presión Política por las Nubes:</strong> Identifica qué grupo está más descontento y activa una política que los apacigüe directamente.</li>
-          <li><strong className="text-red-400 block">📉 Crisis Económica:</strong> Activa políticas pro-crecimiento. Si estás en Nivel 3, considera un préstamo para invertir en algo productivo.</li>
-          <li><strong className="text-green-400 block">🌍 Colapso Ecológico:</strong> Medidas drásticas. Activa todas las políticas pro-ambientales que puedas.</li>
-        </ul>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Juego Individual</h4>
-          <p className="text-sm">Pausa y analiza. ¿Cuándo empezó el problema? Entender la causa raíz es el primer paso.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Talleres en Grupo</h4>
-          <p className="text-sm">Convoquen una "reunión de gabinete de emergencia". Presenten la crisis y debatan posibles soluciones.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Guía para Talleres en Grupo",
-    content: (
-      <div>
-        <p className="mb-4">DecarboNation es una poderosa herramienta para el diálogo y el aprendizaje colaborativo.</p>
-        <ul className="list-disc list-inside space-y-4 text-sm">
-          <li><strong className="text-sky-300">Juego de Roles:</strong> Asignar roles hace que los debates sean más ricos y realistas.</li>
-          <li><strong className="text-sky-300">Mecanismos de Decisión:</strong> Establezcan si se decide por consenso, votación, o "presidencia" con voto de desempate.</li>
-          <li><strong className="text-sky-300">Pausas para la Reflexión:</strong> Al cerrar una partida, la app genera automáticamente una síntesis individual (decisiones, trade-offs y preguntas de reflexión). Para el cierre grupal, el facilitador cuenta además con la "Guía del Facilitador — Debriefing de Taller" (documento descargable, con guion paso a paso y preguntas por nivel) para conducir la discusión: ¿Qué funcionó? ¿Qué aprendimos?</li>
-          <li><strong className="text-sky-300">Utilicen a DecarboNito:</strong> El chatbot puede actuar como asesor técnico imparcial.</li>
-        </ul>
-        <p className="mt-6 text-sm italic text-gray-400">El objetivo no es solo "ganar", sino entender las tensiones y compromisos en la gobernanza para la sostenibilidad.</p>
-      </div>
-    )
-  },
-];
+type Lang = 'es' | 'en';
 
-const SLIDES_EN = [
-  {
-    title: "Introduction: Thinking Strategically",
-    content: (
-      <div>
-        <p className="mb-4">Welcome to the Player Manual! This guide will help you go beyond individual decisions and become a true sustainability strategist. The goal is to think about how your policies combine to create a prosperous and sustainable future.</p>
-        <p className="mb-4">It's not just about activating policies, but about weaving a coherent web of decisions that reinforce each other over time.</p>
-        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">🤖 DecarboNito, your floating advisor</h4>
-          <p className="text-sm">DecarboNito no longer lives in a fixed panel: it's a character that floats over the board. Click it (or press the C key) to talk. It can answer questions, point at any control on the board, and — if you explicitly ask it to — operate the interface for you (activate policies, assign effort, simulate), always asking for your confirmation before changing anything.</p>
+const Card: React.FC<{ title: string; tone?: 'teal' | 'sky'; children: React.ReactNode }> = ({ title, tone = 'teal', children }) => (
+  <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+    <h4 className={`font-semibold text-lg mb-2 ${tone === 'teal' ? 'text-teal-300' : 'text-sky-300'}`}>{title}</h4>
+    <div className="text-sm">{children}</div>
+  </div>
+);
+
+/**
+ * Phase 50 (mejora-general/files/50 §1): the manual describes model 2.0 as it works — targets the indicators move
+ * toward, policies that start slowly, wear and recover, instrument channels, the just transition, scarce public money —
+ * and only the synergy the model really has (Agroecology + Conservation; antagonism Intensive Agriculture + Flexible
+ * Regulations). The 1.1 manual described a Conservation + Sustainable Livestock synergy that no equation implements.
+ */
+function buildSlides(lang: Lang): { title: string; content: React.ReactNode }[] {
+  const L = (es: string, en: string) => (lang === 'es' ? es : en);
+  const solo = L('👤 Juego individual', '👤 Individual play');
+  const group = L('👥 Talleres en grupo', '👥 Group workshops');
+  return [
+    {
+      title: L('Introducción: pensar estratégicamente', 'Introduction: thinking strategically'),
+      content: (
+        <div>
+          <p className="mb-4">{L('Esta guía te ayuda a ir más allá de las decisiones sueltas: el país responde a la combinación de tus políticas, al tiempo que llevan activas y a cómo repartís el esfuerzo y el dinero.', 'This guide helps you go beyond one-off decisions: the country responds to the combination of your policies, how long they have been running and how you split effort and money.')}</p>
+          <Card title={L('🤖 DecarboNito, tu asesor flotante', '🤖 DecarboNito, your floating advisor')}>
+            {L('Hacé clic en él (o presioná C) para conversar. Responde preguntas con los datos de tu partida, te señala controles del tablero y, si se lo pedís, opera la interfaz por vos, siempre pidiendo confirmación.', 'Click him (or press C) to talk. He answers with your game\'s data, points at controls on the board and, if you ask, operates the interface for you, always asking for confirmation.')}
+          </Card>
+          <Card title={L('🏁 No hay una sola forma de ganar', '🏁 There is no single way to win')}>
+            {L('Al final de cada nivel tenés que cumplir los mínimos de gobernabilidad y una ruta completa: integridad ecológica, transición productiva, innovación (y equilibrio en el Nivel 3). El panel "Rutas de victoria" muestra cuánto te falta en cada una.', 'At the end of each level you must meet the governance floors and one complete route: ecological integrity, productive transition, innovation (and equilibrium on Level 3). The "Win routes" panel shows how far you are from each.')}
+          </Card>
+          <Card title={group} tone="sky">{L('Definan una visión compartida y repartan roles (Ambiente, Economía, Bienestar Social) para enriquecer el debate.', 'Agree on a shared vision and split roles (Environment, Economy, Social Wellbeing) to enrich the debate.')}</Card>
         </div>
-        <div className="mt-4 mb-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">🏁 There's no single way to win</h4>
-          <p className="text-sm">Each level can be cleared through several different routes (for example: a productive path, an ecological one, a technological-innovation one), each with its own profile of demands. The board's "Win routes" panel shows your progress on each in real time — there's no single fixed checklist to satisfy.</p>
+      ),
+    },
+    {
+      title: L('Cómo responde tu país', 'How your country responds'),
+      content: (
+        <div>
+          <p className="mb-4">{L('Cada indicador se mueve cada año una parte del camino hacia un objetivo. Debajo de cada número del tablero ves ese objetivo: "va hacia 52". Si no tocás nada y el territorio no cambia, el objetivo es el valor de partida y el indicador se queda quieto.', 'Every indicator moves each year part of the way toward a target. Under each number on the board you see that target: "heading to 52". If you change nothing and the territory stays the same, the target is the starting value and the indicator stays put.')}</p>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li>{L('Las decisiones cambian el objetivo enseguida; el indicador lo sigue con inercia. La biodiversidad es la más lenta (deuda de extinción).', 'Decisions change the target right away; the indicator follows it with inertia. Biodiversity is the slowest (extinction debt).')}</li>
+            <li>{L('El CO₂ por habitante tiene tres fuentes, que el tablero desglosa: energía, suelo (AFOLU) y cambio de uso. La energía baja con electricidad renovable y eficiencia, que también avanzan de a poco.', 'CO₂ per inhabitant has three sources, broken down on the board: energy, land (AFOLU) and land-use change. Energy falls with renewable electricity and efficiency, which also advance slowly.')}</li>
+            <li>{L('El presupuesto de carbono suma lo que emitiste desde el inicio contra una senda que baja hacia 2054: más de 1 es pasarse.', 'The carbon budget adds what you emitted since the start against a path falling toward 2054: above 1 means over budget.')}</li>
+          </ul>
+          <Card title={solo}>{L('Antes de simular, mirá las flechas: te dicen hacia dónde va cada indicador con lo que ya decidiste.', 'Before simulating, look at the arrows: they tell you where each indicator is heading with what you already decided.')}</Card>
         </div>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">Think in 5-to-10-year plans. What is your vision for the nation? Do you want an ecological paradise, a green economic powerhouse, or a model of social equity? Your vision will guide your decisions.</p>
+      ),
+    },
+    {
+      title: L('Políticas: arrancan, rinden, se desgastan', 'Policies: they start, perform, wear out'),
+      content: (
+        <div>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li><strong className="text-yellow-300">{L('En marcha', 'Starting up')}</strong>: {L('recién activada rinde poco; tarda entre medio año y dos años y medio en llegar a la mayor parte de su efecto.', 'just activated it yields little; it takes half a year to two and a half years to reach most of its effect.')}</li>
+            <li><strong className="text-green-300">{L('Plena', 'Full')}</strong>: {L('rinde lo máximo.', 'it performs at its best.')}</li>
+            <li><strong className="text-orange-300">{L('Desgastada', 'Worn')}</strong>: {L('con los años de uso pierde empuje hacia un piso institucional (nunca llega a cero).', 'with years of use it loses push toward an institutional floor (it never reaches zero).')}</li>
+            <li><strong className="text-sky-300">{L('Descanso', 'Rest')}</strong>: {L('si la desactivás, se recupera; al reactivarla vuelve a arrancar de a poco.', 'if you deactivate it, it recovers; when reactivated it starts slowly again.')}</li>
+          </ul>
+          <p className="mt-3 text-sm">{L('Cada política cuesta una parte del PBI por año, que crece con el esfuerzo que le ponés. El Estado ya gasta casi todo lo que recauda: con pocas políticas sobra un 2 % del PBI, con muchas hay déficit y deuda.', 'Each policy costs a share of GDP per year, which grows with the effort you put in. The State already spends almost all it collects: with few policies about 2 % of GDP is left; with many there is a deficit and debt.')}</p>
+          <Card title={solo}>{L('Una política desgastada que ya hizo su trabajo puede descansar unos años mientras otra toma la posta.', 'A worn policy that already did its job can rest for a few years while another takes over.')}</Card>
         </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">Discuss and define a shared vision for the nation. Consider assigning roles (e.g., Environment Minister, Economy Minister, Social Welfare Minister) to enrich the debate.</p>
+      ),
+    },
+    {
+      title: L('Instrumentos, canales y transición justa (Nivel 2+)', 'Instruments, channels and just transition (Level 2+)'),
+      content: (
+        <div>
+          <p className="mb-3 text-sm">{L('Cada política tiene cuatro instrumentos. Cada uno pesa más en un canal: suelo (bosque, hábitat, carbono del suelo), producción (rendimientos, exportaciones, economía) o social (conflicto, presiones). El panel los etiqueta "alto" o "medio". El reparto parejo da el efecto completo; concentrar refuerza un canal y debilita los otros, con rendimientos decrecientes.', 'Each policy has four instruments. Each weighs more on one channel: land (forest, habitat, soil carbon), production (yields, exports, economy) or social (conflict, pressures). The panel tags them "high" or "medium". An even split gives the full effect; concentrating strengthens one channel and weakens the others, with diminishing returns.')}</p>
+          <p className="mb-3 text-sm">{L('Algunos instrumentos restringen al sector (áreas protegidas, impuesto al carbono, protección de fuentes de agua) y otros lo acompañan (bioinsumos, capacitación, silvopastoreo). El índice de transición justa J lo mide: restringir sin acompañar sube el conflicto social. También lo sube que la tierra se concentre en cultivo convencional y plantaciones (índice G).', 'Some instruments restrict the sector (protected areas, carbon tax, water-source protection) and others support it (bio-inputs, training, silvopasture). The just-transition index J measures it: restricting without support raises social conflict. So does land concentrating into conventional crops and plantations (index G).')}</p>
+          <Card title={group} tone="sky">{L('Los instrumentos permiten negociar: el "lobby agrícola" y los "grupos ambientalistas" pueden discutir cuánto esfuerzo va a restringir y cuánto a acompañar.', 'Instruments allow negotiation: the "farm lobby" and the "environmental groups" can argue how much effort goes to restricting and how much to supporting.')}</Card>
         </div>
-      </div>
-    )
-  },
-  {
-    title: "Synergies and Antagonisms",
-    content: (
-      <div>
-        <p className="mb-4">Policies don't act in isolation. Some help each other (<strong className="text-green-400">synergies</strong>), while others conflict (<strong className="text-red-400">antagonisms</strong>). Identifying them is key to a successful strategy.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="p-3 bg-green-900 bg-opacity-40 rounded-lg">
-            <strong className="text-green-300">Synergy Example:</strong><br/>
-            Activating <span className="font-semibold">Natural Assets Conservation</span> + <span className="font-semibold">Sustainable Livestock</span> doesn't just add up — it multiplies! Biodiversity soars and environmental pressures drop.
+      ),
+    },
+    {
+      title: L('Sinergias y antagonismos', 'Synergies and antagonisms'),
+      content: (
+        <div>
+          <p className="mb-4">{L('Las políticas no actúan aisladas. En el modelo hay una combinación que suma más que sus partes y otra que resta más que sus partes:', 'Policies do not act alone. In the model there is one combination that adds more than its parts and one that subtracts more:')}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="p-3 bg-green-900 bg-opacity-40 rounded-lg">
+              <strong className="text-green-300">{L('Sinergia', 'Synergy')}</strong><br />
+              {L('Agroecología + Conservación de los Bienes Naturales: juntas suben la biodiversidad más que cada una por separado (cuenta la más débil de las dos, así que conviene sostener ambas).', 'Agroecology + Natural Conservation: together they raise biodiversity more than each one alone (the weaker of the two counts, so it pays to sustain both).')}
+            </div>
+            <div className="p-3 bg-red-900 bg-opacity-40 rounded-lg">
+              <strong className="text-red-300">{L('Antagonismo', 'Antagonism')}</strong><br />
+              {L('Agricultura Intensiva + Normativas Ambientales Flexibles: juntas hunden la biodiversidad más que cada una por separado.', 'Intensive Agriculture + Flexible Environmental Regulations: together they sink biodiversity more than each one alone.')}
+            </div>
           </div>
-          <div className="p-3 bg-red-900 bg-opacity-40 rounded-lg">
-            <strong className="text-red-300">Antagonism Example:</strong><br/>
-            Combining <span className="font-semibold">Intensive Agriculture</span> with <span className="font-semibold">Flexible Environmental Regulations</span> may boost short-term production but will cause a biodiversity collapse.
-          </div>
+          <p className="mt-4 text-sm">{L('Hay además tensiones que no son sinergias sino costos: Conservación baja la presión ambientalista pero sube la agrícola; sacar tierra de producción tensiona al campo; el impuesto al carbono pesa sobre la seguridad económica.', 'There are also tensions that are not synergies but costs: Conservation lowers environmental pressure but raises the agricultural one; taking land out of production strains farmers; the carbon tax weighs on economic security.')}</p>
         </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">Before simulating, review your active policies. Are they working together toward your vision, or sabotaging each other?</p>
+      ),
+    },
+    {
+      title: L('Nivel 1: sentar las bases', 'Level 1: laying the foundations'),
+      content: (
+        <div>
+          <p className="mb-3">{L('Indicadores clave: biodiversidad, CO₂ por habitante, bosque nativo y seguridad económica (las rutas la piden y hay un mínimo). En este nivel el esfuerzo se reparte parejo: solo decidís qué políticas activar.', 'Key indicators: biodiversity, CO₂ per inhabitant, native forest and economic security (routes ask for it and there is a floor). On this level effort is split evenly: you only decide which policies to activate.')}</p>
+          <Card title={solo}>{L('Conservación + Agroecología es la sinergia del modelo y frena la frontera agrícola; sin alguna política productiva, la economía y las cuentas públicas se resienten.', 'Conservation + Agroecology is the model\'s synergy and slows the farming frontier; without some productive policy, the economy and public accounts suffer.')}</Card>
         </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">The "Economy Minister" may want policies that conflict with those of the "Environment Minister." Negotiate and find common ground. Can you use policy instruments (Level 2+) to mitigate negative effects?</p>
+      ),
+    },
+    {
+      title: L('Nivel 2: equilibrio sociopolítico', 'Level 2: socio-political balance'),
+      content: (
+        <div>
+          <p className="mb-3">{L('Se suman las seguridades alimentaria y económica, el bienestar, la estabilidad y las tres presiones sectoriales, con un mínimo para cada una. Aparecen los instrumentos y el panel de transición justa (G y J).', 'Food and economic security, wellbeing, stability and the three sectoral pressures join, with a floor for each. Instruments and the just-transition panel (G and J) appear.')}</p>
+          <Card title={solo}>{L('Si una presión sube, mirá su flecha: te dice si va a seguir subiendo. Acompañar lo que restringís suele bajar el conflicto más que sumar otra política.', 'If a pressure rises, look at its arrow: it tells you whether it will keep rising. Supporting what you restrict usually lowers conflict more than adding another policy.')}</Card>
         </div>
-      </div>
-    )
-  },
-  {
-    title: "Strategies for Level 1",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Focus: Laying the Foundations</h3>
-        <p className="mb-4">At this level, the goal is simple but fundamental: stop the environmental decline and begin building a sustainable future.</p>
-        <p className="font-semibold">Key Indicators: <span className="text-green-300">Biodiversity</span>, <span className="text-cyan-300">CO2eq/capita Emissions</span>, <span className="text-yellow-300">% Native Forest</span>.</p>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">A powerful initial combination is <strong className="text-green-400">Conservation Policies</strong> + <strong className="text-yellow-400">Agro-ecological Policies</strong>. This will stabilize biodiversity and improve your carbon balance.</p>
+      ),
+    },
+    {
+      title: L('Nivel 3: finanzas y liderazgo global', 'Level 3: finance and global leadership'),
+      content: (
+        <div>
+          <ul className="list-none space-y-3 text-sm">
+            <li><strong className="text-yellow-300 block">{L('💰 Dinero escaso', '💰 Scarce money')}</strong>{L('Las reservas nunca bajan del 2 % del PBI: cada déficit se paga con deuda. La deuda cobra intereses que suben si pasa el 60 % del PBI; si los intereses se comen más del 20 % de la recaudación, el estrés fiscal frena la economía. Con deuda por encima del 100 % del PBI e intereses por encima del 20 % durante dos años, la nación quiebra.', 'Reserves never fall below 2 % of GDP: every deficit is paid with debt. Debt pays interest that rises above 60 % of GDP; if interest eats more than 20 % of revenue, fiscal stress slows the economy. With debt above 100 % of GDP and interest above 20 % for two years, the nation goes bankrupt.')}</li>
+            <li><strong className="text-green-300 block">{L('🤝 Pactos', '🤝 Pacts')}</strong>{L('Mueven objetivos mientras están vigentes y tienen una adhesión y una cuota anual. Entrar es inversión pública: sin espacio fiscal se rechaza.', 'They shift targets while in force and have an entry fee and an annual fee. Joining is public investment: without fiscal space it is refused.')}</li>
+            <li><strong className="text-red-300 block">{L('📊 Préstamos y presión fiscal', '📊 Loans and tax pressure')}</strong>{L('El préstamo adelanta plata para invertir pero es deuda. La presión fiscal adicional sube la recaudación, frena el crecimiento y sube el malestar.', 'A loan prefinances investment but is debt. Additional tax pressure raises revenue, slows growth and raises discontent.')}</li>
+          </ul>
+          <Card title={group} tone="sky">{L('Debatan como gabinete: ¿este pacto vale su cuota? ¿Qué política dejamos descansar para bajar el déficit?', 'Debate as a cabinet: is this pact worth its fee? Which policy do we rest to cut the deficit?')}</Card>
         </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">Agree on a foundational environmental strategy. Do we prioritize strict forest protection or actively promote the transition to sustainable crops?</p>
+      ),
+    },
+    {
+      title: L('Gestión de crisis', 'Crisis management'),
+      content: (
+        <div>
+          <ul className="list-none space-y-3 text-sm">
+            <li><strong className="text-orange-400 block">{L('🚨 Una presión por las nubes', '🚨 A pressure through the roof')}</strong>{L('Identificá qué grupo está peor que al inicio y qué lo empeoró (tierra fuera de producción, restricciones sin apoyo, bienestar en baja).', 'Find which group is worse off than at the start and what made it worse (land out of production, restrictions without support, falling wellbeing).')}</li>
+            <li><strong className="text-red-400 block">{L('📉 Deuda creciente', '📉 Rising debt')}</strong>{L('Mirá el saldo primario: dejar descansar políticas costosas o sumar una productiva corta el déficit; un préstamo solo lo posterga.', 'Look at the primary balance: resting costly policies or adding a productive one cuts the deficit; a loan only postpones it.')}</li>
+            <li><strong className="text-green-400 block">{L('🌍 Biodiversidad en caída', '🌍 Falling biodiversity')}</strong>{L('Responde lento: actuá antes de que la flecha apunte hacia el mínimo. Proteger y restaurar bosque y sostener la sinergia Agroecología + Conservación.', 'It responds slowly: act before the arrow points to the floor. Protect and restore forest and sustain the Agroecology + Conservation synergy.')}</li>
+          </ul>
         </div>
-      </div>
-    )
-  },
-  {
-    title: "Strategies for Level 2",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Focus: Sociopolitical Balance</h3>
-        <p className="mb-4">Welcome to complexity! Now you manage not just the environment, but also people's expectations and discontent. <strong className="text-orange-400">Political pressures</strong> and <strong className="text-purple-400">socioeconomic indicators</strong> take center stage.</p>
-        <p className="font-semibold mb-2">New mechanics: <span className="text-blue-300">Policy Instruments</span>. Use them to fine-tune your policies' impact.</p>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">You can't please everyone all the time. Keep an eye on pressure gauges. Use instruments to allocate more effort to the actions that give the best results with the least political cost.</p>
+      ),
+    },
+    {
+      title: L('Guía para talleres en grupo', 'Guide for group workshops'),
+      content: (
+        <div>
+          <ul className="list-disc list-inside space-y-4 text-sm">
+            <li><strong className="text-sky-300">{L('Juego de roles', 'Role play')}:</strong> {L('asignar ministerios hace los debates más ricos.', 'assigning ministries makes debates richer.')}</li>
+            <li><strong className="text-sky-300">{L('Mecanismo de decisión', 'Decision rule')}:</strong> {L('consenso, votación o presidencia con desempate.', 'consensus, vote or a chair with a tie-break.')}</li>
+            <li><strong className="text-sky-300">{L('Cierre', 'Close')}:</strong> {L('al terminar, la app arma un informe con lo que hicieron, los índices de la sesión y preguntas de reflexión; el paquete docente trae la guía de debriefing.', 'at the end, the app builds a report with what you did, the session indices and reflection questions; the teacher package has the debriefing guide.')}</li>
+          </ul>
+          <p className="mt-6 text-sm italic text-gray-400">{L('Las cifras son de un modelo de juego, no proyecciones de un territorio real. El objetivo no es solo ganar: es entender las tensiones de gobernar la transición.', 'The figures come from a game model, not projections of a real territory. The goal is not just to win: it is to understand the tensions of governing the transition.')}</p>
         </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">Negotiation becomes critical. How do you reach an agreement between the "agricultural lobby" and "environmental groups"? Instruments allow negotiating effort allocation per sub-policy.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Strategies for Level 3",
-    content: (
-      <div>
-        <h3 className="text-xl font-bold text-yellow-400 mb-2">Focus: Global Leadership and Finance</h3>
-        <p className="mb-4">Your nation now plays in the big leagues. Financial management is as important as environmental management.</p>
-        <ul className="list-none space-y-3 text-sm">
-          <li><strong className="text-green-300 block">🤝 International Pacts:</strong> Analyze long-term costs and benefits before joining. Pacts grant passive annual effects on your indicators.</li>
-          <li><strong className="text-yellow-300 block">💰 Loans and debt:</strong> The state already spends almost everything it collects: with few policies, 2–2.5 % of GDP is left over. Spend more and the reserves fall to a floor (2 % of GDP) and the rest is paid with debt automatically; debt charges interest that rises above 60 % of GDP and, once interest eats into revenue, slows the economy. A loan (up to 10 % of GDP a year) brings money forward to invest. With debt above 100 % of GDP and interest above 20 % of revenue for two years, the nation goes bankrupt.</li>
-          <li><strong className="text-red-300 block">📊 Additional Tax Pressure:</strong> Increases annual income but reduces economic security, social wellbeing, and GDP growth. A double-edged tool.</li>
-        </ul>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">Use loans to finance high-return policies like Foreign Investment. Use additional taxes as a last resort.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">Debate as a cabinet: Do we need this loan? Do the pact benefits outweigh the costs? Will the population accept a tax increase to fund our green projects?</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Crisis Management",
-    content: (
-      <div>
-        <p className="mb-4">Every nation faces crises. Your ability to respond will determine your success. Don't panic — analyze and act!</p>
-        <ul className="list-none space-y-3 text-sm">
-          <li><strong className="text-orange-400 block">🚨 Political Pressure Through the Roof:</strong> Identify which group is most discontented and activate a policy that directly appeases them.</li>
-          <li><strong className="text-red-400 block">📉 Economic Crisis (Low Reserves, High Debt):</strong> Activate pro-growth policies like Foreign Investment. In Level 3, a loan may be unavoidable — invest it productively.</li>
-          <li><strong className="text-green-400 block">🌍 Ecological Collapse (Critical Biodiversity or Carbon):</strong> Drastic measures. Activate all pro-environmental policies you can, even if you sacrifice some short-term economy.</li>
-        </ul>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-teal-300 mb-2">👤 Individual Play</h4>
-          <p className="text-sm">Pause and analyze. Review trend charts. When did the problem start? Understanding the root cause is the first step to solving it.</p>
-        </div>
-        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-          <h4 className="font-semibold text-lg text-sky-300 mb-2">👥 Group Workshops</h4>
-          <p className="text-sm">Call an "emergency cabinet meeting." Present the crisis and debate possible solutions. A great moment for role-playing and negotiating under pressure.</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "Guide for Group Workshops",
-    content: (
-      <div>
-        <p className="mb-4">DecarboNation is a powerful tool for dialogue and collaborative learning. Here are some ideas to maximize the group experience.</p>
-        <ul className="list-disc list-inside space-y-4 text-sm">
-          <li><strong className="text-sky-300">Role Play:</strong> Assigning roles (e.g., different ministry ministers, sector representatives) makes debates richer and more realistic. Players must defend their role's interests.</li>
-          <li><strong className="text-sky-300">Decision Mechanisms:</strong> Establish how decisions will be made. By consensus? By vote? Is there a "President" with the deciding vote in case of a tie?</li>
-          <li><strong className="text-sky-300">Reflection Pauses:</strong> When a session ends, the app automatically generates an individual synthesis (decisions, trade-offs, and reflection questions). For the group closing, the facilitator also has the "Facilitator Guide — Workshop Debriefing" (downloadable document with a step-by-step script and per-level questions) to run the discussion: What worked? What didn't? What did we learn?</li>
-          <li><strong className="text-sky-300">Use DecarboNito:</strong> Encourage the group to ask questions to DecarboNito. The chatbot can act as an impartial technical advisor.</li>
-        </ul>
-        <p className="mt-6 text-sm italic text-gray-400">The goal is not just to "win" the game, but to understand the tensions, trade-offs, and need for an integral vision in governance for sustainability.</p>
-      </div>
-    )
-  },
-];
+      ),
+    },
+  ];
+}
+
+const SLIDES_ES = buildSlides('es');
+const SLIDES_EN = buildSlides('en');
 
 const UI = {
   es: { title: 'Manual del Jugador', close: 'Cerrar manual', page: (c:number,t:number) => `Página ${c} de ${t}`, prev: 'Anterior', next: 'Siguiente', finish: 'Cerrar Manual' },

@@ -11,6 +11,8 @@
  * pressures' adjustment speed joined.
  * Phase 44: base public spending per level (Gasto_Publico_Base_Nivel_*, the model's most sensitive parameter) joined
  * "Budget & Debt"; PBIGrowth_Reduction_Factor_Per_Tax_Point left for PARAMS_V2.finance.growthTaxDrag (spec 44 §2).
+ * Phase 50: groups of spec 50 §3 — growth and population (+ Poblacion_Inicial, read at level start), adjustment speeds,
+ * policies (efficiency floor and recovery of model 2.0) and finance.
  */
 import type { ControlParams } from '../../types';
 
@@ -20,19 +22,39 @@ export type NumericParamKey = {
 
 export interface ParamGroup { label: string; keys: NumericParamKey[] }
 
+const GROWTH: NumericParamKey[] = ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Poblacion_Inicial'];
+const SPEEDS: NumericParamKey[] = ['Velocidad_Ajuste_Biodiversidad', 'Velocidad_Ajuste_Seg_Alimentaria', 'Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso', 'Velocidad_Ajuste_Presiones'];
+const POLICIES: NumericParamKey[] = ['Eficiencia_Minima_Politicas', 'Recuperacion_Politicas_Anios'];
+const FINANCE: NumericParamKey[] = [
+  'Tasa_Impositiva_General_Sobre_PBI', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3',
+  'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3',
+  'Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3',
+  'Max_Additional_Tax_Rate_Percentage', 'Ano_Activacion_Prestamo',
+];
+
+/** Phase 50 (mejora-general/files/50 §3): the four groups of the 2.0 panel. */
 export const PARAM_GROUPS_ES: ParamGroup[] = [
-  { label: 'Crecimiento y población', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Velocidad de ajuste de los indicadores', keys: ['Velocidad_Ajuste_Biodiversidad', 'Velocidad_Ajuste_Seg_Alimentaria', 'Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso', 'Velocidad_Ajuste_Presiones'] },
-  { label: 'Presupuesto y deuda', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3', 'Ano_Activacion_Prestamo'] },
-  { label: 'Presión fiscal', keys: ['Max_Additional_Tax_Rate_Percentage'] },
+  { label: 'Crecimiento y población', keys: GROWTH },
+  { label: 'Velocidades de ajuste', keys: SPEEDS },
+  { label: 'Políticas', keys: POLICIES },
+  { label: 'Finanzas', keys: FINANCE },
 ];
 
 export const PARAM_GROUPS_EN: ParamGroup[] = [
-  { label: 'Growth & Population', keys: ['Tasa_Base_Crecimiento_PBI', 'Tasa_Crecimiento_Poblacional_Base', 'Tasa_Impositiva_General_Sobre_PBI'] },
-  { label: 'Indicator Adjustment Speed', keys: ['Velocidad_Ajuste_Biodiversidad', 'Velocidad_Ajuste_Seg_Alimentaria', 'Velocidad_Ajuste_Seg_Economica', 'Velocidad_Ajuste_Conflicto', 'Velocidad_Ajuste_Colapso', 'Velocidad_Ajuste_Presiones'] },
-  { label: 'Budget & Debt', keys: ['Pago_deuda_anual_Nivel_1', 'Pago_deuda_anual_Nivel_2', 'Pago_deuda_anual_Nivel_3', 'Tasa_de_interes_Nivel_1', 'Tasa_de_interes_Nivel_2', 'Tasa_de_interes_Nivel_3', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3', 'Ano_Activacion_Prestamo'] },
-  { label: 'Fiscal Pressure', keys: ['Max_Additional_Tax_Rate_Percentage'] },
+  { label: 'Growth & Population', keys: GROWTH },
+  { label: 'Adjustment speeds', keys: SPEEDS },
+  { label: 'Policies', keys: POLICIES },
+  { label: 'Finance', keys: FINANCE },
 ];
+
+/**
+ * Keys read only when a level starts (createInitialState): changing them applies on the next level start or restart,
+ * not to the running level. The panel says so next to them; the facilitator test builds the state with the changed CP.
+ */
+export const RESTART_PARAM_KEYS: NumericParamKey[] = ['Poblacion_Inicial'];
+
+/** Keys whose change the panel flags as sensitive (phase 44: the model's most sensitive parameter). */
+export const SENSITIVE_PARAM_KEYS: NumericParamKey[] = ['Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3'];
 
 /**
  * Keys the engine never reads because they only gate the UI: the loan unlock year

@@ -350,3 +350,12 @@ con ±5). Verificado: `tests/sim/score.spec.ts`, `tests/sim/winRoutes.spec.ts`, 
 | N-13 | Rutas de los tres niveles = ROUTES3 del prototipo (sin cambios de umbral): resultados en vez de esfuerzo (`cond.renewables` = `model.energy.renewableShare`, `cond.gdpGrowth` = Y/Y₀), sin `cond.score` salvo en equilibrio (7 de 9) | `src/sim/winRoutes.ts` | `tech_tax` N1 0 % (antes 100 %); dirigidas 83–100 % |
 | T-05 | Territorio: integridad con uso público declarado ≥ 6 % (spec 8); transición productiva F ≥ 40,5 (spec 44), E ≥ 40, W ≥ 55, saldo primario medio 5 años ≥ 0, D/Y ≤ 0,6 y ≥ 15 años con ≥ 2 políticas productivas; innovación c ≤ 4,8, parques ≥ 1,6 %, W ≥ 55 | `src/territorio/routes.ts`, `model.productiveYears` (`core.ts`, `PARAMS_V2.productive`) | — (sólo Territorio) |
 
+## Modelo 2.0-dev — interfaz, manuales, paquete docente y DecarboNito (fase 50, 2026-10-27)
+
+Spec: `mejora-general/files/50_interfaz_docentes_decarbonito.md`. Sin cambios de ecuaciones ni parámetros (`sim:check --quick`
+idéntico a la fase 49). Verificado: `tests/game/modelView.spec.ts`, `tests/game/levelIntro.spec.tsx`,
+`tests/docentes/generatedTables.spec.ts`, `tests/sim/facilitatorParams.spec.ts`.
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| N-08 (definitiva) | El panel del facilitador expone solo claves que el motor lee, en los grupos de 50 §3 (con `Poblacion_Inicial`, `Eficiencia_Minima_Politicas`, `Recuperacion_Politicas_Anios`, `Gasto_Publico_Base_*`); cada una con test de efecto. Pistas de instrumentos = relevancias de `INSTRUMENT_CHANNELS` (se borra `INSTRUMENT_IMPACT_HINTS`). Manuales, hoja docente y DecarboNito describen el 2.0; las tablas docentes se generan del código | `src/components/facilitator/*`, `src/game/modelView.ts`, `src/components/equations/families.ts`, `scripts/params-table-html.ts`, `scripts/routes-table-html.ts` | Ninguno en el modelo; `Poblacion_Inicial` del panel ahora sí actúa al empezar/reiniciar un nivel |

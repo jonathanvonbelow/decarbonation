@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { GameState, Policy, LandUseType, LandUse, LevelConfig, Pact, PolicyState, HistoricalDataPoint, InstrumentImpactHints } from '../types';
+import { GameState, Policy, LandUse, LevelConfig, PolicyState, HistoricalDataPoint, Indicators } from '../types';
 import PolicyToggle from './PolicyToggle';
-import { POLICY_UI_ORDER, SIMULATION_YEARS_PER_ROUND, CONTROL_PARAMS, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
+import { POLICY_UI_ORDER, SIMULATION_YEARS_PER_ROUND, MAX_ACTIVE_POLICIES, POLICY_LOCK_IN_DURATION } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Text, LineChart, XAxis, YAxis, CartesianGrid, Legend, Line, ReferenceLine } from 'recharts';
 import RegionalStatusDashboard from './levelSpecific/RegionalStatusDashboard';
 import InnovationGlobalDashboard from './levelSpecific/InnovationGlobalDashboard';
@@ -15,6 +15,9 @@ import { ANCHORS, useAnchor, type AnchorId } from './decarbonito/anchors';
 import PredictionStrip from './tutorial/PredictionStrip';
 import type { PredictionResult, PredictionSelections } from './tutorial/predictions';
 import { usePrevious, useCountUp } from '../hooks/useCountUp';
+import { useFormat, useT } from '../i18n';
+import { emissionsTargets, floorLines, indicatorTarget, routeIndicators, scoreTarget, targetDirection } from '../game/modelView';
+import { CarbonPanel, FiscalPanel, SocialPanel } from './ModelPanels';
 
 interface DashboardProps {
   gameState: GameState;
@@ -27,7 +30,6 @@ interface DashboardProps {
   togglePact: (pactId: string) => void;
   handleInstrumentEffortChange: (policyId: Policy, instrumentId: string, effort: number) => void;
   handleAdditionalTaxPressureChange: (newPressure: number) => void;
-  instrumentImpactHints: InstrumentImpactHints;
   predictionSelections: PredictionSelections;
   onPredictionChange: (next: PredictionSelections) => void;
   lastPredictionResults: PredictionResult[] | null;
@@ -49,7 +51,14 @@ const IndicatorCard: React.FC<{
   title: string; value: number; precision?: number; color?: string; unit?: string;
   tooltip?: string; isWinCondition?: boolean; winLabel?: string; anchorId?: AnchorId;
   invert?: boolean; index?: number;
-}> = ({ title, value, precision = 1, color = 'text-chlorophyll', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId, invert = false, index = 0 }) => {
+  /** Phase 50: the logistic target X* the indicator relaxes toward (`model.targets`), null when it has none. */
+  target?: number | null;
+}> = ({ title, value, precision = 1, color = 'text-chlorophyll', unit = '', tooltip, isWinCondition, winLabel = '⭐', anchorId, invert = false, index = 0, target = null }) => {
+  const { t } = useT();
+  const fmt = useFormat();
+  const dir = targetDirection(value, target);
+  // Colour of the arrow: moving up is good unless the indicator is inverted (pressures).
+  const dirGood = dir === 'flat' ? null : (dir === 'up') !== invert;
   // Registered even when no consumer points at it yet (phase 8/9's job) — cheap, and it's what
   // lets `window.__dn.listAnchors()` see every indicator from day one of the overlay.
   const anchorRef = useAnchor<HTMLDivElement>(anchorId ?? `unused:${title}`, title);
@@ -103,6 +112,14 @@ const IndicatorCard: React.FC<{
           </span>
         )}
       </p>
+      {target !== null && (
+        <Tooltip text={t('model.towardsTip')} position="bottom">
+          <p data-numeric className={`text-[11px] leading-tight cursor-help ${dirGood === null ? 'text-ash-dim' : dirGood ? 'text-chlorophyll' : 'text-ember'}`}>
+            {dir === 'up' ? '↗ ' : dir === 'down' ? '↘ ' : '→ '}
+            {dir === 'flat' ? t('model.steady') : t('model.towards', { value: fmt.num(target, precision) })}
+          </p>
+        </Tooltip>
+      )}
     </div>
   );
   return tooltip ? (
@@ -182,7 +199,7 @@ const LandUseDistributionChart: React.FC<{ landUses: GameState['landUses'] }> = 
   );
 };
 
-const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; currentLevel: number; levelConfig?: LevelConfig }> = ({ historicalData, currentLevel, levelConfig }) => {
+const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; currentLevel: number }> = ({ historicalData, currentLevel }) => {
   const { language } = useLanguageContext();
   const chartRef = useAnchor<HTMLDivElement>(ANCHORS.historyChart, 'Historical trends');
   const T = {
@@ -206,7 +223,17 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
     },
   } as const;
   const t = T[language];
-  const winConditions = levelConfig?.winConditions;
+  // Phase 50: threshold lines of the level's governance floors, of the emissions caps of its routes and of the score
+  // route (src/sim/winRoutes.ts via src/game/modelView.ts); the 1.1 headline targets (LEVEL_CONFIGS.winConditions) are gone.
+  const floors = floorLines(currentLevel);
+  const floorOf = (k: keyof Indicators) => floors.find((f) => f.indicator === k)?.target;
+  const lines = {
+    biodiversity: floorOf('biodiversity'), foodSecurity: floorOf('foodSecurity'), economicSecurity: floorOf('economicSecurity'),
+    socialWellbeing: floorOf('socialWellbeing'), politicalStability: floorOf('politicalStability'),
+    ppAgricola: floorOf('ppAgricola'), ppAmbientalista: floorOf('ppAmbientalista'), ppSocial: floorOf('ppSocial'),
+    score: scoreTarget(currentLevel),
+  };
+  const co2Lines = emissionsTargets(currentLevel);
   const THRESHOLD_COLOR = '#94A3B8';
 
   if (historicalData.length < 2) {
@@ -242,20 +269,20 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               {currentLevel >= 2 && <Line type="monotone" dataKey="economicSecurity" name={t.econSec} stroke="#4299E1" dot={false} />}
               {currentLevel >= 2 && <Line type="monotone" dataKey="socialWellbeing" name={t.socialWell} stroke="#ED64A6" dot={false} />}
               {currentLevel >= 2 && <Line type="monotone" dataKey="politicalStability" name={t.polStab} stroke="#A0AEC0" dot={false} />}
-              {winConditions?.biodiversityMin !== undefined && (
-                <ReferenceLine y={winConditions.biodiversityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.biodiversity}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {lines.biodiversity !== undefined && (
+                <ReferenceLine y={lines.biodiversity} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.biodiversity}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {currentLevel >= 2 && winConditions?.foodSecurityMin !== undefined && (
-                <ReferenceLine y={winConditions.foodSecurityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.foodSec}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {currentLevel >= 2 && lines.foodSecurity !== undefined && (
+                <ReferenceLine y={lines.foodSecurity} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.foodSec}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {currentLevel >= 2 && winConditions?.economicSecurityMin !== undefined && (
-                <ReferenceLine y={winConditions.economicSecurityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.econSec}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {currentLevel >= 2 && lines.economicSecurity !== undefined && (
+                <ReferenceLine y={lines.economicSecurity} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.econSec}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {currentLevel >= 2 && winConditions?.bienestarSocialMin !== undefined && (
-                <ReferenceLine y={winConditions.bienestarSocialMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.socialWell}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {currentLevel >= 2 && lines.socialWellbeing !== undefined && (
+                <ReferenceLine y={lines.socialWellbeing} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.socialWell}: ${t.minThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {currentLevel >= 2 && winConditions?.politicalStabilityMin !== undefined && (
-                <ReferenceLine y={winConditions.politicalStabilityMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.polStab}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {currentLevel >= 2 && lines.politicalStability !== undefined && (
+                <ReferenceLine y={lines.politicalStability} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.polStab}: ${t.minThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -272,11 +299,11 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               <Legend />
               <Line type="monotone" yAxisId="left" dataKey="co2EqEmissionsPerCapita" name={t.co2} stroke="#FC8181" dot={false} />
               <Line type="monotone" yAxisId="right" dataKey="generalScore" name={t.score} stroke="#63B3ED" dot={false} />
-              {winConditions?.co2EqEmissionsPerCapitaMax !== undefined && (
-                <ReferenceLine yAxisId="left" y={winConditions.co2EqEmissionsPerCapitaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.co2}: ${t.maxThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
-              )}
-              {winConditions?.puntajeGeneralMin !== undefined && (
-                <ReferenceLine yAxisId="right" y={winConditions.puntajeGeneralMin} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.score}: ${t.minThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {co2Lines.map((y) => (
+                <ReferenceLine key={y} yAxisId="left" y={y} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.co2} ≤ ${y}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              ))}
+              {lines.score !== undefined && (
+                <ReferenceLine yAxisId="right" y={lines.score} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.score}: ${t.minThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -295,14 +322,14 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
               <Line type="monotone" dataKey="ppAgricola" name={t.ppAgr} stroke="#F6E05E" dot={false} />
               <Line type="monotone" dataKey="ppAmbientalista" name={t.ppEnv} stroke="#48BB78" dot={false} />
               <Line type="monotone" dataKey="ppSocial" name={t.ppSoc} stroke="#ED64A6" dot={false} />
-              {winConditions?.ppAgricolaMax !== undefined && (
-                <ReferenceLine y={winConditions.ppAgricolaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppAgr}: ${t.maxThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {lines.ppAgricola !== undefined && (
+                <ReferenceLine y={lines.ppAgricola} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppAgr}: ${t.maxThreshold}`, position: 'insideTopLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {winConditions?.ppAmbientalistaMax !== undefined && (
-                <ReferenceLine y={winConditions.ppAmbientalistaMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppEnv}: ${t.maxThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {lines.ppAmbientalista !== undefined && (
+                <ReferenceLine y={lines.ppAmbientalista} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppEnv}: ${t.maxThreshold}`, position: 'insideBottomLeft', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
-              {winConditions?.ppSocialMax !== undefined && (
-                <ReferenceLine y={winConditions.ppSocialMax} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppSoc}: ${t.maxThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
+              {lines.ppSocial !== undefined && (
+                <ReferenceLine y={lines.ppSocial} stroke={THRESHOLD_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${t.ppSoc}: ${t.maxThreshold}`, position: 'insideTopRight', fill: THRESHOLD_COLOR, fontSize: 9 }} />
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -315,7 +342,7 @@ const HistoricalCharts: React.FC<{ historicalData: HistoricalDataPoint[]; curren
 export const Dashboard: React.FC<DashboardProps> = ({
   gameState, historicalData, togglePolicy, runSimulationRound, gameOver,
   levelConfig, requestLoan, togglePact, handleInstrumentEffortChange,
-  handleAdditionalTaxPressureChange, instrumentImpactHints,
+  handleAdditionalTaxPressureChange,
   predictionSelections, onPredictionChange, lastPredictionResults, demoPolicyIds,
 }) => {
   const { language } = useLanguageContext();
@@ -372,14 +399,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   } as const;
   const t = T[language];
 
-  const isWinCondition = (indicatorKey: string): boolean => {
-    if (!levelConfig || !levelConfig.winConditions) return false;
-    const conditions = levelConfig.winConditions;
-    const keyMin = `${indicatorKey}Min` as keyof typeof conditions;
-    const keyMax = `${indicatorKey}Max` as keyof typeof conditions;
-    const keyPercentageMin = `${indicatorKey}MinPercentage` as keyof typeof conditions;
-    return conditions[keyMin] !== undefined || conditions[keyMax] !== undefined || conditions[keyPercentageMin] !== undefined;
-  };
+  // Phase 50: a star marks an indicator some governance floor or win route of the level asks for (LEVEL_ROUTES, phase 49).
+  const starred = routeIndicators(currentLevel);
+  const isWinCondition = (indicatorKey: keyof Indicators): boolean => starred.has(indicatorKey);
+  const target = (k: keyof Indicators) => indicatorTarget(gameState, k);
 
   // v3 tokens (19_estetica_visual.md §2): ember/ochre/chlorophyll instead of the phase-1
   // red/yellow/green — same three-tier logic, reskinned.
@@ -403,24 +426,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <IndicatorCard index={0} anchorId={ANCHORS.indicatorBiodiversity} title={t.biodiversity} value={indicators.biodiversity} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
+        <IndicatorCard index={0} anchorId={ANCHORS.indicatorBiodiversity} title={t.biodiversity} value={indicators.biodiversity} target={target('biodiversity')} unit="%" color={getIndicatorColor(indicators.biodiversity)} isWinCondition={isWinCondition('biodiversity')} tooltip={t.biodiversityTip} winLabel={t.winStar} />
         <IndicatorCard index={1} anchorId={ANCHORS.indicatorEmissions} title={t.co2} value={indicators.co2EqEmissionsPerCapita} precision={2} unit=" t" invert color={indicators.co2EqEmissionsPerCapita > 8 ? 'text-ember' : indicators.co2EqEmissionsPerCapita > 4 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('co2EqEmissionsPerCapita')} tooltip={t.co2Tip} winLabel={t.winStar} />
 
         {currentLevel >= 2 && (
           <>
-            <IndicatorCard index={2} anchorId={ANCHORS.indicatorFoodSecurity} title={t.foodSec} value={indicators.foodSecurity} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
-            <IndicatorCard index={3} anchorId={ANCHORS.indicatorEconomicSecurity} title={t.econSec} value={indicators.economicSecurity} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
-            <IndicatorCard index={4} anchorId={ANCHORS.indicatorSocialWellbeing} title={t.socialWell} value={indicators.socialWellbeing} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
-            <IndicatorCard index={5} anchorId={ANCHORS.indicatorPoliticalStability} title={t.polStab} value={indicators.politicalStability} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
-            <IndicatorCard index={6} title={t.ppAgr} value={indicators.ppAgricola} unit="%" invert color={getIndicatorColor(indicators.ppAgricola, true, 45, 65)} isWinCondition={isWinCondition('ppAgricola')} tooltip={t.ppAgrTip} winLabel={t.winStar} />
-            <IndicatorCard index={7} title={t.ppEnv} value={indicators.ppAmbientalista} unit="%" invert color={getIndicatorColor(indicators.ppAmbientalista, true, 45, 65)} isWinCondition={isWinCondition('ppAmbientalista')} tooltip={t.ppEnvTip} winLabel={t.winStar} />
-            <IndicatorCard index={8} title={t.ppSoc} value={indicators.ppSocial} unit="%" invert color={getIndicatorColor(indicators.ppSocial, true, 45, 65)} isWinCondition={isWinCondition('ppSocial')} tooltip={t.ppSocTip} winLabel={t.winStar} />
+            <IndicatorCard index={2} anchorId={ANCHORS.indicatorFoodSecurity} title={t.foodSec} value={indicators.foodSecurity} target={target('foodSecurity')} unit="%" color={getIndicatorColor(indicators.foodSecurity)} isWinCondition={isWinCondition('foodSecurity')} tooltip={t.foodSecTip} winLabel={t.winStar} />
+            <IndicatorCard index={3} anchorId={ANCHORS.indicatorEconomicSecurity} title={t.econSec} value={indicators.economicSecurity} target={target('economicSecurity')} unit="%" color={getIndicatorColor(indicators.economicSecurity)} isWinCondition={isWinCondition('economicSecurity')} tooltip={t.econSecTip} winLabel={t.winStar} />
+            <IndicatorCard index={4} anchorId={ANCHORS.indicatorSocialWellbeing} title={t.socialWell} value={indicators.socialWellbeing} target={target('socialWellbeing')} unit="%" color={getIndicatorColor(indicators.socialWellbeing)} isWinCondition={isWinCondition('socialWellbeing')} tooltip={t.socialWellTip} winLabel={t.winStar} />
+            <IndicatorCard index={5} anchorId={ANCHORS.indicatorPoliticalStability} title={t.polStab} value={indicators.politicalStability} target={target('politicalStability')} unit="%" color={getIndicatorColor(indicators.politicalStability)} isWinCondition={isWinCondition('politicalStability')} tooltip={t.polStabTip} winLabel={t.winStar} />
+            <IndicatorCard index={6} title={t.ppAgr} value={indicators.ppAgricola} target={target('ppAgricola')} unit="%" invert color={getIndicatorColor(indicators.ppAgricola, true, 45, 65)} isWinCondition={isWinCondition('ppAgricola')} tooltip={t.ppAgrTip} winLabel={t.winStar} />
+            <IndicatorCard index={7} title={t.ppEnv} value={indicators.ppAmbientalista} target={target('ppAmbientalista')} unit="%" invert color={getIndicatorColor(indicators.ppAmbientalista, true, 45, 65)} isWinCondition={isWinCondition('ppAmbientalista')} tooltip={t.ppEnvTip} winLabel={t.winStar} />
+            <IndicatorCard index={8} title={t.ppSoc} value={indicators.ppSocial} target={target('ppSocial')} unit="%" invert color={getIndicatorColor(indicators.ppSocial, true, 45, 65)} isWinCondition={isWinCondition('ppSocial')} tooltip={t.ppSocTip} winLabel={t.winStar} />
           </>
         )}
         {currentLevel >= 3 && (
           <>
             <IndicatorCard index={9} title={t.pbi} value={indicators.pbi} precision={0} color={indicators.pbi > 14000 ? 'text-chlorophyll' : indicators.pbi > 11000 ? 'text-ochre' : 'text-ember'} isWinCondition={isWinCondition('pbi')} tooltip={t.pbiTip} winLabel={t.winStar} />
-            <IndicatorCard index={10} title={t.debt} value={indicators.debt} precision={0} invert color={debtRatio > 0.8 ? 'text-ember' : debtRatio > 0.5 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('deudaPbi')} tooltip={t.debtTip(debtRatio.toFixed(2))} winLabel={t.winStar} />
+            <IndicatorCard index={10} title={t.debt} value={indicators.debt} precision={0} invert color={debtRatio > 0.8 ? 'text-ember' : debtRatio > 0.5 ? 'text-ochre' : 'text-chlorophyll'} isWinCondition={isWinCondition('debt')} tooltip={t.debtTip(debtRatio.toFixed(2))} winLabel={t.winStar} />
             <IndicatorCard index={11} title={t.reserves} value={indicators.treasuryReserves} precision={0} color={reservesRatio <= 0.021 ? (debtRatio > 0.6 ? 'text-ember' : 'text-ochre') : 'text-chlorophyll'} tooltip={t.reservesTip} winLabel={t.winStar} />
             {fiscal && (
               <IndicatorCard index={12} title={t.burden} value={fiscal.interestBurden * 100} unit=" %" invert color={fiscal.interestBurden > 0.2 ? 'text-ember' : fiscal.interestBurden > 0.12 ? 'text-ochre' : 'text-chlorophyll'} tooltip={t.burdenTip(((stellaSpecificState.PBI_Real > 0 ? fiscal.primaryBalance / stellaSpecificState.PBI_Real : 0) * 100).toFixed(1), fiscal.stress.toFixed(2))} winLabel={t.winStar} />
@@ -429,9 +452,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
       </div>
 
+      {/* Phase 50: carbon by source, public finance (full on level 3) and the just transition (levels 2–3). */}
+      <div className={`grid grid-cols-1 gap-4 ${currentLevel >= 2 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        <CarbonPanel gameState={gameState} />
+        <FiscalPanel gameState={gameState} />
+        {currentLevel >= 2 && <SocialPanel gameState={gameState} />}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LandUseDistributionChart landUses={gameState.landUses} />
-        {gameState.currentLevel === 3 && <EventsNewsPanel currentEvent={gameState.currentEvent} newsHeadlines={gameState.newsHeadlines} gameState={gameState} />}
+        {gameState.currentLevel === 3 && <EventsNewsPanel newsHeadlines={gameState.newsHeadlines} gameState={gameState} />}
       </div>
 
       <div className="panel p-6">
@@ -459,6 +489,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               currentYear={year}
               policyLockInDuration={POLICY_LOCK_IN_DURATION}
               currentLevel={currentLevel}
+              gdp={stellaSpecificState.PBI_Real}
             />
           ))}
         </div>
@@ -470,6 +501,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           currentLevel={currentLevel}
           handleInstrumentEffortChange={handleInstrumentEffortChange}
           disabled={gameState.isSimulating}
+          gdp={stellaSpecificState.PBI_Real}
         />
       )}
 
@@ -499,7 +531,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      <HistoricalCharts historicalData={historicalData} currentLevel={currentLevel} levelConfig={levelConfig} />
+      <HistoricalCharts historicalData={historicalData} currentLevel={currentLevel} />
     </div>
   );
 };

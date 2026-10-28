@@ -183,10 +183,15 @@ export interface GameState {
     status: 'won' | 'lost';
     reason: string;
     finalIndicators: Indicators;
-    winConditions?: LevelConfig['winConditions'];
   } | null;
   sentLevelReflectionMessage: boolean;
   currentEvent: RandomEvent | null; // For random events
+  /**
+   * Ids of every random event that fired during the last simulated year of the 3-level game, in order (phase 50: the
+   * level-3 events panel lists them all; phase 46 draws events independently, so a year can have several). Set by
+   * `advanceYear`; absent in Territorio and in states saved before phase 50.
+   */
+  eventsThisYear?: string[];
   newsHeadlines: string[]; // For AI-generated news
   level3EventsTriggeredCount: number; // Counter for events in Level 3
   additionalTaxPressurePercentage: number; // 0-20, representing additional tax rate
@@ -317,23 +322,6 @@ export interface LevelConfig {
   targetYear?: number;
   progressionConditionsMet: (gameState: GameState) => boolean;
   description?: string;
-  winConditions?: {
-    puntajeGeneralMin?: number;
-    co2EqEmissionsPerCapitaMax?: number;
-    bosqueNativoProtegidoMin?: number; 
-    nativeForestTotalMinPercentage?: number; 
-    bienestarSocialMin?: number;
-    politicalStabilityMin?: number; // Added
-    colapsoPoliticoMax?: number;
-    deudaPbiMax?: number;
-    biodiversityMin?: number;
-    foodSecurityMin?: number;
-    economicSecurityMin?: number;
-    pbiMin?: number;
-    ppAgricolaMax?: number;
-    ppAmbientalistaMax?: number;
-    ppSocialMax?: number;
-  };
 }
 
 export interface RegionalDemographics {
@@ -432,11 +420,3 @@ export interface ControlParams {
   Gasto_Publico_Base_Nivel_2: number;
   Gasto_Publico_Base_Nivel_3: number;
 }
-
-export type InstrumentImpactHint = {
-  indicator: string;
-  direction: 'positive' | 'negative';
-  magnitude: 'high' | 'medium' | 'low';
-};
-
-export type InstrumentImpactHints = Record<string, InstrumentImpactHint[]>;

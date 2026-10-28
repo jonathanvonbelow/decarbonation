@@ -179,8 +179,9 @@ describe('advance', () => {
       const shared = makeRng(3, i);
       for (let k = 0; k < 12; k++) byMonths = advance(byMonths, MONTHLY_DT, shared, CONTROL_PARAMS, { month: k }).next;
       // The months log the activation in Territorio's wording and with the year being simulated (not + 1), and keep
-      // the last fired event in currentEvent only for that month: compare the model state.
-      expect(JSON.stringify({ ...yearly, policies: null, currentEvent: null })).toBe(JSON.stringify({ ...byMonths, policies: null, currentEvent: null }));
+      // the last fired event in currentEvent only for that month; eventsThisYear (phase 50) is the yearly list of the
+      // events panel, bookkeeping only: compare the model state.
+      expect(JSON.stringify({ ...yearly, policies: null, currentEvent: null, eventsThisYear: null })).toBe(JSON.stringify({ ...byMonths, policies: null, currentEvent: null, eventsThisYear: null }));
       a = yearly;
       const r = advance(m, MONTHLY_DT, makeRng(3, i), CONTROL_PARAMS, { month });
       const s = stepMonth(m, month, makeRng(3, i));

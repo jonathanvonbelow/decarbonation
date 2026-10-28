@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/**/*.spec.ts'],
+    include: ['tests/**/*.spec.ts', 'tests/**/*.spec.tsx'],
     // Phase 46: the annual step is 12 monthly sub-steps; the 30-year multi-seed invariants take 2–4 s alone and can pass
     // the 5 s default when every file runs in parallel.
     testTimeout: 20_000,

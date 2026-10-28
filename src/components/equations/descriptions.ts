@@ -20,8 +20,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "Base definitions for each policy, including their costs and efficiency dynamics over time. Live values reflect the current state of the session.",
   },
   TITLE_LAND_USE: {
-    es: "Propiedades base para cada tipo de uso de suelo, incluyendo sus tasas de emisión y secuestro de carbono. El área en vivo muestra la distribución actual del territorio.",
-    en: "Base properties for each land use type, including its carbon emission and sequestration rates. Live area shows the territory's current distribution.",
+    es: "Propiedades base para cada tipo de uso de suelo, incluyendo su flujo anual de carbono (tCO₂e/ha) y su stock (Mg C/ha). El área en vivo muestra la distribución actual del territorio.",
+    en: "Base properties for each land use type, including its annual carbon flux (tCO₂e/ha) and its stock (Mg C/ha). Live area shows the territory's current distribution.",
   },
   TITLE_EQUATIONS: {
     es: "Las fórmulas matemáticas fundamentales que impulsan la simulación. Muestran cómo se interrelacionan las variables para producir los resultados anuales.",
@@ -169,17 +169,34 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     es: "Tasa de interés anual que se aplica sobre la deuda total en el Nivel 3.",
     en: "Annual interest rate applied to total debt in Level 3.",
   },
+  // Phase 50: model 2.0 scalars exposed in the facilitator panel.
+  Poblacion_Inicial: {
+    es: "Población del territorio al empezar cada nivel y Territorio (habitantes). Divide las emisiones (CO₂ por habitante) y la oferta de alimentos. Se aplica al empezar o reiniciar un nivel.",
+    en: "Population of the territory at the start of each level and of Territorio (inhabitants). It divides emissions (CO₂ per inhabitant) and food supply. It applies when a level starts or restarts.",
+  },
+  Tasa_Crecimiento_Poblacional_Base: {
+    es: "Crecimiento anual de la población (fracción por año), compuesto: P ← P·(1 + g)^dt.",
+    en: "Annual population growth (fraction per year), compounded: P ← P·(1 + g)^dt.",
+  },
+  Eficiencia_Minima_Politicas: {
+    es: "Piso institucional de la eficiencia de una política desgastada (0-1): por mucho que se use, nunca rinde menos que esta fracción de su efecto pleno.",
+    en: "Institutional floor of a worn policy's efficiency (0-1): however long it is used, it never yields less than this fraction of its full effect.",
+  },
+  Recuperacion_Politicas_Anios: {
+    es: "Constante de tiempo (años) con la que una política desactivada recupera su empuje: el desgaste acumulado baja como e^(−t/ρ).",
+    en: "Time constant (years) with which a deactivated policy recovers its push: the accumulated wear decays as e^(−t/ρ).",
+  },
   Gasto_Publico_Base_Nivel_1: {
-    es: "Gasto público base del Nivel 1 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,13 deja 2 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
-    en: "Base public spending of Level 1 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.13 leaves 2 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
+    es: "Gasto público base del Nivel 1, fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,13 deja 2 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
+    en: "Base public spending of Level 1, fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.13 leaves 2 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
   },
   Gasto_Publico_Base_Nivel_2: {
     es: "Gasto público base del Nivel 2 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,125 deja 2,5 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
     en: "Base public spending of Level 2 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.125 leaves 2.5 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
   },
   Gasto_Publico_Base_Nivel_3: {
-    es: "Gasto público base del Nivel 3 (o de Territorio, que corre con el Nivel 2), fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,125 deja 2,5 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
-    en: "Base public spending of Level 3 (or of Territorio, which runs on Level 2), fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.125 leaves 2.5 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
+    es: "Gasto público base del Nivel 3, fracción del PBI por año: salud, educación, administración. Con 0,15 de recaudación base, 0,125 deja 2,5 % del PBI de superávit primario antes de pagar políticas. Es el parámetro más sensible del modelo: +20 % le quita a la cartera verde unos 14 puntos de Seguridad Económica en el Nivel 2.",
+    en: "Base public spending of Level 3, fraction of GDP per year: health, education, administration. With 0.15 base revenue, 0.125 leaves 2.5 % of GDP of primary surplus before paying for policies. The model's most sensitive parameter: +20 % takes about 14 points of Economic Security from the green portfolio in Level 2.",
   },
   Tasa_de_BNNP_a_BNP_Base: {
     es: "Tasa de conversión anual base de Bosque Nativo No Protegido a Bosque Nativo Protegido.",

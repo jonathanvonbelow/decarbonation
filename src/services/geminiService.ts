@@ -5,6 +5,8 @@ import { samplingFor } from './geminiConfig';
 import { Language } from '../hooks/useLanguage';
 import { getPolicyName, getIndicatorName } from '../legacyContent/gameData';
 import { policyStatus } from '../sim/v2/policies';
+import { carbonView, fiscalView, indicatorTarget, routesContextLines, socialView } from '../game/modelView';
+import { tFor, type TranslationKey } from '../i18n';
 
 // Suffix appended to the system instruction to enforce response language
 const LANGUAGE_INSTRUCTION: Record<Language, string> = {
@@ -97,24 +99,52 @@ const createGameStateContext = (gameState: GameState, purpose: 'GENERAL_ASSISTAN
     context += `- **Nivel Actual:** ${currentLevel} - ${activeLevelConfig?.name}\n`;
     context += `- **Puntaje General:** ${indicators.generalScore.toFixed(1)}/1000\n\n`;
 
-    context += `**Indicadores Clave (0-100, alto es generalmente mejor, excepto para CO2):**\n`;
-    context += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}\n`;
-    context += `- Emisiones CO2eq per cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} (un valor bajo es favorable)\n`;
-    if (currentLevel >= 2) {
-        context += `- Seguridad Alimentaria: ${indicators.foodSecurity.toFixed(1)}\n`;
-        context += `- Seguridad Económica: ${indicators.economicSecurity.toFixed(1)}\n`;
-        context += `- Bienestar Social: ${indicators.socialWellbeing.toFixed(1)}\n`;
-        context += `- Estabilidad Política: ${indicators.politicalStability.toFixed(1)}\n\n`;
-        context += `**Presiones Políticas (0-100, bajo es mejor):**\n`;
-        context += `- Presión Agrícola: ${indicators.ppAgricola.toFixed(1)}\n`;
-        context += `- Presión Ambientalista: ${indicators.ppAmbientalista.toFixed(1)}\n`;
-        context += `- Presión Social: ${indicators.ppSocial.toFixed(1)}\n\n`;
+    // Phase 50: each bounded indicator with the target it relaxes toward ("va hacia", model.targets), CO2 by source,
+    // public finance and the distributive indices G and J (src/game/modelView.ts).
+    const towards = (k: keyof GameState['indicators']) => {
+        const target = indicatorTarget(gameState, k);
+        return target === null ? '' : ` (va hacia ${target.toFixed(1)})`;
+    };
+    context += `**Indicadores Clave (0-100, alto es generalmente mejor, excepto para CO2). "Va hacia" es el objetivo al que se mueve cada indicador con las decisiones y el territorio actuales:**\n`;
+    context += `- Biodiversidad: ${indicators.biodiversity.toFixed(1)}${towards('biodiversity')}\n`;
+    context += `- Emisiones CO2eq per cápita: ${indicators.co2EqEmissionsPerCapita.toFixed(2)} t (un valor bajo es favorable)\n`;
+    const cv = carbonView(gameState);
+    if (cv) {
+        context += `  Desglose por habitante: energía ${cv.energy.toFixed(2)} t, suelo (AFOLU) ${cv.afolu.toFixed(2)} t, cambio de uso ${cv.luc.toFixed(2)} t. Electricidad renovable ${(100 * cv.renewableShare).toFixed(0)}%, eficiencia del resto de la energía ${(100 * cv.efficiency).toFixed(0)}%. Presupuesto de carbono usado: ${cv.budget === null ? 'sin datos aún' : cv.budget.toFixed(2)} (más de 1 = por encima).\n`;
     }
+    if (currentLevel === 1) {
+        context += `- Seguridad Económica: ${indicators.economicSecurity.toFixed(1)}${towards('economicSecurity')}\n`;
+    }
+    if (currentLevel >= 2) {
+        context += `- Seguridad Alimentaria: ${indicators.foodSecurity.toFixed(1)}${towards('foodSecurity')}\n`;
+        context += `- Seguridad Económica: ${indicators.economicSecurity.toFixed(1)}${towards('economicSecurity')}\n`;
+        context += `- Bienestar Social: ${indicators.socialWellbeing.toFixed(1)}${towards('socialWellbeing')}\n`;
+        context += `- Estabilidad Política: ${indicators.politicalStability.toFixed(1)}${towards('politicalStability')}\n\n`;
+        context += `**Presiones Políticas (0-100, bajo es mejor):**\n`;
+        context += `- Presión Agrícola: ${indicators.ppAgricola.toFixed(1)}${towards('ppAgricola')}\n`;
+        context += `- Presión Ambientalista: ${indicators.ppAmbientalista.toFixed(1)}${towards('ppAmbientalista')}\n`;
+        context += `- Presión Social: ${indicators.ppSocial.toFixed(1)}${towards('ppSocial')}\n\n`;
+        const sv = socialView(gameState);
+        if (sv) {
+            context += `**Conflicto distributivo:** concentración de la tierra G = ${sv.concentration.toFixed(2)} (al inicio ${sv.concentration0.toFixed(2)}; si sube, sube el conflicto); transición justa J = ${sv.justTransition.toFixed(2)} (1 = restricciones acompañadas de apoyo; bajo con restricciones activas sube el conflicto).\n\n`;
+        }
+    }
+    const fv = fiscalView(gameState);
     if (currentLevel >= 3) {
         context += `**Finanzas:**\n`;
         context += `- PBI Real: ${stellaSpecificState.PBI_Real.toFixed(0)}\n`;
         context += `- Deuda: ${stellaSpecificState.Deuda.toFixed(0)}\n`;
-        context += `- Reservas del Tesoro: ${stellaSpecificState.Reservas_del_Tesoro.toFixed(0)}\n\n`;
+        context += `- Reservas del Tesoro: ${stellaSpecificState.Reservas_del_Tesoro.toFixed(0)} (no bajan del 2% del PBI: el déficit se paga con deuda)\n`;
+        if (fv) context += `- Deuda/PBI: ${(100 * fv.debtRatio).toFixed(0)}% | Saldo primario: ${(100 * fv.primaryShare).toFixed(1)}% del PBI | Intereses/recaudación: ${(100 * fv.interestBurden).toFixed(0)}% | Estrés fiscal: ${fv.stress.toFixed(2)}${fv.noFiscalSpace ? ' | SIN ESPACIO FISCAL (pactos rechazados)' : ''}${fv.breachMonths > 0 ? ` | en zona de quiebra hace ${fv.breachMonths} meses` : ''}\n`;
+        context += `\n`;
+    } else if (fv) {
+        context += `**Saldo primario:** ${(100 * fv.primaryShare).toFixed(1)}% del PBI (negativo = déficit, se paga con deuda; deuda/PBI ${(100 * fv.debtRatio).toFixed(0)}%).\n\n`;
+    }
+    // Phase 50: the level's win rule as the routes panel shows it (floors + routes, src/sim/winRoutes.ts), with Spanish
+    // labels (the context is in Spanish) — the same lines as the level-end reflection (modelView.routesContextLines).
+    if (purpose !== 'NEWS_HEADLINES') {
+        context += `**Rutas de victoria (hay que cumplir todos los mínimos y una ruta completa):**\n`;
+        context += routesContextLines(gameState, (k) => tFor('es', k as TranslationKey)).join('\n') + '\n\n';
     }
     // FIX: Add explicit type annotation to fix potential 'unknown' type error on 'p'.
     const activePolicies = Object.values(policies).filter((p: PolicyState) => p.isActive);

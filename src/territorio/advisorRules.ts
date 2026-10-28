@@ -30,6 +30,7 @@ import { INSTRUMENTS_UNLOCK_YEAR, TOTAL_MONTHS } from './calendar';
 import { evaluateTerritorio, publicNaturePct, TERRITORIO_FLOORS } from './routes';
 import { SITUATION_BY_ID } from './situations';
 import { unlocks, type Session } from './session';
+import { carbonView, fiscalView, indicatorTarget, justTransitionLow, socialView } from '../game/modelView';
 
 /** Anchor ids owned by the preview (registered in hud.tsx / TerritorioApp.tsx). */
 export const ANCHOR = {
@@ -67,6 +68,10 @@ const pct = (n: number) => Math.round(n);
 const totalArea = (s: Session) => (Object.values(s.game.landUses) as { area: number }[]).reduce((sum, lu) => sum + lu.area, 0) || 1;
 const nativeForestPct = (s: Session) =>
   ((s.game.landUses[LandUseType.UnprotectedNativeForest].area + s.game.landUses[LandUseType.ProtectedNativeForest].area) / totalArea(s)) * 100;
+
+/** Phase 50 thresholds of the 2.0 cues (spec 50 §2): D/Y of "little fiscal space" and carbon budget used. */
+export const FISCAL_LOW_DY = 0.5;
+export const BUDGET_HIGH = 1.2;
 
 /** Indicators whose collapse ends the game, with the margin at which DecarboNito starts warning. */
 const DANGER: { key: 'politicalStability' | 'biodiversity' | 'foodSecurity'; floor: number; warnAt: number }[] = [
@@ -162,6 +167,37 @@ export function cueFor(prev: Session, next: Session, CP: ControlParams = CONTROL
     return { id: 'unlock-finance', key: 'unlock.finance', values: { year: CP.Ano_Activacion_Prestamo }, tone: 'normal', priority: 2, surface: 'bubble', anchor: ANCHOR.finance };
   }
 
+  // 6b. Phase 50 (spec 50 §2): model 2.0 cues, once per game each (fixed ids).
+  //  - Little fiscal space left: D/Y above 0.5 (at 0.6 public investment with debt is refused and the rate rises).
+  const fv = fiscalView(next.game);
+  const fvBefore = fiscalView(prev.game);
+  if (fv && fv.debtRatio > FISCAL_LOW_DY && (fvBefore?.debtRatio ?? 0) <= FISCAL_LOW_DY) {
+    return { id: 'fiscal-low', key: 'fiscal.low', values: { dy: Math.round(fv.debtRatio * 100) }, tone: 'caution', priority: 2, surface: 'bubble', anchor: ANCHOR.finance };
+  }
+  //  - Restricting without support: J below 0.4 with a real restriction load (phase 45).
+  const sv = socialView(next.game);
+  const svBefore = socialView(prev.game);
+  if (justTransitionLow(sv) && !justTransitionLow(svBefore)) {
+    return { id: 'just-low', key: 'just.low', values: { j: Math.round(sv!.justTransition * 100) / 100 }, tone: 'caution', priority: 2, surface: 'bubble', anchor: ANCHOR.policies };
+  }
+  //  - A policy that crossed below half of its push by wear this month (fatigue factor < 0.5, phase 36).
+  const wornNow = (Object.values(next.game.policies) as PolicyState[]).find((p) => policyStatus(p).worn && !policyStatus(prev.game.policies[p.id]).worn);
+  if (wornNow) {
+    return { id: `policy-worn-${wornNow.id}`, key: 'policy.worn', values: { policy: wornNow.id }, tone: 'normal', priority: 1, surface: 'notification', anchor: ANCHOR.policies };
+  }
+  //  - A declaration this month that lowered the forest connectivity K: the lot was isolated (phase 40).
+  const kPrev = prev.connectivity?.K;
+  const kNext = next.connectivity?.K;
+  if (next.declaredCount > prev.declaredCount && kPrev !== undefined && kNext !== undefined && kNext < kPrev - 1e-6) {
+    return { id: 'lot-isolated', key: 'lot.isolated', tone: 'normal', priority: 1, surface: 'bubble', anchor: ANCHOR.map };
+  }
+  //  - Carbon budget used above 1.2 (cumulative emissions over the path to 2054).
+  const budget = carbonView(next.game)?.budget ?? null;
+  const budgetBefore = carbonView(prev.game)?.budget ?? null;
+  if (budget !== null && budget > BUDGET_HIGH && (budgetBefore === null || budgetBefore <= BUDGET_HIGH) && next.monthIndex >= MONTHS_PER_YEAR) {
+    return { id: 'budget-over', key: 'budget.over', values: { b: Math.round(budget * 100) / 100 }, tone: 'caution', priority: 1, surface: 'bubble', anchor: ANCHOR.indicators };
+  }
+
   // 7. The inbox is winning. Wear is the mechanic players notice last, so name it.
   if (next.open.length >= 4) {
     return {
@@ -243,23 +279,33 @@ export function territorioContext(s: Session, locale: Language = 'es'): string {
   L.push('--- ESTADO DE LA REGIÓN ---');
   L.push(`Fecha: ${MONTH_NAMES[s.month]} de ${g.year}. Partida: mes ${s.monthIndex} de ${TOTAL_MONTHS} (termina en 2054).`);
   L.push('');
-  L.push('**Indicadores (0-100 salvo CO2):**');
-  L.push(`- Biodiversidad: ${i.biodiversity.toFixed(1)}`);
+  // Phase 50: each bounded indicator with its target ("va hacia"), CO2 by source, G and J (src/game/modelView.ts).
+  const towards = (k: keyof typeof i) => {
+    const target = indicatorTarget(g, k);
+    return target === null ? '' : ` (va hacia ${target.toFixed(1)})`;
+  };
+  L.push('**Indicadores (0-100 salvo CO2). "Va hacia" es el objetivo al que se mueve cada uno con las decisiones y el territorio actuales:**');
+  L.push(`- Biodiversidad: ${i.biodiversity.toFixed(1)}${towards('biodiversity')}`);
   L.push(`- CO2eq per cápita: ${i.co2EqEmissionsPerCapita.toFixed(2)} t (más bajo es mejor)`);
-  L.push(`- Seguridad alimentaria: ${i.foodSecurity.toFixed(1)}`);
-  L.push(`- Seguridad económica: ${i.economicSecurity.toFixed(1)}`);
-  L.push(`- Bienestar social: ${i.socialWellbeing.toFixed(1)}`);
-  L.push(`- Estabilidad política: ${i.politicalStability.toFixed(1)}`);
+  const cv = carbonView(g);
+  if (cv) L.push(`  Por fuente: energía ${cv.energy.toFixed(2)} t, suelo (AFOLU) ${cv.afolu.toFixed(2)} t, cambio de uso ${cv.luc.toFixed(2)} t. Electricidad renovable ${(100 * cv.renewableShare).toFixed(0)}%, eficiencia del resto de la energía ${(100 * cv.efficiency).toFixed(0)}%. Presupuesto de carbono usado: ${cv.budget === null ? 'sin datos aún' : cv.budget.toFixed(2)} (más de 1 = por encima de la senda a 2054).`);
+  L.push(`- Seguridad alimentaria: ${i.foodSecurity.toFixed(1)}${towards('foodSecurity')}`);
+  L.push(`- Seguridad económica: ${i.economicSecurity.toFixed(1)}${towards('economicSecurity')}`);
+  L.push(`- Bienestar social: ${i.socialWellbeing.toFixed(1)}${towards('socialWellbeing')}`);
+  L.push(`- Estabilidad política: ${i.politicalStability.toFixed(1)}${towards('politicalStability')}`);
+  const sv = socialView(g);
+  if (sv) L.push(`- Concentración de la tierra G: ${sv.concentration.toFixed(2)} (inicio ${sv.concentration0.toFixed(2)}; si sube, sube el conflicto). Transición justa J: ${sv.justTransition.toFixed(2)} (bajo con restricciones activas = restringir sin acompañar, sube el conflicto).`);
   L.push(`- Puntaje general: ${i.generalScore.toFixed(0)}`);
   L.push('');
   L.push('**Presiones sectoriales (0-100, alto = más presión sobre el gobierno):**');
-  L.push(`- Agrícola: ${i.ppAgricola.toFixed(0)} | Ambientalista: ${i.ppAmbientalista.toFixed(0)} | Social: ${i.ppSocial.toFixed(0)}`);
+  L.push(`- Agrícola: ${i.ppAgricola.toFixed(0)}${towards('ppAgricola')} | Ambientalista: ${i.ppAmbientalista.toFixed(0)}${towards('ppAmbientalista')} | Social: ${i.ppSocial.toFixed(0)}${towards('ppSocial')}`);
   L.push('');
   L.push('**Finanzas:**');
   L.push(`- Reservas del tesoro: ${Math.round(stella.Reservas_del_Tesoro)} | Deuda: ${Math.round(stella.Deuda)} | PBI real: ${Math.round(stella.PBI_Real)}`);
   if (g.model?.fiscal) {
     const f = g.model.fiscal;
     L.push(`- Deuda/PBI: ${(stella.PBI_Real > 0 ? (100 * stella.Deuda) / stella.PBI_Real : 0).toFixed(0)}% | Saldo primario: ${(stella.PBI_Real > 0 ? (100 * f.primaryBalance) / stella.PBI_Real : 0).toFixed(1)}% del PBI | Intereses/recaudación: ${(100 * f.interestBurden).toFixed(0)}% | Estrés fiscal: ${f.stress.toFixed(2)}`);
+    if (fiscalView(g)?.noFiscalSpace) L.push('- SIN ESPACIO FISCAL: reservas en su piso y deuda por encima del 60% del PBI; usos públicos, pactos y opciones pagas se rechazan.');
     L.push('- Reglas: las reservas no bajan del 2% del PBI (el déficit se paga con deuda); pactos, usos públicos y opciones pagas se pagan con reservas libres y luego con deuda mientras no pase el 60% del PBI; quiebra con deuda > 100% del PBI e intereses > 20% de la recaudación durante 24 meses.');
   }
   L.push(`- Presión fiscal adicional: ${g.additionalTaxPressurePercentage}%`);
