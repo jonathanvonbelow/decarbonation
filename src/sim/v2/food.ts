@@ -7,7 +7,7 @@
  *             ·(1 + 0.06·η_AGUA)·(1 + 0.006)^t·(1 + ε)                 domestic supply (η on the prod channel)
  *   x   = 0.30 + 0.20·η_PEA                                            exported share
  *   ρ   = max(Q/P, 0.001·ρ0)                                           availability per capita (floor: no ln 0)
- *   D_F = 2.5·ln(ρ/ρ0) + 0.6·(E − E0)/50 + cap(situation impulses)     supply and access by income
+ *   D_F = 3.0·ln(ρ/ρ0) + 0.6·(E − E0)/50 + cap(situation impulses)     supply and access by income
  *   F*  = 100·σ(ℓ_F0 + D_F);   F ← relax(F, F*, k_F = CP.Velocidad_Ajuste_Seg_Alimentaria, dt)
  *
  * t is the model time at the start of the step (`model.t`), P the population after this step's growth, and ε the

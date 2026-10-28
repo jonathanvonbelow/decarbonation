@@ -3456,3 +3456,24 @@ C6 16,847 · C7 0,023 · C8 0 · C9 0,000 (idéntico a la 49b; `reports/balance-
 `/play?demo=1` (política, predicción, años, cierre en 2029 tras el arreglo), `/play` N3 en inglés (5 años, panel del
 facilitador con τ₀ y γ sensibles), `/territorio` a 375 px (políticas, meses), landing, docentes, hoja de ecuaciones (κ₁ 3,
 producción N3 F ≥ 31) y cuestionario con `?taller=` (resumen con `modelVersion` `'2.0'` e índices). Sin envío del cuestionario.
+
+## 2026-10-28 — Supabase: alineación no destructiva del esquema de producción y guardado de partidas
+
+**Problema.** Desde el 2026-08-02 el juego de 3 niveles no guardaba nada para usuarios logueados: `createGameSession` daba 400.
+Diagnóstico en la base en vivo: producción seguía con el esquema de mayo (`supabase/schema.sql` v2.6 nunca se aplicó).
+`game_sessions` no tenía `anio_inicio`/`anio_fin` (el código los manda en cada insert); `annual_snapshots` seguía con una
+fila por año (`anio` NOT NULL, UNIQUE (session_id, anio)) mientras el código hace upsert de una fila final por sesión;
+`pre_survey` no tenía `bloque_convocatoria` y su `experiencia_simulacion` era TEXT (el código manda BOOLEAN); `post_survey`
+no tenía `utilidad_sintesis`. Sin triggers ni políticas recursivas (lo que sospechaba `debug_supabase_persistence.md`).
+
+**Arreglo.** `supabase/schema_v26_alineacion_no_destructiva.sql`, aplicado en el SQL Editor (una transacción, idempotente).
+A diferencia de `schema.sql`, no pierde datos: las 210 filas anuales de `annual_snapshots` se copiaron a
+`annual_snapshots_v1_anual` (con verificación de conteo y RLS sin políticas) antes de reestructurar la tabla;
+`pre_survey.experiencia_simulacion` (TEXT, otra pregunta) se renombró a `experiencia_simulacion_v1`; las columnas viejas de
+las encuestas se conservan. Se agregó la política UPDATE de `annual_snapshots` que necesita el upsert.
+
+**Verificación.** Esquema consultado después de aplicar; desde producción (`/play?demo=1`, usuario logueado) se creó una
+sesión con `anio_inicio = 2024` y `model_version = '2.0'`. Hay dos filas de prueba del 2026-10-28 ~19:35–19:37 UTC; la
+primera quedó con `model_version = '1.0'` porque la pestaña usó un build 1.0 en caché del navegador.
+
+**Deudas.** El modo 3 niveles usa `Math.random` en producción (las partidas no son reproducibles por semilla).

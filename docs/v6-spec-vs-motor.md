@@ -221,7 +221,7 @@ documentadas; falta que el equipo las acepte o pida revertirlas (cada una con su
 | 4 | Piso de F de la ruta de producción del N3 | 33 | 31 | Con κ₁ 3,0 `production` N3 caía a 72,5 %; con 31 vuelve a 85 % sin abrir la ruta a `extractive` | 49b |
 | 5 | κ₁ (elasticidad de F a la disponibilidad per cápita) | 2,5 | 3,0 (motor y prototipo, golden regenerado) | Decisión del usuario 2026-10-27 (C6 F N3 14,6 → 16,8) | 49b |
 | 6 | Paso anual del juego de 3 niveles = 12 sub-pasos mensuales | Un paso de dt = 1 (spec 46 §5 solo pedía discretización exacta) | `advanceYear` = 12 × `advance(1/12)` (también en el prototipo) | Con dt = 1 C9 daba 2,05 también en el prototipo | 46 |
-| 7 | Canal de abandono de la bandeja de Territorio: D_Pc += 1,2·max(0, N − 3), vida media 36 meses | No está en la spec 47 ni en el prototipo | Canal propio sin tope | Decisión del usuario 2026-09-19 (ignorar la bandeja debe tumbar al gobierno); calibrado 1,2/3 | 47 |
+| 7 | Canal de abandono de la bandeja de Territorio: D_Pc += 1,2·max(0, N − 3), vida media 36 meses | No está en la spec 47; el prototipo lo replica (`NEGLECT_LOGIT`, `NEGLECT_TOL`, `NEGLECT_TAU_M` en `play_territorio`) | Canal propio sin tope | Decisión del usuario 2026-09-19 (ignorar la bandeja debe tumbar al gobierno); calibrado 1,2/3 | 47 |
 | 8 | Piso de F de producción N1 32 y pisos de E 36/40/36 (ROUTES3) | Spec 49 | Valores del prototipo | Rutas por resultados (fase 49) | 49 |
 | 9 | Escrutinio internacional por c > 1,5·c₀ | c > 12 t (inalcanzable en unidades físicas) | Regla del prototipo | La escala vieja dejaba el evento muerto | 46 |
 | 10 | Estacionalidad de la sequía como exponente del peligro | "probabilidad mensual × w_m" | p_mes = 1 − (1 − p)^(w_m/12) | Conserva la frecuencia anual exacta | 46 |
