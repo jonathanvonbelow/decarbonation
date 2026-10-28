@@ -20,8 +20,8 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 | C-1 | Conversión a CO₂eq con 44/12 antes del per cápita | **OK (modelo 2.0, fase 38)** | La constante `CO2_PER_C = 44/12` vive en `src/sim/v2/carbon.ts` y solo convierte las pérdidas de stock (Mg C/ha) del cambio de uso; los flujos del suelo y la energía ya están en tCO₂e. Se borraron `FACTOR_C_A_CO2EQ` (3,67) y el factor de escala 40 000. |
 | C-2 | Población constante o creciente, y documentada | **OK (fase 38)** | Arranca en `CP.Poblacion_Inicial` (400 000) en todos los niveles y crece `P *= (1 + g)^dt` (exacto: 12 meses = 1 año; antes `1 + g·dt`). Documentada en el manual del facilitador y el de ecuaciones. |
 | C-3 | Balance neto: ¿flujo o stock acumulado? | **OK (fase 38): ambos** | `co2EqEmissionsPerCapita` es el flujo anual (energía + suelo + cambio de uso) / población; el acumulado vive en `model.cumulativeEmissions` (Σ E_total·dt) y alimenta el índice de presupuesto `carbonBudgetIndex` (B_t, > 1 = sobre el presupuesto). |
-| C-4 | Sinergia CR+C: ¿antes o después de instrumentos? | PENDIENTE | No se encontró una sinergia explícita CR+C en el bloque de carbono (`src/sim/carbon.ts`); sí existe una sinergia CR+C en biodiversidad (`Sinergia_AS_CR_Bio_Factor`, distinta). Revisar si el manual describe una sinergia de carbono que el código no implementa. |
-| C-5 | Antagonismo C+SE: ¿multiplicativo o aditivo? | PENDIENTE | No identificado en el bloque de carbono actual. |
+| C-4 | Sinergia CR+C: ¿antes o después de instrumentos? | **CERRADO (fases 34/38)** | No existe sinergia de carbono CR+C; el manual dejó de describirla en la 34 (N-08) y el carbono físico de la 38 no la tiene. La única sinergia con CR es la de biodiversidad (+0,10·min(η_AS, η_CR), fase 40). |
+| C-5 | Antagonismo C+SE: ¿multiplicativo o aditivo? | **OK (fase 38): multiplicativo** | Energía per cápita `ε0·y^0,3·(1 + 0,15·η_SE^land)·[0,35(1 − s) + 0,65(1 − u)]`: SE multiplica las emisiones energéticas y CN baja s/u, así que se componen multiplicativamente (`src/sim/v2/carbon.ts`). |
 | C-6 | Efectos de instrumentos: ¿escalan con esfuerzo o son binarios? | OK | Desde la fase 38 los instrumentos de Neutralidad de Carbono entran por los canales `elec` / `other` (φ con rendimientos decrecientes, fase 36), que mueven los objetivos s* / u*; escalan con el esfuerzo. |
 
 ## Usos del suelo
@@ -29,33 +29,33 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 | ID | Qué verificar | Estado | Nota |
 |---|---|---|---|
 | L-1 | ¿Toda tasa A→B resta de A exactamente lo que suma a B? | **OK (modelo 2.0, fase 37)** | Toda transición es una transferencia: la matriz 2.0 (`src/sim/v2/land.ts`) aplica cada flujo como `A_i −= F·dt·escala_i; A_j += lo mismo`, y los efectos `landUseChange` de eventos y situaciones pasan por `applyLandEffects` (pares ± = transferencia directa; pérdida suelta → barbecho FAL; ganancia suelta desde FAL, PRG, CC). INV-01 vale con eventos a 1e-9 kHa (`tests/sim/invariants.spec.ts`, 50 semillas × 30 años). Historia: en 1.0/1.1 la sequía severa retiraba área de CC y CA sin destino (~16 kHa en una corrida). |
-| L-2 | ¿Puede un uso llegar a área negativa? ¿Normalización proporcional? | DOCUMENTAR | El clamp final (`Math.max(0, area)`) es independiente por uso, no proporcional. Con las tasas actuales no se observó ningún uso llegar a 0 en 20 años de simulación sin políticas (BNNP bajó de 100 a 68.4), así que el caso límite no se disparó en las pruebas — pero el código no lo previene si ocurriera. Documentar el riesgo; no se evidenció como problema activo en este ciclo. |
+| L-2 | ¿Puede un uso llegar a área negativa? ¿Normalización proporcional? | **OK (fase 37)** | La matriz 2.0 realiza los flujos con dt exacto y sin negativos (`realiseLandFlows`): ningún flujo saca más área de la que tiene su origen. INV-01 y los casos extremos de la fase 51 (todo el territorio en un uso, `tests/sim/extremes.spec.ts`) lo verifican. |
 | L-3 | ¿Tasas moduladas por eficiencia de política o constantes? | OK | Sí, moduladas: cada tasa final es `(Base + eff*factor) * changeFactor` (`src/sim/landUse.ts`), no una constante. |
 | L-4 | ¿Hay caminos de retorno para todos los usos? | **OK (modelo 2.0, fase 37)** | Plantaciones (PF) y pasturas (PRG) participan del pool agrícola por renta (CC, CA, PRG, PF y barbecho) con rentas ancladas; el barbecho rebrota a BNNP (5 %/año) y vuelve al pool (25 %/año). Siguen sin retorno, a propósito, BNP (protegido) y los usos públicos HUM/ENR (solo los crea una declaración). |
-| L-5 | Áreas iniciales: ¿reparto plausible documentado? | PENDIENTE | `INITIAL_LAND_USES` reparte 20% parejo entre 5 usos (100 kHa c/u de 500 kHa total) — valores de maqueta, tal como anticipaba el archivo `16`. Falta definir un reparto inspirado en un territorio subtropical real (tipo Bosque Atlántico) y documentar la fuente. |
+| L-5 | Áreas iniciales: ¿reparto plausible documentado? | **ABIERTO (deuda, fase 51)** | Las áreas de los niveles siguen siendo de maqueta (N1 500 kHa, N2/N3 600 kHa; bosque 20 / 16,7 %). El modelo 2.0 ancla todo al estado inicial, así que el reparto no rompe nada, pero falta documentar una fuente territorial (tipo Bosque Atlántico). |
 
 ## Indicadores y presiones
 
 | ID | Qué verificar | Estado | Nota |
 |---|---|---|---|
-| I-1 | ¿Los pesos `Factor_Impacto_*_Peso` suman 1 por indicador? | PENDIENTE | No verificado numéricamente contra `CONTROL_PARAMS` en este ciclo. |
-| I-2 | ¿El cambio es aditivo (Δ) o se recalcula el nivel? | **OK (modelo 2.0, fase 39): relajación** | E, conflicto (W) y colapso (St) relajan exacto hacia un objetivo logístico anclado, `X ← X* + (X − X*)(1 − k)^dt` con `X* = 100·σ(logit(X₀) + D)` (`src/sim/v2/indicators.ts`); 12 pasos mensuales = 1 anual. B y F siguen aditivos (1.1) hasta las fases 40/41. |
+| I-1 | ¿Los pesos `Factor_Impacto_*_Peso` suman 1 por indicador? | **OBSOLETO (fases 39–42)** | Los pesos `Factor_Impacto_*` e `INDICATOR_IMPACT_WEIGHTS` se borraron: cada indicador relaja hacia su objetivo logístico con impulsores propios (`src/sim/v2/`). |
+| I-2 | ¿El cambio es aditivo (Δ) o se recalcula el nivel? | **OK (modelo 2.0, fases 39–42): relajación** | E, conflicto (W) y colapso (St) relajan exacto hacia un objetivo logístico anclado, `X ← X* + (X − X*)(1 − k)^dt` con `X* = 100·σ(logit(X₀) + D)` (`src/sim/v2/indicators.ts`); 12 pasos mensuales = 1 anual. B (40), F (41) y las presiones (42) también. |
 | I-3 | Clamping: ¿al final o término a término? | **OK (fase 39): sin recortes en E, C, Pc** | El objetivo logístico vive en (0, 100) y la relajación no sale de ahí: E, W, St no necesitan clamp ni topes ±4 por término. El clamp final `[0,100]` (paso 11 de `advance`) queda para B, F y las presiones 1.1. |
 | I-4 | Curva S de presiones: ¿`f(0)=f(100)=0`? | OK (fase 42) | Desde la fase 42 las tres presiones relajan hacia un objetivo logístico anclado `π* = 100·σ(ℓ_π0 + D_π)` (`src/sim/v2/pressures.ts`): la curva S que el manual prometía existe, y las presiones viven en el interior del rango (ninguna estrategia del arnés toca 0 ni 100 a 30 años; `extractive` llega a π_e ≈ 75 en N1). El impulso lineal con disipación de 1.1 (`src/sim/pressures.ts`) se borró. |
 | I-5 | Años para que una presión de 80 vuelva a 50 sin acción | OK (fase 42, medido) | N2 sin políticas, paso mensual, sin eventos: agrícola 1,67 años (20 meses), ambientalista 1,83 (22), social 1,50 (18). Con k_π = 0,35 el camino de 80 a 50 hacia π₀ = 20–25 tarda ≈ ln((50 − π₀)/(80 − π₀))/ln(0,65); el resto lo aporta la realimentación por W y St. |
 | I-6 | Estabilidad política vs. polarización: ¿tres presiones altas y parejas? | **OK (fase 39)** | D_Pc suma dos términos continuos: polarización `0,5·(max π − min π − pol₀)/30` y nivel medio `0,6·(π̄ − π̄₀)/20` (`drivePc`). Tres presiones altas y parejas suben el colapso por el nivel medio aunque no haya polarización. Los umbrales individuales de 70 y `Umbral_polarizacion` se borraron. Transitorio: las presiones 1.1 se saturan en 0/100 hasta la fase 42. |
-| I-7 | Retroalimentación biodiversidad → seg. alimentaria → presión agrícola sin amortiguar | PENDIENTE | No se buscaron bucles positivos sin amortiguación en este ciclo; requiere el harness de sensibilidad (Fase 5). |
+| I-7 | Retroalimentación biodiversidad → seg. alimentaria → presión agrícola sin amortiguar | **OK (fase 51)** | Todo bucle pasa por relajaciones con k < 1 hacia objetivos logísticos acotados. Sin eventos, sin políticas y con tendencias exógenas y frontera quietas, todas las variables convergen (|Δ| < 0,01 desde el año 60; `tests/sim/extremes.spec.ts`); Morris (`reports/sensitivity-2.0.md`) no muestra divergencias. |
 
 ## Políticas y economía
 
 | ID | Qué verificar | Estado | Nota |
 |---|---|---|---|
-| P-1 | Decaimiento exponencial: ¿eficiencia al año 10? | **CORREGIR** | Confirmado con datos reales por `scripts/simulate.ts` (Fase 5, `reports/routes-calibration.md`): la mayoría de las políticas tienen `efficiencyDecayDuration` de 5-7 años, muy por debajo de los 30 años de un nivel — con `e^(-30/6) ≈ 0,007`, una política activada una sola vez queda con ~0,7% de eficiencia mucho antes de terminar el nivel. Peor aún: `Tiempo_Activacion_X` (el stock que alimenta el decaimiento) nunca se resetea al desactivar una política (`src/sim/policies.ts`, confirmado por grep en todo `src/`), así que ni siquiera desactivar y reactivar la misma política ayuda — el `POLICY_LOCK_IN_DURATION` de 5 años sugiere que sí debería. Esto explica por qué `economicSecurity` casi no responde a ninguna estrategia probada (ver hallazgo 1 de `reports/routes-calibration.md`). Candidato a arreglo real: resetear el contador al desactivar, con su propio test de regresión — no se toca en esta fase (afecta ecuaciones ya congeladas en la Fase 2, y un cambio de balance de este tamaño necesita su propia calibración dedicada, no una corrección de paso dentro de la Fase 5). |
-| P-2 | Esfuerzo 0 ⇒ eficiencia 0 en nivel 2+: ¿está bien comunicado? | OK (código) / pendiente (UX) | Confirmado en `getPolicyEfficiency` (`src/sim/policies.ts`): `baseEfficiency * (totalInstrumentEffortApplied / 100)`. La comunicación al jugador es tarea de la Fase 9 (tutoriales), ya prevista ahí explícitamente. |
-| P-3 | Costos: ¿escalan con eficiencia o solo con PBI? | DOCUMENTAR | `computeTotalPolicyCost` (`src/sim/policies.ts`) usa `costFactor * PBI_Real`, **sin** escalar por eficiencia — una política vieja y decaída cuesta lo mismo que una recién activada. Es una decisión válida pero debe decirse explícitamente (coincide con la sospecha del archivo `16`). |
+| P-1 | Decaimiento exponencial: ¿eficiencia al año 10? | **RESUELTO (fase 36)** | La eficiencia es `(1 − e^(−τ/λ))·[η_min + (1 − η_min)·e^(−T/δ)]` con piso institucional `Eficiencia_Minima_Politicas` (0,35), puesta en marcha que vuelve a 0 al desactivar y desgaste que se recupera en reposo (`Recuperacion_Politicas_Anios`). Ver la sección de la fase 36. |
+| P-2 | Esfuerzo 0 ⇒ eficiencia 0 en nivel 2+: ¿está bien comunicado? | **OK (fases 36/50)** | χ = Σ μ·φ(e)/Σ μ·φ(25) vale 0 sin esfuerzo (`channelStrength`); la UI muestra el estado de cada política (`policyStatus`, fase 50). |
+| P-3 | Costos: ¿escalan con eficiencia o solo con PBI? | **RESUELTO (fases 36/44)** | Costo `κ·Y·(0,3 + 0,7·ē)`: escala con el esfuerzo (30 % fijo), no con la eficiencia, y entra en el saldo primario contra el gasto base γ (fase 44). |
 | E-1 | Intereses: ¿simples o compuestos? ¿Antes o después del capital? | OK | Simples sobre la deuda al inicio del paso, `i(d)·D` con prima de riesgo `i_N + 0,05·max(0, D/Y − 0,6)` desde la fase 44 (`src/sim/v2/finance.ts`); intereses y amortización `α_N·D` salen juntos de las reservas × dt. |
 | E-2 | ¿El tesoro puede quedar negativo? ¿Hay default? | RESUELTO (fase 44) | Ya no: las reservas no bajan de 0,02·PBI; el faltante se financia con deuda automáticamente (`stepFinance`). El default es explícito: quiebra cuando D/Y > 1 y intereses/recaudación > 0,20 durante 2 años seguidos (24 meses en Territorio; `model.fiscal.breachYears`, `isBankrupt`); la regla 1.1 (R < −0,2·Y y D > 1,5·Y, inalcanzable) se borró de `gameOver.ts`. |
-| E-3 | Impuesto adicional: ¿óptimo trivial en 0% o 20%? | PENDIENTE | Requiere el barrido de sensibilidad del harness (Fase 5). |
+| E-3 | Impuesto adicional: ¿óptimo trivial en 0% o 20%? | **OK (fase 51)** | No es trivial: τ = 20 durante 30 años en N3 deja E ≈ 15 y conflicto ≈ 72 con deuda casi nula (`tests/sim/extremes.spec.ts`); τ solo conviene para financiar una cartera cara. La tasa base τ₀ es el factor más influyente del análisis de Morris junto con γ. |
 | E-4 | Crecimiento del PBI: ¿puede ser negativo indefinidamente? | RESUELTO (fase 44) | g = 0,02 + 0,01·η_PIE + 0,005·η_PEA − 0,0002·τ − 0,01·φ: con τ ≤ 20 y φ ≤ 1 el piso es 0,02 − 0,004 − 0,01 = +0,006 por año, así que el PBI no decrece por la ecuación (solo por eventos). El estrés fiscal acota el crecimiento en lugar de llevarlo a una espiral; la quiebra llega antes por D/Y. |
 | S-1 | Puntaje: ¿pesos por nivel suman 1? ¿Componentes normalizados a [0,1]? | RESUELTO (v6 fase 49) | `src/sim/score.ts`: pesos en `SCORE_WEIGHTS`, test INV-14 en `tests/sim/score.spec.ts`. Componentes en [0, 100]: el carbono se ancla al CO₂ inicial del nivel, C_sc = 100·clip((1,25·c₀ − c)/c₀, 0, 1), y el PBI al inicial, Y_sc = min(100, 100·Y/(2·Y₀)) (antes, `c/12` y un techo fijo de 25 000). |
 
@@ -64,8 +64,9 @@ este ciclo. Se actualiza a medida que cada ítem se revisa.
 - [x] `src/sim/` no importa `react` ni `@google/genai`.
 - [x] Extracción cubierta por `tests/sim/stepYear.spec.ts` (pureza, determinismo) e
       `tests/sim/invariants.spec.ts` (6 invariantes vía `fast-check`).
-- [ ] Los 14 invariantes completos de `16` §3 — 6 cubiertos, 8 pendientes (harness Fase 5).
-- [ ] `reports/balance.md` (Monte Carlo, 8 estrategias) — pendiente, Fase 5.
+- [x] Invariantes: `tests/sim/invariants.spec.ts` (INV-01…INV-16 vigentes) y los casos extremos de la fase 51 (`tests/sim/extremes.spec.ts`).
+- [x] Balance Monte Carlo: `npm run sim:check` (`reports/balance-2.0.md`, criterios C1–C9; fases 33 y 49–51).
+- [x] Sensibilidad: `scripts/sensitivity.ts` (Morris, `reports/sensitivity-2.0.md`; fase 51).
 - [x] Un hallazgo real documentado (L-1: eventos rompen la conservación de área) con su etiqueta
       y sin corrección apresurada.
 
@@ -105,7 +106,8 @@ guarda la versión; ningún análisis mezcla versiones sin estratificar. Nunca s
 |---|---|---|
 | Modelo 1.0 — commit 144c321 — estado auditado el 19/10/2026 | `144c321`, tag local `model-v1.0` (pendiente de `git push origin model-v1.0`) | Modelo con el que se recolectaron todos los datos de talleres hasta la fase 32 del paquete v6. Las filas existentes quedan con `'1.0'` (default de la migración `supabase/model_version_migration.sql`). |
 | Modelo 1.1 — correcciones de la auditoría (fase 34, 22/10/2026) | rama `v6-modelo-1-1`, tag local `model-v1.1` | Cambia trayectorias en los dos juegos; detalle por ID en la sección siguiente y balance en `reports/balance-1.1.md`. |
-| Modelo 2.0 — en desarrollo, `'2.0-dev'` (fase 35, 22/10/2026) | rama `v6-modelo-v2` | Estructura del motor 2.0 (`src/sim/v2/`); las ecuaciones siguen siendo las 1.1. Única diferencia numérica: el Nivel 1 arranca con `Colapso_politico` = 5 (ver la sección de la fase 35). Las fases 36–46 reemplazan cada submodelo; la versión `2.0` se publica en la fase 51. |
+| Modelo 2.0-dev — en desarrollo (fases 35–50, 22–28/10/2026) | rama `v6-modelo-v2` | Cadena intermedia: `'2.0-dev'` mientras las fases 36–49b reemplazaban cada submodelo. Ninguna fila de investigación debe llevar esta versión (la rama no recolectó datos). |
+| Modelo 2.0 — publicado en la fase 51 (28/10/2026) | rama `v6-modelo-v2`, tag local `model-v2.0` (pendiente de push y de mover tras el merge, `docs/v6-checklist-equipo.md`) | Motor 2.0 completo para los dos juegos (`MODEL_VERSION_BY_GAME` ambos `'2.0'`, decisión 3): integrador único `advance`, anclas, relajación logística, carbono físico, finanzas con quiebra, eventos independientes, situaciones como impulsos. Validación en la sección de la fase 51; balance en `reports/balance-2.0.md`, sensibilidad en `reports/sensitivity-2.0.md`. |
 
 ## Modelo 1.1 — correcciones de la auditoría (fase 34, 2026-10-22)
 
@@ -149,7 +151,7 @@ pasos 2 y 4 de `advance` (`src/sim/v2/core.ts`). Verificado con `npm run sim:che
 | N-01 / T-02 (residual) | Neutralidad de Carbono ya no depende de un `stellaName`: todas las políticas leen λ, δ y κ por id (`PID_OF`); INV-15 verifica que las diez tengan las tres. 10 años ⇒ 0,772. | `src/sim/v2/policies.ts`, `tests/sim/invariants.spec.ts` | Ninguno adicional. |
 | N-02 / P-2 | El esfuerzo cuenta en todos los niveles: canal χ^c = Σ μ_k φ(e_k) / Σ μ_k φ(25), φ(e) = 1 − e^(−e/40), con relevancias por instrumento (`INSTRUMENT_CHANNELS`, orden = `INITIAL_POLICY_INSTRUMENTS`). Reparto parejo ⇒ χ = 1 (el Nivel 1 juega siempre así); 12,5 por instrumento ⇒ 0,58; esfuerzo 0 ⇒ 0. Los submodelos 1.1 leen `getPolicyEfficiency` = η·χ^prod. | `src/sim/v2/params.ts`, `src/sim/policies.ts` | Con reparto parejo, nada cambia respecto del esfuerzo; concentrar (N2+) sube el canal de los instrumentos relevantes y baja el resto (antes daba igual cómo se repartiera). |
 | T-06 | La eficiencia que se muestra al activar es la de los relojes (`baseEfficiency`: 0 al activar, "en marcha"), y reactivar conserva el desgaste acumulado (el reloj T no se reinicia). | `App.tsx`, `src/territorio/session.ts` | Ninguno sobre trayectorias. |
-| P-3 | El costo sigue al esfuerzo: `K = κ·Y·(0,3 + 0,7·ē)`, ē = min(100, Σ e_k)/100. **Escala transitoria**: κ = `costShareBridge` (los viejos `costFactor`) hasta que la fase 44 agregue el gasto base y pase a `costShare`. | `src/sim/v2/policies.ts` (`policyCost`, `costShareOf`) | Con reparto parejo (100 %) el costo es el de 1.1; una política con menos esfuerzo cuesta menos (30 % fijo). |
+| P-3 | Costos: ¿escalan con eficiencia o solo con PBI? | **RESUELTO (fases 36/44)** | Costo `κ·Y·(0,3 + 0,7·ē)`: escala con el esfuerzo (30 % fijo), no con la eficiencia, y entra en el saldo primario contra el gasto base γ (fase 44). |
 | N-08 (parte) | Las pistas de instrumentos dejan de ser solo orientativas: el aviso dice qué canal lee hoy el motor. Aviso de desgaste nuevo (factor `e^(−T/δ)` < 0,5, una vez por cruce) y estados "en marcha (NN %)" (rampa < 0,9) / "desgastada" en los dos juegos. | `src/sim/policies.ts`, `PolicyToggle.tsx`, `src/territorio/panels.tsx`, i18n | Ninguno numérico. |
 
 
@@ -372,3 +374,53 @@ Decisión del usuario del 2026-10-27 sobre el criterio C6 (opción 3: ajustar la
 |---|---|---|---|
 | C6 (F N3) | κ₁ = 2,5 → 3,0 en D_F = κ₁·ln(ρ/ρ₀) + 0,6·(E − E₀)/50: +20 % de disponibilidad por habitante sube F ≈ 13,5 puntos cerca de 40 (antes ≈ 11) | `PARAMS_V2.food.kappa1` (`src/sim/v2/params.ts`), prototipo | Recorrido de F entre estrategias extremas (arnés, 40 semillas con eventos, año 30): N1 19,7 → 22,9; N2 15,9 → 18,3; N3 14,6 → 16,8 (balanced 27,5 → extractive 44,4). `extractive` casi no cambia (su término de oferta ≈ 0); la cartera que exporta sin subir rendimientos (`balanced`, PEA sin PAI) baja ≈ 2 puntos. Territorio F 25,7 → 26,5 |
 | C2 (producción N3) | Piso de F de la ruta de producción del N3 33 → 31 | `src/sim/winRoutes.ts`, `ROUTES3` del prototipo, `docentes-ecuaciones.html` (generada) | `production` N3 85 % (con 33 y κ₁ 3,0: 72,5 %; antes de la 49b 82,5 %). `extractive` sigue en 0 % (falla W ≥ 52), `balanced` no llega (F ≈ 27,5) |
+
+## Modelo 2.0 — validación y cierre (fase 51, 2026-10-28)
+
+Spec: `mejora-general/files/51_validacion_cierre_deploy.md`. `MODEL_VERSION = '2.0'` (los dos juegos). Sin cambios de ecuaciones
+ni parámetros respecto de la 49b (golden, `core.spec.ts` y bandas de predicción sin cambios numéricos; `predictionBands.json`
+y la climatología de `supabase/analytics_queries.sql` solo cambian la etiqueta de versión). Verificado:
+`tests/sim/extremes.spec.ts` (condiciones extremas), `tests/sim/reference.spec.ts` (comportamiento de referencia),
+`scripts/sensitivity.ts` → `reports/sensitivity-2.0.md` (Morris, 30 factores, r = 20), `npm run sim:check` completo
+(`reports/balance-2.0.md`).
+
+| ID | Cambio | Dónde | Efecto en el juego de 3 niveles |
+|---|---|---|---|
+| — | Versión publicada `2.0` (era `2.0-dev`); CHECK de `territorio_feedback` ya la acepta | `src/sim/version.ts` | Toda fila de investigación nueva lleva `'2.0'` |
+| E-3 / I-7 | Validación: casos extremos y convergencia; Morris ordena τ₀ y γ₂ primero (saldo primario) | tests y reportes | Ninguno |
+| N-08 (complemento) | El panel marca también `Tasa_Impositiva_General_Sobre_PBI` como sensible; manual y descripción lo nombran | `paramGroups.ts`, `FacilitatorManual.tsx`, `descriptions.ts` | Ninguno numérico |
+
+### Estado final por ID (auditoría 16 y paquete v6)
+
+| IDs | Estado final | Fase |
+|---|---|---|
+| C-1, C-2, C-3, C-6 | OK | 38 |
+| C-4 | Cerrado: no existe sinergia de carbono | 34/38 |
+| C-5 | OK: multiplicativo | 38 |
+| L-1, L-2, L-4 | OK (matriz conservativa, sin negativos, retornos) | 37 |
+| L-3 | OK | 1.0 |
+| L-5 | **Abierto (deuda)**: áreas iniciales de maqueta, sin fuente territorial | — |
+| I-1 | Obsoleto (pesos borrados) | 39–42 |
+| I-2, I-3, I-6 | OK (relajación logística) | 39–42 |
+| I-4, I-5 | OK (presiones logísticas; tiempos medidos) | 42 |
+| I-7 | OK (convergencia y Morris) | 51 |
+| P-1, P-2, P-3 | Resuelto (puesta en marcha, desgaste con piso, costo por esfuerzo) | 36/44 |
+| E-1, E-2, E-4 | OK / resuelto (finanzas 2.0, quiebra explícita, crecimiento acotado) | 44 |
+| E-3 | OK (τ no trivial) | 51 |
+| S-1 | Resuelto (puntaje anclado) | 49 |
+| N-01, N-02, N-03, N-09, N-14, T-02, T-03, T-06, T-08 | Resueltos en 1.1 y reescritos en 2.0 (CN con desgaste, esfuerzo parejo, pactos como datos, sequía por área real) | 34 → 36/43/46 |
+| N-04, T-04, R-5, R-6 | Resuelto (E, B, F por relajación) | 39–41 |
+| N-05 | Resuelto (conflicto con G y J) | 39/45 |
+| N-06, T-05 | Resuelto (gasto base, κ, saldo primario) | 44/49 |
+| N-07 | Resuelto (eficiencia 2.0) | 36 |
+| N-08 | Resuelto (interfaz honesta, panel completo) | 34/50/51 |
+| N-10, T-09 | Resuelto (eventos independientes, varios por paso) | 46 |
+| N-11, T-10 | Resuelto (puntaje anclado a c₀ e Y₀) | 49 |
+| N-12, T-11, R-4 | Resuelto (inventario físico en tCO₂e) | 38 |
+| N-13 | Resuelto (rutas por resultados, ROUTES3) | 49/49b |
+| T-01, T-07, T-12 | Resuelto (situaciones como impulsos, dinero inmediato) | 47 |
+| N-04b | Resuelto (bandas por terciles, Brier, skill) | 48 |
+| C6 (F N3), C9 | Resuelto (κ₁ = 3,0; 12 sub-pasos mensuales) | 49b / 46 |
+
+Pendientes de visto bueno del equipo (no son ítems de auditoría abiertos, sino decisiones de calibración): ver
+`docs/v6-spec-vs-motor.md`, sección "Requiere visto bueno del equipo".

@@ -3387,3 +3387,72 @@ cambia sus estrategias, revisar C6. Las tasas del prototipo citadas en la 49 §2
 **Verificación.** `npx tsc --noEmit`, `npm test` (47 archivos, 737 tests), `npm run build`, `npm run i18n:audit` limpios;
 `npm run sim:check` completo exit 0 y `--update-latest`. Sin cambios de UI (solo cifras generadas de la hoja docente): sin
 prueba en navegador.
+
+## 2026-10-28 — v6 fase 51: validación y cierre del modelo 2.0 (resumen v6)
+
+Spec: `mejora-general/files/51_validacion_cierre_deploy.md`. **Restricción del usuario:** sin merge a `main`, sin push, sin
+deploy y sin aplicar SQL en Supabase; todo eso queda en `docs/v6-checklist-equipo.md`. Tag local `model-v2.0` sobre el commit
+de esta fase.
+
+**Qué.** (1) `MODEL_VERSION = '2.0'` y `MODEL_VERSION_BY_GAME` ambos `'2.0'` (decisión 3); `predictionBands.json` regenerado
+(solo cambia `modelVersion`, las bandas son idénticas) y la climatología de `supabase/analytics_queries.sql` re-etiquetada;
+el CHECK de `model_version_migration.sql` ya aceptaba `'2.0'`. (2) `scripts/sensitivity.ts`: Morris sobre 30 factores (15 de
+`CONTROL_PARAMS`, 15 de `PARAMS_V2`, las tablas `costShare`/`rampYears`/`fatigueYears`/`bE` con un multiplicador), ±20 %,
+p = 4, r = 20 (1 302 corridas, 73 s), respuestas B, F, E, W, c, D/Y del N2 a 30 años para `green` y `production`, sin
+eventos; más una pasada una-variable-a-la-vez +20 % → `reports/sensitivity-2.0.{md,json}`. (3) `tests/sim/extremes.spec.ts`
+(10 tests: todo en CC, todo en BNP, τ = 20 en N3, cinco políticas caras sin impuestos en N3/N2, población × 10, todo activo al
+máximo alcanzable y un estrés fuera de las reglas de la UI en los tres niveles, velocidades 0 y 1, convergencia con y sin frontera) y `tests/sim/reference.spec.ts` (4 tests:
+deforestación, transición forestal, aprendizaje, recuperación de F). (4) Documentación final: `docs/audit-equations.md`
+(historial 1.0 / 1.1 / 2.0-dev / 2.0, estado final por ID, ítems PENDIENTE cerrados salvo L-5), `docs/v6-spec-vs-motor.md`
+(todas las filas con estado final, sección "Requiere visto bueno del equipo"), `CLAUDE.md` (arquitectura 2.0, comandos del
+arnés, regla de versiones que reemplaza "el juego de 3 niveles no cambia de comportamiento"), `src/sim/v2/README.md`.
+(5) Panel del facilitador: `Tasa_Impositiva_General_Sobre_PBI` se suma a `SENSITIVE_PARAM_KEYS`; manual y descripción lo nombran.
+(6) Bug de QA preexistente (también en `main`): `/play?demo=1` llegaba a 2054 porque `runSimulationRound` restauraba
+`activeLevelConfig` desde `LEVEL_CONFIGS` y perdía el `targetYear` corto de la demo; ahora se conserva, y el reintento y el
+cambio manual al nivel 1 en la demo vuelven a aplicar `withDemoTargetYear` (la demo cierra en 2029).
+(7) Revisión de código: Morris lee siempre el año 30 (un fin de partida se registra y el modelo sigue; antes un efecto
+elemental podía comparar el año 30 con un estado congelado en la quiebra; el orden no cambió), el aviso de γ del reporte es
+condicional, `activatePolicies` del arnés recibe el CP de la corrida (default `CONTROL_PARAMS`: el arnés no cambia), la
+climatología de `analytics_queries.sql` conserva también las filas `'2.0-dev'`, y las secciones escritas a mano de
+`reports/sensitivity-2.0.md` sobreviven a la regeneración (marca HTML).
+
+**Resultados de sensibilidad (top 5 del índice global).** τ₀ `Tasa_Impositiva_General_Sobre_PBI` 0,68 · γ₂
+`Gasto_Publico_Base_Nivel_2` 0,60 · `Eficiencia_Minima_Politicas` 0,31 · `Tasa_Crecimiento_Poblacional_Base` 0,31 ·
+`fatigueYears` 0,26. τ₀ y γ₂ actúan por la misma vía (saldo primario, 2,5 % del PBI antes de las políticas) con un umbral:
+σ ≈ μ\*. OAT +20 % de γ₂ con `green`: ΔE −14,4, ΔW −23,6 y quiebra en 2051 (prototipo −13,6 / −22,6): el aviso del panel se
+confirma. Las velocidades de ajuste casi no cambian el estado a 30 años (índice ≤ 0,035), como esperaba la spec.
+
+**Desvíos de la spec.** (a) r = 20 en lugar de 10. (b) γ no es el único dominante: τ₀ queda primero (el prototipo solo probó
++20 %, que no ve el lado del déficit). (c) κ₁ (spec: tercero) queda 14.º. (d) Convergencia a 100 años: con población y PBI
+constantes no converge (máx |Δ| 0,056, también en el prototipo) porque la frontera sigue talando; con las tasas de frontera
+en 0 sí (|Δ| < 0,001 desde el año 30): la condición de la spec estaba incompleta. (e) "Todo en CC: F ≈ 87": el motor y el
+prototipo corregido dan 91,2. (f) Recuperación de F: ≈ 1,65 / 5,6 años en el motor (1,61 / 5,35 analítico) por la
+realimentación por E. (g) En los casos "todo en un uso" los tests re-anclan el pool agrícola como el `Aag0` perezoso del
+prototipo; con eso coinciden al decimal (sin re-anclar, B 26 en lugar de 20,6). (h) El paper técnico no está en el repo.
+
+**Resumen v6 (fases 32–51).** 32 versión del modelo en cada fila de investigación (`MODEL_VERSION`, migración, reintentos sin
+columna). 33 arnés `sim:check` con criterios C1–C9 y estrategias canónicas del prototipo. 34 modelo 1.1 (rama `v6-modelo-1-1`):
+CN con desgaste, esfuerzo parejo, pactos como impulsos, sequía por área real, interfaz honesta. 35 estructura 2.0: `advance`
+único, `PARAMS_V2`, anclas, golden. 36 políticas: puesta en marcha, desgaste con piso y recuperación, canales por instrumento,
+costo por esfuerzo. 37 matriz de uso del suelo conservativa con barbecho y pool por renta anclada. 38 carbono en tCO₂e
+(energía, suelo, cambio de uso, presupuesto). 39 E, conflicto y colapso por relajación logística. 40 B por especies-área y
+conectividad (Territorio). 41 F por balance oferta/demanda. 42 presiones logísticas ancladas. 43 pactos como datos
+(desplazamientos, frontera, costos ∝ PBI). 44 finanzas con gasto base, deuda automática, prima de riesgo y quiebra explícita.
+45 concentración G y transición justa J en el conflicto. 46 eventos independientes, choque AR(1), estacionalidad y paso anual
+de 12 sub-pasos (C9 = 0). 47 situaciones de Territorio como impulsos y canal de abandono. 48 bandas de predicción por
+terciles, Brier/skill e índices de investigación. 49 rutas y puntaje por resultados, anclados. 50 interfaz, manuales, hoja
+docente generada y DecarboNito al día. 49b κ₁ 3,0 para C6. 51 validación y cierre.
+
+**Deudas abiertas al cierre.** Territorio a 375 px: la fila de controles se superpone con los íconos de paneles y el puntaje
+(QA de esta fase; la 50 no revisó celular). Barra de progreso en 0 para condiciones de estado (renovables, bosque, D/Y,
+pactos). L-5: áreas iniciales de maqueta. K puede subir al talar un parche aislado (definición de la spec). Dev server en
+blanco sin `.env.local`. Territorio `production` gana 80 % (margen 10 pp sobre C2/C5). Once decisiones de calibración
+esperan visto bueno (`docs/v6-spec-vs-motor.md`). DecarboNito no se probó con respuestas reales (clave de relleno).
+
+**Verificación.** `npm run sim:check -- --update-latest` completo, exit 0, C1 0,000 · C2 0,800 · C3 0,050 · C4 0,000 · C5 0 ·
+C6 16,847 · C7 0,023 · C8 0 · C9 0,000 (idéntico a la 49b; `reports/balance-2.0.{md,json}`, `balance-latest.json`).
+`npx tsc --noEmit`, `npm test` (49 archivos, 751 tests), `npm run build`, `npm run i18n:audit`, `prediction-bands.ts --check`,
+`params-table-html.ts --check`, `routes-table-html.ts --check` limpios. Navegador (dev server con clave de Gemini de relleno):
+`/play?demo=1` (política, predicción, años, cierre en 2029 tras el arreglo), `/play` N3 en inglés (5 años, panel del
+facilitador con τ₀ y γ sensibles), `/territorio` a 375 px (políticas, meses), landing, docentes, hoja de ecuaciones (κ₁ 3,
+producción N3 F ≥ 31) y cuestionario con `?taller=` (resumen con `modelVersion` `'2.0'` e índices). Sin envío del cuestionario.

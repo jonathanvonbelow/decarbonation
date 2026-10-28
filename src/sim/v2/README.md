@@ -1,6 +1,6 @@
 # `src/sim/v2/` — motor del modelo 2.0
 
-Esqueleto del modelo 2.0 de DecarboNation (paquete v6, `mejora-general/files/35`–`51`). El prototipo ejecutable de
+Motor del modelo 2.0 de DecarboNation (paquete v6, `mejora-general/files/35`–`51`; `MODEL_VERSION = '2.0'` desde la fase 51, los dos juegos). El prototipo ejecutable de
 todas las ecuaciones es `scripts/reference/modelo_v2.py`; sus valores sin eventos están en
 `scripts/reference/golden_v2.csv`. **El prototipo manda en las ecuaciones, el arnés (`npm run sim:check`) en la
 calibración.**
@@ -61,7 +61,9 @@ avanza 12·dt meses y cambia de año después de diciembre). `stepMonth` = `adva
 | 46 | paso 3: eventos con sorteo independiente, choques de nivel, ε AR(1) (`src/sim/events.ts`, `PARAMS_V2.events`); paso anual = 12 sub-pasos mensuales; `deferred.ts` borrado; `GOLDEN_ACTIVE = true` | hecho (golden activo y exacto) |
 | 47 | Territorio: situaciones como impulsos del objetivo (`model.impulses`, vida media 18 meses, tope ±0,6, descarte a 6τ; `PARAMS_V2.situations`), descuido del escritorio sobre D_Pc (`AdvanceOptions.wear.Pc`), `investmentScale` √(Y/Y₀) en costos de situaciones y lotes | hecho (`SITUATION_EFFECT_SCALE` borrado; prototipo sin golden nuevo) |
 | 48 | fuera de `advance`: bandas de predicción por terciles (`scripts/prediction-bands.ts`), índices de investigación (`research.ts`, `PARAMS_V2.research`) | hecho (el modelo no cambia) |
+| 49 / 49b | fuera de `advance`: rutas (`winRoutes.ts`, `src/territorio/routes.ts`) y puntaje (`score.ts`) anclados; 49b: κ₁ 2,5 → 3,0 (`food.kappa1`) | hecho (golden regenerado en la 49b) |
 | 50 | fuera de `advance`: interfaz, manuales, hoja docente y DecarboNito leen el submodelo con `src/game/modelView.ts`; `advanceYear` anota `eventsThisYear` (solo contabilidad) | hecho (el modelo no cambia) |
+| 51 | validación: `tests/sim/extremes.spec.ts`, `tests/sim/reference.spec.ts`, `scripts/sensitivity.ts` (Morris → `reports/sensitivity-2.0.md`); `MODEL_VERSION = '2.0'` | hecho (el modelo no cambia) |
 
 ## Convenciones
 
@@ -181,3 +183,12 @@ Fase 49b (2026-10-28, decisión del usuario del 2026-10-27 sobre C6, opción 3):
 ecuación: `PARAMS_V2.food.kappa1` 2,5 → 3,0 (también en el prototipo; golden, `food41`/`indicators39`/`pressures42_cases.json`,
 trayectorias de `core.spec.ts` y bandas de predicción regenerados). El piso de F de la ruta de producción del N3 pasa de 33 a 31
 (`winRoutes.ts` y `ROUTES3` del prototipo) para que `production` N3 conserve su tasa. C6 F N3 16,8 (antes 14,6); C1–C9 PASS.
+
+Fase 51 (2026-10-28): sin recortes de ecuación ni de parámetros. Desvíos de la spec: (1) Morris con r = 20 trayectorias (la spec
+pide 10; 100 ms por corrida) y rango ±20 % del nominal; `Gasto_Publico_Base_Nivel_2` sale segundo, detrás de
+`Tasa_Impositiva_General_Sobre_PBI` (los dos fijan el saldo primario). (2) La convergencia a 100 años sin políticas ni tendencias
+(spec §2) solo se cumple si también se aquietan las tasas de frontera: con población y PBI constantes el bosque no protegido
+sigue cayendo ~1 %/año (igual en el prototipo); los dos casos están en `tests/sim/extremes.spec.ts`. (3) En los casos "todo el
+territorio en un uso" los tests re-anclan el pool agrícola (`anchors.agriAreas0`) a la mezcla nueva, como el `Aag0` perezoso
+del prototipo; con eso el motor coincide con el prototipo al decimal. Recortado: el paper técnico del modelo 2.0 (§4 de la
+spec) no está en el repo; sus tablas se actualizan fuera con `reports/balance-2.0.md` y `reports/sensitivity-2.0.md`.

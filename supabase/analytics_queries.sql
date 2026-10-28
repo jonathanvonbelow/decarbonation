@@ -344,7 +344,7 @@ ORDER BY created_at;
 --   Brier categórico de una predicción determinista: 0 si acierta, 2 si falla.
 --   SS_pers = 1 − Brier_jugador / Brier_persistencia;  SS_clim = 1 − Brier_jugador / Brier_climatología.
 -- La climatología son las proporciones a priori del nivel (src/components/tutorial/predictionBands.json, campo
--- `climatology`); el bloque VALUES de abajo la copia para model_version '2.0-dev' y hay que regenerarlo
+-- `climatology`); el bloque VALUES de abajo la copia para model_version '2.0' (y '2.0-dev', mismas proporciones) y hay que regenerarlo
 -- cuando cambie el JSON (npx tsx scripts/prediction-bands.ts).
 -- =============================================================================
 
@@ -365,6 +365,16 @@ GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
 -- SS_pers y SS_clim por versión del modelo, nivel e indicador (solo filas con persistence_pred: modelo 2.0)
 WITH clim(model_version, level, indicator, p_down, p_flat, p_up) AS (
   VALUES
+    ('2.0', 1, 'biodiversity', 0.3294, 0.3333, 0.3372),
+    ('2.0', 1, 'economicSecurity', 0.2437, 0.3333, 0.4229),
+    ('2.0', 1, 'co2EqEmissionsPerCapita', 0.5144, 0.3334, 0.1522),
+    ('2.0', 2, 'biodiversity', 0.3204, 0.3338, 0.3458),
+    ('2.0', 2, 'economicSecurity', 0.2556, 0.3334, 0.411),
+    ('2.0', 2, 'co2EqEmissionsPerCapita', 0.4956, 0.3334, 0.171),
+    ('2.0', 3, 'biodiversity', 0.3071, 0.3334, 0.3595),
+    ('2.0', 3, 'economicSecurity', 0.3236, 0.3333, 0.3431),
+    ('2.0', 3, 'co2EqEmissionsPerCapita', 0.5033, 0.3333, 0.1634),
+    -- '2.0-dev' (fases 35–50, mismas bandas): por si alguna fila de prueba quedó con la etiqueta de desarrollo
     ('2.0-dev', 1, 'biodiversity', 0.3294, 0.3333, 0.3372),
     ('2.0-dev', 1, 'economicSecurity', 0.2437, 0.3333, 0.4229),
     ('2.0-dev', 1, 'co2EqEmissionsPerCapita', 0.5144, 0.3334, 0.1522),

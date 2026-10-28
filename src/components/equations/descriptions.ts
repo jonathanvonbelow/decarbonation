@@ -114,8 +114,8 @@ export const DESCRIPTIONS: Record<string, Record<Language, string>> = {
     en: "The first game year in which the option to request loans becomes available to the player (usually in Level 3).",
   },
   Tasa_Impositiva_General_Sobre_PBI: {
-    es: "La tasa impositiva base que se aplica sobre el PBI para calcular los ingresos del gobierno.",
-    en: "The base tax rate applied to GDP to calculate government revenue.",
+    es: "La tasa impositiva base que se aplica sobre el PBI para calcular los ingresos del gobierno. Junto con el gasto público base fija el superávit primario antes de las políticas: en el análisis de sensibilidad (reports/sensitivity-2.0.md) son los dos parámetros más influyentes del modelo.",
+    en: "The base tax rate applied to GDP to calculate government revenue. Together with base public spending it sets the primary surplus before policies: in the sensitivity analysis (reports/sensitivity-2.0.md) they are the two most influential parameters of the model.",
   },
   Tasa_Base_Crecimiento_PBI: {
     es: "La tasa de crecimiento anual 'natural' del PBI, antes de ser modificada por los efectos de las políticas.",

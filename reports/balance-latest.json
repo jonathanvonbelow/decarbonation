@@ -1,10 +1,10 @@
 {
-  "modelVersion": "2.0-dev",
+  "modelVersion": "2.0",
   "modelVersionByGame": {
-    "niveles": "2.0-dev",
-    "territorio": "2.0-dev"
+    "niveles": "2.0",
+    "territorio": "2.0"
   },
-  "generatedAt": "2026-10-28T10:43:10.963Z",
+  "generatedAt": "2026-10-28T11:09:19.853Z",
   "mode": "full",
   "seeds": {
     "niveles": 40,
@@ -296,72 +296,72 @@
     }
   ],
   "comparedWith": {
-    "modelVersion": "1.1",
+    "modelVersion": "2.0-dev",
     "mode": "full",
-    "generatedAt": "2026-10-22T21:09:51.974Z"
+    "generatedAt": "2026-10-28T10:43:10.963Z"
   },
   "changes": [
     {
       "key": "C1_do_nothing_never_wins",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0.075,
+      "valueBefore": 0,
       "valueAfter": 0,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C2_targeted_wins",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0,
+      "valueBefore": 0.8,
       "valueAfter": 0.8,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C3_no_strategy_wins_all",
       "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0.225,
+      "valueBefore": 0.05,
       "valueAfter": 0.05,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C4_shortcuts_closed",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0.35,
+      "valueBefore": 0,
       "valueAfter": 0,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C5_strategy_decides",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 5,
+      "valueBefore": 0,
       "valueAfter": 0,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C6_indicator_range",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0.34063488846351575,
+      "valueBefore": 16.846872035966054,
       "valueAfter": 16.846872035966054,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
       "key": "C7_prediction_band",
-      "before": "FAIL",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 0.6699999999999999,
+      "valueBefore": 0.022888888888888848,
       "valueAfter": 0.022888888888888848,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     },
     {
@@ -375,11 +375,11 @@
     },
     {
       "key": "C9_annual_monthly",
-      "before": "SKIP",
+      "before": "PASS",
       "after": "PASS",
-      "valueBefore": 1.52933295277494,
+      "valueBefore": 0,
       "valueAfter": 0,
-      "change": "improved",
+      "change": "same",
       "regressed": false
     }
   ],
@@ -4195,5 +4195,5 @@
       }
     ]
   },
-  "durationSeconds": 531
+  "durationSeconds": 601
 }

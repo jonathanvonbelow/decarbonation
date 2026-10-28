@@ -53,8 +53,13 @@ export const PARAM_GROUPS_EN: ParamGroup[] = [
  */
 export const RESTART_PARAM_KEYS: NumericParamKey[] = ['Poblacion_Inicial'];
 
-/** Keys whose change the panel flags as sensitive (phase 44: the model's most sensitive parameter). */
-export const SENSITIVE_PARAM_KEYS: NumericParamKey[] = ['Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3'];
+/**
+ * Keys whose change the panel flags as sensitive (phase 44: base public spending; phase 51: the Morris analysis,
+ * reports/sensitivity-2.0.md, ranks the base tax rate first and γ second — together they set the primary surplus).
+ */
+export const SENSITIVE_PARAM_KEYS: NumericParamKey[] = [
+  'Tasa_Impositiva_General_Sobre_PBI', 'Gasto_Publico_Base_Nivel_1', 'Gasto_Publico_Base_Nivel_2', 'Gasto_Publico_Base_Nivel_3',
+];
 
 /**
  * Keys the engine never reads because they only gate the UI: the loan unlock year

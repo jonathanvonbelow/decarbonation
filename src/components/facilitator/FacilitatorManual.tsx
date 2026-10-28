@@ -270,7 +270,7 @@ function buildSlides(lang: Language): { title: string; content: React.ReactNode 
           <li>{L('Políticas', 'Policies')}: <Code>Eficiencia_Minima_Politicas</Code> <Code>Recuperacion_Politicas_Anios</Code></li>
           <li>{L('Finanzas', 'Finance')}: <Code>Tasa_Impositiva_General_Sobre_PBI</Code> <Code>Gasto_Publico_Base_Nivel_1..3</Code> <Code>Tasa_de_interes_Nivel_1..3</Code> <Code>Pago_deuda_anual_Nivel_1..3</Code> <Code>Max_Additional_Tax_Rate_Percentage</Code> <Code>Ano_Activacion_Prestamo</Code></li>
         </ul>
-        <p className="text-sm mt-3 text-yellow-300">{L('Gasto_Publico_Base_* es el más sensible: pequeños cambios deciden si las carteras verdes son viables. Las cifras del modelo son de un juego calibrado, no proyecciones de un territorio real.', 'Gasto_Publico_Base_* is the most sensitive: small changes decide whether green portfolios are viable. The model\'s figures come from a calibrated game, not projections of a real territory.')}</p>
+        <p className="text-sm mt-3 text-yellow-300">{L('Gasto_Publico_Base_* y Tasa_Impositiva_General_Sobre_PBI son los más sensibles (juntos fijan el superávit primario; ver reports/sensitivity-2.0.md): pequeños cambios deciden si las carteras verdes son viables. Las cifras del modelo son de un juego calibrado, no proyecciones de un territorio real.', 'Gasto_Publico_Base_* and Tasa_Impositiva_General_Sobre_PBI are the most sensitive (together they set the primary surplus; see reports/sensitivity-2.0.md): small changes decide whether green portfolios are viable. The model\'s figures come from a calibrated game, not projections of a real territory.')}</p>
       </div>
     ),
   },

@@ -592,7 +592,10 @@ export const App = () => {
         }
     } else if (lastResult?.status === 'lost') {
         const retryLevelNumber = lastResult.level;
-        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(retryLevelNumber, controlParamsRef.current);
+        const retry = createInitialState(retryLevelNumber, controlParamsRef.current);
+        // Phase 51 (QA): a demo retry of level 1 keeps the demo's short level (withDemoTargetYear), like the first start.
+        const gameStatePatch = isDemoRef.current && retryLevelNumber === 1 ? withDemoTargetYear(retry.gameStatePatch) : retry.gameStatePatch;
+        const { initialHistoricalDataPoint } = retry;
         if (!gameStatePatch.activeLevelConfig) {
             setGameState(prev => ({ ...prev, lastConcludedLevelInfo: null }));
             return;
@@ -1063,7 +1066,13 @@ export const App = () => {
     tempGameState.newsHeadlines = [];
     
     if (tempGameState.activeLevelConfig) {
-        tempGameState.activeLevelConfig = LEVEL_CONFIGS.find(lc => lc.levelNumber === tempGameState.currentLevel);
+        // Restores the config's functions lost in the JSON clone. Phase 51 (QA): keep the level's own targetYear, so the
+        // demo's shortened level 1 (`withDemoTargetYear`, 2029) is not reset to 2054 on the first round.
+        const cloned = tempGameState.activeLevelConfig;
+        const fresh = LEVEL_CONFIGS.find(lc => lc.levelNumber === tempGameState.currentLevel);
+        tempGameState.activeLevelConfig = fresh && cloned.levelNumber === fresh.levelNumber && cloned.targetYear
+          ? { ...fresh, targetYear: cloned.targetYear }
+          : fresh;
     }
 
 
@@ -1225,7 +1234,10 @@ export const App = () => {
     setGameState(prev => {
         if (prev.currentLevel === level) return prev;
 
-        const { gameStatePatch, initialHistoricalDataPoint } = createInitialState(level, controlParamsRef.current);
+        const init = createInitialState(level, controlParamsRef.current);
+        // Phase 51 (QA): in the demo, going back to level 1 keeps its short level (withDemoTargetYear).
+        const gameStatePatch = isDemoRef.current && level === 1 ? withDemoTargetYear(init.gameStatePatch) : init.gameStatePatch;
+        const { initialHistoricalDataPoint } = init;
         if (!gameStatePatch.activeLevelConfig) return prev;
 
         setHistoricalData([initialHistoricalDataPoint]);

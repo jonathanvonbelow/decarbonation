@@ -63,6 +63,7 @@ function setEffortVector(p: PolicyState, code: PolicyCode, vector: EffortVector)
  */
 export function activatePolicies(
   state: GameState, codes: PolicyCode[], level: number, effort?: Partial<Record<PolicyCode, EffortVector>>,
+  CP: ControlParams = CONTROL_PARAMS,
 ): void {
   codes.forEach((code) => {
     const p = state.policies[POLICY_BY_CODE[code]];
@@ -70,7 +71,7 @@ export function activatePolicies(
     const active = (Object.values(state.policies) as PolicyState[]).filter((x) => x.isActive).length;
     if (active >= MAX_ACTIVE_POLICIES) return;
     p.isActive = true;
-    p.currentEfficiency = baseEfficiency(p, CONTROL_PARAMS); // 0 until it ramps up (phase 36)
+    p.currentEfficiency = baseEfficiency(p, CP); // 0 until it ramps up (phase 36); CP = the run's (phase 51)
     p.previousFatigueFactor = fatigueFactor(p);
     const vector = level >= 2 ? effort?.[code] : undefined;
     if (vector) setEffortVector(p, code, vector);
