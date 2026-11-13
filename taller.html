@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aula del taller · DecarboNation Territorio</title>
+<meta name="description" content="Aula del taller híbrido de lanzamiento de DecarboNation Territorio: seis módulos breves, una partida en grupo y la encuesta final." />
+<meta name="theme-color" content="#08100e" />
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+<link rel="canonical" href="https://decarbonation.vercel.app/taller" />
+<meta property="og:title" content="Aula del taller · DecarboNation Territorio" />
+<meta property="og:description" content="Seis módulos, una partida, una encuesta. Cada módulo que completás restaura una parcela del territorio." />
+<meta property="og:image" content="https://decarbonation.vercel.app/assets/ecosim/hero.webp" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<style>
+/* =====================================================================
+   Tokens — same palette as DecarboNation Territorio (src/index.css)
+   ===================================================================== */
+:root {
+  --basalt-950: #08100e; --basalt-900: #0e1a16; --basalt-800: #16241f;
+  --basalt-700: #1f332c; --basalt-600: #2b4239;
+  --bone: #e9e7df; --ash: #a3b0a9; --ash-dim: #7f8d87;
+  --chlorophyll: #6fd08c; --ochre: #e0a458; --ember: #e8613c;
+  --hydro: #5fb3c9; --bloom: #c8e6a0;
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 16px;
+  --tile: 156px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--basalt-950); color: var(--bone);
+  font-family: var(--font-sans); font-size: 16px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; }
+a { color: var(--hydro); }
+a:hover { color: #8fd0e0; }
+:focus-visible { outline: 2px solid var(--chlorophyll); outline-offset: 3px; border-radius: 6px; }
+.wrap { width: min(1180px, 100% - 32px); margin-inline: auto; }
+.mono { font-family: var(--font-mono); letter-spacing: 0.04em; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ochre); }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.05; margin: 0; letter-spacing: -0.015em; }
+p { margin: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 46px;
+  padding: 0.65rem 1.15rem; border-radius: 12px; font: 600 15px/1 var(--font-sans);
+  text-decoration: none; cursor: pointer; border: 1px solid var(--basalt-600);
+  background: rgb(14 26 22 / 0.7); color: var(--bone); transition: transform .15s, background .15s, border-color .15s;
+  backdrop-filter: blur(6px);
+}
+.btn:hover { background: var(--basalt-700); color: var(--bone); transform: translateY(-1px); }
+.btn-primary { background: var(--chlorophyll); color: var(--basalt-950); border-color: transparent; box-shadow: 0 8px 28px -10px rgb(111 208 140 / 0.7); }
+.btn-primary:hover { background: #86dca0; color: var(--basalt-950); }
+.btn-ochre { background: var(--ochre); color: var(--basalt-950); border-color: transparent; box-shadow: 0 8px 28px -10px rgb(224 164 88 / 0.7); }
+.btn-ochre:hover { background: #ebb574; color: var(--basalt-950); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+/* =====================================================================
+   Top bar
+   ===================================================================== */
+.topbar { position: sticky; top: 0; z-index: 30; background: rgb(8 16 14 / 0.78); backdrop-filter: blur(12px); border-bottom: 1px solid rgb(43 66 57 / 0.6); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 64px; }
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--bone); }
+.brand img { width: 34px; height: 35px; }
+.brand b { font-family: var(--font-display); font-size: 19px; color: var(--chlorophyll); letter-spacing: -0.01em; }
+.brand span { font-family: var(--font-mono); font-size: 11px; color: var(--ash); letter-spacing: 0.12em; text-transform: uppercase; }
+.topbar .btn { min-height: 40px; padding: 0.5rem 0.9rem; font-size: 14px; }
+@media (max-width: 560px) { .brand span { display: none; } .topbar .btn .long { display: none; } }
+
+/* =====================================================================
+   Hero
+   ===================================================================== */
+.hero { position: relative; isolation: isolate; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; z-index: -2; background: url("/assets/ecosim/hero.webp") center 40% / cover no-repeat; transform: scale(1.04); animation: drift 30s ease-in-out infinite alternate; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(8 16 14 / 0.96) 0%, rgb(8 16 14 / 0.86) 38%, rgb(8 16 14 / 0.35) 70%, rgb(8 16 14 / 0.55) 100%),
+    linear-gradient(180deg, rgb(8 16 14 / 0) 55%, var(--basalt-950) 100%); }
+@keyframes drift { to { transform: scale(1.1) translate(-1.5%, -1%); } }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 2rem; align-items: center; padding-block: 72px 88px; }
+.hero h1 { font-size: clamp(44px, 7vw, 84px); font-weight: 800; margin-top: 14px; }
+.hero h1 em { font-style: normal; color: var(--chlorophyll); }
+.hero .lead { font-size: clamp(17px, 2vw, 20px); color: #d6d9d0; max-width: 34ch; margin-top: 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.chip { font-family: var(--font-mono); font-size: 12.5px; padding: 6px 11px; border-radius: 999px; background: rgb(14 26 22 / 0.75); border: 1px solid var(--basalt-600); color: var(--bone); }
+.chip i { font-style: normal; color: var(--ochre); }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+@media (max-width: 880px) { .hero .wrap { grid-template-columns: 1fr; padding-block: 48px 56px; } }
+
+/* Iso board: the six parcels = the six modules */
+.board-card { background: rgb(8 16 14 / 0.55); border: 1px solid rgb(111 208 140 / 0.25); border-radius: 22px; padding: 18px 18px 14px; backdrop-filter: blur(8px); box-shadow: 0 30px 80px -30px #000; }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.board-head b { font-family: var(--font-display); font-size: 18px; }
+.board-head span { font-family: var(--font-mono); font-size: 12px; color: var(--ash); }
+.meter { height: 6px; border-radius: 99px; background: var(--basalt-700); overflow: hidden; margin: 10px 0 2px; }
+.meter > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--ochre), var(--chlorophyll)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.board { position: relative; height: calc(var(--tile) * 1.78); margin: 10px auto 0; max-width: 100%; width: calc(var(--tile) * 2.6); }
+.parcel { position: absolute; width: var(--tile); height: var(--tile); padding: 0; border: 0; background: none; cursor: pointer;
+  left: calc(50% - var(--tile) / 2 + (var(--c) - var(--r) - 0.5) * var(--tile) * 0.5);
+  top: calc((var(--c) + var(--r)) * var(--tile) * 0.255);
+  z-index: calc(10 + var(--c) + var(--r)); transition: transform .2s; }
+.parcel:hover { transform: translateY(-6px); }
+.parcel img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .7s, transform .7s cubic-bezier(.2,1.4,.4,1), filter .4s; }
+.parcel .after { opacity: 0; transform: translateY(14px) scale(.9); }
+.parcel.done .before { opacity: 0; }
+.parcel.done .after { opacity: 1; transform: none; }
+.parcel:not(.done) .before { filter: saturate(.55) brightness(.8); }
+.parcel .tag { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); z-index: 2;
+  font: 700 13px/1 var(--font-mono); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 99px;
+  background: var(--basalt-950); color: var(--ochre); border: 1.5px solid var(--ochre); box-shadow: 0 4px 12px rgb(0 0 0 / .5); }
+.parcel.done .tag { color: var(--basalt-950); background: var(--chlorophyll); border-color: var(--chlorophyll); }
+.parcel.current .tag { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px rgb(224 164 88 / 0.25); } }
+.board-foot { font-size: 13px; color: var(--ash); text-align: center; margin-top: 4px; }
+@media (max-width: 1100px) { :root { --tile: 136px; } }
+@media (max-width: 420px) { :root { --tile: 100px; } }
+
+/* =====================================================================
+   Sections
+   ===================================================================== */
+section { padding-block: 64px; scroll-margin-top: 64px; }
+.sec-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; max-width: 62ch; }
+.sec-head h2 { font-size: clamp(30px, 4vw, 44px); font-weight: 800; }
+.sec-head p { color: var(--ash); }
+
+/* Journey: before / during / after */
+.journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.stage { position: relative; background: var(--basalt-900); border: 1px solid var(--basalt-700); border-radius: var(--radius); padding: 22px; }
+.stage.mid { border-color: rgb(224 164 88 / 0.45); background: linear-gradient(180deg, rgb(224 164 88 / 0.08), var(--basalt-900) 60%); }
+.stage .when { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); }
+.stage h3 { font-size: 24px; margin: 6px 0 4px; }
+.stage .hrs { font-family: var(--font-mono); color: var(--ochre); font-size: 13px; }
+.stage p { color: var(--ash); font-size: 14.5px; margin-top: 10px; }
+.agenda { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 2px; }
+.agenda li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; font-size: 14px; padding: 7px 0; border-top: 1px dashed var(--basalt-600); color: #cfd3cb; }
+.agenda time { font-family: var(--font-mono); color: var(--ochre); font-size: 13px; }
+@media (max-width: 880px) { .journey { grid-template-columns: 1fr; } }
+
+/* =====================================================================
+   Classroom: module rail + stage
+   ===================================================================== */
+.aula { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+.rail { position: sticky; top: 84px; display: grid; gap: 8px; }
+.rail-btn { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left;
+  padding: 8px 12px 8px 8px; border-radius: 14px; border: 1px solid var(--basalt-700); background: var(--basalt-900); color: var(--bone); cursor: pointer; font: inherit; transition: border-color .2s, background .2s, transform .2s; }
+.rail-btn:hover { border-color: var(--basalt-600); transform: translateX(2px); }
+.rail-btn[aria-current="true"] { border-color: var(--chlorophyll); background: linear-gradient(90deg, rgb(111 208 140 / 0.12), var(--basalt-900)); }
+.rail-btn img { width: 54px; height: 54px; }
+.rail-btn .t { display: block; font-weight: 600; font-size: 14.5px; line-height: 1.25; }
+.rail-btn .m { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--ash); margin-top: 2px; }
+.rail-btn .ok { width: 22px; height: 22px; border-radius: 99px; border: 1.5px solid var(--basalt-600); display: grid; place-items: center; color: transparent; }
+.rail-btn.done .ok { background: var(--chlorophyll); border-color: var(--chlorophyll); color: var(--basalt-950); }
+.rail-btn.done .ok svg { width: 13px; height: 13px; }
+@media (max-width: 960px) {
+  .aula { grid-template-columns: 1fr; }
+  .rail { position: static; display: flex; overflow-x: auto; gap: 8px; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+  .rail-btn { flex: 0 0 220px; scroll-snap-align: start; }
+}
+
+.stagebox { background: var(--basalt-900); border: 1px solid var(--basalt-700); border-radius: 22px; overflow: hidden; }
+.mod { display: none; }
+.mod.active { display: block; animation: rise .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.mod-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; align-items: center; padding: 28px 30px 22px;
+  background: radial-gradient(120% 140% at 100% 0%, rgb(var(--tint) / 0.18), transparent 55%), linear-gradient(180deg, var(--basalt-800), var(--basalt-900)); border-bottom: 1px solid var(--basalt-700); }
+.mod-hero .num { font-family: var(--font-mono); font-size: 12.5px; color: rgb(var(--tint)); letter-spacing: .14em; text-transform: uppercase; }
+.mod-hero h3 { font-size: clamp(28px, 3.4vw, 38px); font-weight: 800; margin-top: 8px; }
+.mod-hero .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.mod-hero .tile-big { width: 150px; height: 150px; filter: drop-shadow(0 18px 24px rgb(0 0 0 / .55)); animation: bob 5s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-6px); } }
+@media (max-width: 600px) { .mod-hero { grid-template-columns: 1fr; padding: 22px 20px 18px; } .mod-hero .tile-big { display: none; } }
+.mod-body { padding: 26px 30px 30px; display: grid; gap: 22px; }
+@media (max-width: 600px) { .mod-body { padding: 20px; } }
+.key { font-family: var(--font-display); font-weight: 700; font-size: clamp(19px, 2.2vw, 23px); line-height: 1.3; color: var(--bone);
+  padding-left: 18px; border-left: 4px solid rgb(var(--tint)); }
+.txt { color: #c9cec6; display: grid; gap: 10px; max-width: 68ch; }
+.txt b { color: var(--bone); }
+
+/* emit / capture duo */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.duo > div { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; padding: 12px 14px 12px 8px; border-radius: 14px; background: var(--basalt-800); border: 1px solid var(--basalt-700); }
+.duo img { width: 72px; height: 72px; }
+.duo b { display: block; font-family: var(--font-display); font-size: 18px; }
+.duo .em b { color: var(--ember); } .duo .ca b { color: var(--chlorophyll); }
+.duo p { font-size: 14px; color: var(--ash); }
+@media (max-width: 600px) { .duo { grid-template-columns: 1fr; } }
+
+/* Activity box */
+.act { border-radius: 16px; padding: 18px 20px; background: linear-gradient(180deg, rgb(224 164 88 / 0.10), rgb(224 164 88 / 0.03)); border: 1px solid rgb(224 164 88 / 0.35); }
+.act-h { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ochre); margin-bottom: 10px; }
+.act-h svg { width: 18px; height: 18px; }
+.act .q { font-weight: 600; font-size: 16.5px; margin-bottom: 10px; }
+.opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 8px; padding: 12px 14px; min-height: 48px; border-radius: 12px;
+  border: 1px solid var(--basalt-600); background: var(--basalt-900); color: var(--bone); font: 500 15px/1.35 var(--font-sans); cursor: pointer; transition: border-color .15s, background .15s; }
+.opt:hover { border-color: var(--ash-dim); }
+.opt .l { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font: 600 12px var(--font-mono); background: var(--basalt-700); color: var(--ash); }
+.opt.ok { border-color: var(--chlorophyll); background: rgb(111 208 140 / 0.12); }
+.opt.ok .l { background: var(--chlorophyll); color: var(--basalt-950); }
+.opt.no { border-color: var(--ember); background: rgb(232 97 60 / 0.10); }
+.opt.no .l { background: var(--ember); color: var(--basalt-950); }
+.fb { margin-top: 10px; font-size: 14.5px; min-height: 1.4em; }
+.fb.ok { color: var(--chlorophyll); } .fb.no { color: #f0a58f; }
+
+/* Trade-off simulator (module 2) */
+.uses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.use { display: grid; justify-items: center; gap: 4px; padding: 8px 6px 10px; border-radius: 14px; border: 1px solid var(--basalt-600); background: var(--basalt-900); color: var(--bone); cursor: pointer; font: 600 13px/1.2 var(--font-sans); text-align: center; transition: border-color .15s, transform .15s; }
+.use img { width: 76px; height: 76px; }
+.use:hover { transform: translateY(-2px); }
+.use[aria-pressed="true"] { border-color: var(--ochre); background: rgb(224 164 88 / 0.12); }
+@media (max-width: 520px) { .uses { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bars { display: grid; gap: 10px; margin-top: 16px; }
+.bar { display: grid; grid-template-columns: 112px 1fr; gap: 10px; align-items: center; font-size: 14px; }
+.bar .track { height: 12px; border-radius: 99px; background: var(--basalt-700); overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 99px; width: 50%; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.note { font-size: 12.5px; color: var(--ash-dim); margin-top: 10px; }
+
+/* Actors (module 2) */
+.actors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.actor { display: grid; justify-items: center; text-align: center; gap: 6px; padding: 12px 8px; border-radius: 14px; background: var(--basalt-800); border: 1px solid var(--basalt-700); font-size: 13px; color: var(--ash); }
+.actor img { width: 64px; height: 64px; border-radius: 99px; border: 2px solid var(--basalt-600); object-fit: cover; }
+.actor b { color: var(--bone); font-size: 14px; }
+@media (max-width: 520px) { .actors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Steps (module 3) */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; counter-reset: s; }
+.steps li { counter-increment: s; padding: 16px; border-radius: 14px; background: var(--basalt-800); border: 1px solid var(--basalt-700); font-size: 14px; color: var(--ash); }
+.steps li::before { content: "0" counter(s); display: block; font: 500 12px var(--font-mono); color: rgb(var(--tint)); margin-bottom: 6px; }
+.steps b { display: block; color: var(--bone); font-family: var(--font-display); font-size: 17px; margin-bottom: 4px; }
+@media (max-width: 680px) { .steps { grid-template-columns: 1fr; } }
+
+/* Game kit (module 4) */
+.kit { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.kit > div { display: grid; justify-items: center; text-align: center; gap: 2px; padding: 10px 8px 12px; border-radius: 14px; background: var(--basalt-800); border: 1px solid var(--basalt-700); }
+.kit img { width: 84px; height: 84px; }
+.kit b { font-size: 13.5px; } .kit span { font-size: 12px; color: var(--ash); }
+@media (max-width: 600px) { .kit { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.route { padding: 14px 16px; border-radius: 14px; border: 1px solid; background: var(--basalt-800); }
+.route b { display: block; font-family: var(--font-display); font-size: 17px; }
+.route span { font-size: 13px; color: var(--ash); }
+.route.g { border-color: rgb(111 208 140 / .5); } .route.g b { color: var(--chlorophyll); }
+.route.o { border-color: rgb(224 164 88 / .5); } .route.o b { color: var(--ochre); }
+.route.h { border-color: rgb(95 179 201 / .5); } .route.h b { color: var(--hydro); }
+@media (max-width: 680px) { .routes { grid-template-columns: 1fr; } }
+.floors { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--ash); }
+.floors .chip { border-color: rgb(232 97 60 / .45); }
+.situ { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.situ figure { margin: 0; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--basalt-700); background: var(--basalt-800); }
+.situ img { width: 100%; aspect-ratio: 1; object-fit: contain; padding: 6px; }
+.situ figcaption { position: absolute; left: 8px; bottom: 8px; font: 500 11.5px var(--font-mono); padding: 4px 8px; border-radius: 99px; background: rgb(8 16 14 / .85); }
+.mission { counter-reset: m; list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mission li { counter-increment: m; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; font-size: 15px; color: #d3d7cf; }
+.mission li::before { content: counter(m); width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font: 600 13px var(--font-mono); background: var(--ochre); color: var(--basalt-950); }
+.playbox { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; padding: 18px 20px; border-radius: 16px;
+  background: linear-gradient(100deg, rgb(8 16 14 / .92), rgb(8 16 14 / .6)), url("/assets/ecosim/hero.webp") center 60% / cover; border: 1px solid rgb(111 208 140 / .35); }
+.playbox p { font-size: 14px; color: var(--ash); max-width: 42ch; }
+.playbox .code { font-family: var(--font-mono); color: var(--ochre); }
+
+/* Resources (module 5) */
+.res { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.res a { display: grid; gap: 2px; padding: 14px 16px; border-radius: 14px; background: var(--basalt-800); border: 1px solid var(--basalt-700); text-decoration: none; color: var(--bone); transition: border-color .15s, transform .15s; }
+.res a:hover { border-color: var(--hydro); transform: translateY(-2px); color: var(--bone); }
+.res b { font-family: var(--font-display); font-size: 17px; }
+.res span { font-size: 13.5px; color: var(--ash); }
+@media (max-width: 600px) { .res { grid-template-columns: 1fr; } }
+.check { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.check li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 15px; color: #d3d7cf; }
+.check li::before { content: ""; width: 18px; height: 18px; margin-top: 3px; border-radius: 6px; border: 1.5px solid var(--ochre); }
+.deadline { display: inline-flex; gap: 8px; align-items: center; font-family: var(--font-mono); font-size: 13px; padding: 8px 12px; border-radius: 10px; background: rgb(224 164 88 / .12); color: var(--ochre); }
+
+/* Survey (module 6 + final band) */
+.survey { position: relative; overflow: hidden; border-radius: 18px; padding: 24px; border: 1px solid rgb(111 208 140 / .45);
+  background: radial-gradient(120% 120% at 0% 0%, rgb(111 208 140 / .18), transparent 60%), var(--basalt-800); }
+.survey h4 { font-family: var(--font-display); font-size: 24px; margin: 0 0 6px; }
+.survey p { color: #cdd2ca; font-size: 15px; max-width: 52ch; }
+.survey .stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+
+/* Module footer */
+.mod-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 18px 30px; border-top: 1px solid var(--basalt-700); background: var(--basalt-950); }
+@media (max-width: 600px) { .mod-foot { padding: 16px 20px; } }
+.complete[aria-pressed="true"] { background: var(--basalt-700); color: var(--chlorophyll); box-shadow: none; border-color: rgb(111 208 140 / .5); }
+.nav { display: flex; gap: 8px; }
+
+/* Final band */
+.band { position: relative; isolation: isolate; overflow: hidden; border-radius: 26px; padding: clamp(28px, 5vw, 56px); border: 1px solid rgb(111 208 140 / .35); }
+.band::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(8 16 14 / .95) 20%, rgb(8 16 14 / .55)), url("/assets/ecosim/hero.webp") center 70% / cover; }
+.band h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; max-width: 16ch; }
+.band p { color: #d0d4cc; margin-top: 12px; max-width: 46ch; }
+.band .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.faces { display: flex; margin-top: 26px; }
+.faces img { width: 52px; height: 52px; border-radius: 99px; border: 2px solid var(--basalt-950); margin-left: -10px; object-fit: cover; }
+.faces img:first-child { margin-left: 0; }
+
+/* Footer */
+footer { padding: 48px 0 56px; border-top: 1px solid var(--basalt-700); color: var(--ash); font-size: 14px; }
+footer .wrap { display: grid; gap: 14px; }
+footer .team b { color: var(--bone); }
+footer .links { display: flex; flex-wrap: wrap; gap: 16px; }
+footer .reset { background: none; border: 0; color: var(--ash-dim); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+
+/* Toast */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%); z-index: 50; display: flex; gap: 12px; align-items: center;
+  padding: 10px 16px 10px 10px; border-radius: 14px; background: var(--basalt-800); border: 1px solid rgb(111 208 140 / .5); box-shadow: 0 20px 50px -10px #000; transition: transform .45s cubic-bezier(.2,1.3,.4,1); font-size: 14.5px; }
+.toast.show { transform: translate(-50%, 0); }
+.toast img { width: 48px; height: 48px; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<!-- ============================== TOP BAR ============================== -->
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <img src="/assets/ecosim/emblem.webp" alt="" width="34" height="35" />
+      <b>DecarboNation</b><span>Aula del taller</span>
+    </a>
+    <a class="btn btn-primary" data-survey href="/territorio/encuesta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Encuesta<span class="long"> final</span></span>
+    </a>
+  </div>
+</header>
+
+<main>
+<!-- ============================== HERO ============================== -->
+<div class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Taller híbrido · Lanzamiento</p>
+      <h1>DecarboNation <em>Territorio</em></h1>
+      <p class="lead">Seis módulos cortos, una partida en grupo y una encuesta. Cada módulo que completás restaura una parcela del territorio.</p>
+      <div class="chips">
+        <span class="chip"><i>●</i> Jueves 3 de diciembre de 2026</span>
+        <span class="chip">9 a 12 h</span>
+        <span class="chip">FCF-UNaM, Eldorado + online</span>
+        <span class="chip">10 h reloj</span>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ochre" href="#aula" data-start>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span data-start-label>Empezar el módulo 1</span>
+        </a>
+        <a class="btn" data-play href="/territorio" target="_blank" rel="noopener">Jugar Territorio ↗</a>
+      </div>
+    </div>
+
+    <div class="board-card" aria-labelledby="board-title">
+      <div class="board-head">
+        <b id="board-title">Tu territorio</b>
+        <span aria-live="polite"><span data-count>0</span>/6 parcelas restauradas</span>
+      </div>
+      <div class="meter" aria-hidden="true"><div data-meter></div></div>
+      <div class="board" id="board">
+        <!-- c,r = isometric grid position; before/after tiles show the parcel's restoration -->
+        <button class="parcel" data-goto="1" style="--c:0;--r:0" aria-label="Módulo 1: Clima y uso del suelo">
+          <img class="before" src="/assets/ecosim/tiles/fallow_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/reforest_v1.webp" alt="" />
+          <span class="tag">1</span>
+        </button>
+        <button class="parcel" data-goto="2" style="--c:1;--r:0" aria-label="Módulo 2: El territorio como sistema">
+          <img class="before" src="/assets/ecosim/tiles/intensive_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/regen_v1.webp" alt="" />
+          <span class="tag">2</span>
+        </button>
+        <button class="parcel" data-goto="3" style="--c:2;--r:0" aria-label="Módulo 3: Juegos serios">
+          <img class="before" src="/assets/ecosim/tiles/rocky_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/wetland_natural_v1.webp" alt="" />
+          <span class="tag">3</span>
+        </button>
+        <button class="parcel" data-goto="4" style="--c:0;--r:1" aria-label="Módulo 4: Jugá Territorio">
+          <img class="before" src="/assets/ecosim/tiles/power_plant_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/energy_wind_v1.webp" alt="" />
+          <span class="tag">4</span>
+        </button>
+        <button class="parcel" data-goto="5" style="--c:1;--r:1" aria-label="Módulo 5: Llevalo a tu aula">
+          <img class="before" src="/assets/ecosim/tiles/housing_informal_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/school_v1.webp" alt="" />
+          <span class="tag">5</span>
+        </button>
+        <button class="parcel" data-goto="6" style="--c:2;--r:1" aria-label="Módulo 6: Evaluá el juego">
+          <img class="before" src="/assets/ecosim/tiles/waste_site_v1.webp" alt="" />
+          <img class="after" src="/assets/ecosim/tiles/forest_protected_v1.webp" alt="" />
+          <span class="tag">6</span>
+        </button>
+      </div>
+      <p class="board-foot">Tocá una parcela para ir a su módulo.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== JOURNEY ============================== -->
+<section id="recorrido">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El recorrido</p>
+      <h2>Antes, durante y después</h2>
+      <p>Diez horas en tres tramos. El encuentro es híbrido: se puede seguir en la Facultad o en vivo desde cualquier lugar.</p>
+    </div>
+    <div class="journey">
+      <div class="stage">
+        <p class="when">Antes · a distancia</p>
+        <h3>Preparación</h3>
+        <p class="hrs">3 h · módulos 1 a 3</p>
+        <p>Leé los tres primeros módulos y hacé una primera exploración libre del juego, sin apuro.</p>
+      </div>
+      <div class="stage mid">
+        <p class="when">Jueves 3/12 · híbrido</p>
+        <h3>Encuentro</h3>
+        <p class="hrs">3 h · módulos 4 y 6</p>
+        <ol class="agenda">
+          <li><time>9:00</time><span>Apertura</span></li>
+          <li><time>9:15</time><span>Panel: Laterra · Monjeau · Nahuelhual</span></li>
+          <li><time>9:55</time><span>Lanzamiento en vivo: von Below · Chifarelli</span></li>
+          <li><time>10:15</time><span>Pausa</span></li>
+          <li><time>10:25</time><span>Partidas en grupos</span></li>
+          <li><time>11:10</time><span>Debriefing y plenario</span></li>
+          <li><time>11:40</time><span>Encuesta y cierre</span></li>
+        </ol>
+      </div>
+      <div class="stage">
+        <p class="when">Después · a distancia</p>
+        <h3>Producción final</h3>
+        <p class="hrs">4 h · módulo 5</p>
+        <p>Diseñá cómo usarías Territorio con tu grupo y entregalo hasta el 17 de diciembre para el certificado de aprobación.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== AULA ============================== -->
+<section id="aula" style="padding-top: 8px">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El aula</p>
+      <h2>Seis módulos, una parcela cada uno</h2>
+    </div>
+
+    <div class="aula">
+      <nav class="rail" aria-label="Módulos">
+        <button class="rail-btn" data-goto="1"><img src="/assets/ecosim/tiles/reforest_v1.webp" alt="" /><span><span class="t">Clima y uso del suelo</span><span class="m">01 · 15 min · antes</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+        <button class="rail-btn" data-goto="2"><img src="/assets/ecosim/tiles/regen_v1.webp" alt="" /><span><span class="t">El territorio como sistema</span><span class="m">02 · 15 min · antes</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+        <button class="rail-btn" data-goto="3"><img src="/assets/ecosim/tiles/wetland_natural_v1.webp" alt="" /><span><span class="t">Juegos serios</span><span class="m">03 · 10 min · antes</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+        <button class="rail-btn" data-goto="4"><img src="/assets/ecosim/tiles/energy_wind_v1.webp" alt="" /><span><span class="t">Jugá Territorio</span><span class="m">04 · 45 min · encuentro</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+        <button class="rail-btn" data-goto="5"><img src="/assets/ecosim/tiles/school_v1.webp" alt="" /><span><span class="t">Llevalo a tu aula</span><span class="m">05 · 4 h · después</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+        <button class="rail-btn" data-goto="6"><img src="/assets/ecosim/tiles/forest_protected_v1.webp" alt="" /><span><span class="t">Evaluá el juego</span><span class="m">06 · 10 min · encuentro</span></span><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+      </nav>
+
+      <div class="stagebox" id="stage" tabindex="-1">
+
+        <!-- ---------------- MÓDULO 1 ---------------- -->
+        <article class="mod" data-mod="1" style="--tint: 111 208 140" aria-labelledby="m1-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 01 · Antes del encuentro</p>
+              <h3 id="m1-h">Clima y uso del suelo</h3>
+              <div class="meta"><span class="chip">15 min</span><span class="chip">AFOLU</span><span class="chip">NDC</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/reforest_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">El uso del suelo es el único sector que emite y, a la vez, puede capturar carbono a gran escala.</p>
+            <div class="duo">
+              <div class="em"><img src="/assets/ecosim/fx/fx_fire_v1.webp" alt="" /><span><b>Emite</b><p>Desmonte, incendios, ganado y fertilizantes.</p></span></div>
+              <div class="ca"><img src="/assets/ecosim/tiles/restoration_v1.webp" alt="" /><span><b>Captura</b><p>Bosques que crecen, restauración y suelos con más materia orgánica.</p></span></div>
+            </div>
+            <div class="txt">
+              <p>El sector <b>AFOLU</b> (agricultura, silvicultura y otros usos del suelo) es clave en los compromisos climáticos de la Argentina: la <b>NDC</b> y el <b>Plan Nacional de Adaptación y Mitigación al 2030</b>. Buena parte de esos compromisos se juega en provincias forestales como Misiones.</p>
+            </div>
+            <div class="act quiz" data-answer="a">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Chequeo rápido</p>
+              <p class="q">¿Qué decisión reduce emisiones y además captura carbono?</p>
+              <button type="button" class="opt" data-opt="a"><span class="l">A</span>Restaurar bosque nativo en tierras degradadas</button>
+              <button type="button" class="opt" data-opt="b"><span class="l">B</span>Cambiar el combustible de los tractores</button>
+              <button type="button" class="opt" data-opt="c"><span class="l">C</span>Reemplazar monte por pastura mejorada</button>
+              <p class="fb" aria-live="polite" data-ok="Exacto. La restauración frena pérdidas y vuelve a fijar carbono en la biomasa y el suelo." data-no="No del todo: esa opción solo reduce emisiones, o incluso las aumenta. Probá otra."></p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ---------------- MÓDULO 2 ---------------- -->
+        <article class="mod" data-mod="2" style="--tint: 224 164 88" aria-labelledby="m2-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 02 · Antes del encuentro</p>
+              <h3 id="m2-h">El territorio como sistema socio-ecológico</h3>
+              <div class="meta"><span class="chip">15 min</span><span class="chip">Servicios ecosistémicos</span><span class="chip">Trade-offs</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/regen_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">Cada parcela sirve para varias cosas a la vez. Lo que hace subir un objetivo puede hacer bajar otro.</p>
+            <div class="act" id="tradeoff">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Probalo: ¿qué hacés con esta parcela?</p>
+              <div class="uses" role="group" aria-label="Uso de la parcela">
+                <button type="button" class="use" data-use="forest" aria-pressed="true"><img src="/assets/ecosim/tiles/forest_v1.webp" alt="" />Bosque nativo</button>
+                <button type="button" class="use" data-use="intensive" aria-pressed="false"><img src="/assets/ecosim/tiles/intensive_v1.webp" alt="" />Agricultura intensiva</button>
+                <button type="button" class="use" data-use="agro" aria-pressed="false"><img src="/assets/ecosim/tiles/orchard_v1.webp" alt="" />Chacra diversificada</button>
+                <button type="button" class="use" data-use="solar" aria-pressed="false"><img src="/assets/ecosim/tiles/energy_solar_v1.webp" alt="" />Parque solar</button>
+              </div>
+              <div class="bars" aria-live="polite">
+                <div class="bar"><span>Carbono</span><div class="track"><div class="fill" data-bar="carbon" style="background: var(--chlorophyll)"></div></div></div>
+                <div class="bar"><span>Biodiversidad</span><div class="track"><div class="fill" data-bar="bio" style="background: var(--bloom)"></div></div></div>
+                <div class="bar"><span>Alimentos</span><div class="track"><div class="fill" data-bar="food" style="background: var(--ochre)"></div></div></div>
+                <div class="bar"><span>Ingresos</span><div class="track"><div class="fill" data-bar="income" style="background: var(--hydro)"></div></div></div>
+              </div>
+              <p class="note">Barras ilustrativas para discutir, no cifras del modelo del juego.</p>
+            </div>
+            <div class="txt">
+              <p>Misiones conserva el mayor remanente continuo del <b>Bosque Atlántico</b> (Selva Paranaense). Ahí conviven forestaciones, yerba, tabaco, ganadería y chacras familiares. Los servicios que da el paisaje (agua, polinización, regulación del clima) dependen de cómo se combinan esos usos, y cada actor mira algo distinto.</p>
+            </div>
+            <div class="actors">
+              <div class="actor"><img src="/assets/ecosim/portraits/farmer_v1.webp" alt="" /><b>Productores</b>rinde e ingresos</div>
+              <div class="actor"><img src="/assets/ecosim/portraits/indigenous_v1.webp" alt="" /><b>Comunidades</b>territorio y monte</div>
+              <div class="actor"><img src="/assets/ecosim/portraits/ngo_v1.webp" alt="" /><b>Ambientalistas</b>biodiversidad</div>
+              <div class="actor"><img src="/assets/ecosim/portraits/citizen_v1.webp" alt="" /><b>Ciudadanía</b>empleo y servicios</div>
+            </div>
+            <div class="act">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Para el plenario · 1 minuto</p>
+              <p class="q" style="margin: 0">Elegí una decisión real de tu localidad: un loteo, una ruta, un área protegida, una planta de energía. ¿Quién gana y quién pierde? Traela al encuentro.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ---------------- MÓDULO 3 ---------------- -->
+        <article class="mod" data-mod="3" style="--tint: 95 179 201" aria-labelledby="m3-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 03 · Antes del encuentro</p>
+              <h3 id="m3-h">Juegos serios y aprendizaje social</h3>
+              <div class="meta"><span class="chip">10 min</span><span class="chip">Modelos</span><span class="chip">Debriefing</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/wetland_natural_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">Un juego serio no predice el futuro: sirve para probar decisiones, ver sus consecuencias a largo plazo y discutirlas con otras personas.</p>
+            <ol class="steps">
+              <li><b>Un modelo simplifica</b>Las cifras de DecarboNation son de un territorio de juego, no proyecciones del Bosque Atlántico.</li>
+              <li><b>Se aprende con otros</b>Comparar estrategias entre grupos enseña más que jugar solo.</li>
+              <li><b>Lo clave es el después</b>En el debriefing: ¿qué pasó?, ¿por qué?, ¿qué se parece a la realidad y qué no?</li>
+            </ol>
+            <div class="act quiz" data-answer="b">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Chequeo rápido</p>
+              <p class="q">Un grupo ganó por la Vía de la Innovación. ¿Qué pregunta abre mejor el debriefing?</p>
+              <button type="button" class="opt" data-opt="a"><span class="l">A</span>¿Cuántos puntos sacaron?</button>
+              <button type="button" class="opt" data-opt="b"><span class="l">B</span>¿Qué tuvieron que resignar para llegar ahí, y quién lo pagó?</button>
+              <button type="button" class="opt" data-opt="c"><span class="l">C</span>¿Cuánto tardaron en ganar?</button>
+              <p class="fb" aria-live="polite" data-ok="Sí. Pone en el centro los costos y los actores, que es lo que el juego quiere hacer visible." data-no="Es un dato, pero no abre la discusión sobre las decisiones. Probá otra."></p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ---------------- MÓDULO 4 ---------------- -->
+        <article class="mod" data-mod="4" style="--tint: 111 208 140" aria-labelledby="m4-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 04 · Durante el encuentro</p>
+              <h3 id="m4-h">Jugá DecarboNation Territorio</h3>
+              <div class="meta"><span class="chip">45 min</span><span class="chip">2024 → 2054</span><span class="chip">Mes a mes</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/energy_wind_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">Gobernás un territorio mes a mes durante 30 años. Ganás si cumplís una de tres vías sin romper los mínimos de gobernabilidad.</p>
+            <div>
+              <p class="eyebrow" style="margin-bottom: 10px">Usos públicos que podés crear</p>
+              <div class="kit">
+                <div><img src="/assets/ecosim/tiles/forest_protected_v1.webp" alt="" /><b>Área protegida</b></div>
+                <div><img src="/assets/ecosim/tiles/restoration_v1.webp" alt="" /><b>Restauración</b></div>
+                <div><img src="/assets/ecosim/tiles/wetland_public_v1.webp" alt="" /><b>Humedal protegido</b></div>
+                <div><img src="/assets/ecosim/tiles/energy_solar_v1.webp" alt="" /><b>Parque energético</b></div>
+              </div>
+            </div>
+            <div>
+              <p class="eyebrow" style="margin-bottom: 10px">Tres vías para ganar</p>
+              <div class="routes">
+                <div class="route g"><b>Integridad Ecológica</b><span>Conservar y conectar el monte.</span></div>
+                <div class="route o"><b>Transición Productiva</b><span>Producir más con menos emisiones.</span></div>
+                <div class="route h"><b>Innovación</b><span>Energía y tecnología para el cambio.</span></div>
+              </div>
+            </div>
+            <div class="floors"><span>Mínimos que no podés romper:</span><span class="chip">Biodiversidad</span><span class="chip">Seguridad alimentaria</span><span class="chip">Estabilidad política</span><span class="chip">Bienestar social</span></div>
+            <div>
+              <p class="eyebrow" style="margin-bottom: 10px">Situaciones: imprevistos con plazo</p>
+              <div class="situ">
+                <figure><img src="/assets/ecosim/fx/fx_drought_v1.webp" alt="Ilustración de sequía" /><figcaption>Sequía</figcaption></figure>
+                <figure><img src="/assets/ecosim/fx/fx_flood_v1.webp" alt="Ilustración de inundación" /><figcaption>Inundación</figcaption></figure>
+                <figure><img src="/assets/ecosim/fx/fx_protest_v1.webp" alt="Ilustración de protesta" /><figcaption>Protesta</figcaption></figure>
+              </div>
+            </div>
+            <div class="act">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22V4l8 4 8-4v12l-8 4-8-4"/></svg>Misión del grupo</p>
+              <ol class="mission">
+                <li>Elijan una vía antes de empezar y anótenla.</li>
+                <li>Jueguen al menos 15 minutos. Pausen cada vez que tengan que discutir una decisión.</li>
+                <li>Anoten la decisión que más les costó y qué indicador sacrificaron.</li>
+                <li>Pregúntenle a DecarboNito, el asesor del juego, por qué pasó lo que pasó.</li>
+                <li>Al terminar, cada integrante completa la encuesta del módulo 6.</li>
+              </ol>
+            </div>
+            <div class="playbox">
+              <p>Funciona en el navegador del celular o la computadora, sin instalar nada. El enlace ya incluye el código del taller: <span class="code" data-code>FCF-DIC26</span></p>
+              <a class="btn btn-primary" data-play href="/territorio" target="_blank" rel="noopener">Abrir Territorio ↗</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- ---------------- MÓDULO 5 ---------------- -->
+        <article class="mod" data-mod="5" style="--tint: 224 164 88" aria-labelledby="m5-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 05 · Después del encuentro</p>
+              <h3 id="m5-h">Llevalo a tu aula</h3>
+              <div class="meta"><span class="chip">4 h</span><span class="chip">Producción final</span><span class="chip">Certificado</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/school_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">Una clase con Territorio tiene tres partes: una consigna breve, la partida en grupos y el debriefing.</p>
+            <div class="res">
+              <a href="/docentes"><b>Paquete docente →</b><span>Elegí versión y formato.</span></a>
+              <a href="/docentes/plan-clase"><b>Plan de clase →</b><span>Una secuencia completa, lista para usar.</span></a>
+              <a href="/docentes/consignas"><b>Consignas →</b><span>Para repartir a los grupos.</span></a>
+              <a href="/docentes/espacio"><b>Espacio docente →</b><span>Generá el enlace con el código de tu grupo.</span></a>
+            </div>
+            <div class="act">
+              <p class="act-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Producción final</p>
+              <p class="q">«Propuesta de uso de DecarboNation Territorio», individual o en grupos de hasta 3 personas, de 2 a 3 páginas. Incluí:</p>
+              <ul class="check">
+                <li>Dónde lo usarías: curso, nivel o ámbito de trabajo.</li>
+                <li>Objetivos y consigna de juego.</li>
+                <li>Tres preguntas de debriefing adaptadas a tu grupo.</li>
+                <li>Un problema territorial real de la región con el que lo vincularías.</li>
+                <li>Al menos dos propuestas de mejora del juego.</li>
+              </ul>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px">
+                <span class="deadline">Entrega: hasta el 17/12/2026</span>
+                <a class="btn" href="mailto:jonathan.vonbelow@fcf.unam.edu.ar?subject=Producci%C3%B3n%20final%20%C2%B7%20Taller%20DecarboNation%20Territorio" data-delivery>Entregar por correo →</a>
+                <span style="font-size: 13.5px; color: var(--ash)">a <span class="mono">jonathan.vonbelow@fcf.unam.edu.ar</span></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ---------------- MÓDULO 6 ---------------- -->
+        <article class="mod" data-mod="6" style="--tint: 111 208 140" aria-labelledby="m6-h">
+          <header class="mod-hero">
+            <div>
+              <p class="num">Módulo 06 · Al terminar de jugar</p>
+              <h3 id="m6-h">Evaluá y co-diseñá el juego</h3>
+              <div class="meta"><span class="chip">10 min</span><span class="chip">Anónimo</span><span class="chip">Vista previa</span></div>
+            </div>
+            <img class="tile-big" src="/assets/ecosim/tiles/forest_protected_v1.webp" alt="" />
+          </header>
+          <div class="mod-body">
+            <p class="key">Territorio es una vista previa en desarrollo. Tu opinión decide qué se mejora primero.</p>
+            <div class="survey">
+              <h4>Encuesta final</h4>
+              <p>Respondela en el mismo dispositivo con el que jugaste: junto con tus respuestas se guarda un resumen de tu última partida (año alcanzado, vía más cercana, indicadores finales). No pedimos nombre ni correo.</p>
+              <div class="stats"><span class="chip">14 preguntas</span><span class="chip">≈ 7 minutos</span><span class="chip">Todas opcionales</span><span class="chip">Anónima</span></div>
+              <a class="btn btn-primary" data-survey href="/territorio/encuesta">Responder la encuesta →</a>
+            </div>
+            <div class="txt"><p>¿Te quedó una idea larga, un error o una propuesta? <a href="mailto:fombis.von@gmail.com?subject=Taller%20DecarboNation%20Territorio">Escribinos</a>.</p></div>
+          </div>
+        </article>
+
+        <footer class="mod-foot">
+          <button type="button" class="btn btn-ochre complete" data-complete aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+            <span data-complete-label>Completar y restaurar la parcela</span>
+          </button>
+          <div class="nav">
+            <button type="button" class="btn" data-prev aria-label="Módulo anterior">←</button>
+            <button type="button" class="btn" data-next>Siguiente →</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== FINAL BAND ============================== -->
+<section style="padding-top: 24px">
+  <div class="wrap">
+    <div class="band">
+      <p class="eyebrow">¿Ya jugaste?</p>
+      <h2>Tu partida también es un dato</h2>
+      <p>Contanos cómo te fue en Territorio: 14 preguntas, unos 7 minutos, anónimo. Con eso decidimos qué mejorar antes de llevarlo a más aulas.</p>
+      <div class="actions">
+        <a class="btn btn-primary" data-survey href="/territorio/encuesta">Ir a la encuesta final →</a>
+        <a class="btn" data-play href="/territorio" target="_blank" rel="noopener">Volver a jugar ↗</a>
+      </div>
+      <div class="faces" aria-hidden="true">
+        <img src="/assets/ecosim/portraits/farmer_v2.webp" alt="" />
+        <img src="/assets/ecosim/portraits/indigenous_v2.webp" alt="" />
+        <img src="/assets/ecosim/portraits/scientist_v1.webp" alt="" />
+        <img src="/assets/ecosim/portraits/youth_v1.webp" alt="" />
+        <img src="/assets/ecosim/portraits/ngo_v2.webp" alt="" />
+        <img src="/assets/ecosim/portraits/citizen_v2.webp" alt="" />
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="team"><b>Equipo:</b> Jonathan von Below y Pedro Laterra (coordinación) · Diego Chifarelli · Adrián Monjeau · Laura Nahuelhual.</p>
+    <p>Secretaría de Extensión · Facultad de Ciencias Forestales · Universidad Nacional de Misiones. DecarboNation cuenta con financiamiento de la Iniciativa Internacional para el Clima (IKI).</p>
+    <div class="links">
+      <a href="/territorio">Territorio</a><a href="/docentes">Docentes</a><a href="/">Inicio</a>
+      <button type="button" class="reset" data-reset>Reiniciar mi avance</button>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" aria-live="polite" data-toast><img alt="" src="/assets/ecosim/tiles/reforest_v1.webp" /><span data-toast-text></span></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Workshop code (same rule as src/shared/workshopCodeRe.ts) ---------- */
+  var CODE_RE = /^[A-Za-z0-9_-]{2,32}$/;
+  var DEFAULT_CODE = 'FCF-DIC26';
+  // When opened as a local file, send links to the published site.
+  var BASE = location.protocol === 'file:' ? 'https://decarbonation.vercel.app' : '';
+  var fromUrl = new URLSearchParams(location.search).get('taller');
+  var code = fromUrl && CODE_RE.test(fromUrl) ? fromUrl : DEFAULT_CODE;
+  var q = '?taller=' + encodeURIComponent(code);
+  document.querySelectorAll('[data-play]').forEach(function (a) { a.href = BASE + '/territorio' + q; });
+  document.querySelectorAll('[data-survey]').forEach(function (a) { a.href = BASE + '/territorio/encuesta' + q; });
+  document.querySelectorAll('[data-code]').forEach(function (el) { el.textContent = code; });
+  if (BASE) document.querySelectorAll('a[href^="/"]').forEach(function (a) {
+    if (!a.hasAttribute('data-play') && !a.hasAttribute('data-survey')) a.href = BASE + a.getAttribute('href');
+  });
+
+  /* ---------- Progress (per browser, best effort) ---------- */
+  var KEY = 'dn_taller_fcf_v2';
+  var TOTAL = 6;
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ } }
+
+  var mods = Array.prototype.slice.call(document.querySelectorAll('.mod'));
+  var current = 1;
+  var titles = {};
+  mods.forEach(function (m) { titles[m.dataset.mod] = m.querySelector('h3').textContent; });
+
+  function doneCount() { var n = 0; for (var i = 1; i <= TOTAL; i++) if (state[i]) n++; return n; }
+
+  function render() {
+    var n = doneCount();
+    document.querySelectorAll('[data-count]').forEach(function (el) { el.textContent = n; });
+    document.querySelector('[data-meter]').style.width = (n / TOTAL) * 100 + '%';
+    document.querySelectorAll('.parcel').forEach(function (p) {
+      var id = +p.dataset.goto;
+      p.classList.toggle('done', !!state[id]);
+      p.classList.toggle('current', id === current);
+    });
+    document.querySelectorAll('.rail-btn').forEach(function (b) {
+      var id = +b.dataset.goto;
+      b.classList.toggle('done', !!state[id]);
+      b.setAttribute('aria-current', id === current ? 'true' : 'false');
+    });
+    var c = document.querySelector('[data-complete]');
+    c.setAttribute('aria-pressed', state[current] ? 'true' : 'false');
+    document.querySelector('[data-complete-label]').textContent = state[current] ? 'Parcela restaurada' : 'Completar y restaurar la parcela';
+    document.querySelector('[data-prev]').disabled = current === 1;
+    document.querySelector('[data-next]').textContent = current === TOTAL ? 'Ir a la encuesta →' : 'Siguiente →';
+    var next = firstPending();
+    document.querySelector('[data-start-label]').textContent =
+      n === 0 ? 'Empezar el módulo 1' : n === TOTAL ? 'Repasar los módulos' : 'Seguir con el módulo ' + next;
+  }
+
+  function firstPending() { for (var i = 1; i <= TOTAL; i++) if (!state[i]) return i; return 1; }
+
+  function show(id, scroll) {
+    current = Math.min(TOTAL, Math.max(1, id));
+    mods.forEach(function (m) { m.classList.toggle('active', +m.dataset.mod === current); });
+    try { history.replaceState(null, '', '#m' + current); } catch (e) { /* file:// */ }
+    render();
+    if (scroll) document.getElementById('aula').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  var toast = document.querySelector('[data-toast]');
+  var toastTimer;
+  function celebrate(id) {
+    var after = document.querySelector('.parcel[data-goto="' + id + '"] .after');
+    toast.querySelector('img').src = after.src;
+    toast.querySelector('[data-toast-text]').textContent = doneCount() === TOTAL
+      ? '¡Restauraste las 6 parcelas! Territorio completo.'
+      : 'Parcela ' + id + ' restaurada · ' + titles[id];
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2600);
+  }
+
+  document.querySelectorAll('[data-goto]').forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.dataset.goto, b.classList.contains('parcel')); });
+  });
+  document.querySelector('[data-start]').addEventListener('click', function (e) {
+    e.preventDefault(); show(doneCount() === TOTAL ? 1 : firstPending(), true);
+  });
+  document.querySelector('[data-prev]').addEventListener('click', function () { show(current - 1, true); });
+  document.querySelector('[data-next]').addEventListener('click', function () {
+    if (current === TOTAL) { location.href = document.querySelector('[data-survey]').href; return; }
+    show(current + 1, true);
+  });
+  document.querySelector('[data-complete]').addEventListener('click', function () {
+    state[current] = !state[current]; save();
+    if (state[current]) celebrate(current);
+    render();
+  });
+  document.querySelector('[data-reset]').addEventListener('click', function () {
+    state = {}; save(); show(1, true);
+  });
+
+  /* ---------- Quick checks ---------- */
+  document.querySelectorAll('.quiz').forEach(function (quiz) {
+    var fb = quiz.querySelector('.fb');
+    quiz.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var ok = btn.dataset.opt === quiz.dataset.answer;
+        quiz.querySelectorAll('.opt').forEach(function (o) { o.classList.remove('ok', 'no'); });
+        btn.classList.add(ok ? 'ok' : 'no');
+        fb.textContent = ok ? fb.dataset.ok : fb.dataset.no;
+        fb.className = 'fb ' + (ok ? 'ok' : 'no');
+      });
+    });
+  });
+
+  /* ---------- Trade-off explorer (illustrative levels, not model output) ---------- */
+  var LEVELS = {
+    forest:    { carbon: 92, bio: 95, food: 12, income: 25 },
+    intensive: { carbon: 18, bio: 12, food: 95, income: 85 },
+    agro:      { carbon: 55, bio: 58, food: 68, income: 55 },
+    solar:     { carbon: 70, bio: 30, food: 8,  income: 72 }
+  };
+  var uses = document.querySelectorAll('.use');
+  function setUse(k) {
+    uses.forEach(function (u) { u.setAttribute('aria-pressed', u.dataset.use === k ? 'true' : 'false'); });
+    Object.keys(LEVELS[k]).forEach(function (bar) {
+      document.querySelector('[data-bar="' + bar + '"]').style.width = LEVELS[k][bar] + '%';
+    });
+  }
+  uses.forEach(function (u) { u.addEventListener('click', function () { setUse(u.dataset.use); }); });
+  setUse('forest');
+
+  /* ---------- Initial module: from #mN, else first pending ---------- */
+  var m = /^#m([1-6])$/.exec(location.hash);
+  show(m ? +m[1] : firstPending(), false);
+})();
+</script>
+</body>
+</html>

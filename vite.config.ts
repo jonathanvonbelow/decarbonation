@@ -57,6 +57,8 @@ export default defineConfig(({ mode }) => {
             territorio: path.resolve(__dirname, 'territorio.html'),
             // v5/26: anonymous questionnaire for Territorio (no Supabase client in this bundle).
             territorioEncuesta: path.resolve(__dirname, 'territorio-encuesta.html'),
+            // Aula del taller FCF-UNaM (3/12/2026): pagina estatica autocontenida, sin React. Ruta /taller.
+            taller: path.resolve(__dirname, 'taller.html'),
           },
         },
       },
