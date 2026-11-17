@@ -59,6 +59,10 @@ export default defineConfig(({ mode }) => {
             territorioEncuesta: path.resolve(__dirname, 'territorio-encuesta.html'),
             // Aula del taller FCF-UNaM (3/12/2026): pagina estatica autocontenida, sin React. Ruta /taller.
             taller: path.resolve(__dirname, 'taller.html'),
+            // Diagrama stock-flujo del modelo 2.0 (pagina estatica autocontenida, sin React). Ruta /diagrama-flujos.
+            diagramaFlujos: path.resolve(__dirname, 'diagrama-flujos.html'),
+            // Version en ingles del mismo diagrama. Ruta /diagrama-flujos/en.
+            diagramaFlujosEn: path.resolve(__dirname, 'diagrama-flujos-en.html'),
           },
         },
       },

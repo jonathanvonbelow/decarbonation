@@ -3,6 +3,8 @@
   "rewrites": [
     { "source": "/play", "destination": "/play.html" },
     { "source": "/taller", "destination": "/taller.html" },
+    { "source": "/diagrama-flujos/en", "destination": "/diagrama-flujos-en.html" },
+    { "source": "/diagrama-flujos", "destination": "/diagrama-flujos.html" },
     { "source": "/territorio/encuesta", "destination": "/territorio-encuesta.html" },
     { "source": "/territorio", "destination": "/territorio.html" },
     { "source": "/docentes", "destination": "/docentes.html" },
